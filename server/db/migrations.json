@@ -1,0 +1,7 @@
+[{
+  "commit_hash": "981fb03e8e124c8765c3d2873708c3a02fff4a6f",
+  "migrations": [
+    "CREATE TABLE {schema}.users (id SERIAL PRIMARY KEY, first_name VARCHAR(100), last_name VARCHAR(100), dob DATE, phone VARCHAR(15), email VARCHAR(100), password VARCHAR(100));",
+    "CREATE TABLE {schema}.expenses (id SERIAL PRIMARY KEY, amount FLOAT, payer_id INTEGER, description TEXT, CONSTRAINT fk_user FOREIGN KEY (payee) REFERENCES {schema}.users(id));"
+  ]
+}]

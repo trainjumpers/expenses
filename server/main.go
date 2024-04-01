@@ -1,14 +1,35 @@
 package main
 
 import (
+	database "expenses/db"
+	expense "expenses/v1"
 	"fmt"
-	"net/http"
+	"time"
+
+	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 )
 
 func main() {
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, "Hello, you've requested: %s\n", r.URL.Path)
+	r := gin.Default()
+	err := godotenv.Load()
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	database.ConnectDatabase()
+
+	r.GET("/", func(c *gin.Context) {
+		t := time.Now()
+		c.String(200, "Hello, you've requested: %s at %s\n", c.Request.URL.Path, t.UTC().Format("2006-01-02 15:04:05.00 -0700 MST"))
 	})
 
-	http.ListenAndServe(":8080", nil)
+	r.GET("/expenses", expense.GetExpenses)
+	r.POST("/expenses", expense.CreateExpense)
+
+	r.Run(":8080")
+}
+
+func createExpenseTable() {
+
 }
