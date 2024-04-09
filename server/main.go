@@ -2,7 +2,7 @@ package main
 
 import (
 	database "expenses/db"
-	expense "expenses/v1"
+	"expenses/routes"
 	"fmt"
 	"time"
 
@@ -11,7 +11,7 @@ import (
 )
 
 func main() {
-	r := gin.Default()
+	r := routes.Init()
 	err := godotenv.Load()
 	if err != nil {
 		fmt.Println(err)
@@ -24,12 +24,5 @@ func main() {
 		c.String(200, "Hello, you've requested: %s at %s\n", c.Request.URL.Path, t.UTC().Format("2006-01-02 15:04:05.00 -0700 MST"))
 	})
 
-	r.GET("/expenses", expense.GetExpenses)
-	r.POST("/expenses", expense.CreateExpense)
-
 	r.Run(":8080")
-}
-
-func createExpenseTable() {
-
 }

@@ -1,7 +1,13 @@
 [{
   "commit_hash": "981fb03e8e124c8765c3d2873708c3a02fff4a6f",
   "migrations": [
-    "CREATE TABLE {schema}.users (id SERIAL PRIMARY KEY, first_name VARCHAR(100), last_name VARCHAR(100), dob DATE, phone VARCHAR(15), email VARCHAR(100), password VARCHAR(100));",
-    "CREATE TABLE {schema}.expenses (id SERIAL PRIMARY KEY, amount FLOAT, payer_id INTEGER, description TEXT, CONSTRAINT fk_user FOREIGN KEY (payee) REFERENCES {schema}.users(id));"
+    "CREATE TABLE {schema}.users (id SERIAL PRIMARY KEY, first_name VARCHAR(100) NOT NULL, last_name VARCHAR(100) NOT NULL, dob DATE NOT NULL, phone VARCHAR(15) NOT NULL, email VARCHAR(100) UNIQUE NOT NULL, password VARCHAR(100) NOT NULL);",
+    "CREATE TABLE {schema}.expenses (id SERIAL PRIMARY KEY, amount FLOAT NOT NULL, payer_id INTEGER NOT NULL, description TEXT NULL, CONSTRAINT fk_user FOREIGN KEY (payer_id) REFERENCES {schema}.users(id));"
+  ]
+},{
+  "commit_hash": "3444cf9d39eca6c9e7681e4708e36e0a8fde8730",
+  "migrations": [
+    "ALTER TABLE {schema}.expenses ADD column created_by INTEGER NOT NULL default 1",
+    "ALTER TABLE {schema}.expenses ADD CONSTRAINT fk_created_by FOREIGN KEY (created_by) REFERENCES {schema}.users;"
   ]
 }]
