@@ -21,7 +21,7 @@ func (e *ExpenseController) GetExpenses(c *gin.Context) {
 	logger.Info("Recieved request to get all expenses")
 	var expenses []models.Expense
 
-	query := fmt.Sprintf("SELECT * FROM %s.expenses;", schema)
+	query := fmt.Sprintf("SELECT * FROM %s.expense;", schema)
 
 	logger.Info("Executing query to get all expenses: ", query)
 	result, err := database.DbPool.Query(c, query)
@@ -55,7 +55,7 @@ func (e *ExpenseController) CreateExpense(c *gin.Context) {
 	}
 	logger.Info("Recieved request to create an expense with the following body: ", expense)
 
-	query := fmt.Sprintf("INSERT INTO %s.expenses (amount, payer_id, description, created_by) VALUES ($1, $2, $3, $4) RETURNING *;", schema)
+	query := fmt.Sprintf("INSERT INTO %s.expense (amount, payer_id, description, created_by) VALUES ($1, $2, $3, $4) RETURNING *;", schema)
 	var addedExpense models.Expense
 
 	logger.Info("Executing query to insert an expense: ", query)
@@ -85,7 +85,7 @@ func (e *ExpenseController) GetExpenseByID(c *gin.Context) {
 
 	var expense models.Expense
 
-	query := fmt.Sprintf("SELECT * FROM %s.expenses WHERE id = $1;", schema)
+	query := fmt.Sprintf("SELECT * FROM %s.expense WHERE id = $1;", schema)
 
 	logger.Info("Executing query to get an expense by ID: ", query)
 	result := database.DbPool.QueryRow(c, query, expenseID)
@@ -109,7 +109,7 @@ func (e *ExpenseController) DeleteExpense(c *gin.Context) {
 	expenseID := c.Param("expenseID")
 	logger.Info("Recieved request to delete an expense by ID: ", expenseID)
 
-	query := fmt.Sprintf("DELETE FROM %s.expenses WHERE id = $1;", schema)
+	query := fmt.Sprintf("DELETE FROM %s.expense WHERE id = $1;", schema)
 
 	logger.Info("Executing query to delete an expense by ID: ", query)
 	_, err := database.DbPool.Exec(c, query, expenseID)

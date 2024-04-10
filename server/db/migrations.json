@@ -10,4 +10,10 @@
     "ALTER TABLE {schema}.expenses ADD column created_by INTEGER NOT NULL default 1",
     "ALTER TABLE {schema}.expenses ADD CONSTRAINT fk_created_by FOREIGN KEY (created_by) REFERENCES {schema}.users;"
   ]
+},{
+  "commit_hash": "628764d30ab6067ed6035dfa33082ec365167ad5",
+  "migrations": [
+    "ALTER TABLE {schema}.expenses RENAME TO expense",
+    "ALTER TABLE {schema}.users RENAME TO user"
+  ]
 }]

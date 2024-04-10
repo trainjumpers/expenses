@@ -24,10 +24,10 @@ BEGIN
 END
 \$do\$;
 "
-# Create users table
-echo "Creating 'users' table..."
+# Create user table
+echo "Creating 'user' table..."
 PGPASSWORD=$DB_PASS psql -U $DB_USER -h $DB_HOST -d $DB_NAME -c "
-   CREATE TABLE $PGSCHEMA.users (
+   CREATE TABLE $PGSCHEMA.user (
       id SERIAL PRIMARY KEY,
       first_name VARCHAR(100) NOT NULL,
       last_name VARCHAR(100) NOT NULL,
@@ -37,18 +37,18 @@ PGPASSWORD=$DB_PASS psql -U $DB_USER -h $DB_HOST -d $DB_NAME -c "
    );
 "
 
-# Create expenses table
-echo "Creating 'expenses' table..."
+# Create expense table
+echo "Creating 'expense' table..."
 PGPASSWORD=$DB_PASS psql -U $DB_USER -h $DB_HOST -d $DB_NAME -c "
-   CREATE TABLE $PGSCHEMA.expenses (
+   CREATE TABLE $PGSCHEMA.expense (
       id SERIAL PRIMARY KEY,
       amount FLOAT NOT NULL,
       payer_id INTEGER NOT NULL,
       description TEXT NULL,
       created_by INTEGER NOT NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-      CONSTRAINT fk_user FOREIGN KEY (payer_id) REFERENCES $PGSCHEMA.users(id),
-      CONSTRAINT fk_created_by FOREIGN KEY (created_by) REFERENCES $PGSCHEMA.users(id)
+      CONSTRAINT fk_user FOREIGN KEY (payer_id) REFERENCES $PGSCHEMA.user(id),
+      CONSTRAINT fk_created_by FOREIGN KEY (created_by) REFERENCES $PGSCHEMA.user(id)
       );
 "
 

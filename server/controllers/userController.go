@@ -19,7 +19,7 @@ func (u *UserController) GetUsers(c *gin.Context) {
 	logger.Info("Recieved request to get all users")
 	var users []models.UserOutput
 
-	query := fmt.Sprintf("SELECT id, first_name, last_name, email, dob, phone FROM %s.users;", schema)
+	query := fmt.Sprintf("SELECT id, first_name, last_name, email, dob, phone FROM %s.user;", schema)
 
 	logger.Info("Executing query to get all users: ", query)
 	result, err := database.DbPool.Query(c, query)
@@ -50,7 +50,7 @@ func (u *UserController) GetUserById(c *gin.Context) {
 
 	var user models.User
 
-	query := fmt.Sprintf("SELECT * FROM %s.users WHERE id = $1;", schema)
+	query := fmt.Sprintf("SELECT * FROM %s.user WHERE id = $1;", schema)
 
 	logger.Info("Executing query to get a user by ID: ", query)
 	result := database.DbPool.QueryRow(c, query, userID)
@@ -71,7 +71,7 @@ func (u *UserController) DeleteUser(c *gin.Context) {
 	userID := c.Param("userID")
 	logger.Info("Recieved request to delete a user by ID: ", userID)
 
-	query := fmt.Sprintf("DELETE FROM %s.users WHERE id = $1;", schema)
+	query := fmt.Sprintf("DELETE FROM %s.user WHERE id = $1;", schema)
 
 	logger.Info("Executing query to delete a user by ID: ", query)
 	_, err := database.DbPool.Exec(c, query, userID)

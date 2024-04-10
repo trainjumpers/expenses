@@ -30,7 +30,7 @@ func (a *AuthController) Signup(c *gin.Context) {
 		return
 	}
 
-	query := fmt.Sprintf("INSERT INTO %s.users (first_name, last_name, email, dob, phone, password) VALUES ($1, $2, $3, $4, $5, $6) "+
+	query := fmt.Sprintf("INSERT INTO %s.user (first_name, last_name, email, dob, phone, password) VALUES ($1, $2, $3, $4, $5, $6) "+
 		"RETURNING id, first_name, last_name, email, dob, phone;", os.Getenv("PGSCHEMA"))
 	insert := database.DbPool.QueryRow(c, query, newUser.FirstName, newUser.LastName, newUser.Email, newUser.DOB, newUser.Phone, hashedPassword)
 	var createdUser models.UserOutput
@@ -56,7 +56,7 @@ func (a *AuthController) Login(c *gin.Context) {
 	logger.Info("Recieved request to login a user for email: ", loginInput.Email)
 
 	var user models.User
-	query := fmt.Sprintf("SELECT id, email, password FROM %s.users WHERE email = $1;", os.Getenv("PGSCHEMA"))
+	query := fmt.Sprintf("SELECT id, email, password FROM %s.user WHERE email = $1;", os.Getenv("PGSCHEMA"))
 	result := database.DbPool.QueryRow(c, query, loginInput.Email)
 
 	err := result.Scan(&user.ID, &user.Email, &user.Password)
