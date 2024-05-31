@@ -11,13 +11,13 @@ import (
 )
 
 func main() {
-	r := routes.Init()
 	err := godotenv.Load()
 	if err != nil {
 		fmt.Println(err)
 	}
 
 	database.ConnectDatabase()
+	r := routes.Init()
 
 	r.GET("/", func(c *gin.Context) {
 		t := time.Now()

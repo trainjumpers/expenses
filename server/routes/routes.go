@@ -2,6 +2,7 @@ package routes
 
 import (
 	"expenses/controllers"
+	database "expenses/db"
 
 	"github.com/gin-gonic/gin"
 )
@@ -11,9 +12,9 @@ func Init() *gin.Engine {
 	router.Use(gin.Logger())
 	router.Use(gin.Recovery())
 
-	expenseController := new(controllers.ExpenseController)
-	userController := new(controllers.UserController)
-	authController := new(controllers.AuthController)
+	expenseController := controllers.NewExpenseController(database.DbPool)
+	userController := controllers.NewUserController(database.DbPool)
+	authController := controllers.NewAuthController(database.DbPool)
 
 	api := router.Group("/api")
 	{
@@ -26,9 +27,9 @@ func Init() *gin.Engine {
 		user.DELETE("/:userID", userController.DeleteUser)
 
 		expense := api.Group("/expense").Use(gin.HandlerFunc(authController.Protected))
-		expense.GET("", expenseController.GetExpenses)
+		expense.GET("", expenseController.GetExpensesOfUser)
 		expense.POST("", expenseController.CreateExpense)
-		expense.GET("/:expenseID", expenseController.GetExpenseByID)
+		// expense.GET("/:expenseID", expenseController.GetExpenseByID)
 		// expense.PUT("/:expenseID", expenseController.UpdateExpense)
 		expense.DELETE("/:expenseID", expenseController.DeleteExpense)
 	}

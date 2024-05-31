@@ -3,22 +3,17 @@ package models
 import "time"
 
 type Expense struct {
-	ID          int        `json:"id"`
+	ID          int64      `json:"id"`
 	Description string     `json:"description"`
-	PayerID     int        `json:"payer_id"`
+	PayerID     int64      `json:"payer_id"`
 	Amount      float64    `json:"amount"`
-	CreatedBy   int        `json:"created_by"`
+	CreatedBy   int64      `json:"created_by"`
 	CreatedAt   *time.Time `json:"created_at"`
 }
 
-type ExpenseInput struct {
-	Description string  `json:"description"`
-	PayerID     int     `json:"payer_id" binding:"required"`
-	Amount      float64 `json:"amount" binding:"required"`
-}
-
-type UpdateExpenseInput struct {
-	Description string  `json:"description"`
-	PayerID     int     `json:"payer_id"`
-	Amount      float64 `json:"amount"`
+type ExpenseUserMapping struct {
+	ID        int64 `json:"id"`
+	ExpenseID int64 `json:"expense_id"`
+	UserID    int64 `json:"user_id"`
+	Amount    int64 `json:"amount"`
 }

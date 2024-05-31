@@ -52,3 +52,15 @@ PGPASSWORD=$DB_PASS psql -U $DB_USER -h $DB_HOST -d $DB_NAME -c "
       );
 "
 
+# Create expense_contributor table
+echo "Creating 'expense_user_mapping' table..."
+PGPASSWORD=$DB_PASS psql -U $DB_USER -h $DB_HOST -d $DB_NAME -c "
+   CREATE TABLE $PGSCHEMA.expense_user_mapping (
+      id SERIAL PRIMARY KEY,
+      expense_id INTEGER NOT NULL,
+      user_id INTEGER NOT NULL,
+      amount FLOAT NOT NULL,
+      CONSTRAINT fk_expense FOREIGN KEY (expense_id) REFERENCES $PGSCHEMA.expense(id),
+      CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES $PGSCHEMA.user(id)
+   );
+"

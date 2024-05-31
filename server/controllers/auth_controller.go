@@ -1,24 +1,34 @@
 package controllers
 
 import (
-	database "expenses/db"
 	models "expenses/models"
+	"expenses/services"
 	"fmt"
 	"net/http"
 	"os"
 	"strings"
 	"time"
 
+	"expenses/entities"
+
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	logger "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 )
 
-type AuthController struct{}
+type AuthController struct {
+	userService *services.UserService
+}
+
+func NewAuthController(db *pgxpool.Pool) *AuthController {
+	userService := services.NewUserService(db)
+	return &AuthController{userService: userService}
+}
 
 func (a *AuthController) Signup(c *gin.Context) {
-	var newUser models.CreateUserInput
+	var newUser entities.CreateUserInput
 	if err := c.ShouldBindJSON(&newUser); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -30,41 +40,28 @@ func (a *AuthController) Signup(c *gin.Context) {
 		return
 	}
 
-	query := fmt.Sprintf("INSERT INTO %s.user (first_name, last_name, email, dob, phone, password) VALUES ($1, $2, $3, $4, $5, $6) "+
-		"RETURNING id, first_name, last_name, email, dob, phone;", os.Getenv("PGSCHEMA"))
-	insert := database.DbPool.QueryRow(c, query, newUser.FirstName, newUser.LastName, newUser.Email, newUser.DOB, newUser.Phone, hashedPassword)
-	var createdUser models.UserOutput
-
-	err = insert.Scan(&createdUser.ID, &createdUser.FirstName, &createdUser.LastName, &createdUser.Email, &createdUser.DOB, &createdUser.Phone)
-	if err != nil {
-		if strings.Contains(err.Error(), "duplicate") {
-			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("User with email: %s already exists", newUser.Email)})
-			return
-		}
-	}
+	createdUser := a.userService.CreateUser(c, models.User{
+		FirstName: newUser.FirstName,
+		LastName:  newUser.LastName,
+		Email:     newUser.Email,
+		DOB:       newUser.DOB,
+		Phone:     newUser.Phone,
+		Password:  hashedPassword,
+	})
 
 	c.JSON(http.StatusOK, gin.H{"message": "User created successfully", "data": createdUser})
 
 }
 
 func (a *AuthController) Login(c *gin.Context) {
-	var loginInput models.LoginInput
+	var loginInput entities.LoginInput
 	if err := c.ShouldBindJSON(&loginInput); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 	logger.Info("Recieved request to login a user for email: ", loginInput.Email)
 
-	var user models.User
-	query := fmt.Sprintf("SELECT id, email, password FROM %s.user WHERE email = $1;", os.Getenv("PGSCHEMA"))
-	result := database.DbPool.QueryRow(c, query, loginInput.Email)
-
-	err := result.Scan(&user.ID, &user.Email, &user.Password)
-	if err != nil {
-		fmt.Println(err)
-		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
-		return
-	}
+	user := a.userService.GetUserByEmail(c, loginInput.Email)
 
 	authenticated := checkPasswordHash(loginInput.Password, user.Password)
 	if !authenticated {
@@ -92,7 +89,7 @@ func checkPasswordHash(password, hash string) bool {
 	return err == nil
 }
 
-func issueAuthToken(userId int, email string) (string, error) {
+func issueAuthToken(userId int64, email string) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"user_id": userId,
 		"email":   email,
@@ -140,7 +137,7 @@ func (a *AuthController) Protected(c *gin.Context) {
 		c.Abort()
 		return
 	}
-	logger.Info("Type of Claims['user_id']: ", fmt.Sprintf("%T", claims["user_id"]))
+
 	userId, ok := claims["user_id"].(float64)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Malformed User ID"})

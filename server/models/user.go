@@ -5,34 +5,11 @@ import (
 )
 
 type User struct {
-	ID        int        `json:"id"`
+	ID        int64      `json:"id"`
 	Email     string     `json:"email"`
 	FirstName string     `json:"first_name"`
 	LastName  string     `json:"last_name"`
 	DOB       *time.Time `json:"dob"`
 	Phone     string     `json:"phone"`
 	Password  string     `json:"password"`
-}
-
-type UserOutput struct {
-	ID        int        `json:"id"`
-	Email     string     `json:"email"`
-	FirstName string     `json:"first_name"`
-	LastName  string     `json:"last_name"`
-	DOB       *time.Time `json:"dob"`
-	Phone     string     `json:"phone"`
-}
-
-type CreateUserInput struct {
-	Email     string     `json:"email" binding:"required"`
-	FirstName string     `json:"first_name" binding:"required"`
-	LastName  string     `json:"last_name" binding:"required"`
-	DOB       *time.Time `json:"dob" binding:"required"`
-	Phone     string     `json:"phone" binding:"required"`
-	Password  string     `json:"password" binding:"required"`
-}
-
-type LoginInput struct {
-	Email    string `json:"email" binding:"required"`
-	Password string `json:"password" binding:"required"`
 }
