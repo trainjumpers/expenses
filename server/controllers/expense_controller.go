@@ -25,6 +25,7 @@ func NewExpenseController(db *pgxpool.Pool) *ExpenseController {
 	return &ExpenseController{expenseService: expenseService}
 }
 
+// GetExpensesOfUser returns all expenses for a given user
 func (e *ExpenseController) GetExpensesOfUser(c *gin.Context) {
 	var schema = os.Getenv("PGSCHEMA")
 
@@ -44,6 +45,7 @@ func (e *ExpenseController) GetExpensesOfUser(c *gin.Context) {
 	})
 }
 
+// CreateExpense handles creation of a new expense
 func (e *ExpenseController) CreateExpense(c *gin.Context) {
 	var schema = os.Getenv("PGSCHEMA")
 	var userID = c.GetInt64("userID")
@@ -101,6 +103,7 @@ func (e *ExpenseController) CreateExpense(c *gin.Context) {
 // 	})
 // }
 
+// DeleteExpense deletes an expense by ID
 func (e *ExpenseController) DeleteExpense(c *gin.Context) {
 	var schema = os.Getenv("PGSCHEMA")
 

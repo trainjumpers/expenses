@@ -24,6 +24,13 @@ func NewUserService(db *pgxpool.Pool) *UserService {
 	}
 }
 
+/*
+CreateUser creates a new user in the user table
+
+newUser: User object with the details of the new user
+
+returns: User object of the created user
+*/
 func (u *UserService) CreateUser(c *gin.Context, newUser models.User) models.User {
 	fmt.Println(u.schema)
 	query := fmt.Sprintf("INSERT INTO %s.user (first_name, last_name, email, dob, phone, password) VALUES ($1, $2, $3, $4, $5, $6) "+
@@ -43,6 +50,13 @@ func (u *UserService) CreateUser(c *gin.Context, newUser models.User) models.Use
 	return createdUser
 }
 
+/*
+GetUserByEmail returns a user by email
+
+email: Email of the user to be fetched
+
+returns: User object of the fetched user
+*/
 func (u *UserService) GetUserByEmail(c *gin.Context, email string) models.User {
 	var user models.User
 	fmt.Println(u.schema)
@@ -59,6 +73,13 @@ func (u *UserService) GetUserByEmail(c *gin.Context, email string) models.User {
 	return user
 }
 
+/*
+GetUserByID returns a user by ID
+
+userID: ID of the user to be fetched
+
+returns: User object of the fetched user
+*/
 func (u *UserService) GetUserByID(c *gin.Context, userID int64) models.User {
 	var user models.User
 
@@ -76,6 +97,11 @@ func (u *UserService) GetUserByID(c *gin.Context, userID int64) models.User {
 	return user
 }
 
+/*
+GetUsers returns all users
+
+returns: List of users ([]models.User)
+*/
 func (u *UserService) GetUsers(c *gin.Context) []models.User {
 	query := fmt.Sprintf("SELECT id, first_name, last_name, email, dob, phone FROM %s.user;", u.schema)
 	var users []models.User
@@ -104,6 +130,13 @@ func (u *UserService) GetUsers(c *gin.Context) []models.User {
 	return users
 }
 
+/*
+DeleteUser deletes a user by ID
+
+userID: ID of the user to be deleted
+
+returns: nil
+*/
 func (u *UserService) DeleteUser(c *gin.Context, userID int64) {
 	query := fmt.Sprintf("DELETE FROM %s.user WHERE id = $1;", u.schema)
 

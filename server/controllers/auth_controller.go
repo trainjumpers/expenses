@@ -27,6 +27,7 @@ func NewAuthController(db *pgxpool.Pool) *AuthController {
 	return &AuthController{userService: userService}
 }
 
+// Signup controller handles creation of a new user, and returns the user data along with an access token
 func (a *AuthController) Signup(c *gin.Context) {
 	var newUser entities.CreateUserInput
 	if err := c.ShouldBindJSON(&newUser); err != nil {
@@ -49,10 +50,18 @@ func (a *AuthController) Signup(c *gin.Context) {
 		Password:  hashedPassword,
 	})
 
-	c.JSON(http.StatusOK, gin.H{"message": "User created successfully", "data": createdUser})
+	token, err := issueAuthToken(createdUser.ID, createdUser.Email)
+	if err != nil {
+		logger.Error("Error generating token: ", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error generating token"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "User created successfully", "data": createdUser, "access_token": token})
 
 }
 
+// Login controller handles user login and sends back an access token
 func (a *AuthController) Login(c *gin.Context) {
 	var loginInput entities.LoginInput
 	if err := c.ShouldBindJSON(&loginInput); err != nil {
@@ -79,16 +88,19 @@ func (a *AuthController) Login(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "User logged in successfully", "access_token": token})
 }
 
+// hashPassword hashes the password using bcrypt
 func hashPassword(password string) (string, error) {
 	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
 	return string(bytes), err
 }
 
+// checkPasswordHash checks if the password matches the hash
 func checkPasswordHash(password, hash string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 	return err == nil
 }
 
+// issueAuthToken issues a JWT token with the user ID and email
 func issueAuthToken(userId int64, email string) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"user_id": userId,
@@ -106,6 +118,7 @@ func issueAuthToken(userId int64, email string) (string, error) {
 	return tokenString, nil
 }
 
+// verifyAuthToken verifies the JWT token and returns the claims
 func verifyAuthToken(tokenString string) (jwt.MapClaims, error) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		return []byte(os.Getenv("JWT_SECRET")), nil
@@ -122,6 +135,7 @@ func verifyAuthToken(tokenString string) (jwt.MapClaims, error) {
 	return claims, nil
 }
 
+// Protected is a middleware that checks if the request has a valid JWT token
 func (a *AuthController) Protected(c *gin.Context) {
 	tokenString := c.GetHeader("Authorization")
 	if tokenString == "" {

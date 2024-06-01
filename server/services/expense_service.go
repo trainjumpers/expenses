@@ -24,6 +24,13 @@ func NewExpenseService(db *pgxpool.Pool) *ExpenseService {
 	}
 }
 
+/*
+GetExpensesByUserID returns all expenses of a given user
+
+userID: ID of the user whose expenses are to be fetched
+
+returns: List of expenses ([]models.Expense)
+*/
 func (e *ExpenseService) GetExpensesByUserID(c *gin.Context, userID int64, schema string) []models.Expense {
 	query := fmt.Sprintf(`SELECT * FROM %[1]s.expense WHERE id IN 
 		(SELECT expense_id FROM %[1]s.expense_user_mapping WHERE user_id = $1)`,
@@ -54,6 +61,17 @@ func (e *ExpenseService) GetExpensesByUserID(c *gin.Context, userID int64, schem
 	return expenses
 }
 
+/*
+CreateExpense creates a new expense in the expense table and adds contributions of users to the expense_user_mapping table
+
+expense: Expense object containing the details of the expense to be created
+
+contributors: List of user IDs contributing to the expense
+
+contributions: List of amounts contributed by each user
+
+returns: Expense object of the newly created expense
+*/
 func (e *ExpenseService) CreateExpense(c *gin.Context, expense models.Expense, contributors []int64, contributions []float64, schema string) models.Expense {
 	query := fmt.Sprintf(`
 	WITH new_expense AS (

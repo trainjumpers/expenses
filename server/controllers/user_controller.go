@@ -19,6 +19,7 @@ func NewUserController(db *pgxpool.Pool) *UserController {
 	return &UserController{userService: userService}
 }
 
+// GetUsers returns all users
 func (u *UserController) GetUsers(c *gin.Context) {
 	logger.Info("Recieved request to get all users")
 
@@ -30,6 +31,7 @@ func (u *UserController) GetUsers(c *gin.Context) {
 	})
 }
 
+// GetUserById returns a user by ID
 func (u *UserController) GetUserById(c *gin.Context) {
 	userID, err := strconv.ParseInt(c.Param("userID"), 10, 64)
 	if err != nil {
@@ -49,6 +51,7 @@ func (u *UserController) GetUserById(c *gin.Context) {
 	})
 }
 
+// DeleteUser deletes a user by ID
 func (u *UserController) DeleteUser(c *gin.Context) {
 	userID, err := strconv.ParseInt(c.Param("userID"), 10, 64)
 	if err != nil {
