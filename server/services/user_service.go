@@ -1,10 +1,12 @@
 package services
 
 import (
+	"expenses/entities"
 	"expenses/models"
 	"fmt"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -148,4 +150,60 @@ func (u *UserService) DeleteUser(c *gin.Context, userID int64) {
 		c.Abort()
 		return
 	}
+}
+
+/*
+UpdateUser updates a user by ID
+
+userID: ID of the user to be updated
+
+updatedUser: User object with the updated details
+
+returns: User object of the updated user
+*/
+func (u *UserService) UpdateUser(c *gin.Context, userID int64, updatedUser entities.UpdateUserInput) models.User {
+	fmt.Println(updatedUser)
+
+	fields := map[string]interface{}{
+		"first_name": updatedUser.FirstName,
+		"last_name":  updatedUser.LastName,
+		"email":      updatedUser.Email,
+		"dob":        updatedUser.DOB,
+		"phone":      updatedUser.Phone,
+	}
+
+	if updatedUser.DOB.IsZero() {
+		fields["dob"] = ""
+	}
+
+	fieldsClause := ""
+	argIndex := 1
+	argValues := make([]interface{}, 0)
+	for k, v := range fields {
+		if v == "" {
+			continue
+		}
+
+		fieldsClause += k + " = $" + strconv.FormatInt(int64(argIndex), 10) + ", "
+		argIndex++
+		argValues = append(argValues, v)
+	}
+	fieldsClause = strings.TrimSuffix(fieldsClause, ", ")
+
+	query := fmt.Sprintf("UPDATE %[1]s.user SET %[2]s WHERE id = $%d "+
+		"RETURNING id, first_name, last_name, email, dob, phone;", u.schema, fieldsClause, argIndex)
+
+	logger.Info("Executing query to update a user by ID: ", query)
+	result := u.db.QueryRow(c, query, append(argValues, userID)...)
+
+	var user models.User
+	err := result.Scan(&user.ID, &user.FirstName, &user.LastName, &user.Email, &user.DOB, &user.Phone)
+	if err != nil {
+		logger.Fatal(fmt.Errorf("error scanning the database output: %v", err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error parsing users"})
+		c.Abort()
+		return models.User{}
+	}
+
+	return user
 }

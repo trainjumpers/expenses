@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"expenses/entities"
 	"expenses/services"
 	"net/http"
 	"strconv"
@@ -68,5 +69,35 @@ func (u *UserController) DeleteUser(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "User deleted successfully",
+	})
+}
+
+// UpdateUser updates a user by ID
+func (u *UserController) UpdateUser(c *gin.Context) {
+	userID, err := strconv.ParseInt(c.Param("userID"), 10, 64)
+	if err != nil {
+		logger.Error("Failed to parse userID: ", err)
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid user ID",
+		})
+		return
+	}
+
+	logger.Info("Recieved request to update a user by ID: ", userID)
+
+	var updatedUser entities.UpdateUserInput
+	if err := c.ShouldBindJSON(&updatedUser); err != nil {
+		logger.Error("Failed to bind JSON: ", err)
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	user := u.userService.UpdateUser(c, userID, updatedUser)
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "User updated successfully",
+		"data":    user,
 	})
 }

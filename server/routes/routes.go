@@ -23,7 +23,7 @@ func Init() *gin.Engine {
 		user.POST("/signup", authController.Signup)
 		user.POST("/login", authController.Login)
 		user.GET("/:userID", userController.GetUserById)
-		// user.PUT("/:userID", userController.UpdateUserData)
+		user.PATCH("/:userID", userController.UpdateUser)
 		user.DELETE("/:userID", userController.DeleteUser)
 
 		expense := api.Group("/expense").Use(gin.HandlerFunc(authController.Protected))
