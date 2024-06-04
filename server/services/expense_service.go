@@ -3,9 +3,7 @@ package services
 import (
 	"expenses/models"
 	"fmt"
-	"net/http"
 	"os"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -31,17 +29,14 @@ userID: ID of the user whose expenses are to be fetched
 
 returns: List of expenses ([]models.Expense)
 */
-func (e *ExpenseService) GetExpensesByUserID(c *gin.Context, userID int64, schema string) []models.Expense {
+func (e *ExpenseService) GetExpensesByUserID(c *gin.Context, userID int64, schema string) ([]models.Expense, error) {
 	query := fmt.Sprintf(`SELECT * FROM %[1]s.expense WHERE id IN 
 		(SELECT expense_id FROM %[1]s.expense_user_mapping WHERE user_id = $1)`,
 		schema)
 
 	rows, err := e.db.Query(c, query, userID)
 	if err != nil {
-		logger.Fatal(fmt.Errorf("error querying the database: %v", err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error getting expenses"})
-		c.Abort()
-		return nil
+		return []models.Expense{}, err
 	}
 
 	var expenses []models.Expense
@@ -50,15 +45,12 @@ func (e *ExpenseService) GetExpensesByUserID(c *gin.Context, userID int64, schem
 		var expense models.Expense
 		err := rows.Scan(&expense.ID, &expense.Amount, &expense.PayerID, &expense.Description, &expense.CreatedBy, &expense.CreatedAt)
 		if err != nil {
-			logger.Fatal(fmt.Errorf("error scanning the database output: %v", err))
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error parsing expenses"})
-			c.Abort()
-			return nil
+			return []models.Expense{}, err
 		}
 		expenses = append(expenses, expense)
 	}
 
-	return expenses
+	return expenses, nil
 }
 
 /*
@@ -72,7 +64,7 @@ contributions: List of amounts contributed by each user
 
 returns: Expense object of the newly created expense
 */
-func (e *ExpenseService) CreateExpense(c *gin.Context, expense models.Expense, contributors []int64, contributions []float64, schema string) models.Expense {
+func (e *ExpenseService) CreateExpense(c *gin.Context, expense models.Expense, contributors []int64, contributions []float64, schema string) (models.Expense, error) {
 	query := fmt.Sprintf(`
 	WITH new_expense AS (
 		INSERT INTO %[1]s.expense (
@@ -101,16 +93,8 @@ func (e *ExpenseService) CreateExpense(c *gin.Context, expense models.Expense, c
 
 	err := insert.Scan(&addedExpense.ID, &addedExpense.Amount, &addedExpense.PayerID, &addedExpense.Description, &addedExpense.CreatedBy, &addedExpense.CreatedAt)
 	if err != nil {
-		if strings.Contains(err.Error(), "fk_user") {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Payer ID does not exist"})
-			c.Abort()
-			return models.Expense{}
-		}
-		logger.Error("Error inserting expense: ", err.Error())
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error inserting expense"})
-		c.Abort()
-		return models.Expense{}
+		return models.Expense{}, err
 	}
 
-	return addedExpense
+	return addedExpense, nil
 }

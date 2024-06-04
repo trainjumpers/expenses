@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 
 	database "expenses/db"
 	"expenses/entities"
@@ -37,7 +38,13 @@ func (e *ExpenseController) GetExpensesOfUser(c *gin.Context) {
 
 	logger.Info("Recieved request to get all expenses for user with ID: ", userID)
 
-	expenses := e.expenseService.GetExpensesByUserID(c, userID, schema)
+	expenses, err := e.expenseService.GetExpensesByUserID(c, userID, schema)
+	if err != nil {
+		logger.Error("Error getting expenses: ", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error getting expenses"})
+		c.Abort()
+		return
+	}
 
 	logger.Info("Number of expenses found: ", len(expenses))
 	c.JSON(http.StatusOK, gin.H{
@@ -64,12 +71,22 @@ func (e *ExpenseController) CreateExpense(c *gin.Context) {
 		contributions = append(contributions, v)
 	}
 
-	addedExpense := e.expenseService.CreateExpense(c, models.Expense{
+	addedExpense, err := e.expenseService.CreateExpense(c, models.Expense{
 		Amount:      expense.Amount,
 		PayerID:     expense.PayerID,
 		Description: expense.Description,
 		CreatedBy:   userID,
 	}, contributors, contributions, schema)
+	if err != nil {
+		if strings.Contains(err.Error(), "fk_user") {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Payer ID does not exist"})
+			c.Abort()
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error creating expense"})
+		c.Abort()
+		return
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Expense added successfully!",
