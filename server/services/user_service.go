@@ -4,7 +4,6 @@ import (
 	"expenses/entities"
 	"expenses/models"
 	"fmt"
-	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -33,7 +32,7 @@ newUser: User object with the details of the new user
 
 returns: User object of the created user
 */
-func (u *UserService) CreateUser(c *gin.Context, newUser models.User) models.User {
+func (u *UserService) CreateUser(c *gin.Context, newUser models.User) (models.User, error) {
 	fmt.Println(u.schema)
 	query := fmt.Sprintf("INSERT INTO %s.user (first_name, last_name, email, dob, phone, password) VALUES ($1, $2, $3, $4, $5, $6) "+
 		"RETURNING id, first_name, last_name, email, dob, phone;", u.schema)
@@ -42,14 +41,10 @@ func (u *UserService) CreateUser(c *gin.Context, newUser models.User) models.Use
 
 	err := insert.Scan(&createdUser.ID, &createdUser.FirstName, &createdUser.LastName, &createdUser.Email, &createdUser.DOB, &createdUser.Phone)
 	if err != nil {
-		if strings.Contains(err.Error(), "duplicate") {
-			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("User with email: %s already exists", newUser.Email)})
-			c.Abort()
-			return models.User{}
-		}
+		return models.User{}, err
 	}
 
-	return createdUser
+	return createdUser, nil
 }
 
 /*
@@ -59,7 +54,7 @@ email: Email of the user to be fetched
 
 returns: User object of the fetched user
 */
-func (u *UserService) GetUserByEmail(c *gin.Context, email string) models.User {
+func (u *UserService) GetUserByEmail(c *gin.Context, email string) (models.User, error) {
 	var user models.User
 	fmt.Println(u.schema)
 
@@ -68,11 +63,9 @@ func (u *UserService) GetUserByEmail(c *gin.Context, email string) models.User {
 
 	err := result.Scan(&user.ID, &user.Email, &user.Password)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
-		c.Abort()
-		return models.User{}
+		return models.User{}, err
 	}
-	return user
+	return user, nil
 }
 
 /*
@@ -82,7 +75,7 @@ userID: ID of the user to be fetched
 
 returns: User object of the fetched user
 */
-func (u *UserService) GetUserByID(c *gin.Context, userID int64) models.User {
+func (u *UserService) GetUserByID(c *gin.Context, userID int64) (models.User, error) {
 	var user models.User
 
 	query := fmt.Sprintf("SELECT * FROM %s.user WHERE id = $1 AND deleted_at IS NULL;", u.schema)
@@ -91,12 +84,10 @@ func (u *UserService) GetUserByID(c *gin.Context, userID int64) models.User {
 
 	err := result.Scan(&user.ID, &user.FirstName, &user.LastName, &user.Email, &user.DOB, &user.Phone)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
-		c.Abort()
-		return models.User{}
+		return models.User{}, err
 	}
 
-	return user
+	return user, nil
 }
 
 /*
@@ -104,32 +95,26 @@ GetUsers returns all users
 
 returns: List of users ([]models.User)
 */
-func (u *UserService) GetUsers(c *gin.Context) []models.User {
+func (u *UserService) GetUsers(c *gin.Context) ([]models.User, error) {
 	query := fmt.Sprintf("SELECT id, first_name, last_name, email, dob, phone FROM %s.user WHERE deleted_at IS NULL;", u.schema)
 	var users []models.User
 
 	logger.Info("Executing query to get all users: ", query)
 	result, err := u.db.Query(c, query)
 	if err != nil {
-		logger.Fatal(fmt.Errorf("error querying the database: %v", err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error querying users"})
-		c.Abort()
-		return nil
+		return []models.User{}, err
 	}
 
 	for result.Next() {
 		var user models.User
 		err := result.Scan(&user.ID, &user.FirstName, &user.LastName, &user.Email, &user.DOB, &user.Phone)
 		if err != nil {
-			logger.Fatal(fmt.Errorf("error scanning the database output: %v", err))
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error parsing users"})
-			c.Abort()
-			return nil
+			return []models.User{}, err
 		}
 		users = append(users, user)
 	}
 
-	return users
+	return users, nil
 }
 
 /*
@@ -139,17 +124,16 @@ userID: ID of the user to be deleted
 
 returns: nil
 */
-func (u *UserService) DeleteUser(c *gin.Context, userID int64) {
-	query := fmt.Sprintf("UPDATE %s.user SET deleted_at = NOW() WHERE id = $1 AND deleted_at IS NULL;", u.schema)
+func (u *UserService) DeleteUser(c *gin.Context, userID int64) error {
+	query := fmt.Sprintf("DELETE FROM %s.user WHERE id = $1 AND deleted_at IS NULL;", u.schema)
 
 	logger.Info("Executing query to delete a user by ID: ", query)
 	_, err := u.db.Exec(c, query, userID)
 	if err != nil {
-		logger.Fatal(fmt.Errorf("error scanning the database output: %v", err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error parsing users"})
-		c.Abort()
-		return
+		return err
 	}
+
+	return nil
 }
 
 /*
@@ -161,9 +145,7 @@ updatedUser: User object with the updated details
 
 returns: User object of the updated user
 */
-func (u *UserService) UpdateUser(c *gin.Context, userID int64, updatedUser entities.UpdateUserInput) models.User {
-	fmt.Println(updatedUser)
-
+func (u *UserService) UpdateUser(c *gin.Context, userID int64, updatedUser entities.UpdateUserInput) (models.User, error) {
 	fields := map[string]interface{}{
 		"first_name": updatedUser.FirstName,
 		"last_name":  updatedUser.LastName,
@@ -199,11 +181,8 @@ func (u *UserService) UpdateUser(c *gin.Context, userID int64, updatedUser entit
 	var user models.User
 	err := result.Scan(&user.ID, &user.FirstName, &user.LastName, &user.Email, &user.DOB, &user.Phone)
 	if err != nil {
-		logger.Fatal(fmt.Errorf("error scanning the database output: %v", err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error parsing users"})
-		c.Abort()
-		return models.User{}
+		return models.User{}, err
 	}
 
-	return user
+	return user, nil
 }

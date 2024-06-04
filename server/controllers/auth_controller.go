@@ -41,7 +41,7 @@ func (a *AuthController) Signup(c *gin.Context) {
 		return
 	}
 
-	createdUser := a.userService.CreateUser(c, models.User{
+	createdUser, err := a.userService.CreateUser(c, models.User{
 		FirstName: newUser.FirstName,
 		LastName:  newUser.LastName,
 		Email:     newUser.Email,
@@ -49,6 +49,16 @@ func (a *AuthController) Signup(c *gin.Context) {
 		Phone:     newUser.Phone,
 		Password:  hashedPassword,
 	})
+	if err != nil {
+		logger.Error("Error creating user: ", err)
+		if strings.Contains(err.Error(), "duplicate") {
+			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("User with email: %s already exists", newUser.Email)})
+			c.Abort()
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error creating user"})
+		c.Abort()
+		return
+	}
 
 	token, err := issueAuthToken(createdUser.ID, createdUser.Email)
 	if err != nil {
@@ -70,7 +80,12 @@ func (a *AuthController) Login(c *gin.Context) {
 	}
 	logger.Info("Recieved request to login a user for email: ", loginInput.Email)
 
-	user := a.userService.GetUserByEmail(c, loginInput.Email)
+	user, err := a.userService.GetUserByEmail(c, loginInput.Email)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		c.Abort()
+		return
+	}
 
 	authenticated := checkPasswordHash(loginInput.Password, user.Password)
 	if !authenticated {

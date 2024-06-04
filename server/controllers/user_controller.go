@@ -24,7 +24,13 @@ func NewUserController(db *pgxpool.Pool) *UserController {
 func (u *UserController) GetUsers(c *gin.Context) {
 	logger.Info("Recieved request to get all users")
 
-	users := u.userService.GetUsers(c)
+	users, err := u.userService.GetUsers(c)
+	if err != nil {
+		logger.Error("Error getting users: ", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error getting users"})
+		c.Abort()
+		return
+	}
 
 	logger.Info("Number of users found: ", len(users))
 	c.JSON(http.StatusOK, gin.H{
@@ -45,7 +51,13 @@ func (u *UserController) GetUserById(c *gin.Context) {
 
 	logger.Info("Recieved request to get a user by ID: ", userID)
 
-	user := u.userService.GetUserByID(c, userID)
+	user, err := u.userService.GetUserByID(c, userID)
+	if err != nil {
+		logger.Error("Error getting user by ID: ", err)
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		c.Abort()
+		return
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"data": user,
@@ -65,7 +77,13 @@ func (u *UserController) DeleteUser(c *gin.Context) {
 
 	logger.Info("Recieved request to delete a user by ID: ", userID)
 
-	u.userService.DeleteUser(c, userID)
+	err = u.userService.DeleteUser(c, userID)
+	if err != nil {
+		logger.Error("Error deleting user: ", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error deleting user"})
+		c.Abort()
+		return
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "User deleted successfully",
@@ -94,7 +112,13 @@ func (u *UserController) UpdateUser(c *gin.Context) {
 		return
 	}
 
-	user := u.userService.UpdateUser(c, userID, updatedUser)
+	user, err := u.userService.UpdateUser(c, userID, updatedUser)
+	if err != nil {
+		logger.Error("Error updating user: ", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error updating user"})
+		c.Abort()
+		return
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "User updated successfully",
