@@ -63,7 +63,7 @@ func (u *UserService) GetUserByEmail(c *gin.Context, email string) models.User {
 	var user models.User
 	fmt.Println(u.schema)
 
-	query := fmt.Sprintf("SELECT id, email, password FROM %s.user WHERE email = $1;", u.schema)
+	query := fmt.Sprintf("SELECT id, email, password FROM %s.user WHERE email = $1 AND deleted_at IS NULL;", u.schema)
 	result := u.db.QueryRow(c, query, email)
 
 	err := result.Scan(&user.ID, &user.Email, &user.Password)
@@ -85,7 +85,7 @@ returns: User object of the fetched user
 func (u *UserService) GetUserByID(c *gin.Context, userID int64) models.User {
 	var user models.User
 
-	query := fmt.Sprintf("SELECT * FROM %s.user WHERE id = $1;", u.schema)
+	query := fmt.Sprintf("SELECT * FROM %s.user WHERE id = $1 AND deleted_at IS NULL;", u.schema)
 
 	result := u.db.QueryRow(c, query, userID)
 
@@ -105,7 +105,7 @@ GetUsers returns all users
 returns: List of users ([]models.User)
 */
 func (u *UserService) GetUsers(c *gin.Context) []models.User {
-	query := fmt.Sprintf("SELECT id, first_name, last_name, email, dob, phone FROM %s.user;", u.schema)
+	query := fmt.Sprintf("SELECT id, first_name, last_name, email, dob, phone FROM %s.user WHERE deleted_at IS NULL;", u.schema)
 	var users []models.User
 
 	logger.Info("Executing query to get all users: ", query)
@@ -140,7 +140,7 @@ userID: ID of the user to be deleted
 returns: nil
 */
 func (u *UserService) DeleteUser(c *gin.Context, userID int64) {
-	query := fmt.Sprintf("DELETE FROM %s.user WHERE id = $1;", u.schema)
+	query := fmt.Sprintf("UPDATE %s.user SET deleted_at = NOW() WHERE id = $1 AND deleted_at IS NULL;", u.schema)
 
 	logger.Info("Executing query to delete a user by ID: ", query)
 	_, err := u.db.Exec(c, query, userID)
@@ -190,7 +190,7 @@ func (u *UserService) UpdateUser(c *gin.Context, userID int64, updatedUser entit
 	}
 	fieldsClause = strings.TrimSuffix(fieldsClause, ", ")
 
-	query := fmt.Sprintf("UPDATE %[1]s.user SET %[2]s WHERE id = $%d "+
+	query := fmt.Sprintf("UPDATE %[1]s.user SET %[2]s WHERE id = $%d AND deleted_at IS NULL "+
 		"RETURNING id, first_name, last_name, email, dob, phone;", u.schema, fieldsClause, argIndex)
 
 	logger.Info("Executing query to update a user by ID: ", query)
