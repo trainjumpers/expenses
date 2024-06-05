@@ -28,7 +28,6 @@ func NewExpenseController(db *pgxpool.Pool) *ExpenseController {
 
 // GetExpensesOfUser returns all expenses for a given user
 func (e *ExpenseController) GetExpensesOfUser(c *gin.Context) {
-	var schema = os.Getenv("PGSCHEMA")
 
 	userID, err := strconv.ParseInt(c.Query("user_id"), 10, 64)
 	if err != nil {
@@ -38,7 +37,7 @@ func (e *ExpenseController) GetExpensesOfUser(c *gin.Context) {
 
 	logger.Info("Recieved request to get all expenses for user with ID: ", userID)
 
-	expenses, err := e.expenseService.GetExpensesByUserID(c, userID, schema)
+	expenses, err := e.expenseService.GetExpensesByUserID(c, userID)
 	if err != nil {
 		logger.Error("Error getting expenses: ", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error getting expenses"})
@@ -54,7 +53,6 @@ func (e *ExpenseController) GetExpensesOfUser(c *gin.Context) {
 
 // CreateExpense handles creation of a new expense
 func (e *ExpenseController) CreateExpense(c *gin.Context) {
-	var schema = os.Getenv("PGSCHEMA")
 	var userID = c.GetInt64("userID")
 
 	var expense entities.ExpenseInput
@@ -76,7 +74,7 @@ func (e *ExpenseController) CreateExpense(c *gin.Context) {
 		PayerID:     expense.PayerID,
 		Description: expense.Description,
 		CreatedBy:   userID,
-	}, contributors, contributions, schema)
+	}, contributors, contributions)
 	if err != nil {
 		if strings.Contains(err.Error(), "fk_user") {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Payer ID does not exist"})

@@ -29,10 +29,10 @@ userID: ID of the user whose expenses are to be fetched
 
 returns: List of expenses ([]models.Expense)
 */
-func (e *ExpenseService) GetExpensesByUserID(c *gin.Context, userID int64, schema string) ([]models.Expense, error) {
+func (e *ExpenseService) GetExpensesByUserID(c *gin.Context, userID int64) ([]models.Expense, error) {
 	query := fmt.Sprintf(`SELECT * FROM %[1]s.expense WHERE id IN 
 		(SELECT expense_id FROM %[1]s.expense_user_mapping WHERE user_id = $1)`,
-		schema)
+		e.schema)
 
 	rows, err := e.db.Query(c, query, userID)
 	if err != nil {
@@ -64,7 +64,7 @@ contributions: List of amounts contributed by each user
 
 returns: Expense object of the newly created expense
 */
-func (e *ExpenseService) CreateExpense(c *gin.Context, expense models.Expense, contributors []int64, contributions []float64, schema string) (models.Expense, error) {
+func (e *ExpenseService) CreateExpense(c *gin.Context, expense models.Expense, contributors []int64, contributions []float64) (models.Expense, error) {
 	query := fmt.Sprintf(`
 	WITH new_expense AS (
 		INSERT INTO %[1]s.expense (
@@ -85,7 +85,7 @@ func (e *ExpenseService) CreateExpense(c *gin.Context, expense models.Expense, c
 		ne.created_by,
 		ne.created_at 
 	FROM new_expense ne LEFT JOIN new_mappings nm ON ne.id = nm.expense_id;
-		`, schema)
+		`, e.schema)
 	var addedExpense models.Expense
 
 	logger.Info("Executing query to insert an expense: ", query)
