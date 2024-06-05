@@ -33,7 +33,8 @@ PGPASSWORD=$DB_PASS psql -U $DB_USER -h $DB_HOST -d $DB_NAME -c "
       last_name VARCHAR(100) NOT NULL,
       dob DATE NOT NULL, phone VARCHAR(15) NOT NULL,
       email VARCHAR(100) UNIQUE NOT NULL,
-      password VARCHAR(100) NOT NULL
+      password VARCHAR(100) NOT NULL,
+      deleted_at TIMESTAMPTZ NULL
    );
 "
 

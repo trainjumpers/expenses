@@ -1,19 +1,29 @@
-[{
-  "commit_hash": "981fb03e8e124c8765c3d2873708c3a02fff4a6f",
-  "migrations": [
-    "CREATE TABLE {schema}.users (id SERIAL PRIMARY KEY, first_name VARCHAR(100) NOT NULL, last_name VARCHAR(100) NOT NULL, dob DATE NOT NULL, phone VARCHAR(15) NOT NULL, email VARCHAR(100) UNIQUE NOT NULL, password VARCHAR(100) NOT NULL);",
-    "CREATE TABLE {schema}.expenses (id SERIAL PRIMARY KEY, amount FLOAT NOT NULL, payer_id INTEGER NOT NULL, description TEXT NULL, CONSTRAINT fk_user FOREIGN KEY (payer_id) REFERENCES {schema}.users(id));"
-  ]
-},{
-  "commit_hash": "3444cf9d39eca6c9e7681e4708e36e0a8fde8730",
-  "migrations": [
-    "ALTER TABLE {schema}.expenses ADD column created_by INTEGER NOT NULL default 1",
-    "ALTER TABLE {schema}.expenses ADD CONSTRAINT fk_created_by FOREIGN KEY (created_by) REFERENCES {schema}.users;"
-  ]
-},{
-  "commit_hash": "628764d30ab6067ed6035dfa33082ec365167ad5",
-  "migrations": [
-    "ALTER TABLE {schema}.expenses RENAME TO expense",
-    "ALTER TABLE {schema}.users RENAME TO user"
-  ]
-}]
+[
+  {
+    "commit_hash": "981fb03e8e124c8765c3d2873708c3a02fff4a6f",
+    "migrations": [
+      "CREATE TABLE {schema}.users (id SERIAL PRIMARY KEY, first_name VARCHAR(100) NOT NULL, last_name VARCHAR(100) NOT NULL, dob DATE NOT NULL, phone VARCHAR(15) NOT NULL, email VARCHAR(100) UNIQUE NOT NULL, password VARCHAR(100) NOT NULL);",
+      "CREATE TABLE {schema}.expenses (id SERIAL PRIMARY KEY, amount FLOAT NOT NULL, payer_id INTEGER NOT NULL, description TEXT NULL, CONSTRAINT fk_user FOREIGN KEY (payer_id) REFERENCES {schema}.users(id));"
+    ]
+  },
+  {
+    "commit_hash": "3444cf9d39eca6c9e7681e4708e36e0a8fde8730",
+    "migrations": [
+      "ALTER TABLE {schema}.expenses ADD column created_by INTEGER NOT NULL default 1",
+      "ALTER TABLE {schema}.expenses ADD CONSTRAINT fk_created_by FOREIGN KEY (created_by) REFERENCES {schema}.users;"
+    ]
+  },
+  {
+    "commit_hash": "628764d30ab6067ed6035dfa33082ec365167ad5",
+    "migrations": [
+      "ALTER TABLE {schema}.expenses RENAME TO expense",
+      "ALTER TABLE {schema}.users RENAME TO user"
+    ]
+  },
+  {
+    "commit_hash": "82070d90521f6aacc4dec519d1cf4daee3422d64",
+    "migrations": [
+      "ALTER TABLE {schema}.user ADD COLUMN deleted_at TIMESTAMPTZ DEFAULT NULL;"
+    ]
+  }
+]
