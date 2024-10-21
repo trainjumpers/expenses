@@ -92,38 +92,74 @@ func (e *ExpenseController) CreateExpense(c *gin.Context) {
 	})
 }
 
-// func (e *ExpenseController) GetExpenseByID(c *gin.Context) {
-// 	var schema = os.Getenv("PGSCHEMA")
+func (e *ExpenseController) GetExpenseByID(c *gin.Context) {
+	expenseIDParam := c.Param("expenseID")
+	expenseID, err := strconv.ParseInt(expenseIDParam, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid expense ID"})
+		return
+	}
 
-// 	expenseID := c.Param("expenseID")
-// 	logger.Info("Recieved request to get an expense by ID: ", expenseID)
+	logger.Info("Recieved request to get an expense by ID: ", expenseID)
 
-// 	var expense models.Expense
+	var expense models.Expense
 
-// 	query := fmt.Sprintf("SELECT * FROM %s.expense WHERE id = $1;", schema)
+	expense, err = e.expenseService.GetExpenseByID(c, expenseID)
+	if err != nil {
+		logger.Error("Error getting expense: ", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error getting expense"})
+		c.Abort()
+		return
+	}
 
-// 	logger.Info("Executing query to get an expense by ID: ", query)
-// 	result := database.DbPool.QueryRow(c, query, expenseID)
+	c.JSON(http.StatusOK, gin.H{
+		"data": expense,
+	})
+}
 
-// 	err := result.Scan(&expense.ID, &expense.Amount, &expense.PayerID, &expense.Description, &expense.CreatedBy, &expense.CreatedAt)
-// 	if err != nil {
-// 		if strings.Contains(err.Error(), "no rows in result set") {
-// 			c.JSON(http.StatusNotFound, gin.H{"error": "Expense not found"})
-// 			return
-// 		}
-// 	}
+func (e *ExpenseController) UpdateExpenseBasic(c *gin.Context) {
+	expenseIDParam := c.Param("expenseID")
+	expenseID, err := strconv.ParseInt(expenseIDParam, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid expense ID"})
+		return
+	}
 
-// 	c.JSON(http.StatusOK, gin.H{
-// 		"data": expense,
-// 	})
-// }
+	var expenseInput entities.UpdateExpenseBasicInput
+	if err := c.ShouldBindJSON(&expenseInput); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	logger.Info("Received request to update an expense with the following body: ", expenseInput)
+
+	updatedExpense, err := e.expenseService.UpdateExpenseBasicDetails(c, expenseInput, expenseID)
+	if err != nil {
+		if strings.Contains(err.Error(), "fk_user") {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Payer ID does not exist"})
+			c.Abort()
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error updating expense"})
+		c.Abort()
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Expense updated successfully!",
+		"data":    updatedExpense,
+	})
+}
+
+func (e *ExpenseController) UpdateExpenseContributions(c *gin.Context) {
+
+}
 
 // DeleteExpense deletes an expense by ID
 func (e *ExpenseController) DeleteExpense(c *gin.Context) {
 	var schema = os.Getenv("PGSCHEMA")
 
 	expenseID := c.Param("expenseID")
-	logger.Info("Recieved request to delete an expense by ID: ", expenseID)
+	logger.Info("Received request to delete an expense by ID: ", expenseID)
 
 	query := fmt.Sprintf("DELETE FROM %s.expense WHERE id = $1;", schema)
 

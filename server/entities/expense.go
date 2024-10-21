@@ -7,8 +7,7 @@ type ExpenseInput struct {
 	Contributions map[int64]float64 `json:"contributions" binding:"required"`
 }
 
-type UpdateExpenseInput struct {
-	Description string  `json:"description"`
-	PayerID     int64   `json:"payer_id"`
-	Amount      float64 `json:"amount"`
+type UpdateExpenseBasicInput struct {
+	Description string `json:"description,omitempty"`
+	PayerID     int64  `json:"payer_id,omitempty"`
 }

@@ -29,8 +29,8 @@ func Init() *gin.Engine {
 		expense := api.Group("/expense").Use(gin.HandlerFunc(authController.Protected))
 		expense.GET("", expenseController.GetExpensesOfUser)
 		expense.POST("", expenseController.CreateExpense)
-		// expense.GET("/:expenseID", expenseController.GetExpenseByID)
-		// expense.PUT("/:expenseID", expenseController.UpdateExpense)
+		expense.GET("/:expenseID", expenseController.GetExpenseByID)
+		expense.PATCH("/:expenseID", expenseController.UpdateExpenseBasic)
 		expense.DELETE("/:expenseID", expenseController.DeleteExpense)
 	}
 
