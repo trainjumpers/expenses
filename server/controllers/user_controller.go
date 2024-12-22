@@ -3,12 +3,12 @@ package controllers
 import (
 	"expenses/entities"
 	"expenses/services"
+	logger "expenses/utils"
 	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
-	logger "github.com/sirupsen/logrus"
 )
 
 type UserController struct {

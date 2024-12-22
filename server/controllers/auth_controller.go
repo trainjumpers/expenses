@@ -3,6 +3,7 @@ package controllers
 import (
 	models "expenses/models"
 	"expenses/services"
+	logger "expenses/utils"
 	"fmt"
 	"net/http"
 	"os"
@@ -14,7 +15,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	logger "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 )
 

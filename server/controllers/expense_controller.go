@@ -11,10 +11,10 @@ import (
 	"expenses/entities"
 	models "expenses/models"
 	"expenses/services"
+	logger "expenses/utils"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
-	logger "github.com/sirupsen/logrus"
 )
 
 type ExpenseController struct {

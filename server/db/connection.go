@@ -6,8 +6,9 @@ import (
 	"os"
 	"strconv"
 
+	logger "expenses/utils"
+
 	"github.com/jackc/pgx/v5/pgxpool"
-	logger "github.com/sirupsen/logrus"
 )
 
 var DbPool *pgxpool.Pool
@@ -27,7 +28,6 @@ func ConnectDatabase() {
 
 	if err != nil {
 		logger.Fatal("There is an error while connecting to the database ", err)
-
 		panic(err)
 	} else {
 		DbPool = db

@@ -8,9 +8,10 @@ import (
 	"strconv"
 	"strings"
 
+	logger "expenses/utils"
+
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
-	logger "github.com/sirupsen/logrus"
 )
 
 type UserService struct {
