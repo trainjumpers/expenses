@@ -20,8 +20,8 @@ func ConnectDatabase() {
 	dbname := os.Getenv("PGDBNAME")
 	pass := os.Getenv("PGPASSWORD")
 
-	psqlSetup := fmt.Sprintf("host=%s port=%d user=%s dbname=%s password=%s sslmode=disable pool_max_conns=10",
-		host, port, user, dbname, pass)
+	psqlSetup := fmt.Sprintf("postgresql://%s:%s@%s:%d/%s?sslmode=verify-full",
+	user, pass, host, port, dbname)
 
 	logger.Info("Connecting to database")
 	db, err := pgxpool.New(context.Background(), psqlSetup)
