@@ -1,0 +1,6 @@
+run:
+    $GOPATH/bin/air
+
+install:
+    go install github.com/cosmtrek/air@latest
+    go get .

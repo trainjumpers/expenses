@@ -22,13 +22,8 @@ Once the database is created, create all the tables by running the `delete_and_r
 Windows users can run this script using the git bash terminal
 
 ## How to run Server
-Once the database is setup, its time to run the server
+Once the database is setup, its time to run the server. This will install air for live reloading
 ```bash
-go get . # Install Project Dependencies
-go run . # Build and run the server
-```
-
-For Live reloading, install [air](https://github.com/cosmtrek/air), and run
-```bash
-air
+just install # Install Project Dependencies
+just run # Build and run the server
 ```

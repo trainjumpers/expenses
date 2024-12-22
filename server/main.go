@@ -24,5 +24,5 @@ func main() {
 		c.String(200, "Hello, you've requested: %s at %s\n", c.Request.URL.Path, t.UTC().Format("2006-01-02 15:04:05.00 -0700 MST"))
 	})
 
-	r.Run(":8080")
+	r.Run("localhost:8080")
 }
