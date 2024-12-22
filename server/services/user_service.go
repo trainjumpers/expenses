@@ -92,33 +92,6 @@ func (u *UserService) GetUserByID(c *gin.Context, userID int64) (models.User, er
 }
 
 /*
-GetUsers returns all users
-
-returns: List of users ([]models.User)
-*/
-func (u *UserService) GetUsers(c *gin.Context) ([]models.User, error) {
-	query := fmt.Sprintf("SELECT id, name, email FROM %s.user WHERE deleted_at IS NULL;", u.schema)
-	var users []models.User
-
-	logger.Info("Executing query to get all users: ", query)
-	result, err := u.db.Query(c, query)
-	if err != nil {
-		return []models.User{}, err
-	}
-
-	for result.Next() {
-		var user models.User
-		err := result.Scan(&user.ID, &user.Name, &user.Email)
-		if err != nil {
-			return []models.User{}, err
-		}
-		users = append(users, user)
-	}
-
-	return users, nil
-}
-
-/*
 DeleteUser deletes a user by ID
 
 userID: ID of the user to be deleted

@@ -19,7 +19,6 @@ func Init() *gin.Engine {
 	api := router.Group("/api/v1")
 	{
 		user := api.Group("/user")
-		user.GET("", userController.GetUsers)
 		user.POST("/signup", authController.Signup)
 		user.POST("/login", authController.Login)
 		user.GET("/:userID", userController.GetUserById)

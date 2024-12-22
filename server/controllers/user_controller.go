@@ -20,24 +20,6 @@ func NewUserController(db *pgxpool.Pool) *UserController {
 	return &UserController{userService: userService}
 }
 
-// GetUsers returns all users
-func (u *UserController) GetUsers(c *gin.Context) {
-	logger.Info("Recieved request to get all users")
-
-	users, err := u.userService.GetUsers(c)
-	if err != nil {
-		logger.Error("Error getting users: ", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error getting users"})
-		c.Abort()
-		return
-	}
-
-	logger.Info("Number of users found: ", len(users))
-	c.JSON(http.StatusOK, gin.H{
-		"data": users,
-	})
-}
-
 // GetUserById returns a user by ID
 func (u *UserController) GetUserById(c *gin.Context) {
 	userID, err := strconv.ParseInt(c.Param("userID"), 10, 64)
