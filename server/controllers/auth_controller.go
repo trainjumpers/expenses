@@ -1,9 +1,9 @@
 package controllers
 
 import (
+	logger "expenses/logger"
 	models "expenses/models"
 	"expenses/services"
-	logger "expenses/utils"
 	"fmt"
 	"net/http"
 	"os"
@@ -42,11 +42,8 @@ func (a *AuthController) Signup(c *gin.Context) {
 	}
 
 	createdUser, err := a.userService.CreateUser(c, models.User{
-		FirstName: newUser.FirstName,
-		LastName:  newUser.LastName,
+		Name: newUser.Name,
 		Email:     newUser.Email,
-		DOB:       newUser.DOB,
-		Phone:     newUser.Phone,
 		Password:  hashedPassword,
 	})
 	if err != nil {

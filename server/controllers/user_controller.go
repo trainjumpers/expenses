@@ -2,8 +2,8 @@ package controllers
 
 import (
 	"expenses/entities"
+	logger "expenses/logger"
 	"expenses/services"
-	logger "expenses/utils"
 	"net/http"
 	"strconv"
 

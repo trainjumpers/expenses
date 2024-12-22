@@ -16,7 +16,7 @@ func Init() *gin.Engine {
 	userController := controllers.NewUserController(database.DbPool)
 	authController := controllers.NewAuthController(database.DbPool)
 
-	api := router.Group("/api")
+	api := router.Group("/api/v1")
 	{
 		user := api.Group("/user")
 		user.GET("", userController.GetUsers)

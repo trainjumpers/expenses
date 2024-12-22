@@ -6,7 +6,7 @@ import (
 	"os"
 	"strconv"
 
-	logger "expenses/utils"
+	logger "expenses/logger"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )

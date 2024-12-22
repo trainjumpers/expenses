@@ -2,13 +2,12 @@ package services
 
 import (
 	"expenses/entities"
+	logger "expenses/logger"
 	"expenses/models"
+	"expenses/utils"
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
-
-	logger "expenses/utils"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -22,8 +21,8 @@ type UserService struct {
 func NewUserService(db *pgxpool.Pool) *UserService {
 	return &UserService{
 		db:     db,
-		schema: os.Getenv("PGSCHEMA"),
-	}
+		schema: utils.GetPGSchema(),
+		}
 }
 
 /*
@@ -35,12 +34,13 @@ returns: User object of the created user
 */
 func (u *UserService) CreateUser(c *gin.Context, newUser models.User) (models.User, error) {
 	fmt.Println(u.schema)
-	query := fmt.Sprintf("INSERT INTO %s.user (first_name, last_name, email, dob, phone, password) VALUES ($1, $2, $3, $4, $5, $6) "+
-		"RETURNING id, first_name, last_name, email, dob, phone;", u.schema)
-	insert := u.db.QueryRow(c, query, newUser.FirstName, newUser.LastName, newUser.Email, newUser.DOB, newUser.Phone, newUser.Password)
+	query := fmt.Sprintf("INSERT INTO %s.user (name, email, password) VALUES ($1, $2, $3) "+
+		"RETURNING id, name, email;", u.schema)
+	insert := u.db.QueryRow(c, query, newUser.Name, newUser.Email, newUser.Password)
+	logger.Info("Executing query to create a user: ", query)
 	var createdUser models.User
 
-	err := insert.Scan(&createdUser.ID, &createdUser.FirstName, &createdUser.LastName, &createdUser.Email, &createdUser.DOB, &createdUser.Phone)
+	err := insert.Scan(&createdUser.ID, &createdUser.Name, &createdUser.Email)
 	if err != nil {
 		return models.User{}, err
 	}
@@ -79,11 +79,11 @@ returns: User object of the fetched user
 func (u *UserService) GetUserByID(c *gin.Context, userID int64) (models.User, error) {
 	var user models.User
 
-	query := fmt.Sprintf("SELECT * FROM %s.user WHERE id = $1 AND deleted_at IS NULL;", u.schema)
+	query := fmt.Sprintf("SELECT id, name, email FROM %s.user WHERE id = $1 AND deleted_at IS NULL;", u.schema)
 
 	result := u.db.QueryRow(c, query, userID)
 
-	err := result.Scan(&user.ID, &user.FirstName, &user.LastName, &user.Email, &user.DOB, &user.Phone)
+	err := result.Scan(&user.ID, &user.Name, &user.Email)
 	if err != nil {
 		return models.User{}, err
 	}
@@ -97,7 +97,7 @@ GetUsers returns all users
 returns: List of users ([]models.User)
 */
 func (u *UserService) GetUsers(c *gin.Context) ([]models.User, error) {
-	query := fmt.Sprintf("SELECT id, first_name, last_name, email, dob, phone FROM %s.user WHERE deleted_at IS NULL;", u.schema)
+	query := fmt.Sprintf("SELECT id, name, email FROM %s.user WHERE deleted_at IS NULL;", u.schema)
 	var users []models.User
 
 	logger.Info("Executing query to get all users: ", query)
@@ -108,7 +108,7 @@ func (u *UserService) GetUsers(c *gin.Context) ([]models.User, error) {
 
 	for result.Next() {
 		var user models.User
-		err := result.Scan(&user.ID, &user.FirstName, &user.LastName, &user.Email, &user.DOB, &user.Phone)
+		err := result.Scan(&user.ID, &user.Name, &user.Email)
 		if err != nil {
 			return []models.User{}, err
 		}
@@ -148,15 +148,7 @@ returns: User object of the updated user
 */
 func (u *UserService) UpdateUser(c *gin.Context, userID int64, updatedUser entities.UpdateUserInput) (models.User, error) {
 	fields := map[string]interface{}{
-		"first_name": updatedUser.FirstName,
-		"last_name":  updatedUser.LastName,
-		"email":      updatedUser.Email,
-		"dob":        updatedUser.DOB,
-		"phone":      updatedUser.Phone,
-	}
-
-	if updatedUser.DOB.IsZero() {
-		fields["dob"] = ""
+		"name": updatedUser.Name,
 	}
 
 	fieldsClause := ""
@@ -174,13 +166,13 @@ func (u *UserService) UpdateUser(c *gin.Context, userID int64, updatedUser entit
 	fieldsClause = strings.TrimSuffix(fieldsClause, ", ")
 
 	query := fmt.Sprintf("UPDATE %[1]s.user SET %[2]s WHERE id = $%d AND deleted_at IS NULL "+
-		"RETURNING id, first_name, last_name, email, dob, phone;", u.schema, fieldsClause, argIndex)
+		"RETURNING id, name, email;", u.schema, fieldsClause, argIndex)
 
 	logger.Info("Executing query to update a user by ID: ", query)
 	result := u.db.QueryRow(c, query, append(argValues, userID)...)
 
 	var user models.User
-	err := result.Scan(&user.ID, &user.FirstName, &user.LastName, &user.Email, &user.DOB, &user.Phone)
+	err := result.Scan(&user.ID, &user.Name, &user.Email)
 	if err != nil {
 		return models.User{}, err
 	}

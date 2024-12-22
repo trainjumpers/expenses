@@ -3,12 +3,12 @@ package services
 import (
 	"expenses/entities"
 	"expenses/models"
+	"expenses/utils"
 	"fmt"
 	"net/http"
-	"os"
 	"strings"
 
-	logger "expenses/utils"
+	logger "expenses/logger"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -22,7 +22,7 @@ type ExpenseService struct {
 func NewExpenseService(db *pgxpool.Pool) *ExpenseService {
 	return &ExpenseService{
 		db:     db,
-		schema: os.Getenv("PGSCHEMA"), //unable to load as this is not inited anywhere in main, thus doesnt have access to env
+		schema: utils.GetPGSchema(), //unable to load as this is not inited anywhere in main, thus doesnt have access to env
 	}
 }
 

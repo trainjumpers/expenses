@@ -3,15 +3,15 @@ package controllers
 import (
 	"fmt"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 
 	database "expenses/db"
 	"expenses/entities"
+	logger "expenses/logger"
 	models "expenses/models"
 	"expenses/services"
-	logger "expenses/utils"
+	"expenses/utils"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -156,7 +156,7 @@ func (e *ExpenseController) UpdateExpenseContributions(c *gin.Context) {
 
 // DeleteExpense deletes an expense by ID
 func (e *ExpenseController) DeleteExpense(c *gin.Context) {
-	var schema = os.Getenv("PGSCHEMA")
+	var schema = utils.GetPGSchema()
 
 	expenseID := c.Param("expenseID")
 	logger.Info("Received request to delete an expense by ID: ", expenseID)

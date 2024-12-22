@@ -25,5 +25,14 @@
     "migrations": [
       "ALTER TABLE {schema}.user ADD COLUMN deleted_at TIMESTAMPTZ DEFAULT NULL;"
     ]
+  },
+  {
+    "commit_hash": "935244682861285096f21466904967186227c870",
+    "migrations": [
+      "ALTER TABLE {schema}.user DROP COLUMN last_name",
+      "ALTER TABLE {schema}.user DROP COLUMN phone",
+      "ALTER TABLE {schema}.user DROP COLUMN dob",
+      "ALTER TABLE {schema}.user RENAME COLUMN first_name TO name"
+    ]
   }
 ]
