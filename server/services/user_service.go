@@ -78,9 +78,8 @@ returns: User object of the fetched user
 */
 func (u *UserService) GetUserByID(c *gin.Context, userID int64) (models.User, error) {
 	var user models.User
-
 	query := fmt.Sprintf("SELECT id, name, email FROM %s.user WHERE id = $1 AND deleted_at IS NULL;", u.schema)
-
+	logger.Info("Executing query to get a user by ID: ", query)
 	result := u.db.QueryRow(c, query, userID)
 
 	err := result.Scan(&user.ID, &user.Name, &user.Email)

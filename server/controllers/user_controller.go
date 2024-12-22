@@ -4,8 +4,8 @@ import (
 	"expenses/entities"
 	logger "expenses/logger"
 	"expenses/services"
+	"expenses/utils"
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -22,17 +22,16 @@ func NewUserController(db *pgxpool.Pool) *UserController {
 
 // GetUserById returns a user by ID
 func (u *UserController) GetUserById(c *gin.Context) {
-	userID, err := strconv.ParseInt(c.Param("userID"), 10, 64)
+	userID, err := utils.GetUserIdFromContext(c)
 	if err != nil {
-		logger.Error("Failed to parse userID: ", err)
+		logger.Error("Failed to get userID from context: ", err)
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Invalid user ID",
 		})
 		return
 	}
-
 	logger.Info("Recieved request to get a user by ID: ", userID)
-
+ 
 	user, err := u.userService.GetUserByID(c, userID)
 	if err != nil {
 		logger.Error("Error getting user by ID: ", err)
@@ -48,7 +47,7 @@ func (u *UserController) GetUserById(c *gin.Context) {
 
 // DeleteUser deletes a user by ID
 func (u *UserController) DeleteUser(c *gin.Context) {
-	userID, err := strconv.ParseInt(c.Param("userID"), 10, 64)
+	userID, err := utils.GetUserIdFromContext(c)
 	if err != nil {
 		logger.Error("Failed to parse userID: ", err)
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -74,7 +73,7 @@ func (u *UserController) DeleteUser(c *gin.Context) {
 
 // UpdateUser updates a user by ID
 func (u *UserController) UpdateUser(c *gin.Context) {
-	userID, err := strconv.ParseInt(c.Param("userID"), 10, 64)
+	userID, err := utils.GetUserIdFromContext(c)
 	if err != nil {
 		logger.Error("Failed to parse userID: ", err)
 		c.JSON(http.StatusBadRequest, gin.H{

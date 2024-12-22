@@ -42,9 +42,9 @@ func (a *AuthController) Signup(c *gin.Context) {
 	}
 
 	createdUser, err := a.userService.CreateUser(c, models.User{
-		Name: newUser.Name,
-		Email:     newUser.Email,
-		Password:  hashedPassword,
+		Name:     newUser.Name,
+		Email:    newUser.Email,
+		Password: hashedPassword,
 	})
 	if err != nil {
 		logger.Error("Error creating user: ", err)
@@ -171,6 +171,6 @@ func (a *AuthController) Protected(c *gin.Context) {
 		return
 	}
 	c.Set("userID", int64(userId))
-
+	logger.Info("Recieved request from user with ID: ", int64(userId))
 	c.Next()
 }

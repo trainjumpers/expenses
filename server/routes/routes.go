@@ -18,12 +18,14 @@ func Init() *gin.Engine {
 
 	api := router.Group("/api/v1")
 	{
-		user := api.Group("/user")
-		user.POST("/signup", authController.Signup)
-		user.POST("/login", authController.Login)
-		user.GET("/:userID", userController.GetUserById)
-		user.PATCH("/:userID", userController.UpdateUser)
-		user.PATCH("/:userID/delete", userController.DeleteUser)
+		auth := api.Group("")
+		auth.POST("/signup", authController.Signup)
+		auth.POST("/login", authController.Login)
+
+		user := api.Group("/user").Use(gin.HandlerFunc(authController.Protected))
+		user.GET("", userController.GetUserById)
+		user.PATCH("", userController.UpdateUser)
+		user.DELETE("", userController.DeleteUser)
 
 		expense := api.Group("/expense").Use(gin.HandlerFunc(authController.Protected))
 		expense.GET("", expenseController.GetExpensesOfUser)
