@@ -2,6 +2,11 @@
   <div class="min-h-screen bg-base-200 flex items-center justify-center">
     <div class="card w-96 bg-base-100 shadow-xl">
       <div class="card-body">
+        <div v-if="error" className="toast toast-top toast-end">
+          <div className="alert alert-error">
+            <span>{{ error }}</span>
+          </div>
+        </div>
         <h2 class="card-title text-center justify-center mb-4 text-3xl">
           Welcome Back
         </h2>
