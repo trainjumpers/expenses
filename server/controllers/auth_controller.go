@@ -49,11 +49,10 @@ func (a *AuthController) Signup(c *gin.Context) {
 	if err != nil {
 		logger.Error("Error creating user: ", err)
 		if strings.Contains(err.Error(), "duplicate") {
-			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("User with email: %s already exists", newUser.Email)})
-			c.Abort()
+			c.JSON(http.StatusConflict, gin.H{"error": fmt.Sprintf("User with email: %s already exists", newUser.Email)})
+			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error creating user"})
-		c.Abort()
 		return
 	}
 
