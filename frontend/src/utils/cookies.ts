@@ -21,8 +21,7 @@ const getCookie = (name: string) => {
  *
  * @returns The user's preferred theme, either 'light' or 'dark'.
  */
-export const getTheme = (isClient: boolean) => {
-  if (!isClient) return "light";
+export const getTheme = () => {
   const cookieTheme = getCookie("theme");
   if (cookieTheme) {
     return cookieTheme;
