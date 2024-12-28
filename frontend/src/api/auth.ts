@@ -1,6 +1,10 @@
 import { BACKEND_URL } from "@/constants/web";
+import type { LoginResponse } from "@/types/user";
 
-export async function login(email: string, password: string) {
+export async function login(
+  email: string,
+  password: string
+): Promise<LoginResponse> {
   const response = await fetch(`${BACKEND_URL}/login`, {
     method: "POST",
     headers: {
@@ -21,11 +25,15 @@ export async function login(email: string, password: string) {
     throw new Error("Something went wrong");
   }
 
-  const data = await response.json();
+  const data = (await response.json()) as LoginResponse;
   return data;
 }
 
-export async function register(email: string, password: string, name: string) {
+export async function register(
+  email: string,
+  password: string,
+  name: string
+): Promise<LoginResponse> {
   const response = await fetch(`${BACKEND_URL}/signup`, {
     method: "POST",
     headers: {
@@ -42,6 +50,6 @@ export async function register(email: string, password: string, name: string) {
     throw new Error("Something went wrong");
   }
 
-  const data = await response.json();
+  const data = (await response.json()) as LoginResponse;
   return data;
 }

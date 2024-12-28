@@ -67,9 +67,15 @@
           </div>
 
           <div class="mt-6">
-            <button class="btn btn-primary w-full">Sign Up</button>
+            <LoadingButton
+              className="btn btn-primary w-full"
+              :loading="loading"
+              :handleClick="handleSignup"
+            >
+              Signup
+            </LoadingButton>
           </div>
-
+          <div class="divider">OR</div>
           <div class="text-center mt-4">
             <router-link to="/login" class="btn w-full"
               >Already have an account? Login</router-link
@@ -82,8 +88,10 @@
 </template>
 
 <script setup lang="ts">
+import LoadingButton from "@/components/Button/LoadingButton.vue";
+
 import { useSignup } from "./signup";
 
-const { name, email, password, confirmPassword, error, handleSignup } =
+const { name, email, password, confirmPassword, error, loading, handleSignup } =
   useSignup();
 </script>

@@ -20,6 +20,7 @@
               v-model="email"
               placeholder="email@example.com"
               class="input input-bordered"
+              autocomplete="username"
               required
             />
           </div>
@@ -32,6 +33,7 @@
               v-model="password"
               placeholder="Enter your password"
               class="input input-bordered"
+              autocomplete="current-password"
               required
             />
             <label class="label">
@@ -41,9 +43,13 @@
             </label>
           </div>
           <div class="form-control mt-6">
-            <button class="btn btn-primary" v-on:click="{ handleLogin }">
+            <LoadingButton
+              :loading="loading"
+              className="btn btn-primary"
+              :handleClick="handleLogin"
+            >
               Login
-            </button>
+            </LoadingButton>
           </div>
         </form>
         <div class="divider">OR</div>
@@ -58,7 +64,9 @@
 </template>
 
 <script setup lang="ts">
+import LoadingButton from "@/components/Button/LoadingButton.vue";
+
 import { useLogin } from "./login";
 
-const { email, password, error, handleLogin } = useLogin();
+const { email, password, error, handleLogin, loading } = useLogin();
 </script>

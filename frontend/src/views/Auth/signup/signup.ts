@@ -4,6 +4,10 @@ import { setUserToken } from "@/utils/cookies";
 import { ref } from "vue";
 import { useRouter } from "vue-router";
 
+
+
+import { ERROR_TIMEOUT, NAME_LENGTH, PASSWORD_LENGTH } from "../constants";
+
 export const useSignup = () => {
   const router = useRouter();
   const name = ref("");
@@ -11,11 +15,12 @@ export const useSignup = () => {
   const password = ref("");
   const confirmPassword = ref("");
   const error = ref("");
+  const loading = ref(false);
 
   const setTimeoutForError = () => {
     setTimeout(() => {
       error.value = "";
-    }, 3000);
+    }, ERROR_TIMEOUT);
   };
 
   const handleSignup = async () => {
@@ -24,12 +29,12 @@ export const useSignup = () => {
       setTimeoutForError();
       return;
     }
-    if (password.value.length < 6) {
+    if (password.value.length < PASSWORD_LENGTH) {
       error.value = "Password must be at least 6 characters long";
       setTimeoutForError();
       return;
     }
-    if (name.value.length < 3) {
+    if (name.value.length < NAME_LENGTH) {
       error.value = "Name must be at least 3 characters long";
       setTimeoutForError();
       return;
@@ -42,6 +47,8 @@ export const useSignup = () => {
     } catch (err) {
       error.value = convertErrorToString(err);
       setTimeoutForError();
+    } finally {
+      loading.value = false;
     }
   };
 
@@ -51,6 +58,7 @@ export const useSignup = () => {
     password,
     confirmPassword,
     error,
+    loading,
     handleSignup,
   };
 };
