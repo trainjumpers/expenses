@@ -25,11 +25,7 @@ func NewExpenseController(db *pgxpool.Pool) *ExpenseController {
 
 // GetExpensesOfUser returns all expenses for a given user
 func (e *ExpenseController) GetExpensesOfUser(c *gin.Context) {
-	userID, err := strconv.ParseInt(c.Query("user_id"), 10, 64)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
-		return
-	}
+	userID := c.GetInt64("authUserID")
 
 	logger.Info("Recieved request to get all expenses for user with ID: ", userID)
 
