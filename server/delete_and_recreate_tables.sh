@@ -43,6 +43,7 @@ PGPASSWORD=$DB_PASS psql -U $DB_USER -h $DB_HOST -d $DB_NAME -c "
       id SERIAL PRIMARY KEY,
       amount FLOAT NOT NULL,
       payer_id INTEGER NOT NULL,
+      NAME VARCHAR(100) NOT NULL,
       description TEXT NULL,
       created_by INTEGER NOT NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,

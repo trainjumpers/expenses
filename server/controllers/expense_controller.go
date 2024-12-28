@@ -7,8 +7,11 @@ import (
 
 	"expenses/entities"
 	logger "expenses/logger"
+	"expenses/mapper"
 	models "expenses/models"
 	"expenses/services"
+	"expenses/utils"
+	"expenses/validators"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -24,6 +27,7 @@ func NewExpenseController(db *pgxpool.Pool) *ExpenseController {
 }
 
 // GetExpensesOfUser returns all expenses for a given user
+// TODO: Add pagination
 func (e *ExpenseController) GetExpensesOfUser(c *gin.Context) {
 	userID := c.GetInt64("authUserID")
 
@@ -61,15 +65,31 @@ func (e *ExpenseController) CreateExpense(c *gin.Context) {
 		contributions = append(contributions, v)
 	}
 
+	logger.Info("Validating the expenses input")
+	err := validators.ValidateCreateExpense(expense)
+	if err != nil {
+		logger.Error("Error validating expense: ", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to validate expense", "reason": err.Error()})
+		return
+	}
+	logger.Info("Expense input validated successfully")
+
 	addedExpense, err := e.expenseService.CreateExpense(c, models.Expense{
 		Amount:      expense.Amount,
 		PayerID:     expense.PayerID,
 		Description: expense.Description,
+		Name:        expense.Name,
 		CreatedBy:   userID,
 	}, contributors, contributions)
 	if err != nil {
-		if strings.Contains(err.Error(), "fk_user") {
+		logger.Error("Error creating expense: ", err)
+		if utils.CheckForeignKey(err, "expense", "user_id") {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Payer ID does not exist"})
+			c.Abort()
+			return
+		}
+		if utils.CheckForeignKey(err, "expense_user_mapping", "user_id") {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Contributors ID does not exist"})
 			c.Abort()
 			return
 		}
@@ -86,6 +106,7 @@ func (e *ExpenseController) CreateExpense(c *gin.Context) {
 
 func (e *ExpenseController) GetExpenseByID(c *gin.Context) {
 	expenseIDParam := c.Param("expenseID")
+	userId := c.GetInt64("authUserID")
 	expenseID, err := strconv.ParseInt(expenseIDParam, 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid expense ID"})
@@ -94,23 +115,36 @@ func (e *ExpenseController) GetExpenseByID(c *gin.Context) {
 
 	logger.Info("Recieved request to get an expense by ID: ", expenseID)
 
-	var expense models.Expense
-
-	expense, err = e.expenseService.GetExpenseByID(c, expenseID)
+	expensesModel, err := e.expenseService.GetExpenseByID(c, expenseID, userId)
 	if err != nil {
 		logger.Error("Error getting expense: ", err)
+		if strings.Contains(err.Error(), "no rows in result set") {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Expense not found"})
+			c.Abort()
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error getting expense"})
 		c.Abort()
 		return
 	}
 
+	expenses, err := mapper.ExpenseContributorToMap(expensesModel)
+	if err != nil {
+		logger.Error("Error mapping expense: ", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error mapping expense", "reason": err.Error()})
+		c.Abort()
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{
-		"data": expense,
+		"data": expenses,
 	})
 }
 
 func (e *ExpenseController) UpdateExpenseBasic(c *gin.Context) {
 	expenseIDParam := c.Param("expenseID")
+	userId := c.GetInt64("authUserID")
+
 	expenseID, err := strconv.ParseInt(expenseIDParam, 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid expense ID"})
@@ -124,7 +158,7 @@ func (e *ExpenseController) UpdateExpenseBasic(c *gin.Context) {
 	}
 	logger.Info("Received request to update an expense with the following body: ", expenseInput)
 
-	updatedExpense, err := e.expenseService.UpdateExpenseBasicDetails(c, expenseInput, expenseID)
+	updatedExpense, err := e.expenseService.UpdateExpenseBasicDetails(c, expenseInput, expenseID, userId)
 	if err != nil {
 		if strings.Contains(err.Error(), "fk_user") {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Payer ID does not exist"})

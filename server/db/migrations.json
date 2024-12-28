@@ -1,3 +1,5 @@
-[
-  
-]
+{
+  "cfcebb8f9c4627691f785713d489e5eb322ebc4a": [
+      "ALTER TABLE ${schema}.expense ADD COLUMN name VARCHAR(100) NOT NULL"
+  ]
+}

@@ -2,6 +2,7 @@ package utils
 
 import (
 	"os"
+	"strings"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -24,4 +25,8 @@ func HashPassword(password string) (string, error) {
 func CheckPasswordHash(password, hash string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 	return err == nil
+}
+
+func CheckForeignKey(err error, table string, fkKey string) bool {
+	return strings.Contains(err.Error(), "fk_"+table) && strings.Contains(err.Error(), fkKey)
 }

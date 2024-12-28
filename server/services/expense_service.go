@@ -5,7 +5,7 @@ import (
 	"expenses/models"
 	"expenses/utils"
 	"fmt"
-	"net/http"
+	"strconv"
 	"strings"
 
 	logger "expenses/logger"
@@ -33,23 +33,32 @@ userID: ID of the user whose expenses are to be fetched
 
 returns: List of expenses ([]models.Expense)
 */
-func (e *ExpenseService) GetExpensesByUserID(c *gin.Context, userID int64) ([]models.Expense, error) {
-	query := fmt.Sprintf(`SELECT * FROM %[1]s.expense WHERE id IN 
-		(SELECT expense_id FROM %[1]s.expense_user_mapping WHERE user_id = $1)`,
-		e.schema)
+func (e *ExpenseService) GetExpensesByUserID(c *gin.Context, userID int64) ([]models.ExpenseWithContribution, error) {
+	query := fmt.Sprintf(`SELECT
+		e.id,
+		e.amount,
+		e.payer_id,
+		e.name,
+		e.description,
+		e.created_by,
+		e.created_at,
+		eum.amount AS user_amount
+	FROM %[1]s.expense e
+	LEFT JOIN %[1]s.expense_user_mapping eum ON e.id = eum.expense_id
+	WHERE eum.user_id = $1;`, e.schema)
 
 	rows, err := e.db.Query(c, query, userID)
 	if err != nil {
-		return []models.Expense{}, err
+		return []models.ExpenseWithContribution{}, err
 	}
 
-	var expenses []models.Expense
+	var expenses []models.ExpenseWithContribution
 
 	for rows.Next() {
-		var expense models.Expense
-		err := rows.Scan(&expense.ID, &expense.Amount, &expense.PayerID, &expense.Description, &expense.CreatedBy, &expense.CreatedAt)
+		var expense models.ExpenseWithContribution
+		err := rows.Scan(&expense.ID, &expense.Amount, &expense.PayerID, &expense.Name, &expense.Description, &expense.CreatedBy, &expense.CreatedAt, &expense.UserAmount)
 		if err != nil {
-			return []models.Expense{}, err
+			return []models.ExpenseWithContribution{}, err
 		}
 		expenses = append(expenses, expense)
 	}
@@ -72,19 +81,20 @@ func (e *ExpenseService) CreateExpense(c *gin.Context, expense models.Expense, c
 	query := fmt.Sprintf(`
 	WITH new_expense AS (
 		INSERT INTO %[1]s.expense (
-			amount, payer_id, description, created_by
+			amount, payer_id, description, name, created_by
 			) VALUES (
-			$1, $2, $3, $4
-		) returning *
+			$1, $2, $3, $4, $5
+		) RETURNING *
 	), new_mappings AS (
 		INSERT INTO %[1]s.expense_user_mapping (
 			expense_id, user_id, amount
-		) (SELECT id, unnest($5::bigint[]), unnest($6::numeric[]) from new_expense
+		) (SELECT id, unnest($6::bigint[]), unnest($7::numeric[]) from new_expense
 	) RETURNING *)
 	SELECT 
 		ne.id AS expense_id, 
 		ne.amount as total_amount, 
-		ne.payer_id, 
+		ne.payer_id,
+		ne.name,
 		ne.description, 
 		ne.created_by,
 		ne.created_at 
@@ -93,9 +103,9 @@ func (e *ExpenseService) CreateExpense(c *gin.Context, expense models.Expense, c
 	var addedExpense models.Expense
 
 	logger.Info("Executing query to insert an expense: ", query)
-	insert := e.db.QueryRow(c, query, expense.Amount, expense.PayerID, expense.Description, expense.CreatedBy, contributors, contributions)
+	insert := e.db.QueryRow(c, query, expense.Amount, expense.PayerID, expense.Description, expense.Name, expense.CreatedBy, contributors, contributions)
 
-	err := insert.Scan(&addedExpense.ID, &addedExpense.Amount, &addedExpense.PayerID, &addedExpense.Description, &addedExpense.CreatedBy, &addedExpense.CreatedAt)
+	err := insert.Scan(&addedExpense.ID, &addedExpense.Amount, &addedExpense.PayerID, &addedExpense.Name, &addedExpense.Description, &addedExpense.CreatedBy, &addedExpense.CreatedAt)
 	if err != nil {
 		return models.Expense{}, err
 	}
@@ -103,71 +113,105 @@ func (e *ExpenseService) CreateExpense(c *gin.Context, expense models.Expense, c
 	return addedExpense, nil
 }
 
-func (e *ExpenseService) GetExpenseByID(c *gin.Context, expenseID int64) (models.Expense, error) {
-	var expense models.Expense
+func (e *ExpenseService) GetExpenseByID(c *gin.Context, expenseID int64, userId int64) ([]models.ExpenseWithAllContributions, error) {
+	var expenses []models.ExpenseWithAllContributions
 
-	query := fmt.Sprintf("SELECT * FROM %s.expense WHERE id = $1;", e.schema)
+	query := fmt.Sprintf(`
+	SELECT e.*,
+		eum.user_id AS contributor_id,
+		eum.amount AS contribution,
+		u.name AS contributor_name
+	FROM (
+		SELECT 
+			id,
+			amount,
+			payer_id,
+			name,
+			description,
+			created_by,
+			created_at
+		FROM %[1]s.expense
+		WHERE id = $1
+		AND id IN (
+			SELECT expense_id FROM %[1]s.expense_user_mapping WHERE user_id = $2
+		)
+	) AS e
+	LEFT JOIN %[1]s.expense_user_mapping eum ON e.id = eum.expense_id
+	LEFT JOIN %[1]s.user u ON eum.user_id = u.id;
+	`, e.schema)
 
 	logger.Info("Executing query to get an expense by ID: ", query)
-	result := e.db.QueryRow(c, query, expenseID)
-
-	err := result.Scan(&expense.ID, &expense.Amount, &expense.PayerID, &expense.Description, &expense.CreatedBy, &expense.CreatedAt)
+	rows, err := e.db.Query(c, query, expenseID, userId)
 	if err != nil {
-		if strings.Contains(err.Error(), "no rows in result set") {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Expense not found"})
-			return models.Expense{}, err
-		}
+		return []models.ExpenseWithAllContributions{}, err
 	}
 
-	return expense, nil
+	for rows.Next() {
+		var expense models.ExpenseWithAllContributions
+		err := rows.Scan(&expense.ID, &expense.Amount, &expense.PayerID, &expense.Name, &expense.Description, &expense.CreatedBy, &expense.CreatedAt, &expense.ContributorId, &expense.Contribution, &expense.ContributorName)
+		if err != nil {
+			return []models.ExpenseWithAllContributions{}, err
+		}
+		expenses = append(expenses, expense)
+	}
+	return expenses, nil
 }
 
-func (e *ExpenseService) UpdateExpenseBasicDetails(c *gin.Context, updatedFields entities.UpdateExpenseBasicInput, expenseID int64) (models.Expense, error) {
+func (e *ExpenseService) UpdateExpenseBasicDetails(c *gin.Context, updatedFields entities.UpdateExpenseBasicInput, expenseID int64, userId int64) (models.Expense, error) {
 
-	fieldClause := ""
-	args := make([]interface{}, 0)
+	fields := map[string]interface{}{
+		"description": updatedFields.Description,
+		"payer_id":    updatedFields.PayerID,
+		"name":        updatedFields.Name,
+	}
+
+	fieldsClause := ""
 	argIndex := 1
-
-	args = append(args, expenseID)
-	argIndex++
-
-	if updatedFields.Description != "" {
-		fieldClause += fmt.Sprintf("description = $%d", argIndex)
-		args = append(args, updatedFields.Description)
-		argIndex++
-	}
-	if updatedFields.PayerID != 0 {
-		if fieldClause != "" {
-			fieldClause += ", "
+	argValues := make([]interface{}, 0)
+	for k, v := range fields {
+		if v == "" || v == int64(0) {
+			logger.Info("Skipping field: ", k)
+			continue
 		}
-		fieldClause += fmt.Sprintf("payer_id = $%d", argIndex)
-		args = append(args, updatedFields.PayerID)
+	
+		fieldsClause += k + " = $" + strconv.FormatInt(int64(argIndex), 10) + ", "
 		argIndex++
+		argValues = append(argValues, v)
 	}
-
-	if fieldClause == "" {
+	fieldsClause = strings.TrimSuffix(fieldsClause, ", ")
+	if fieldsClause == "" {
 		return models.Expense{}, fmt.Errorf("no fields to update")
 	}
 
-	query := fmt.Sprintf("UPDATE %[1]s.expense SET %[2]s WHERE id = $1 RETURNING *;", e.schema, fieldClause, argIndex)
+	query := fmt.Sprintf(`UPDATE %[1]s.expense 
+	SET %[2]s WHERE id = $%[3]d AND ID IN (
+		SELECT expense_id
+		FROM %[1]s.expense_user_mapping 
+		WHERE user_id = $%[4]d
+	) RETURNING
+		id,
+		amount,
+		payer_id,
+		description,
+		created_by,
+		created_at,
+		name 
+	;`, e.schema, fieldsClause, argIndex, argIndex + 1)
 
 	logger.Info("Executing query to update an expense: ", query)
 
 	var updatedExpense models.Expense
+	logger.Info("arg ", argValues)
 
-	update := e.db.QueryRow(c, query, args...)
-	err := update.Scan(&updatedExpense.ID, &updatedExpense.Amount, &updatedExpense.PayerID, &updatedExpense.Description, &updatedExpense.CreatedBy, &updatedExpense.CreatedAt)
+	update := e.db.QueryRow(c, query, append(argValues, expenseID, userId)...)
+	err := update.Scan(&updatedExpense.ID, &updatedExpense.Amount, &updatedExpense.PayerID, &updatedExpense.Description, &updatedExpense.CreatedBy, &updatedExpense.CreatedAt, &updatedExpense.Name)
 	if err != nil {
-		if strings.Contains(err.Error(), "fk_user") {
-			return models.Expense{}, fmt.Errorf("payer ID does not exist")
-		}
 		logger.Error("Error updating expense into the db: ", err)
 		return models.Expense{}, err
 	}
 
 	return updatedExpense, nil
 }
-
 func (e *ExpenseService) UpdateExpenseContributions(c *gin.Context, expenseID int64, contributors []int64, contributions []float64) error {
 	query := fmt.Sprintf(`
 	WITH updated_mappings AS (

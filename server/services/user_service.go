@@ -22,7 +22,7 @@ func NewUserService(db *pgxpool.Pool) *UserService {
 	return &UserService{
 		db:     db,
 		schema: utils.GetPGSchema(),
-		}
+	}
 }
 
 /*
