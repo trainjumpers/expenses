@@ -4,6 +4,7 @@ import (
 	"expenses/entities"
 	"expenses/models"
 	"expenses/utils"
+	"expenses/validators"
 	"fmt"
 	"strconv"
 	"strings"
@@ -173,7 +174,7 @@ func (e *ExpenseService) UpdateExpenseBasicDetails(c *gin.Context, updatedFields
 			logger.Info("Skipping field: ", k)
 			continue
 		}
-	
+
 		fieldsClause += k + " = $" + strconv.FormatInt(int64(argIndex), 10) + ", "
 		argIndex++
 		argValues = append(argValues, v)
@@ -196,7 +197,7 @@ func (e *ExpenseService) UpdateExpenseBasicDetails(c *gin.Context, updatedFields
 		created_by,
 		created_at,
 		name 
-	;`, e.schema, fieldsClause, argIndex, argIndex + 1)
+	;`, e.schema, fieldsClause, argIndex, argIndex+1)
 
 	logger.Info("Executing query to update an expense: ", query)
 
@@ -212,22 +213,59 @@ func (e *ExpenseService) UpdateExpenseBasicDetails(c *gin.Context, updatedFields
 
 	return updatedExpense, nil
 }
-func (e *ExpenseService) UpdateExpenseContributions(c *gin.Context, expenseID int64, contributors []int64, contributions []float64) error {
-	query := fmt.Sprintf(`
-	WITH updated_mappings AS (
-		UPDATE %[1]s.expense_user_mapping SET amount = unnest($1::numeric[]) WHERE expense_id = $2 AND user_id = ANY($3::bigint[]) RETURNING *
-	), updated_expense AS (
-		UPDATE %[1]s.expense SET amount = $3 WHERE id = $2 RETURNING *
-	)
-	SELECT * FROM updated_mappings;
-	`, e.schema)
+func (e *ExpenseService) UpdateExpenseContributions(c *gin.Context, expenseID int64, userId int64, contributors []int64, contributions []float64) error {
+	getQuery := fmt.Sprintf(`
+	SELECT e.amount FROM %[1]s.expense e
+	INNER JOIN %[1]s.expense_user_mapping eum ON e.id = eum.expense_id
+	WHERE e.id = $1 AND eum.user_id = $2`, e.schema)
+	
+	deleteQuery := fmt.Sprintf(`
+	DELETE FROM %[1]s.expense_user_mapping WHERE expense_id = $1;`, e.schema)
 
-	logger.Info("Executing query to update expense contributions: ", query)
-	_, err := e.db.Exec(c, query, contributions, expenseID, contributors)
+	insertQuery := fmt.Sprintf(`
+	INSERT INTO %[1]s.expense_user_mapping (
+		expense_id, user_id, amount
+	) SELECT $1, unnest($2::bigint[]), unnest($3::numeric[])
+	 RETURNING *;`, e.schema)
+
+	logger.Info("Acquiring a db transaction to update expense contributions")
+	tx, err := e.db.Begin(c)
 	if err != nil {
 		return err
 	}
+	defer tx.Rollback(c)
+	logger.Info("Successfully acquired a db transaction to update expense contributions")
 
+	logger.Info("Getting existing expense contributions with query: ", getQuery)
+	expense := tx.QueryRow(c, getQuery, expenseID, userId)
+	var amount float64
+	err = expense.Scan(&amount)
+	if err != nil {
+		return err
+	}
+	logger.Info("Successfully got existing expense contributions")
+	err = validators.ValidateContributions(contributions, amount)
+	if err != nil {
+		return err
+	}
+	
+	logger.Info("Deleting existing expense contributions with query: ", deleteQuery)
+	_, err = tx.Exec(c, deleteQuery, expenseID)
+	if err != nil {
+		return err
+	}
+	logger.Info("Successfully deleted existing expense contributions")
+	logger.Info("Inserting new expense contributions with query: ", insertQuery)
+	_, err = tx.Exec(c, insertQuery, expenseID, contributors, contributions)
+	if err != nil {
+		return err
+	}
+	logger.Info("Successfully inserted new expense contributions")
+	err = tx.Commit(c)
+	logger.Info("Successfully committed db transaction to update expense contributions")
+	if err != nil {
+		return err
+	}
 	return nil
 }
 

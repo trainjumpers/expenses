@@ -43,6 +43,7 @@ func Init() *gin.Engine {
 		expense.GET("", expenseController.GetExpensesOfUser)
 		expense.POST("", expenseController.CreateExpense)
 		expense.GET("/:expenseID", expenseController.GetExpenseByID)
+		expense.PATCH("/:expenseID/contribution", expenseController.UpdateExpenseContributions)
 		expense.PATCH("/:expenseID", expenseController.UpdateExpenseBasic)
 		expense.DELETE("/:expenseID", expenseController.DeleteExpense)
 	}

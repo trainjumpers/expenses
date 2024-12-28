@@ -66,7 +66,7 @@ func (e *ExpenseController) CreateExpense(c *gin.Context) {
 	}
 
 	logger.Info("Validating the expenses input")
-	err := validators.ValidateCreateExpense(expense)
+	err := validators.ValidateContributions(contributions, expense.Amount)
 	if err != nil {
 		logger.Error("Error validating expense: ", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to validate expense", "reason": err.Error()})
@@ -177,7 +177,44 @@ func (e *ExpenseController) UpdateExpenseBasic(c *gin.Context) {
 }
 
 func (e *ExpenseController) UpdateExpenseContributions(c *gin.Context) {
+	expenseIDParam := c.Param("expenseID")
+	userId := c.GetInt64("authUserID")
+	expenseID, err := strconv.ParseInt(expenseIDParam, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid expense ID"})
+		return
+	}
+	var expenseInput entities.UpdateExpenseContributionsInput
+	if err := c.ShouldBindJSON(&expenseInput); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	logger.Info("Received request to update an expense with the following body: ", expenseInput)
 
+	contributors := make([]int64, 0, len(expenseInput.Contributions))
+	contributions := make([]float64, 0, len(expenseInput.Contributions))
+
+	for k, v := range expenseInput.Contributions {
+		contributors = append(contributors, k)
+		contributions = append(contributions, v)
+	}
+	logger.Info("Total number of contributors: ", len(contributors))
+
+	err = e.expenseService.UpdateExpenseContributions(c, expenseID, userId, contributors, contributions)
+	if err != nil {
+		logger.Error("Error updating expense: ", err)
+		if strings.Contains(err.Error(), "fk_user") {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Payer ID does not exist"})
+			c.Abort()
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error updating expense"})
+		c.Abort()
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Expense updated successfully!",
+	})
 }
 
 // DeleteExpense deletes an expense by ID

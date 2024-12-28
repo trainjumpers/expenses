@@ -26,6 +26,10 @@ type ExpenseOutputContribution struct {
 	Name   string  `json:"name"`
 }
 
+type UpdateExpenseContributionsInput struct {
+	Contributions map[int64]float64 `json:"contributions" binding:"required"`
+}
+
 type UpdateExpenseBasicInput struct {
 	Name        string `json:"name,omitempty"`
 	Description string `json:"description,omitempty"`
