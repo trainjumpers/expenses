@@ -4,6 +4,7 @@ import (
 	logger "expenses/logger"
 	models "expenses/models"
 	"expenses/services"
+	"expenses/utils"
 	"fmt"
 	"net/http"
 	"os"
@@ -15,7 +16,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"golang.org/x/crypto/bcrypt"
 )
 
 type AuthController struct {
@@ -35,7 +35,7 @@ func (a *AuthController) Signup(c *gin.Context) {
 		return
 	}
 
-	hashedPassword, err := hashPassword(newUser.Password)
+	hashedPassword, err := utils.HashPassword(newUser.Password)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -83,7 +83,7 @@ func (a *AuthController) Login(c *gin.Context) {
 		return
 	}
 
-	authenticated := checkPasswordHash(loginInput.Password, user.Password)
+	authenticated := utils.CheckPasswordHash(loginInput.Password, user.Password)
 	if !authenticated {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
 		return
@@ -99,17 +99,7 @@ func (a *AuthController) Login(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "User logged in successfully", "access_token": token})
 }
 
-// hashPassword hashes the password using bcrypt
-func hashPassword(password string) (string, error) {
-	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
-	return string(bytes), err
-}
 
-// checkPasswordHash checks if the password matches the hash
-func checkPasswordHash(password, hash string) bool {
-	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
-	return err == nil
-}
 
 // issueAuthToken issues a JWT token with the user ID and email
 func issueAuthToken(userId int64, email string) (string, error) {
@@ -169,7 +159,7 @@ func (a *AuthController) Protected(c *gin.Context) {
 		c.Abort()
 		return
 	}
-	c.Set("userID", int64(userId))
+	c.Set("authUserID", int64(userId))
 	logger.Info("Recieved request from user with ID: ", int64(userId))
 	c.Next()
 }

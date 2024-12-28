@@ -1,17 +1,14 @@
 package controllers
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
 
-	database "expenses/db"
 	"expenses/entities"
 	logger "expenses/logger"
 	models "expenses/models"
 	"expenses/services"
-	"expenses/utils"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -28,7 +25,6 @@ func NewExpenseController(db *pgxpool.Pool) *ExpenseController {
 
 // GetExpensesOfUser returns all expenses for a given user
 func (e *ExpenseController) GetExpensesOfUser(c *gin.Context) {
-
 	userID, err := strconv.ParseInt(c.Query("user_id"), 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
@@ -53,7 +49,7 @@ func (e *ExpenseController) GetExpensesOfUser(c *gin.Context) {
 
 // CreateExpense handles creation of a new expense
 func (e *ExpenseController) CreateExpense(c *gin.Context) {
-	var userID = c.GetInt64("userID")
+	var userID = c.GetInt64("authUserID")
 
 	var expense entities.ExpenseInput
 	if err := c.ShouldBindJSON(&expense); err != nil {
@@ -156,17 +152,20 @@ func (e *ExpenseController) UpdateExpenseContributions(c *gin.Context) {
 
 // DeleteExpense deletes an expense by ID
 func (e *ExpenseController) DeleteExpense(c *gin.Context) {
-	var schema = utils.GetPGSchema()
-
-	expenseID := c.Param("expenseID")
-	logger.Info("Received request to delete an expense by ID: ", expenseID)
-
-	query := fmt.Sprintf("DELETE FROM %s.expense WHERE id = $1;", schema)
-
-	logger.Info("Executing query to delete an expense by ID: ", query)
-	_, err := database.DbPool.Exec(c, query, expenseID)
+	expenseIDParam := c.Param("expenseID")
+	expenseID, err := strconv.ParseInt(expenseIDParam, 10, 64)
 	if err != nil {
-		panic(err.Error())
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid expense ID"})
+		return
+	}
+
+	logger.Info("Recieved request to delete an expense by ID: ", expenseID)
+	err = e.expenseService.DeleteExpense(c, expenseID)
+	if err != nil {
+		logger.Error("Error deleting expense: ", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error deleting expense"})
+		c.Abort()
+		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{

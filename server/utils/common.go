@@ -1,11 +1,9 @@
 package utils
 
 import (
-	"errors"
-	"expenses/logger"
 	"os"
 
-	"github.com/gin-gonic/gin"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func GetPGSchema() string {
@@ -16,16 +14,14 @@ func GetPGSchema() string {
 	return schema
 }
 
-func GetUserIdFromContext(c *gin.Context) (int64, error) {
-	userID, exists := c.Get("userID")
-	if !exists {
-		logger.Error("Failed to get userID from context")
-		return 0, errors.New("Invalid user ID")
-	}
-	id, ok := userID.(int64)
-	if !ok {
-		logger.Error("userID is not of type int64")
-		return 0, errors.New("Invalid user ID type")
-	}
-	return id, nil
+// hashPassword hashes the password using bcrypt
+func HashPassword(password string) (string, error) {
+	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
+	return string(bytes), err
+}
+
+// checkPasswordHash checks if the password matches the hash
+func CheckPasswordHash(password, hash string) bool {
+	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+	return err == nil
 }

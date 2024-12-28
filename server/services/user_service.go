@@ -98,8 +98,7 @@ userID: ID of the user to be deleted
 returns: nil
 */
 func (u *UserService) DeleteUser(c *gin.Context, userID int64) error {
-	query := fmt.Sprintf("DELETE FROM %s.user WHERE id = $1 AND deleted_at IS NULL;", u.schema)
-
+	query := fmt.Sprintf("UPDATE %s.user SET deleted_at = NOW() WHERE id = $1 AND deleted_at IS NULL;", u.schema)
 	logger.Info("Executing query to delete a user by ID: ", query)
 	_, err := u.db.Exec(c, query, userID)
 	if err != nil {
@@ -136,6 +135,9 @@ func (u *UserService) UpdateUser(c *gin.Context, userID int64, updatedUser entit
 		argValues = append(argValues, v)
 	}
 	fieldsClause = strings.TrimSuffix(fieldsClause, ", ")
+	if fieldsClause == "" {
+		return models.User{}, fmt.Errorf("no fields to update")
+	}
 
 	query := fmt.Sprintf("UPDATE %[1]s.user SET %[2]s WHERE id = $%d AND deleted_at IS NULL "+
 		"RETURNING id, name, email;", u.schema, fieldsClause, argIndex)
@@ -149,5 +151,41 @@ func (u *UserService) UpdateUser(c *gin.Context, userID int64, updatedUser entit
 		return models.User{}, err
 	}
 
+	return user, nil
+}
+
+/*
+updateUserPassword updates a user's password by ID
+
+userID: ID of the user to be updated
+PasswordDetails: User object with the updated password details
+returns: User object of the updated user
+*/
+func (u *UserService) UpdateUserPassword(c *gin.Context, userID int64, passwordDetails entities.UpdateUserPasswordInput) (models.User, error) {
+	// Fetch old password
+	query := fmt.Sprintf("SELECT password FROM %[1]s.user WHERE id = $1 AND deleted_at IS NULL;", u.schema)
+	logger.Info("Executing query to get a user by ID: ", query)
+	result := u.db.QueryRow(c, query, userID)
+	var oldPassword string
+	err := result.Scan(&oldPassword)
+	if err != nil {
+		return models.User{}, err
+	}
+	if !utils.CheckPasswordHash(passwordDetails.OldPassword, oldPassword) {
+		return models.User{}, fmt.Errorf("old password is incorrect")
+	}
+	hashedPassword, err := utils.HashPassword(passwordDetails.NewPassword)
+	if err != nil {
+		return models.User{}, err
+	}
+	query = fmt.Sprintf("UPDATE %[1]s.user SET password = $2 WHERE id = $1 AND deleted_at IS NULL "+
+	"RETURNING id, name, email;", u.schema)
+	logger.Info("Executing query to update a user by ID: ", query)
+	result = u.db.QueryRow(c, query, userID, hashedPassword)
+	var user models.User
+	err = result.Scan(&user.ID, &user.Name, &user.Email)
+	if err != nil {
+		return models.User{}, err
+	}
 	return user, nil
 }

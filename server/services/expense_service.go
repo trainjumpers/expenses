@@ -186,3 +186,13 @@ func (e *ExpenseService) UpdateExpenseContributions(c *gin.Context, expenseID in
 
 	return nil
 }
+
+func (e *ExpenseService) DeleteExpense(c *gin.Context, expenseID int64) error {
+	query := fmt.Sprintf("DELETE FROM %[1]s.expense WHERE id = $1;", e.schema)
+	logger.Info("Executing query to delete an expense by ID: ", query)
+	_, err := e.db.Exec(c, query, expenseID)
+	if err != nil {
+		return err
+	}
+	return nil
+}
