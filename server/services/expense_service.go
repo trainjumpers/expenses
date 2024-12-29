@@ -1,6 +1,7 @@
 package services
 
 import (
+	"errors"
 	"expenses/entities"
 	"expenses/models"
 	"expenses/utils"
@@ -8,6 +9,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	logger "expenses/logger"
 
@@ -114,92 +116,104 @@ func (e *ExpenseService) CreateExpense(c *gin.Context, expense models.Expense, c
 	return addedExpense, nil
 }
 
-
 func (e *ExpenseService) CreateMultipleExpenses(c *gin.Context, expenses []models.Expense) ([]models.Expense, error) {
-    var addedExpenses []models.Expense
+	var addedExpenses []models.Expense
 
-    insertExpensesQuery := fmt.Sprintf(`WITH new_expenses AS (
+	insertExpensesQuery := fmt.Sprintf(`WITH new_expenses AS (
         INSERT INTO %[1]s.expense (
-            amount, payer_id, description, name, created_by
+            amount, payer_id, description, name, created_by, created_at, unique_id
             ) SELECT
-            unnest($1::numeric[]), unnest($2::bigint[]), unnest($3::text[]), unnest($4::text[]), unnest($5::bigint[])
+            unnest($1::numeric[]), unnest($2::bigint[]), unnest($3::text[]), unnest($4::text[]), unnest($5::bigint[]), unnest($6::timestamp[]), unnest($7::text[])
+		ON CONFLICT (unique_id) DO NOTHING
         RETURNING *
     )
     SELECT
         ne.id AS expense_id,
         ne.amount as total_amount,
-        ne.payer_id
+        ne.payer_id,
+		ne.name,
+		ne.description,
+		ne.created_at
     FROM new_expenses ne;`, e.schema)
 
-    insertExpenseUserMappingQuery := fmt.Sprintf(`
+	insertExpenseUserMappingQuery := fmt.Sprintf(`
     INSERT INTO %[1]s.expense_user_mapping (
         expense_id, user_id, amount
     ) SELECT
         unnest($1::bigint[]), unnest($2::bigint[]), unnest($3::numeric[])
     ;`, e.schema)
 
-    logger.Info("Acquiring transaction for creating expenses")
-    txn, err := e.db.Begin(c)
-    if err != nil {
-        return []models.Expense{}, err
-    }
-    defer txn.Rollback(c)
+	logger.Info("Acquiring transaction for creating expenses")
+	txn, err := e.db.Begin(c)
+	if err != nil {
+		return []models.Expense{}, err
+	}
+	defer txn.Rollback(c)
 
-    logger.Info("Successfully acquired transaction for creating expenses")
-    amounts := make([]float64, len(expenses))
-    payerIDs := make([]int64, len(expenses))
-    descriptions := make([]string, len(expenses))
-    names := make([]string, len(expenses))
-    createdBys := make([]int64, len(expenses))
+	logger.Info("Successfully acquired transaction for creating expenses")
+	amounts := make([]float64, len(expenses))
+	payerIDs := make([]int64, len(expenses))
+	descriptions := make([]string, len(expenses))
+	names := make([]string, len(expenses))
+	createdBys := make([]int64, len(expenses))
+	createdAts := make([]*time.Time, len(expenses))
+	uniqueIdentifiers := make([]string, len(expenses))
 
-    for i, expense := range expenses {
-        amounts[i] = expense.Amount
-        payerIDs[i] = expense.PayerID
-        descriptions[i] = expense.Description
-        names[i] = expense.Name
-        createdBys[i] = expense.CreatedBy
-    }
+	for i, expense := range expenses {
+		amounts[i] = expense.Amount
+		payerIDs[i] = expense.PayerID
+		descriptions[i] = expense.Description
+		names[i] = expense.Name
+		createdBys[i] = expense.CreatedBy
+		createdAts[i] = expense.CreatedAt
+		uniqueIdentifiers[i] = utils.UniqueIdentifierExpense(expense)
+	}
 
-    logger.Info("Executing query to insert expenses: ", insertExpensesQuery)
-    rows, err := txn.Query(c, insertExpensesQuery, amounts, payerIDs, descriptions, names, createdBys)
-    if err != nil {
-        return []models.Expense{}, err
-    }
-    defer rows.Close()
-    logger.Info("Successfully executed query to insert expenses")
-    for rows.Next() {
-        var expense models.Expense
-        err := rows.Scan(&expense.ID, &expense.Amount, &expense.PayerID)
-        if err != nil {
-            return []models.Expense{}, err
-        }
-        addedExpenses = append(addedExpenses, expense)
-    }
+	logger.Info("Executing query to insert expenses: ", insertExpensesQuery)
+	rows, err := txn.Query(c, insertExpensesQuery, amounts, payerIDs, descriptions, names, createdBys, createdAts, uniqueIdentifiers)
+	if err != nil {
+		return []models.Expense{}, err
+	}
+	defer rows.Close()
+	logger.Info("Successfully executed query to insert expenses")
+	for rows.Next() {
+		var expense models.Expense
+		err := rows.Scan(&expense.ID, &expense.Amount, &expense.PayerID, &expense.Name, &expense.Description, &expense.CreatedAt)
+		if err != nil {
+			return []models.Expense{}, err
+		}
+		addedExpenses = append(addedExpenses, expense)
+	}
 
-    expenseIds := make([]int64, len(addedExpenses))
-    contributors := make([]int64, len(addedExpenses))
-    contributions := make([]float64, len(addedExpenses))
+	expenseIds := make([]int64, len(addedExpenses))
+	contributors := make([]int64, len(addedExpenses))
+	contributions := make([]float64, len(addedExpenses))
 
-    for i, expense := range addedExpenses {
-        expenseIds[i] = expense.ID
-        contributors[i] = expense.PayerID
-        contributions[i] = expense.Amount
-    }
+	for i, expense := range addedExpenses {
+		expenseIds[i] = expense.ID
+		contributors[i] = expense.PayerID
+		contributions[i] = expense.Amount
+	}
 
-    logger.Info("Executing query to insert expense user mapping: ", insertExpenseUserMappingQuery)
-    _, err = txn.Exec(c, insertExpenseUserMappingQuery, expenseIds, contributors, contributions)
-    if err != nil {
-        return []models.Expense{}, err
-    }
-    logger.Info("Successfully executed query to insert expense user mapping")
-    logger.Info("Committing transaction for creating expenses")
-    err = txn.Commit(c)
-    if err != nil {
-        return []models.Expense{}, err
-    }
-    logger.Info("Successfully committed transaction for creating expenses")
+	logger.Info("Executing query to insert expense user mapping: ", insertExpenseUserMappingQuery)
+	_, err = txn.Exec(c, insertExpenseUserMappingQuery, expenseIds, contributors, contributions)
+	if err != nil {
+		return []models.Expense{}, err
+	}
+	logger.Info("Successfully executed query to insert expense user mapping")
 
-    return addedExpenses, nil
+	logger.Info("Committing transaction for creating expenses")
+	err = txn.Commit(c)
+	if err != nil {
+		return []models.Expense{}, err
+	}
+	logger.Info("Successfully committed transaction for creating expenses")
+
+	if addedExpenses == nil {
+		return []models.Expense{}, errors.New("no expenses added")
+	}
+
+	return addedExpenses, nil
 }
 
 func (e *ExpenseService) GetExpenseByID(c *gin.Context, expenseID int64, userId int64) ([]models.ExpenseWithAllContributions, error) {
@@ -307,7 +321,7 @@ func (e *ExpenseService) UpdateExpenseContributions(c *gin.Context, expenseID in
 	SELECT e.amount FROM %[1]s.expense e
 	INNER JOIN %[1]s.expense_user_mapping eum ON e.id = eum.expense_id
 	WHERE e.id = $1 AND eum.user_id = $2`, e.schema)
-	
+
 	deleteQuery := fmt.Sprintf(`
 	DELETE FROM %[1]s.expense_user_mapping WHERE expense_id = $1;`, e.schema)
 
@@ -337,7 +351,7 @@ func (e *ExpenseService) UpdateExpenseContributions(c *gin.Context, expenseID in
 	if err != nil {
 		return err
 	}
-	
+
 	logger.Info("Deleting existing expense contributions with query: ", deleteQuery)
 	_, err = tx.Exec(c, deleteQuery, expenseID)
 	if err != nil {

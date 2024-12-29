@@ -37,15 +37,21 @@ PGPASSWORD=$DB_PASS psql -U $DB_USER -h $DB_HOST -d $DB_NAME -c "
 "
 
 # Create expense table
+# Unique ID stores a precalculated unique id for each expense based on
+# date, payer id, expense id, name and desc. 
+# This is used to prevent duplicate expense while batch processing
+# Also Note: Negative amount indicates a credit transaction
+# Positive amount indicates a debit transaction
 echo "Creating 'expense' table..."
 PGPASSWORD=$DB_PASS psql -U $DB_USER -h $DB_HOST -d $DB_NAME -c "
    CREATE TABLE $PGSCHEMA.expense (
       id SERIAL PRIMARY KEY,
       amount FLOAT NOT NULL,
       payer_id INTEGER NOT NULL,
-      NAME VARCHAR(100) NOT NULL,
+      name VARCHAR(100) NULL,
       description TEXT NULL,
       created_by INTEGER NOT NULL,
+      unique_id VARCHAR(255) UNIQUE NOT NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
       CONSTRAINT fk_user FOREIGN KEY (payer_id) REFERENCES $PGSCHEMA.user(id),
       CONSTRAINT fk_created_by FOREIGN KEY (created_by) REFERENCES $PGSCHEMA.user(id)

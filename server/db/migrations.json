@@ -1,5 +1,8 @@
 {
   "cfcebb8f9c4627691f785713d489e5eb322ebc4a": [
-      "ALTER TABLE ${schema}.expense ADD COLUMN name VARCHAR(100) NOT NULL"
+      "ALTER TABLE ${schema}.expense ADD COLUMN name VARCHAR(100) NULL"
+  ],
+  "f68c9b65263d4c3a5c829aab13c2238e1e88dfea": [
+    "ALTER TABLE ${schema}.expense ADD COLUMN unique_id VARCHAR(255) NOT NULL"
   ]
 }

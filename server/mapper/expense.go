@@ -33,7 +33,6 @@ func ExpenseContributorToMapper(expenses []models.ExpenseWithAllContributions) (
 
 func StatementExpenseMapper(expenses []entities.Statement, userId int64) ([]models.Expense, error) {
 	var expenseModels []models.Expense
-
 	for _, expense := range expenses {
 		expenseModels = append(expenseModels, models.Expense{
 			Amount:      expense.Amount,
@@ -43,7 +42,6 @@ func StatementExpenseMapper(expenses []entities.Statement, userId int64) ([]mode
 			CreatedBy:   userId,
 			CreatedAt:   &expense.Date,
 		})
-		break
 	}
 
 	return expenseModels, nil
