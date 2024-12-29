@@ -128,7 +128,7 @@ func (e *ExpenseController) GetExpenseByID(c *gin.Context) {
 		return
 	}
 
-	expenses, err := mapper.ExpenseContributorToMap(expensesModel)
+	expenses, err := mapper.ExpenseContributorToMapper(expensesModel)
 	if err != nil {
 		logger.Error("Error mapping expense: ", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error mapping expense", "reason": err.Error()})

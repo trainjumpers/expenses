@@ -1,19 +1,6 @@
 package utils
 
-import (
-	"os"
-	"strings"
-
-	"golang.org/x/crypto/bcrypt"
-)
-
-func GetPGSchema() string {
-	schema := os.Getenv("PGSCHEMA")
-	if schema == "" {
-		panic("PGSCHEMA environment variable is not set")
-	}
-	return schema
-}
+import "golang.org/x/crypto/bcrypt"
 
 // hashPassword hashes the password using bcrypt
 func HashPassword(password string) (string, error) {
@@ -25,8 +12,4 @@ func HashPassword(password string) (string, error) {
 func CheckPasswordHash(password, hash string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 	return err == nil
-}
-
-func CheckForeignKey(err error, table string, fkKey string) bool {
-	return strings.Contains(err.Error(), "fk_"+table) && strings.Contains(err.Error(), fkKey)
 }

@@ -6,7 +6,7 @@ import (
 	"fmt"
 )
 
-func ExpenseContributorToMap(expenses []models.ExpenseWithAllContributions) (entities.ExpenseOutput, error) {
+func ExpenseContributorToMapper(expenses []models.ExpenseWithAllContributions) (entities.ExpenseOutput, error) {
 	var expenseOutput entities.ExpenseOutput
 	if len(expenses) == 0 {
 		return expenseOutput, fmt.Errorf("no expenses found")
@@ -29,4 +29,22 @@ func ExpenseContributorToMap(expenses []models.ExpenseWithAllContributions) (ent
 		}
 	}
 	return expenseOutput, nil
+}
+
+func StatementExpenseMapper(expenses []entities.Statement, userId int64) ([]models.Expense, error) {
+	var expenseModels []models.Expense
+
+	for _, expense := range expenses {
+		expenseModels = append(expenseModels, models.Expense{
+			Amount:      expense.Amount,
+			PayerID:     userId,
+			Name:        expense.TrasactionId,
+			Description: expense.Description,
+			CreatedBy:   userId,
+			CreatedAt:   &expense.Date,
+		})
+		break
+	}
+
+	return expenseModels, nil
 }

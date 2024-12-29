@@ -26,6 +26,7 @@ func Init() *gin.Engine {
 	expenseController := controllers.NewExpenseController(database.DbPool)
 	userController := controllers.NewUserController(database.DbPool)
 	authController := controllers.NewAuthController(database.DbPool)
+	statementController := controllers.NewStatementController(database.DbPool)
 
 	api := router.Group("/api/v1")
 	{
@@ -46,6 +47,9 @@ func Init() *gin.Engine {
 		expense.PATCH("/:expenseID/contribution", expenseController.UpdateExpenseContributions)
 		expense.PATCH("/:expenseID", expenseController.UpdateExpenseBasic)
 		expense.DELETE("/:expenseID", expenseController.DeleteExpense)
+
+		statement := api.Group("/statement").Use(gin.HandlerFunc(authController.Protected))
+		statement.POST("/parse", statementController.ParseStatement)
 	}
 
 	return router

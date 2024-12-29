@@ -10,6 +10,7 @@ var Infof, Errorf, Debugf, Warnf, Fatalf func(template string, args ...interface
 
 func init() {
 	config := zap.NewDevelopmentConfig()
+	config.Level = zap.NewAtomicLevelAt(zap.DebugLevel)
 	config.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
 	config.EncoderConfig.TimeKey = "timestamp"
 	config.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
