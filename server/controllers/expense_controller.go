@@ -72,7 +72,7 @@ func (e *ExpenseController) CreateExpense(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to validate expense", "reason": err.Error()})
 		return
 	}
-	logger.Info("Expense input validated successfully")
+	logger.Info("Expense input validated successfully for user with ID: ", userID)
 
 	addedExpense, err := e.expenseService.CreateExpense(c, models.Expense{
 		Amount:      expense.Amount,
@@ -80,7 +80,7 @@ func (e *ExpenseController) CreateExpense(c *gin.Context) {
 		Description: expense.Description,
 		Name:        expense.Name,
 		CreatedBy:   userID,
-	}, contributors, contributions)
+	}, contributors, contributions, expense.SubcategoryID)
 	if err != nil {
 		logger.Error("Error creating expense: ", err)
 		if utils.CheckForeignKey(err, "expense", "user_id") {

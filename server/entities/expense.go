@@ -8,6 +8,7 @@ type ExpenseInput struct {
 	PayerID       int64             `json:"payer_id" binding:"required"`
 	Amount        float64           `json:"amount" binding:"required"`
 	Contributions map[int64]float64 `json:"contributions" binding:"required"`
+	SubcategoryID int64             `json:"subcategory_id"`
 }
 
 type ExpenseOutput struct {

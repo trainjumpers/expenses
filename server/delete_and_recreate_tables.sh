@@ -144,3 +144,15 @@ PGPASSWORD=$DB_PASS psql -U $DB_USER -h $DB_HOST -d $DB_NAME -c "
       CONSTRAINT fk_subcategory FOREIGN KEY (subcategory_id) REFERENCES $PGSCHEMA.subcategories(id)
    );
 "
+
+# Create subcategory expense mapping table
+echo "Creating 'subcategory_expense_mapping' table..."
+PGPASSWORD=$DB_PASS psql -U $DB_USER -h $DB_HOST -d $DB_NAME -c "
+   CREATE TABLE $PGSCHEMA.subcategory_expense_mapping (
+      id SERIAL PRIMARY KEY,
+      subcategory_id INTEGER NOT NULL,
+      expense_id INTEGER NOT NULL,
+      CONSTRAINT fk_subcategory FOREIGN KEY (subcategory_id) REFERENCES $PGSCHEMA.subcategories(id),
+      CONSTRAINT fk_expense FOREIGN KEY (expense_id) REFERENCES $PGSCHEMA.expense(id)
+   )
+"

@@ -14,5 +14,8 @@
     "CREATE TABLE ${schema}.subcategories (id SERIAL PRIMARY KEY, name VARCHAR(100) NOT NULL, created_by INTEGER NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL, CONSTRAINT fk_created_by FOREIGN KEY (created_by) REFERENCES ${schema}.user(id));",
     "CREATE TABLE ${schema}.category_subcategory_mapping (id SERIAL PRIMARY KEY, category_id INTEGER NOT NULL, subcategory_id INTEGER NOT NULL, CONSTRAINT fk_category FOREIGN KEY (category_id) REFERENCES ${schema}.categories(id), CONSTRAINT fk_subcategory FOREIGN KEY (subcategory_id) REFERENCES ${schema}.subcategories(id));",
     "CREATE TABLE ${schema}.subcategory_rules (id SERIAL PRIMARY KEY, subcategory_id INTEGER NOT NULL, rule JSONB NOT NULL, CONSTRAINT fk_subcategory FOREIGN KEY (subcategory_id) REFERENCES ${schema}.subcategories(id));"
+  ],
+  "a332797b1ecec4c918aa0f843a8fef35ea4fd189": [
+    "CREATE TABLE ${schema}.subcategory_expense_mapping (id SERIAL PRIMARY KEY, subcategory_id INTEGER NOT NULL, expense_id INTEGER NOT NULL, CONSTRAINT fk_subcategory FOREIGN KEY (subcategory_id) REFERENCES ${schema}.subcategories(id), CONSTRAINT fk_expense FOREIGN KEY (expense_id) REFERENCES ${schema}.expense(id));"
   ]
 }

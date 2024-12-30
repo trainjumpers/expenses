@@ -73,18 +73,20 @@ contributors: List of user IDs contributing to the expense
 contributions: List of amounts contributed by each user
 returns: Expense object of the newly created expense
 */
-func (e *ExpenseService) CreateExpense(c *gin.Context, expense models.Expense, contributors []int64, contributions []float64) (models.Expense, error) {
+func (e *ExpenseService) CreateExpense(c *gin.Context, expense models.Expense,
+	contributors []int64, contributions []float64, subcategoryID int64,
+) (models.Expense, error) {
 	query := fmt.Sprintf(`
 	WITH new_expense AS (
 		INSERT INTO %[1]s.expense (
-			amount, payer_id, description, name, created_by
+			amount, payer_id, description, name, created_by, unique_id
 			) VALUES (
-			$1, $2, $3, $4, $5
+			$1, $2, $3, $4, $5, $6
 		) RETURNING *
 	), new_mappings AS (
 		INSERT INTO %[1]s.expense_user_mapping (
 			expense_id, user_id, amount
-		) (SELECT id, unnest($6::bigint[]), unnest($7::numeric[]) from new_expense
+		) (SELECT id, unnest($7::bigint[]), unnest($8::numeric[]) from new_expense
 	) RETURNING *)
 	SELECT 
 		ne.id AS expense_id, 
@@ -96,16 +98,45 @@ func (e *ExpenseService) CreateExpense(c *gin.Context, expense models.Expense, c
 		ne.created_at 
 	FROM new_expense ne LEFT JOIN new_mappings nm ON ne.id = nm.expense_id;
 		`, e.schema)
+
+	insertExpenseMappingQuery := fmt.Sprintf(`
+	INSERT INTO %[1]s.subcategory_expense_mapping (expense_id, subcategory_id) 
+	VALUES ($1, $2);`, e.schema)
+
 	var addedExpense models.Expense
-
 	logger.Info("Executing query to insert an expense: ", query)
-	insert := e.db.QueryRow(c, query, expense.Amount, expense.PayerID, expense.Description, expense.Name, expense.CreatedBy, contributors, contributions)
 
-	err := insert.Scan(&addedExpense.ID, &addedExpense.Amount, &addedExpense.PayerID, &addedExpense.Name, &addedExpense.Description, &addedExpense.CreatedBy, &addedExpense.CreatedAt)
+	txn, err := e.db.Begin(c)
 	if err != nil {
 		return models.Expense{}, err
 	}
+	defer txn.Rollback(c)
+	logger.Info("Acquired transaction for creating expenses")
 
+	insert := txn.QueryRow(c, query, expense.Amount, expense.PayerID,
+		expense.Description, expense.Name,
+		expense.CreatedBy, utils.UniqueIdentifierExpense(expense),
+		contributors, contributions)
+
+	err = insert.Scan(&addedExpense.ID, &addedExpense.Amount, &addedExpense.PayerID, &addedExpense.Name, &addedExpense.Description, &addedExpense.CreatedBy, &addedExpense.CreatedAt)
+	if err != nil {
+		return models.Expense{}, err
+	}
+	logger.Info("Successfully executed query to insert an expense")
+	if subcategoryID == 0 {
+		txn.Commit(c)
+		return addedExpense, nil
+	}
+	logger.Info("Inserting into category mapping using expense ID: ", addedExpense.ID)
+
+	_, err = txn.Exec(
+		c, insertExpenseMappingQuery, addedExpense.ID, subcategoryID,
+	)
+	if err != nil {
+		return models.Expense{}, err
+	}
+	logger.Info("Successfully inserted into category mapping")
+	txn.Commit(c)
 	return addedExpense, nil
 }
 
