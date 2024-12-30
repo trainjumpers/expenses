@@ -27,6 +27,7 @@ func Init() *gin.Engine {
 	userController := controllers.NewUserController(database.DbPool)
 	authController := controllers.NewAuthController(database.DbPool)
 	statementController := controllers.NewStatementController(database.DbPool)
+	categoryController := controllers.NewCategoryController(database.DbPool)
 
 	api := router.Group("/api/v1")
 	{
@@ -50,6 +51,16 @@ func Init() *gin.Engine {
 
 		statement := api.Group("/statement").Use(gin.HandlerFunc(authController.Protected))
 		statement.POST("/parse", statementController.ParseStatement)
+
+		category := api.Group("/category").Use(gin.HandlerFunc(authController.Protected))
+		category.GET("", categoryController.GetAllCategories)
+		category.GET("/:categoryID", categoryController.GetCategory)
+		category.POST("", categoryController.CreateCategory)
+		category.POST("/:categoryID/subcategory", categoryController.CreateSubCategory)
+		category.PATCH("/:categoryID", categoryController.UpdateCategory)
+		category.PATCH("/subcategory/:subCategoryID", categoryController.UpdateSubCategory)
+		category.DELETE("/:categoryID", categoryController.DeleteCategory)
+		category.DELETE("/subcategory/:subCategoryID", categoryController.DeleteSubCategory)
 	}
 
 	return router

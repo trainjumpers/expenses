@@ -6,8 +6,6 @@ import (
 	"expenses/models"
 	"expenses/utils"
 	"fmt"
-	"strconv"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -122,21 +120,9 @@ func (u *UserService) UpdateUser(c *gin.Context, userID int64, updatedUser entit
 		"name": updatedUser.Name,
 	}
 
-	fieldsClause := ""
-	argIndex := 1
-	argValues := make([]interface{}, 0)
-	for k, v := range fields {
-		if v == "" {
-			continue
-		}
-
-		fieldsClause += k + " = $" + strconv.FormatInt(int64(argIndex), 10) + ", "
-		argIndex++
-		argValues = append(argValues, v)
-	}
-	fieldsClause = strings.TrimSuffix(fieldsClause, ", ")
-	if fieldsClause == "" {
-		return models.User{}, fmt.Errorf("no fields to update")
+	fieldsClause, argValues, argIndex, err := utils.CreateUpdateParamsQuery(fields)
+	if err != nil {
+		return models.User{}, err
 	}
 
 	query := fmt.Sprintf("UPDATE %[1]s.user SET %[2]s WHERE id = $%d AND deleted_at IS NULL "+
@@ -146,7 +132,7 @@ func (u *UserService) UpdateUser(c *gin.Context, userID int64, updatedUser entit
 	result := u.db.QueryRow(c, query, append(argValues, userID)...)
 
 	var user models.User
-	err := result.Scan(&user.ID, &user.Name, &user.Email)
+	err = result.Scan(&user.ID, &user.Name, &user.Email)
 	if err != nil {
 		return models.User{}, err
 	}

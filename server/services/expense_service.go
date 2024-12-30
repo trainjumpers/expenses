@@ -7,8 +7,6 @@ import (
 	"expenses/utils"
 	"expenses/validators"
 	"fmt"
-	"strconv"
-	"strings"
 	"time"
 
 	logger "expenses/logger"
@@ -31,9 +29,7 @@ func NewExpenseService(db *pgxpool.Pool) *ExpenseService {
 
 /*
 GetExpensesByUserID returns all expenses of a given user
-
 userID: ID of the user whose expenses are to be fetched
-
 returns: List of expenses ([]models.Expense)
 */
 func (e *ExpenseService) GetExpensesByUserID(c *gin.Context, userID int64) ([]models.ExpenseWithContribution, error) {
@@ -54,6 +50,7 @@ func (e *ExpenseService) GetExpensesByUserID(c *gin.Context, userID int64) ([]mo
 	if err != nil {
 		return []models.ExpenseWithContribution{}, err
 	}
+	defer rows.Close()
 
 	var expenses []models.ExpenseWithContribution
 
@@ -71,13 +68,9 @@ func (e *ExpenseService) GetExpensesByUserID(c *gin.Context, userID int64) ([]mo
 
 /*
 CreateExpense creates a new expense in the expense table and adds contributions of users to the expense_user_mapping table
-
 expense: Expense object containing the details of the expense to be created
-
 contributors: List of user IDs contributing to the expense
-
 contributions: List of amounts contributed by each user
-
 returns: Expense object of the newly created expense
 */
 func (e *ExpenseService) CreateExpense(c *gin.Context, expense models.Expense, contributors []int64, contributions []float64) (models.Expense, error) {
@@ -217,8 +210,6 @@ func (e *ExpenseService) CreateMultipleExpenses(c *gin.Context, expenses []model
 }
 
 func (e *ExpenseService) GetExpenseByID(c *gin.Context, expenseID int64, userId int64) ([]models.ExpenseWithAllContributions, error) {
-	var expenses []models.ExpenseWithAllContributions
-
 	query := fmt.Sprintf(`
 	SELECT e.*,
 		eum.user_id AS contributor_id,
@@ -248,6 +239,8 @@ func (e *ExpenseService) GetExpenseByID(c *gin.Context, expenseID int64, userId 
 	if err != nil {
 		return []models.ExpenseWithAllContributions{}, err
 	}
+	defer rows.Close()
+	var expenses []models.ExpenseWithAllContributions
 
 	for rows.Next() {
 		var expense models.ExpenseWithAllContributions
@@ -268,22 +261,9 @@ func (e *ExpenseService) UpdateExpenseBasicDetails(c *gin.Context, updatedFields
 		"name":        updatedFields.Name,
 	}
 
-	fieldsClause := ""
-	argIndex := 1
-	argValues := make([]interface{}, 0)
-	for k, v := range fields {
-		if v == "" || v == int64(0) {
-			logger.Info("Skipping field: ", k)
-			continue
-		}
-
-		fieldsClause += k + " = $" + strconv.FormatInt(int64(argIndex), 10) + ", "
-		argIndex++
-		argValues = append(argValues, v)
-	}
-	fieldsClause = strings.TrimSuffix(fieldsClause, ", ")
-	if fieldsClause == "" {
-		return models.Expense{}, fmt.Errorf("no fields to update")
+	fieldsClause, argValues, argIndex, err := utils.CreateUpdateParamsQuery(fields)
+	if err != nil {
+		return models.Expense{}, err
 	}
 
 	query := fmt.Sprintf(`UPDATE %[1]s.expense 
@@ -307,7 +287,7 @@ func (e *ExpenseService) UpdateExpenseBasicDetails(c *gin.Context, updatedFields
 	logger.Info("arg ", argValues)
 
 	update := e.db.QueryRow(c, query, append(argValues, expenseID, userId)...)
-	err := update.Scan(&updatedExpense.ID, &updatedExpense.Amount, &updatedExpense.PayerID, &updatedExpense.Description, &updatedExpense.CreatedBy, &updatedExpense.CreatedAt, &updatedExpense.Name)
+	err = update.Scan(&updatedExpense.ID, &updatedExpense.Amount, &updatedExpense.PayerID, &updatedExpense.Description, &updatedExpense.CreatedBy, &updatedExpense.CreatedAt, &updatedExpense.Name)
 	if err != nil {
 		logger.Error("Error updating expense into the db: ", err)
 		return models.Expense{}, err

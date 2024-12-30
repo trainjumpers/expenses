@@ -55,7 +55,7 @@ PGPASSWORD=$DB_PASS psql -U $DB_USER -h $DB_HOST -d $DB_NAME -c "
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
       CONSTRAINT fk_user FOREIGN KEY (payer_id) REFERENCES $PGSCHEMA.user(id),
       CONSTRAINT fk_created_by FOREIGN KEY (created_by) REFERENCES $PGSCHEMA.user(id)
-      );
+   );
 "
 
 # Create expense_contributor table
@@ -93,5 +93,54 @@ PGPASSWORD=$DB_PASS psql -U $DB_USER -h $DB_HOST -d $DB_NAME -c "
       user_id INTEGER NOT NULL,
       CONSTRAINT fk_job FOREIGN KEY (job_id) REFERENCES $PGSCHEMA.jobs(id),
       CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES $PGSCHEMA.user(id)
+   );
+"
+
+# Create categories table
+echo "Creating 'categories' table..."
+PGPASSWORD=$DB_PASS psql -U $DB_USER -h $DB_HOST -d $DB_NAME -c "
+   CREATE TABLE $PGSCHEMA.categories (
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(100) NOT NULL,
+      color VARCHAR(100) NULL,
+      created_by INTEGER NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+      CONSTRAINT fk_created_by FOREIGN KEY (created_by) REFERENCES $PGSCHEMA.user(id)
+   );
+"
+
+# Create subcategories table
+echo "Creating 'subcategories' table..."
+PGPASSWORD=$DB_PASS psql -U $DB_USER -h $DB_HOST -d $DB_NAME -c "
+   CREATE TABLE $PGSCHEMA.subcategories (
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(100) NOT NULL,
+      color VARCHAR(100) NULL,
+      created_by INTEGER NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+      CONSTRAINT fk_created_by FOREIGN KEY (created_by) REFERENCES $PGSCHEMA.user(id)
+   );
+"
+
+# Create category_subcategory_mapping table
+echo "Creating 'category_subcategory_mapping' table..."
+PGPASSWORD=$DB_PASS psql -U $DB_USER -h $DB_HOST -d $DB_NAME -c "
+   CREATE TABLE $PGSCHEMA.category_subcategory_mapping (
+      id SERIAL PRIMARY KEY,
+      category_id INTEGER NOT NULL,
+      subcategory_id INTEGER NOT NULL,
+      CONSTRAINT fk_category FOREIGN KEY (category_id) REFERENCES $PGSCHEMA.categories(id),
+      CONSTRAINT fk_subcategory FOREIGN KEY (subcategory_id) REFERENCES $PGSCHEMA.subcategories(id)
+   );
+"
+
+# Create subcategory rules table
+echo "Creating 'subcategory_rules' table..."
+PGPASSWORD=$DB_PASS psql -U $DB_USER -h $DB_HOST -d $DB_NAME -c "
+   CREATE TABLE $PGSCHEMA.subcategory_rules (
+      id SERIAL PRIMARY KEY,
+      rule JSONB NOT NULL,
+      subcategory_id INTEGER NOT NULL,
+      CONSTRAINT fk_subcategory FOREIGN KEY (subcategory_id) REFERENCES $PGSCHEMA.subcategories(id)
    );
 "
