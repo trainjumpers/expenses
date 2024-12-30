@@ -70,3 +70,28 @@ PGPASSWORD=$DB_PASS psql -U $DB_USER -h $DB_HOST -d $DB_NAME -c "
       CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES $PGSCHEMA.user(id)
    );
 "
+
+# Create a job table
+echo "Creating 'job' table..."
+PGPASSWORD=$DB_PASS psql -U $DB_USER -h $DB_HOST -d $DB_NAME -c "
+   CREATE TABLE $PGSCHEMA.jobs (
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(100) NOT NULL,
+      status VARCHAR(100) NOT NULL DEFAULT 'created',
+      metadata JSONB NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+   );
+"
+
+# Create job_user_mapping table
+echo "Creating 'jobs_user_mapping' table..."
+PGPASSWORD=$DB_PASS psql -U $DB_USER -h $DB_HOST -d $DB_NAME -c "
+   CREATE TABLE $PGSCHEMA.job_user_mapping (
+      id SERIAL PRIMARY KEY,
+      job_id INTEGER NOT NULL,
+      user_id INTEGER NOT NULL,
+      CONSTRAINT fk_job FOREIGN KEY (job_id) REFERENCES $PGSCHEMA.jobs(id),
+      CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES $PGSCHEMA.user(id)
+   );
+"

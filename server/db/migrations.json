@@ -4,5 +4,9 @@
   ],
   "f68c9b65263d4c3a5c829aab13c2238e1e88dfea": [
     "ALTER TABLE ${schema}.expense ADD COLUMN unique_id VARCHAR(255) NOT NULL"
+  ], 
+  "28d8aae52dc6e9cfef89733fe576c526a7fec3e8": [
+    "CREATE TABLE ${schema}.jobs (id SERIAL PRIMARY KEY, name VARCHAR(100) NOT NULL, status VARCHAR(100) NOT NULL DEFAULT 'created', metadata JSONB NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL);",
+    "CREATE TABLE ${schema}.jobs_user_mapping (id SERIAL PRIMARY KEY, job_id INTEGER NOT NULL, user_id INTEGER NOT NULL, CONSTRAINT fk_job FOREIGN KEY (job_id) REFERENCES ${schema}.jobs(id), CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES ${schema}.user(id));"
   ]
 }
