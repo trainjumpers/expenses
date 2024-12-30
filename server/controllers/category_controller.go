@@ -5,8 +5,10 @@ import (
 	"expenses/logger"
 	models "expenses/models"
 	"expenses/services"
+	"expenses/utils"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -64,6 +66,10 @@ func (c *CategoryController) CreateSubCategory(ctx *gin.Context) {
 		Color:      input.Color,
 	}, categoryID, userID)
 	if err != nil {
+		if utils.CheckForeignKey(err, "category_subcategory_mapping", "category") {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid category ID"})
+			return
+		}
 		logger.Error("Error creating sub-category: ", err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Error creating sub-category"})
 		return
@@ -174,6 +180,10 @@ func (c *CategoryController) DeleteSubCategory(ctx *gin.Context) {
 
 	err := c.categoryService.DeleteSubCategory(ctx, subCategoryID, userID)
 	if err != nil {
+		if strings.Contains(err.Error(), "sub-category not found") {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": "Sub-category not found"})
+			return
+		}
 		logger.Error("Error deleting sub-category: ", err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Error deleting sub-category"})
 		return

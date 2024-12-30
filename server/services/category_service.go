@@ -1,6 +1,7 @@
 package services
 
 import (
+	"errors"
 	"expenses/entities"
 	"expenses/logger"
 	"expenses/models"
@@ -270,17 +271,39 @@ func (c *CategoryService) DeleteCategory(ctx *gin.Context, categoryID string, us
 }
 
 func (c *CategoryService) DeleteSubCategory(ctx *gin.Context, subCategoryID string, userID int64) error {
-	query := fmt.Sprintf(`
+	getSubcategoryQuery := fmt.Sprintf(`
+		SELECT id FROM %s.subcategories WHERE id = $1 AND created_by = $2;
+	`, c.schema)
+	mappingQuery := fmt.Sprintf(`
+		DELETE FROM %[1]s.category_subcategory_mapping csm
+		WHERE csm.subcategory_id = $1
+	;`, c.schema)
+	subcategoryQuery := fmt.Sprintf(`
         DELETE FROM %s.subcategories 
         WHERE id = $1 AND created_by = $2
-    `, c.schema)
+    ;`, c.schema)
 
-	logger.Info("Executing query to delete sub-category: ", query)
-	_, err := c.db.Exec(ctx, query, subCategoryID, userID)
+	logger.Info("Acquiring transaction for deleting sub-category...")
+	txn, err := c.db.Begin(ctx)
 	if err != nil {
-		logger.Error("Error deleting sub-category: ", err)
+		return err
+	}
+	defer txn.Rollback(ctx)
+	logger.Info("Executing query to get sub-category: ", getSubcategoryQuery)
+	err = txn.QueryRow(ctx, getSubcategoryQuery, subCategoryID, userID).Scan(&subCategoryID)
+	if err != nil {
+		return errors.New("sub-category not found")
+	}
+	logger.Info("Executing query to delete mapping: ", mappingQuery)
+	_, err = txn.Exec(ctx, mappingQuery, subCategoryID)
+	if err != nil {
+		return err
+	}
+	logger.Info("Executing query to delete sub-category: ", subcategoryQuery)
+	_, err = txn.Exec(ctx, subcategoryQuery, subCategoryID, userID)
+	if err != nil {
 		return err
 	}
 	logger.Info("Successfully deleted sub-category with ID: ", subCategoryID)
-	return nil
+	return txn.Commit(ctx)
 }

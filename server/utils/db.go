@@ -16,7 +16,7 @@ func GetPGSchema() string {
 }
 
 func CheckForeignKey(err error, table string, fkKey string) bool {
-	return strings.Contains(err.Error(), "fk_"+table) && strings.Contains(err.Error(), fkKey)
+	return strings.Contains(err.Error(), table) && strings.Contains(err.Error(), fkKey)
 }
 
 func CreateUpdateParamsQuery(fields map[string]interface{}) (string, []interface{}, int, error) {
