@@ -67,3 +67,34 @@ func (e *StatisticsService) GetExpensesBySubcategory(c *gin.Context, userID int6
 	}
 	return breakdown, nil
 }
+
+func (s *StatisticsService) GetMonthlyTrend(c *gin.Context, userID int64, startDate, endDate string) ([]models.MonthlySpending, error) {
+    query := fmt.Sprintf(`
+        SELECT 
+            TO_CHAR(DATE_TRUNC('month', e.created_at), 'Mon') as month,
+            SUM(eum.amount) as total_spending
+        FROM %[1]s.expense e
+        JOIN %[1]s.expense_user_mapping eum ON e.id = eum.expense_id
+        WHERE eum.user_id = $1
+        AND e.created_at BETWEEN $2 AND $3
+        GROUP BY DATE_TRUNC('month', e.created_at), TO_CHAR(DATE_TRUNC('month', e.created_at), 'Mon')
+        ORDER BY DATE_TRUNC('month', e.created_at) ASC;
+    `, s.schema)
+
+    rows, err := s.db.Query(c, query, userID, startDate, endDate)
+    if err != nil {
+        return nil, err
+    }
+    defer rows.Close()
+
+    var monthlyTrends []models.MonthlySpending
+    for rows.Next() {
+        var trend models.MonthlySpending
+        err := rows.Scan(&trend.Month, &trend.TotalAmount)
+        if err != nil {
+            return nil, err
+        }
+        monthlyTrends = append(monthlyTrends, trend)
+    }
+    return monthlyTrends, nil
+}
