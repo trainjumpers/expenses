@@ -66,6 +66,7 @@ func Init() *gin.Engine {
 		statistics := api.Group("/statistics").Use(gin.HandlerFunc(authController.Protected))
 		statistics.GET("/category", statisticsController.GetSubcategoryBreakdown)
 		statistics.GET("/monthly", statisticsController.GetMonthlyTrend)
+		statistics.GET("/heatmap", statisticsController.GetDailyHeatmap)
 	}
 
 	return router

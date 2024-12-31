@@ -55,24 +55,47 @@ func (s *StatisticsController) GetSubcategoryBreakdown(c *gin.Context) {
 }
 
 func (s *StatisticsController) GetMonthlyTrend(c *gin.Context) {
-    userID := c.GetInt64("authUserID")
-    startDate := c.Query("start_date")
-    endDate := c.Query("end_date")
+	userID := c.GetInt64("authUserID")
+	startDate := c.Query("start_date")
+	endDate := c.Query("end_date")
 
-    if startDate == "" || endDate == "" {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "start_date and end_date are required"})
-        return
-    }
+	if startDate == "" || endDate == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "start_date and end_date are required"})
+		return
+	}
 
-    logger.Info("Received request to get monthly spending trends for user: ", userID)
-    trends, err := s.statisticsService.GetMonthlyTrend(c, userID, startDate, endDate)
-    if err != nil {
-        logger.Error("Error getting monthly trends: ", err)
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Error getting monthly trends"})
-        return
-    }
+	logger.Info("Received request to get monthly spending trends for user: ", userID)
+	trends, err := s.statisticsService.GetMonthlyTrend(c, userID, startDate, endDate)
+	if err != nil {
+		logger.Error("Error getting monthly trends: ", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error getting monthly trends"})
+		return
+	}
 
-    c.JSON(http.StatusOK, gin.H{
-        "data": trends,
-    })
+	c.JSON(http.StatusOK, gin.H{
+		"data": trends,
+	})
+}
+
+func (s *StatisticsController) GetDailyHeatmap(c *gin.Context) {
+	userID := c.GetInt64("authUserID")
+	startDate := c.Query("start_date")
+	endDate := c.Query("end_date")
+
+	if startDate == "" || endDate == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "start_date and end_date are required"})
+		return
+	}
+
+	logger.Info("Received request to get daily spending heatmap for user: ", userID)
+	heatmap, err := s.statisticsService.GetDailySpendingHeatmap(c, userID, startDate, endDate)
+	if err != nil {
+		logger.Error("Error getting daily heatmap: ", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error getting daily heatmap"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data": heatmap,
+	})
 }

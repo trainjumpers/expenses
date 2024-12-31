@@ -9,8 +9,13 @@ type SubcategoryExpenseBreakdown struct {
 	TransactionCount int     `json:"transaction_count"`
 }
 
-
 type MonthlySpending struct {
     Month       string  `json:"month"`
     TotalAmount float64 `json:"total_amount"`
+}
+
+type DailySpending struct {
+    Day         string  `json:"day"`
+    TotalAmount float64 `json:"total_amount"`
+    WeekNumber  int     `json:"week_number"`
 }

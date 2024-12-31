@@ -98,3 +98,37 @@ func (s *StatisticsService) GetMonthlyTrend(c *gin.Context, userID int64, startD
     }
     return monthlyTrends, nil
 }
+
+func (s *StatisticsService) GetDailySpendingHeatmap(c *gin.Context, userID int64, startDate, endDate string) ([]models.DailySpending, error) {
+    query := fmt.Sprintf(`
+        SELECT 
+            TO_CHAR(DATE_TRUNC('day', e.created_at), 'Dy') as day,
+            EXTRACT(WEEK FROM e.created_at) as week_number,
+            SUM(eum.amount) as total_spending
+        FROM %[1]s.expense e
+        JOIN %[1]s.expense_user_mapping eum ON e.id = eum.expense_id
+        WHERE eum.user_id = $1
+        AND e.created_at BETWEEN $2 AND $3
+        GROUP BY DATE_TRUNC('day', e.created_at), 
+                 TO_CHAR(DATE_TRUNC('day', e.created_at), 'Dy'),
+                 EXTRACT(WEEK FROM e.created_at)
+        ORDER BY week_number ASC, day ASC;
+    `, s.schema)
+
+    rows, err := s.db.Query(c, query, userID, startDate, endDate)
+    if err != nil {
+        return nil, err
+    }
+    defer rows.Close()
+
+    var dailySpending []models.DailySpending
+    for rows.Next() {
+        var spending models.DailySpending
+        err := rows.Scan(&spending.Day, &spending.WeekNumber, &spending.TotalAmount)
+        if err != nil {
+            return nil, err
+        }
+        dailySpending = append(dailySpending, spending)
+    }
+    return dailySpending, nil
+}
