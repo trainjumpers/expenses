@@ -10,7 +10,7 @@ type Expense struct {
 	Amount      float64    `json:"amount"`
 	CreatedBy   int64      `json:"created_by"`
 	CreatedAt   *time.Time `json:"created_at"`
-	UniqueId string     `json:"unique_id"`
+	UniqueId    string     `json:"unique_id"`
 }
 
 type ExpenseUserMapping struct {

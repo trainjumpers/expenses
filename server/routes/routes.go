@@ -20,7 +20,7 @@ func Init() *gin.Engine {
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
-		MaxAge:          12 * time.Hour,
+		MaxAge:           12 * time.Hour,
 	}))
 
 	expenseController := controllers.NewExpenseController(database.DbPool)
@@ -28,6 +28,7 @@ func Init() *gin.Engine {
 	authController := controllers.NewAuthController(database.DbPool)
 	statementController := controllers.NewStatementController(database.DbPool)
 	categoryController := controllers.NewCategoryController(database.DbPool)
+	statisticsController := controllers.NewStatisticsController(database.DbPool)
 
 	api := router.Group("/api/v1")
 	{
@@ -61,6 +62,9 @@ func Init() *gin.Engine {
 		category.PATCH("/subcategory/:subCategoryID", categoryController.UpdateSubCategory)
 		category.DELETE("/:categoryID", categoryController.DeleteCategory)
 		category.DELETE("/subcategory/:subCategoryID", categoryController.DeleteSubCategory)
+
+		statistics := api.Group("/statistics").Use(gin.HandlerFunc(authController.Protected))
+		statistics.GET("/category", statisticsController.GetSubcategoryBreakdown)
 	}
 
 	return router
