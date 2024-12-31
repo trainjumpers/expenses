@@ -32,38 +32,131 @@ GetExpensesByUserID returns all expenses of a given user
 userID: ID of the user whose expenses are to be fetched
 returns: List of expenses ([]models.Expense)
 */
-func (e *ExpenseService) GetExpensesByUserID(c *gin.Context, userID int64) ([]models.ExpenseWithContribution, error) {
-	query := fmt.Sprintf(`SELECT
-		e.id,
-		e.amount,
-		e.payer_id,
-		e.name,
-		e.description,
-		e.created_by,
-		e.created_at,
-		eum.amount AS user_amount
-	FROM %[1]s.expense e
-	LEFT JOIN %[1]s.expense_user_mapping eum ON e.id = eum.expense_id
-	WHERE eum.user_id = $1;`, e.schema)
+func (e *ExpenseService) GetExpensesByUserID(c *gin.Context, userID int64, limit int, offset int) ([]models.ExpenseWithContribution, int, error) {
+	// Query 1: Get paginated expenses with user contribution
+	expenseQuery := fmt.Sprintf(`
+        SELECT 
+            e.id, e.amount, e.payer_id, e.name, e.description, 
+            e.created_by, e.created_at, eum.amount AS user_amount,
+            COUNT(*) OVER() as total_records
+        FROM %[1]s.expense e
+        JOIN %[1]s.expense_user_mapping eum ON e.id = eum.expense_id
+        WHERE eum.user_id = $1
+        ORDER BY e.created_at DESC
+        LIMIT $2 OFFSET $3`, e.schema)
 
-	rows, err := e.db.Query(c, query, userID)
+	// Query 2: Get subcategory mappings for these expenses
+	subcategoryMappingQuery := fmt.Sprintf(`
+        SELECT DISTINCT e.id as expense_id, sc.id as subcategory_id
+        FROM %[1]s.expense e
+        JOIN %[1]s.subcategory_expense_mapping sem ON e.id = sem.expense_id
+        JOIN %[1]s.subcategories sc ON sem.subcategory_id = sc.id
+        WHERE e.id = ANY($1)`, e.schema)
+
+	// Query 3: Get category details with their subcategories
+	categoryQuery := fmt.Sprintf(`
+        SELECT 
+            c.id, c.name, c.color,
+            sc.id, sc.name, sc.color
+        FROM %[1]s.categories c
+        JOIN %[1]s.category_subcategory_mapping csm ON c.id = csm.category_id
+        JOIN %[1]s.subcategories sc ON csm.subcategory_id = sc.id
+        WHERE sc.id = ANY($1)`, e.schema)
+
+	// Execute first query to get expenses
+	rows, err := e.db.Query(c, expenseQuery, userID, limit, offset)
 	if err != nil {
-		return []models.ExpenseWithContribution{}, err
+		return nil, 0, err
 	}
 	defer rows.Close()
 
 	var expenses []models.ExpenseWithContribution
+	var expenseIDs []int64
+	var totalRecords int
 
 	for rows.Next() {
 		var expense models.ExpenseWithContribution
-		err := rows.Scan(&expense.ID, &expense.Amount, &expense.PayerID, &expense.Name, &expense.Description, &expense.CreatedBy, &expense.CreatedAt, &expense.UserAmount)
+		err := rows.Scan(
+			&expense.ID, &expense.Amount, &expense.PayerID, &expense.Name,
+			&expense.Description, &expense.CreatedBy, &expense.CreatedAt,
+			&expense.UserAmount, &totalRecords,
+		)
 		if err != nil {
-			return []models.ExpenseWithContribution{}, err
+			return nil, 0, err
 		}
 		expenses = append(expenses, expense)
+		expenseIDs = append(expenseIDs, expense.ID)
 	}
 
-	return expenses, nil
+	// Get subcategory mappings
+	subcatRows, err := e.db.Query(c, subcategoryMappingQuery, expenseIDs)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer subcatRows.Close()
+
+	expenseSubcats := make(map[int64][]int64)
+	var allSubcatIDs []int64
+	for subcatRows.Next() {
+		var expenseID, subcatID int64
+		if err := subcatRows.Scan(&expenseID, &subcatID); err != nil {
+			return nil, 0, err
+		}
+		expenseSubcats[expenseID] = append(expenseSubcats[expenseID], subcatID)
+		allSubcatIDs = append(allSubcatIDs, subcatID)
+	}
+
+	// Get categories with their subcategories
+	catRows, err := e.db.Query(c, categoryQuery, allSubcatIDs)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer catRows.Close()
+
+	categoryMap := make(map[int64]models.CategoryWithSubs)
+	subcategoryMap := make(map[int64]models.SubCategory)
+
+	for catRows.Next() {
+		var cat models.CategoryWithSubs
+		var subcat models.SubCategory
+		if err := catRows.Scan(
+			&cat.ID, &cat.Name, &cat.Color,
+			&subcat.ID, &subcat.Name, &subcat.Color,
+		); err != nil {
+			return nil, 0, err
+		}
+
+		if existing, ok := categoryMap[cat.ID]; ok {
+			existing.SubCategories = append(existing.SubCategories, subcat)
+			categoryMap[cat.ID] = existing
+		} else {
+			cat.SubCategories = []models.SubCategory{subcat}
+			categoryMap[cat.ID] = cat
+		}
+		subcategoryMap[subcat.ID] = subcat
+	}
+
+	// Combine all data
+	for i, expense := range expenses {
+		var categories []models.CategoryWithSubs
+		subcatIDs := expenseSubcats[expense.ID]
+
+		// Get unique categories for this expense's subcategories
+		seenCategories := make(map[int64]bool)
+		for _, subcatID := range subcatIDs {
+			for _, cat := range categoryMap {
+				for _, subcat := range cat.SubCategories {
+					if subcat.ID == subcatID && !seenCategories[cat.ID] {
+						categories = append(categories, cat)
+						seenCategories[cat.ID] = true
+					}
+				}
+			}
+		}
+		expenses[i].Categories = categories
+	}
+
+	return expenses, totalRecords, nil
 }
 
 /*

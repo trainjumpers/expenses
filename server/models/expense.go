@@ -22,7 +22,8 @@ type ExpenseUserMapping struct {
 
 type ExpenseWithContribution struct {
 	Expense
-	UserAmount float64 `json:"user_amount"`
+	UserAmount float64            `json:"user_amount"`
+	Categories []CategoryWithSubs `json:"categories"`
 }
 
 type ExpenseWithAllContributions struct {

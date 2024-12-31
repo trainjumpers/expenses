@@ -27,24 +27,43 @@ func NewExpenseController(db *pgxpool.Pool) *ExpenseController {
 }
 
 // GetExpensesOfUser returns all expenses for a given user
-// TODO: Add pagination
 func (e *ExpenseController) GetExpensesOfUser(c *gin.Context) {
-	userID := c.GetInt64("authUserID")
+    userID := c.GetInt64("authUserID")
+    
+    page, err := strconv.Atoi(c.DefaultQuery("page", "1"))
+    if err != nil || page < 1 {
+        page = 1
+    }
+    
+    limit, err := strconv.Atoi(c.DefaultQuery("limit", "10"))
+    if err != nil || limit < 1 {
+        limit = 10
+    }
+    
+    offset := (page - 1) * limit
 
-	logger.Info("Recieved request to get all expenses for user with ID: ", userID)
+    logger.Info("Received request to get all expenses for user with ID: ", userID)
 
-	expenses, err := e.expenseService.GetExpensesByUserID(c, userID)
-	if err != nil {
-		logger.Error("Error getting expenses: ", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error getting expenses"})
-		c.Abort()
-		return
-	}
+    expenses, totalRecords, err := e.expenseService.GetExpensesByUserID(c, userID, limit, offset)
+    if err != nil {
+        logger.Error("Error getting expenses: ", err)
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Error getting expenses"})
+        c.Abort()
+        return
+    }
 
-	logger.Info("Number of expenses found: ", len(expenses))
-	c.JSON(http.StatusOK, gin.H{
-		"data": expenses,
-	})
+    totalPages := (totalRecords + limit - 1) / limit
+
+    logger.Info("Number of expenses found: ", len(expenses))
+    c.JSON(http.StatusOK, gin.H{
+        "data": expenses,
+        "metadata": gin.H{
+            "current_page": page,
+            "total_pages": totalPages,
+            "total_records": totalRecords,
+            "limit": limit,
+        },
+    })
 }
 
 // CreateExpense handles creation of a new expense
