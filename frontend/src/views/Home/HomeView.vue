@@ -1,5 +1,8 @@
 <script setup lang="ts">
+import DailyHeatmap from "@/components/Statistics/DailyHeatmap.vue";
 import Navbar from "@/components/Navbar/NavBar.vue";
+import CategoryBreakdown from "@/components/Statistics/CategoryBreakdown.vue";
+import MonthlyTrend from "@/components/Statistics/MonthlyTrend.vue";
 </script>
 
 <template>
@@ -14,6 +17,11 @@ import Navbar from "@/components/Navbar/NavBar.vue";
         </p>
       </div>
       <router-view />
+      <div class="flex flex-row gap-4">
+        <CategoryBreakdown />
+        <MonthlyTrend />
+      </div>
+      <DailyHeatmap />
     </div>
 
     <template #fallback>

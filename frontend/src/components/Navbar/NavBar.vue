@@ -2,6 +2,7 @@
 import { NAVBAR_ICON_SIZE, THEMES } from "@/components/Navbar/constants";
 import { useThemeStore } from "@/stores/theme";
 import { useUserStore } from "@/stores/user";
+import type { User } from "@/types/user";
 import { checkIfAuth } from "@/utils/auth";
 import { removeUserToken } from "@/utils/cookies";
 import {
@@ -15,11 +16,16 @@ import { onMounted } from "vue";
 import { useRouter } from "vue-router";
 
 const { theme, getTheme, setTheme } = useThemeStore();
-
-const { getUser } = useUserStore();
-const user = await getUser();
-
 const router = useRouter();
+const { getUser } = useUserStore();
+
+let user: User;
+try {
+  user = await getUser();
+} catch (error) {
+  console.log(error);
+  router.push("/login");
+}
 
 const handleLogout = () => {
   removeUserToken();
