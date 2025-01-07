@@ -1,6 +1,6 @@
-run:
-    $GOPATH/bin/air
+run: 
+  $GOPATH/bin/air
 
-install:
-    go install github.com/cosmtrek/air@latest
-    go get .
+install: 
+  go install github.com/air-verse/air@latest
+  go get .
