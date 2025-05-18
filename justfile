@@ -1,6 +1,8 @@
-server: 
-  cd server && air
+[working-directory: 'server']
+@install-server: 
+  go install github.com/air-verse/air@latest
+  go mod tidy
 
-install-server: 
-  cd server && go install github.com/air-verse/air@latest
-  cd server && go mod tidy
+[working-directory: 'server']
+@server:
+  air
