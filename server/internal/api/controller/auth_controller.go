@@ -23,7 +23,7 @@ type AuthController struct {
 }
 
 func NewAuthController(db *pgxpool.Pool) *AuthController {
-	userService := service.NewUserService(db)
+	userService := service.NewUserService()
 	return &AuthController{userService: userService}
 }
 
@@ -34,14 +34,8 @@ func (a *AuthController) Signup(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-
-	hashedPassword, err := utils.HashPassword(newUser.Password)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	newUser.Password = hashedPassword
-	createdUser, err := a.userService.CreateUser(c, newUser)
+	logger.Infof("Received request to create user with email: %s", newUser.Email)
+	authResponse, err := a.userService.CreateUser(c, newUser)
 	if err != nil {
 		logger.Error("Error creating user: ", err)
 		if utils.CheckForeignKey(err, "user", "email") {
@@ -51,30 +45,8 @@ func (a *AuthController) Signup(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error creating user"})
 		return
 	}
-
-	accessToken, err := issueAuthToken(createdUser.Id, createdUser.Email)
-	if err != nil {
-		logger.Error("Error generating token: ", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error generating token"})
-		return
-	}
-	refreshToken, err := generateRefreshToken()
-	if err != nil {
-		logger.Error("Error generating refresh token: ", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error generating refresh token"})
-		return
-	}
-	utils.SaveRefreshToken(refreshToken, utils.RefreshTokenData{
-		UserId: createdUser.Id,
-		Email:  createdUser.Email,
-		Expiry: time.Now().Add(7 * 24 * time.Hour), // 7 days
-	})
-	c.JSON(http.StatusOK, gin.H{
-		"message":       "User created successfully",
-		"data":          createdUser,
-		"access_token":  accessToken,
-		"refresh_token": refreshToken,
-	})
+	logger.Infof("User created successfully with Id: %d", authResponse.User.Id)
+	c.JSON(http.StatusCreated, authResponse)
 }
 
 // Login controller handles user login and sends back an access token

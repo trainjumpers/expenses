@@ -1,7 +1,8 @@
-package utils
+package helper
 
 import (
 	"errors"
+	"expenses/pkg/utils"
 	"fmt"
 	"os"
 	"reflect"
@@ -9,18 +10,13 @@ import (
 	"strings"
 )
 
-var ErrNoFieldsToUpdate = errors.New("no fields to update")
-
+// GetPGSchema retrieves the PostgreSQL schema from the environment variable PG_SCHEMA.
 func GetPGSchema() string {
 	schema := os.Getenv("PG_SCHEMA")
 	if schema == "" {
 		panic("PG_SCHEMA environment variable is not set")
 	}
 	return schema
-}
-
-func CheckForeignKey(err error, table string, fkKey string) bool {
-	return strings.Contains(err.Error(), table) && strings.Contains(err.Error(), fkKey)
 }
 
 // CreateUpdateParams generates an SQL update clause and values from a struct pointer.
@@ -30,7 +26,7 @@ func CreateUpdateParams(obj interface{}) (string, []interface{}, int, error) {
 		return "", nil, 0, err
 	}
 	if len(dbFields) == 0 {
-		return "", nil, 1, ErrNoFieldsToUpdate
+		return "", nil, 1, utils.ErrNoFieldsToUpdate
 	}
 	setClauses := make([]string, len(dbFields))
 	for i, col := range dbFields {
@@ -100,36 +96,17 @@ func toSnakeCase(str string) string {
 
 // extractDbFields extracts pointers, values, and column names for exported struct fields.
 func extractDbFields(obj interface{}, skipNull bool) ([]interface{}, []interface{}, []string, error) {
-	if obj == nil {
-		return nil, nil, nil, errors.New("extractDbFields: obj is nil")
+	ptrs, values, fields, err := utils.ExtractFields(obj, skipNull)
+	if err != nil {
+		return nil, nil, nil, err
 	}
-	v := reflect.ValueOf(obj)
-	if v.Kind() != reflect.Ptr || v.IsNil() {
-		return nil, nil, nil, errors.New("extractDbFields: obj must be a non-nil pointer to a struct")
+	for i, field := range fields {
+		fields[i] = toSnakeCase(field)
 	}
-	v = v.Elem()
-	if v.Kind() != reflect.Struct {
-		return nil, nil, nil, errors.New("extractDbFields: obj must be a pointer to a struct")
+	if len(fields) == 0 {
+		return nil, nil, nil, utils.ErrNoFieldsToUpdate
 	}
-	t := v.Type()
-	var ptrs []interface{}
-	var values []interface{}
-	var dbFields []string
-	for i := range t.NumField() {
-		field := v.Field(i)
-		fieldType := t.Field(i)
-		// Skip unexported fields
-		if fieldType.PkgPath != "" {
-			continue
-		}
-		if skipNull && isZeroValue(field) {
-			continue
-		}
-		ptrs = append(ptrs, field.Addr().Interface())
-		values = append(values, field.Interface())
-		dbFields = append(dbFields, toSnakeCase(fieldType.Name))
-	}
-	return ptrs, values, dbFields, nil
+	return ptrs, values, fields, nil
 }
 
 func isZeroValue(v reflect.Value) bool {

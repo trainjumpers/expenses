@@ -6,7 +6,7 @@ type CreateUserInput struct {
 	Password string `json:"password" binding:"required,min=6"`
 }
 
-type UserOutput struct {
+type UserResponse struct {
 	Id    int64  `json:"id"`
 	Email string `json:"email"`
 	Name  string `json:"name"`

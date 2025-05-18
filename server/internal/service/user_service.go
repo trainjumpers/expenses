@@ -1,174 +1,116 @@
 package service
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"expenses/internal/models"
-	"expenses/pkg/logger"
+	"expenses/internal/repository"
 	"expenses/pkg/utils"
 	"fmt"
-	"strings"
+	"os"
+	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/golang-jwt/jwt"
 )
 
 type UserService struct {
-	db     *pgxpool.Pool
-	schema string
+    repo     repository.UserRepository
 }
 
-func NewUserService(db *pgxpool.Pool) *UserService {
-	return &UserService{
-		db:     db,
-		schema: utils.GetPGSchema(),
-	}
+func NewUserService(repo repository.UserRepository) *UserService {
+    return &UserService{repo: repo}
 }
 
-/*
-CreateUser creates a new user in the user table
-newUser: User object with the details of the new user
-returns: User object of the created user
-*/
-func (u *UserService) CreateUser(c *gin.Context, newUser models.CreateUserInput) (models.UserOutput, error) {
-	var user models.UserOutput
-	query, values, ptrs, err := utils.CreateInsertQuery(&newUser, &user, "user")
+func (u *UserService) CreateUser(c *gin.Context, newUser models.CreateUserInput) (models.AuthResponse, error) {
+	hashedPassword, err := utils.HashPassword(newUser.Password)
 	if err != nil {
-		return models.UserOutput{}, err
+		return models.AuthResponse{}, err
 	}
-	logger.Info("Executing query to create a user: ", query)
-	err = u.db.QueryRow(c, query, values...).Scan(ptrs...)
+	newUser.Password = hashedPassword
+	createdUser, err := u.repo.CreateUser(c, newUser)
 	if err != nil {
-		return models.UserOutput{}, err
+		return models.AuthResponse{}, err
 	}
-	return user, nil
+
+	accessToken, err := issueAuthToken(createdUser.Id, createdUser.Email)
+	if err != nil {
+		return models.AuthResponse{}, err
+	}
+	refreshToken, err := generateRefreshToken()
+	if err != nil {
+		return models.AuthResponse{}, err
+	}
+	utils.SaveRefreshToken(refreshToken, utils.RefreshTokenData{
+		UserId: createdUser.Id,
+		Email:  createdUser.Email,
+		Expiry: time.Now().Add(7 * 24 * time.Hour), // 7 days
+	})
+	return models.AuthResponse{
+		User:          createdUser,
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+	}, nil
 }
 
-/*
-GetUserByEmail returns a user by email
-email: Email of the user to be fetched
-returns: User object of the fetched user
-*/
 func (u *UserService) GetUserByEmail(c *gin.Context, email string) (models.UserWithPassword, error) {
-	var user models.UserWithPassword
-	ptrs, dbFields, err := utils.GetDbFieldsFromObject(&user)
-	if err != nil {
-		return models.UserWithPassword{}, err
-	}
-	query := fmt.Sprintf(`
-		SELECT %s FROM %s.user 
-		WHERE email = $1 AND deleted_at IS NULL;`,
-		strings.Join(dbFields, ", "), u.schema)
-	logger.Info("Executing query to get a user by email: ", query)
-	err = u.db.QueryRow(c, query, email).Scan(ptrs...)
-	if err != nil {
-		return models.UserWithPassword{}, err
-	}
-	return user, nil
+	return u.repo.GetUserByEmail(c, email)
 }
 
-/*
-GetUserById returns a user by Id
-userId: Id of the user to be fetched
-returns: User object of the fetched user
-*/
-func (u *UserService) GetUserById(c *gin.Context, userId int64) (models.UserOutput, error) {
-	var user models.UserOutput
-	ptrs, dbFields, err := utils.GetDbFieldsFromObject(&user)
-	if err != nil {
-		return models.UserOutput{}, err
-	}
-	query := fmt.Sprintf(`
-		SELECT %s 
-		FROM %s.user 
-		WHERE id = $1 AND deleted_at IS NULL;`,
-		strings.Join(dbFields, ", "), u.schema)
-	logger.Info("Executing query to get a user by Id: ", query)
-	err = u.db.QueryRow(c, query, userId).Scan(ptrs...)
-	if err != nil {
-		return models.UserOutput{}, err
-	}
-	return user, nil
+
+func (u *UserService) GetUserById(c *gin.Context, userId int64) (models.UserResponse, error) {
+	return u.repo.GetUserById(c, userId)
 }
 
-/*
-DeleteUser deletes a user by Id
-userId: Id of the user to be deleted
-returns: nil
-*/
 func (u *UserService) DeleteUser(c *gin.Context, userId int64) error {
-	query := fmt.Sprintf("UPDATE %s.user SET deleted_at = NOW() WHERE id = $1 AND deleted_at IS NULL;", u.schema)
-	logger.Info("Executing query to delete a user by Id: ", query)
-	_, err := u.db.Exec(c, query, userId)
-	if err != nil {
-		return err
-	}
-	return nil
+	return u.repo.DeleteUser(c, userId)
 }
 
-/*
-UpdateUser updates a user by Id
-userId: Id of the user to be updated
-updatedUser: User object with the updated details
-returns: User object of the updated user
-*/
-func (u *UserService) UpdateUser(c *gin.Context, userId int64, updatedUser models.UpdateUserInput) (models.UserOutput, error) {
-	fieldsClause, argValues, argIndex, err := utils.CreateUpdateParams(&updatedUser)
-	if err != nil {
-		return models.UserOutput{}, err
-	}
-	var user models.UserOutput
-	ptrs, dbFields, err := utils.GetDbFieldsFromObject(&user)
-	if err != nil {
-		return models.UserOutput{}, err
-	}
-
-	query := fmt.Sprintf(`
-		UPDATE %[1]s.user SET %[2]s 
-		WHERE id = $%d AND deleted_at IS NULL %s;`,
-		u.schema, fieldsClause, argIndex, "RETURNING "+strings.Join(dbFields, ", "))
-
-	logger.Info("Executing query to update a user by Id: ", query)
-	err = u.db.QueryRow(c, query, append(argValues, userId)...).Scan(ptrs...)
-	if err != nil {
-		return models.UserOutput{}, err
-	}
-	return user, nil
+func (u *UserService) UpdateUser(c *gin.Context, userId int64, updatedUser models.UpdateUserInput) (models.UserResponse, error) {
+	return u.repo.UpdateUser(c, userId, updatedUser)
 }
 
-/*
-updateUserPassword updates a user's password by Id
-userId: Id of the user to be updated
-PasswordDetails: User object with the updated password details
-returns: User object of the updated user
-*/
-func (u *UserService) UpdateUserPassword(c *gin.Context, userId int64, passwordDetails models.UpdateUserPasswordInput) (models.UserOutput, error) {
-	// Fetch old password
-	var user models.UserOutput
-	query := fmt.Sprintf("SELECT password FROM %[1]s.user WHERE id = $1 AND deleted_at IS NULL;", u.schema)
-	logger.Info("Executing query to get a user by Id: ", query)
-	var oldPassword string
-	err := u.db.QueryRow(c, query, userId).Scan(&oldPassword)
+// generateRefreshToken creates a random string for refresh token
+func generateRefreshToken() (string, error) {
+	b := make([]byte, 32)
+	_, err := rand.Read(b)
 	if err != nil {
-		return models.UserOutput{}, err
+		return "", err
 	}
-	if !utils.CheckPasswordHash(passwordDetails.OldPassword, oldPassword) {
-		return models.UserOutput{}, fmt.Errorf("old password is incorrect")
-	}
-	hashedPassword, err := utils.HashPassword(passwordDetails.NewPassword)
+	return base64.URLEncoding.EncodeToString(b), nil
+}
+
+// issueAuthToken issues a JWT token with the user Id and email
+func issueAuthToken(userId int64, email string) (string, error) {
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"user_id": userId,
+		"email":   email,
+		"exp":     time.Now().Add(time.Hour * 12).Unix(),
+	})
+
+	key := []byte(os.Getenv("JWT_SECRET"))
+
+	tokenString, err := token.SignedString(key)
 	if err != nil {
-		return models.UserOutput{}, err
+		return "", err
 	}
-	ptrs, dbFields, err := utils.GetDbFieldsFromObject(&user)
+
+	return tokenString, nil
+}
+
+// verifyAuthToken verifies the JWT token and returns the claims
+func verifyAuthToken(tokenString string) (jwt.MapClaims, error) {
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		return []byte(os.Getenv("JWT_SECRET")), nil
+	})
 	if err != nil {
-		return models.UserOutput{}, err
+		return nil, err
 	}
-	returningClause := "RETURNING " + strings.Join(dbFields, ", ")
-	query = fmt.Sprintf(`
-		UPDATE %[1]s.user SET password = $2 
-		WHERE id = $1 AND deleted_at IS NULL %s;`, u.schema, returningClause)
-	logger.Info("Executing query to update a user by Id: ", query)
-	err = u.db.QueryRow(c, query, userId, hashedPassword).Scan(ptrs...)
-	if err != nil {
-		return models.UserOutput{}, err
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok || !token.Valid {
+		return nil, fmt.Errorf("invalid token")
 	}
-	return user, nil
+
+	return claims, nil
 }
