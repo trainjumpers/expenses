@@ -1,4 +1,5 @@
-# Expenses
+# Expenses Management
+A simple expenses management application built with Go, React, and Postgres. It allows users to track their expenses, categorize them, and generate reports. It is specifically made for indians with an option to parse a CSV file of a bank statement from Axis, SBI, or HDFC bank.
 
 ## Setting up local Postgres
 Setup local postgres server and create user and database for local development. This step has to be done only once, for fresh devs
