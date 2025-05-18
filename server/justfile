@@ -1,5 +1,5 @@
 run: 
-  $GOPATH/bin/air
+  air
 
 install: 
   go install github.com/air-verse/air@latest
