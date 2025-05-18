@@ -10,6 +10,7 @@ import (
 	"os/signal"
 	"strconv"
 	"syscall"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -37,7 +38,9 @@ func main() {
 	go func() {
 		<-quit
 		logger.Debug("receive interrupt signal")
-		if err := server.Shutdown(context.Background()); err != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := server.Shutdown(ctx); err != nil {
 			logger.Fatal("Server Close:", err)
 		}
 	}()
