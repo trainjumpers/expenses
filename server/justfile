@@ -1,6 +1,0 @@
-run: 
-  air
-
-install: 
-  go install github.com/air-verse/air@latest
-  go mod tidy
