@@ -13,14 +13,14 @@ import (
 var DbPool *pgxpool.Pool
 
 func ConnectDatabase() {
-	host := os.Getenv("PG_HOST")
-	port, err := strconv.Atoi(os.Getenv("PG_PORT"))
+	host := os.Getenv("DB_HOST")
+	port, err := strconv.Atoi(os.Getenv("DB_PORT"))
 	if err != nil {
 		logger.Fatal("Invalid database port number")
 	}
-	user := os.Getenv("PG_USER")
-	dbname := os.Getenv("PG_DATABASE")
-	pass := os.Getenv("PG_PASSWORD")
+	user := os.Getenv("DB_USER")
+	dbname := os.Getenv("DB_NAME")
+	pass := os.Getenv("DB_PASSWORD")
 
 	psqlSetup := fmt.Sprintf("postgresql://%s:%s@%s:%d/%s?sslmode=verify-full",
 		user, pass, host, port, dbname)
