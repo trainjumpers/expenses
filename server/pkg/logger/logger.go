@@ -1,6 +1,9 @@
 package logger
 
 import (
+	"os"
+	"strings"
+
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -9,15 +12,48 @@ var Info, Error, Debug, Warn, Fatal func(args ...interface{})
 var Infof, Errorf, Debugf, Warnf, Fatalf func(template string, args ...interface{})
 
 func init() {
-	config := zap.NewDevelopmentConfig()
-	config.Level = zap.NewAtomicLevelAt(zap.DebugLevel)
-	config.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
-	config.EncoderConfig.TimeKey = "timestamp"
-	config.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
-	config.EncoderConfig.CallerKey = "caller"
-	config.EncoderConfig.EncodeCaller = zapcore.ShortCallerEncoder
+	env := strings.ToLower(os.Getenv("ENV"))
+	var level zap.AtomicLevel
+	var sampling *zap.SamplingConfig
+	if env == "" {
+		env = "dev"
+	}
+	if env != "prod" {
+		level = zap.NewAtomicLevelAt(zap.DebugLevel)
+		sampling = &zap.SamplingConfig{
+			Initial:    100,
+			Thereafter: 100,
+		}
+	} else {
+		level = zap.NewAtomicLevelAt(zap.InfoLevel)
+		sampling = nil
+	}
 
-	logger, _ := config.Build()
+	logger, err := zap.Config{
+		Level:       level,
+		Development: env != "prod",
+		Sampling: sampling,
+		Encoding: "console",
+		EncoderConfig: zapcore.EncoderConfig{
+			TimeKey:        "timestamp",
+			LevelKey:       "level",
+			NameKey:        "logger",
+			CallerKey:      "caller",
+			FunctionKey:    "function",
+			MessageKey:     "msg",
+			StacktraceKey:  "stacktrace",
+			LineEnding:     zapcore.DefaultLineEnding,
+			EncodeLevel:    zapcore.CapitalColorLevelEncoder,
+			EncodeTime:     zapcore.ISO8601TimeEncoder,
+			EncodeDuration: zapcore.SecondsDurationEncoder,
+			EncodeCaller:   zapcore.ShortCallerEncoder,
+		},
+		OutputPaths:      []string{"stderr"},
+		ErrorOutputPaths: []string{"stderr"},
+	}.Build()
+	if err != nil {
+		panic(err)
+	}
 	sugar := logger.Sugar()
 
 	Info = sugar.Info
