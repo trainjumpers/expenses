@@ -1,5 +1,5 @@
 # Expenses Management
-A simple expenses management application built with Go, React, and Postgres. It allows users to track their expenses, categorize them, and generate reports. It is specifically made for indians with an option to parse a CSV file of a bank statement from Axis, SBI, or HDFC bank.
+A simple expenses management application built with Go, React, and Postgres. It allows users to track their expenses, categorize them, and generate reports. It is specifically made for Indians with an option to parse a CSV file of a bank statement from Axis, SBI, or HDFC bank.
 
 ## Project Command Automation with `just`
 
@@ -45,7 +45,7 @@ grant all privileges on schema test to testuser;
 ```
 
 ### How to run Server
-Once the database is setup, its time to run the server. This will install air for live reloading
+Once the database is setup, it's time to run the server. This will install air for live reloading
 ```bash
 just run # Build and run the server
 ```
