@@ -18,14 +18,14 @@ func init() {
 	if env == "" {
 		env = "dev"
 	}
-	if env != "prod" {
-		level = zap.NewAtomicLevelAt(zap.DebugLevel)
+	if env == "prod" {
+		level = zap.NewAtomicLevelAt(zap.InfoLevel)
 		sampling = &zap.SamplingConfig{
 			Initial:    100,
 			Thereafter: 100,
 		}
 	} else {
-		level = zap.NewAtomicLevelAt(zap.InfoLevel)
+		level = zap.NewAtomicLevelAt(zap.DebugLevel)
 		sampling = nil
 	}
 
@@ -39,7 +39,7 @@ func init() {
 			LevelKey:       "level",
 			NameKey:        "logger",
 			CallerKey:      "caller",
-			FunctionKey:    "function",
+			FunctionKey:    zapcore.OmitKey,
 			MessageKey:     "msg",
 			StacktraceKey:  "stacktrace",
 			LineEnding:     zapcore.DefaultLineEnding,

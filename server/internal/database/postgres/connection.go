@@ -30,7 +30,6 @@ func ConnectDatabase() {
 
 	if err != nil {
 		logger.Fatal("There is an error while connecting to the database ", err)
-		panic(err)
 	} else {
 		DbPool = db
 		logger.Debug("Database connected successfully")
