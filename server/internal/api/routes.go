@@ -20,8 +20,6 @@ func Init() *gin.Engine {
 		MaxAge:           6 * time.Hour,
 	}))
 
-	_ = router.Group("/api/v1")
-
 	// Health check route
 	router.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{

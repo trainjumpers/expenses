@@ -14,7 +14,10 @@ var DbPool *pgxpool.Pool
 
 func ConnectDatabase() {
 	host := os.Getenv("PG_HOST")
-	port, _ := strconv.Atoi(os.Getenv("PG_PORT"))
+	port, err := strconv.Atoi(os.Getenv("PG_PORT"))
+	if err != nil {
+		logger.Fatal("Invalid database port number")
+	}
 	user := os.Getenv("PG_USER")
 	dbname := os.Getenv("PG_DATABASE")
 	pass := os.Getenv("PG_PASSWORD")

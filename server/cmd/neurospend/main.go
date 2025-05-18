@@ -1,12 +1,14 @@
 package main
 
 import (
+	"context"
 	"expenses/internal/api"
 	database "expenses/internal/database/postgres"
 	"expenses/pkg/logger"
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 
 	"github.com/gin-gonic/gin"
@@ -19,13 +21,14 @@ func main() {
 	defer database.CloseDatabase()
 
 	router := api.Init()
-	port := os.Getenv("SERVER_PORT")
-	if port == "" {
-		port = "8080"
+	port, err := strconv.Atoi(os.Getenv("SERVER_PORT"))
+	if err != nil {
+		logger.Warn("Invalid or missing server port number, defaulting to 8080")
+		port = 8080
 	}
-	logger.Infof("Starting server on port %s", port)
+	logger.Infof("Starting server on port %d", port)
 	server := &http.Server{
-		Addr:    ":" + port,
+		Addr:    ":" + strconv.Itoa(port),
 		Handler: router,
 	}
 
@@ -34,7 +37,7 @@ func main() {
 	go func() {
 		<-quit
 		logger.Debug("receive interrupt signal")
-		if err := server.Close(); err != nil {
+		if err := server.Shutdown(context.Background()); err != nil {
 			logger.Fatal("Server Close:", err)
 		}
 	}()
