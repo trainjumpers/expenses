@@ -16,7 +16,7 @@ send_interrupt = true
 kill_delay = 500 # ms
 
 [log]
-time = false
+time = true
 
 [color]
 main = "magenta"
