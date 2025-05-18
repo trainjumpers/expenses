@@ -2,6 +2,7 @@ package logger
 
 import (
 	"os"
+	"strings"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -11,31 +12,34 @@ var Info, Error, Debug, Warn, Fatal func(args ...interface{})
 var Infof, Errorf, Debugf, Warnf, Fatalf func(template string, args ...interface{})
 
 func init() {
-	env := os.Getenv("ENV")
+	env := strings.ToLower(os.Getenv("ENV"))
 	var level zap.AtomicLevel
+	var sampling *zap.SamplingConfig
 	if env == "" {
-		env = "development"
+		env = "dev"
 	}
-	if env == "development" {
+	if env != "prod" {
 		level = zap.NewAtomicLevelAt(zap.DebugLevel)
+		sampling = &zap.SamplingConfig{
+			Initial:    100,
+			Thereafter: 100,
+		}
 	} else {
 		level = zap.NewAtomicLevelAt(zap.InfoLevel)
+		sampling = nil
 	}
 
 	logger, err := zap.Config{
 		Level:       level,
-		Development: false,
-		Sampling: &zap.SamplingConfig{
-			Initial:    100,
-			Thereafter: 100,
-		},
+		Development: env != "prod",
+		Sampling: sampling,
 		Encoding: "console",
 		EncoderConfig: zapcore.EncoderConfig{
 			TimeKey:        "timestamp",
 			LevelKey:       "level",
 			NameKey:        "logger",
 			CallerKey:      "caller",
-			FunctionKey:    zapcore.OmitKey,
+			FunctionKey:    "function",
 			MessageKey:     "msg",
 			StacktraceKey:  "stacktrace",
 			LineEnding:     zapcore.DefaultLineEnding,
