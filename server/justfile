@@ -3,4 +3,4 @@ run:
 
 install: 
   go install github.com/air-verse/air@latest
-  go get .
+  go mod tidy
