@@ -67,7 +67,7 @@ func (a *AuthService) Signup(c *gin.Context, newUser models.CreateUserInput) (mo
 	a.saveRefreshToken(refreshToken, RefreshTokenData{
 		UserId: createdUser.Id,
 		Email:  createdUser.Email,
-		Expiry: time.Now().Add(7 * 24 * time.Hour), // 7 days
+		Expiry: time.Now().Add(config.GetRefreshTokenDuration()),
 	})
 	return models.AuthResponse{
 		User:         createdUser,
@@ -182,18 +182,15 @@ func (a *AuthService) generateRefreshToken() (string, error) {
 }
 
 func (a *AuthService) issueAuthToken(userId int64, email string) (string, error) {
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+	claims := jwt.MapClaims{
 		"user_id": userId,
 		"email":   email,
-		"exp":     time.Now().Add(time.Hour * 12).Unix(),
-	})
-
-	tokenString, err := token.SignedString(config.GetJWTSecret())
-	if err != nil {
-		return "", err
+		"exp":     time.Now().Add(config.GetAccessTokenDuration()).Unix(),
+		"iat":     time.Now().Unix(),
 	}
 
-	return tokenString, nil
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString(config.GetJWTSecret())
 }
 
 func (a *AuthService) VerifyAuthToken(tokenString string) (jwt.MapClaims, error) {
