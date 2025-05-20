@@ -17,7 +17,7 @@ func Protected(authService *service.AuthService) gin.HandlerFunc {
 		if tokenString == "" {
 			logger.Warn("Request received without authorization token")
 			response := gin.H{
-				"message": "please login to continue",
+				"message": "please log in to continue",
 			}
 			if config.IsDev() {
 				response["error"] = "No authorization token provided"
@@ -45,7 +45,7 @@ func Protected(authService *service.AuthService) gin.HandlerFunc {
 		if err != nil {
 			logger.Warn("Invalid token received: ", err)
 			response := gin.H{
-				"message": "invalid token. please login again",
+				"message": "invalid token. please log in again",
 			}
 			if config.IsDev() {
 				response["error"] = err.Error()

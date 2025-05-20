@@ -57,7 +57,7 @@ func (a *AuthController) Login(c *gin.Context) {
 
 	authResponse, err := a.authService.Login(c, loginInput)
 	if err != nil {
-		logger.Error("Failed to login user: ", err)
+		logger.Error("Failed to log in user: ", err)
 		handleError(c, err)
 		return
 	}
