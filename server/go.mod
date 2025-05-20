@@ -8,7 +8,6 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.2.2
 	github.com/jackc/pgx/v5 v5.7.5
 	go.uber.org/zap v1.27.0
-
 )
 
 require (
