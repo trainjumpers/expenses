@@ -3,10 +3,10 @@ package service
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"expenses/internal/config"
 	"expenses/internal/errors"
 	"expenses/internal/models"
 	"fmt"
-	"os"
 	"sync"
 	"time"
 
@@ -188,12 +188,7 @@ func (a *AuthService) issueAuthToken(userId int64, email string) (string, error)
 		"exp":     time.Now().Add(time.Hour * 12).Unix(),
 	})
 
-	key := []byte(os.Getenv("JWT_SECRET"))
-	if key == nil || len(key) == 0 {
-		return "", errors.New("JWT_SECRET is not set")
-	}
-
-	tokenString, err := token.SignedString(key)
+	tokenString, err := token.SignedString(config.GetJWTSecret())
 	if err != nil {
 		return "", err
 	}
@@ -203,7 +198,7 @@ func (a *AuthService) issueAuthToken(userId int64, email string) (string, error)
 
 func (a *AuthService) VerifyAuthToken(tokenString string) (jwt.MapClaims, error) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		return []byte(os.Getenv("JWT_SECRET")), nil
+		return config.GetJWTSecret(), nil
 	})
 	if err != nil {
 		return nil, err

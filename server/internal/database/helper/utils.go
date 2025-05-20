@@ -1,10 +1,10 @@
 package helper
 
 import (
+	"expenses/internal/config"
 	"expenses/internal/errors"
 	"expenses/pkg/utils"
 	"fmt"
-	"os"
 	"reflect"
 	"strconv"
 	"strings"
@@ -12,11 +12,7 @@ import (
 
 // GetPGSchema retrieves the PostgreSQL schema from the environment variable DB_SCHEMA.
 func GetPGSchema() string {
-	schema := os.Getenv("DB_SCHEMA")
-	if schema == "" {
-		panic("DB_SCHEMA environment variable is not set")
-	}
-	return schema
+	return config.GetSchema()
 }
 
 // CreateUpdateParams generates an SQL update clause and values from a struct pointer.

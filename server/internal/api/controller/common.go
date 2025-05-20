@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"errors"
+	"expenses/internal/config"
 	customErrors "expenses/internal/errors"
 	"net/http"
 
@@ -12,11 +13,26 @@ func handleError(c *gin.Context, err error) {
 	if err == nil {
 		return
 	}
+
 	var authErr *customErrors.AuthError
 	if errors.As(err, &authErr) {
-		c.JSON(authErr.Status, gin.H{"message": authErr.Message, "error": authErr.Err.Error()})
+		response := gin.H{
+			"message": authErr.Message,
+		}
+		if config.IsDev() {
+			response["error"] = authErr.Err.Error()
+			response["stack"] = authErr.Stack
+		}
+		c.JSON(authErr.Status, response)
 		return
 	}
-	c.JSON(http.StatusInternalServerError, gin.H{"message": "something went wrong", "error": err.Error()})
+
+	response := gin.H{
+		"message": "Something went wrong",
+	}
+	if config.IsDev() {
+		response["error"] = err.Error()
+	}
+	c.JSON(http.StatusInternalServerError, response)
 	return
 }

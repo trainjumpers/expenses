@@ -38,7 +38,7 @@ func (a *AuthController) Signup(c *gin.Context) {
 	logger.Infof("Received request to create user with email: %s", newUser.Email)
 	authResponse, err := a.authService.Signup(c, newUser)
 	if err != nil {
-		logger.Error("Failed to signup user: ", err)
+		logger.Error("Failed to sign up user: ", err)
 		handleError(c, err)
 		return
 	}
@@ -53,7 +53,7 @@ func (a *AuthController) Login(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	logger.Info("Received request to login a user for email: ", loginInput.Email)
+	logger.Info("Received request to log in a user for email: ", loginInput.Email)
 
 	authResponse, err := a.authService.Login(c, loginInput)
 	if err != nil {
