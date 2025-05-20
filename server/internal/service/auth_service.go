@@ -100,7 +100,7 @@ func (a *AuthService) Login(c *gin.Context, loginInput models.LoginInput) (model
 	a.saveRefreshToken(refreshToken, RefreshTokenData{
 		UserId: user.Id,
 		Email:  user.Email,
-		Expiry: time.Now().Add(7 * 24 * time.Hour), // 7 days
+		Expiry: time.Now().Add(config.GetRefreshTokenDuration()),
 	})
 
 	return models.AuthResponse{
@@ -139,7 +139,7 @@ func (a *AuthService) RefreshToken(c *gin.Context, refreshToken string) (models.
 	a.saveRefreshToken(newRefreshToken, RefreshTokenData{
 		UserId: user.Id,
 		Email:  user.Email,
-		Expiry: time.Now().Add(7 * 24 * time.Hour), // 7 days
+		Expiry: time.Now().Add(config.GetRefreshTokenDuration()),
 	})
 
 	a.deleteRefreshToken(refreshToken)
