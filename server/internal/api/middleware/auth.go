@@ -18,8 +18,13 @@ func Protected(authService *service.AuthService) gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-
-		tokenString = strings.Split(tokenString, " ")[1]
+		tokenParts := strings.Fields(strings.TrimSpace(tokenString))
+		if len(tokenParts) != 2 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid token format"})
+			c.Abort()
+			return
+		}
+		tokenString = tokenParts[1]
 		claims, err := authService.VerifyAuthToken(tokenString)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})

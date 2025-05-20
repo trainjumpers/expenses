@@ -38,6 +38,7 @@ func (a *AuthController) Signup(c *gin.Context) {
 	logger.Infof("Received request to create user with email: %s", newUser.Email)
 	authResponse, err := a.authService.Signup(c, newUser)
 	if err != nil {
+		logger.Error("Failed to signup user: ", err)
 		handleError(c, err)
 		return
 	}
@@ -56,6 +57,7 @@ func (a *AuthController) Login(c *gin.Context) {
 
 	authResponse, err := a.authService.Login(c, loginInput)
 	if err != nil {
+		logger.Error("Failed to login user: ", err)
 		handleError(c, err)
 		return
 	}
@@ -81,6 +83,7 @@ func (a *AuthController) RefreshToken(c *gin.Context) {
 
 	authResponse, err := a.authService.RefreshToken(c, req.RefreshToken)
 	if err != nil {
+		logger.Error("Failed to refresh token: ", err)
 		handleError(c, err)
 		return
 	}

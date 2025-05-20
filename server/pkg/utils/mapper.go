@@ -8,15 +8,15 @@ import (
 // extractFields extracts pointers, values, and column names for exported struct fields.
 func ExtractFields(obj interface{}, skipNull bool) ([]interface{}, []interface{}, []string, error) {
 	if obj == nil {
-		return nil, nil, nil, errors.New("extractDbFields: obj is nil")
+		return nil, nil, nil, errors.New("extractFields: obj is nil")
 	}
 	v := reflect.ValueOf(obj)
 	if v.Kind() != reflect.Ptr || v.IsNil() {
-		return nil, nil, nil, errors.New("extractDbFields: obj must be a non-nil pointer to a struct")
+		return nil, nil, nil, errors.New("extractFields: obj must be a non-nil pointer to a struct")
 	}
 	v = v.Elem()
 	if v.Kind() != reflect.Struct {
-		return nil, nil, nil, errors.New("extractDbFields: obj must be a pointer to a struct")
+		return nil, nil, nil, errors.New("extractFields: obj must be a pointer to a struct")
 	}
 	t := v.Type()
 	var ptrs []interface{}

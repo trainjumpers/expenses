@@ -69,11 +69,11 @@ func CreateInsertQuery(insertObj interface{}, outputObj interface{}, tableName s
 func GetDbFieldsFromObject(obj interface{}) ([]interface{}, []string, error) {
 	v := reflect.ValueOf(obj)
 	if v.Kind() != reflect.Ptr || v.IsNil() {
-		return nil, nil, errors.New(fmt.Errorf("obj must be a non-nil pointer to a struct"))
+		return nil, nil, errors.New("obj must be a non-nil pointer to a struct")
 	}
 	v = v.Elem()
 	if v.Kind() != reflect.Struct {
-		return nil, nil, errors.New(fmt.Errorf("obj must be a pointer to a struct"))
+		return nil, nil, errors.New("obj must be a pointer to a struct")
 	}
 	ptrs, _, dbFields, err := extractDbFields(obj, false)
 	if err != nil {

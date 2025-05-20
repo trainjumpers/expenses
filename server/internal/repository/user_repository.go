@@ -1,14 +1,16 @@
 package repository
 
 import (
+	"errors"
 	"expenses/internal/database/helper"
-	"expenses/internal/errors"
+	commonErrors "expenses/internal/errors"
 	"expenses/internal/models"
 	"expenses/pkg/logger"
 	"fmt"
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -69,8 +71,8 @@ func (u *UserRepository) GetUserByEmail(c *gin.Context, email string) (models.Us
 	logger.Info("Executing query to get a user by email: ", query)
 	err = u.db.QueryRow(c, query, email).Scan(ptrs...)
 	if err != nil {
-		if strings.Contains(err.Error(), "no rows") {
-			return models.UserWithPassword{}, errors.NewUserNotFoundError(err)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return models.UserWithPassword{}, commonErrors.NewUserNotFoundError(err)
 		}
 		return models.UserWithPassword{}, err
 	}

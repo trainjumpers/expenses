@@ -1,6 +1,7 @@
 package errors
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"runtime"
@@ -59,8 +60,8 @@ func IsErrorType(err error, errorType string) bool {
 	return false
 }
 
-func New(err error) *AuthError {
-	return FormatError(http.StatusInternalServerError, "internal server error", err, "InternalServerError")
+func New(err string) *AuthError {
+	return FormatError(http.StatusInternalServerError, "internal server error", errors.New(err), "InternalServerError")
 }
 
 func NoFieldsToUpdateError() *AuthError {

@@ -189,6 +189,9 @@ func (a *AuthService) issueAuthToken(userId int64, email string) (string, error)
 	})
 
 	key := []byte(os.Getenv("JWT_SECRET"))
+	if key == nil || len(key) == 0 {
+		return "", errors.New("JWT_SECRET is not set")
+	}
 
 	tokenString, err := token.SignedString(key)
 	if err != nil {
