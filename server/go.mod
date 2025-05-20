@@ -9,8 +9,6 @@ require (
 	go.uber.org/zap v1.27.0
 )
 
-require github.com/golang-jwt/jwt/v5 v5.2.2 // indirect
-
 require (
 	github.com/bytedance/sonic v1.13.2 // indirect
 	github.com/bytedance/sonic/loader v0.2.4 // indirect
