@@ -2,6 +2,7 @@ package repository
 
 import (
 	"expenses/internal/database/helper"
+	"expenses/internal/errors"
 	"expenses/internal/models"
 	"expenses/pkg/logger"
 	"fmt"
@@ -10,6 +11,14 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
+
+type UserRepositoryInterface interface {
+	CreateUser(c *gin.Context, newUser models.CreateUserInput) (models.UserResponse, error)
+	GetUserByEmail(c *gin.Context, email string) (models.UserWithPassword, error)
+	GetUserById(c *gin.Context, userId int64) (models.UserResponse, error)
+	DeleteUser(c *gin.Context, userId int64) error
+	UpdateUser(c *gin.Context, userId int64, updatedUser models.UpdateUserInput) (models.UserResponse, error)
+}
 
 type UserRepository struct {
 	db     *pgxpool.Pool
@@ -60,6 +69,9 @@ func (u *UserRepository) GetUserByEmail(c *gin.Context, email string) (models.Us
 	logger.Info("Executing query to get a user by email: ", query)
 	err = u.db.QueryRow(c, query, email).Scan(ptrs...)
 	if err != nil {
+		if strings.Contains(err.Error(), "no rows") {
+			return models.UserWithPassword{}, errors.NewUserNotFoundError(err)
+		}
 		return models.UserWithPassword{}, err
 	}
 	return user, nil

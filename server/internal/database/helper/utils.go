@@ -1,7 +1,7 @@
 package helper
 
 import (
-	"errors"
+	"expenses/internal/errors"
 	"expenses/pkg/utils"
 	"fmt"
 	"os"
@@ -10,11 +10,11 @@ import (
 	"strings"
 )
 
-// GetPGSchema retrieves the PostgreSQL schema from the environment variable PG_SCHEMA.
+// GetPGSchema retrieves the PostgreSQL schema from the environment variable DB_SCHEMA.
 func GetPGSchema() string {
-	schema := os.Getenv("PG_SCHEMA")
+	schema := os.Getenv("DB_SCHEMA")
 	if schema == "" {
-		panic("PG_SCHEMA environment variable is not set")
+		panic("DB_SCHEMA environment variable is not set")
 	}
 	return schema
 }
@@ -26,7 +26,7 @@ func CreateUpdateParams(obj interface{}) (string, []interface{}, int, error) {
 		return "", nil, 0, err
 	}
 	if len(dbFields) == 0 {
-		return "", nil, 1, utils.ErrNoFieldsToUpdate
+		return "", nil, 1, errors.NoFieldsToUpdateError()
 	}
 	setClauses := make([]string, len(dbFields))
 	for i, col := range dbFields {
@@ -69,11 +69,11 @@ func CreateInsertQuery(insertObj interface{}, outputObj interface{}, tableName s
 func GetDbFieldsFromObject(obj interface{}) ([]interface{}, []string, error) {
 	v := reflect.ValueOf(obj)
 	if v.Kind() != reflect.Ptr || v.IsNil() {
-		return nil, nil, errors.New("obj must be a non-nil pointer to a struct")
+		return nil, nil, errors.New(fmt.Errorf("obj must be a non-nil pointer to a struct"))
 	}
 	v = v.Elem()
 	if v.Kind() != reflect.Struct {
-		return nil, nil, errors.New("obj must be a pointer to a struct")
+		return nil, nil, errors.New(fmt.Errorf("obj must be a pointer to a struct"))
 	}
 	ptrs, _, dbFields, err := extractDbFields(obj, false)
 	if err != nil {
@@ -104,14 +104,7 @@ func extractDbFields(obj interface{}, skipNull bool) ([]interface{}, []interface
 		fields[i] = toSnakeCase(field)
 	}
 	if len(fields) == 0 {
-		return nil, nil, nil, utils.ErrNoFieldsToUpdate
+		return nil, nil, nil, errors.NoFieldsToUpdateError()
 	}
 	return ptrs, values, fields, nil
-}
-
-func isZeroValue(v reflect.Value) bool {
-	if v.Kind() == reflect.Ptr {
-		return v.IsNil()
-	}
-	return reflect.DeepEqual(v.Interface(), reflect.Zero(v.Type()).Interface())
 }
