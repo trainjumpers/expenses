@@ -12,6 +12,13 @@ GOOSE_MIGRATION_DIR := "./internal/database/migrations"
 # Default version to downgrade to when resetting database
 default_downgrade := "0"
 
+# Executes the goose command
+[private]
+[script("bash")]
+[working-directory: 'server']
+goose command:
+  GOOSE_DBSTRING="{{DB_CONNECTION}}" GOOSE_DRIVER={{GOOSE_DRIVER}} GOOSE_MIGRATION_DIR={{GOOSE_MIGRATION_DIR}} GOOSE_TABLE={{GOOSE_TABLE}} goose {{command}}
+
 # Migration commands
 # Private helper function to execute database migrations
 # Replaces ${DB_SCHEMA} placeholder in migration files with actual schema value
@@ -21,7 +28,7 @@ default_downgrade := "0"
 [working-directory: 'server']
 goose_migrate command:
   find {{GOOSE_MIGRATION_DIR}} -type f -exec sed -i.bak "s|\${DB_SCHEMA}|${DB_SCHEMA}|g" {} +
-  GOOSE_DBSTRING="{{DB_CONNECTION}}" GOOSE_DRIVER={{GOOSE_DRIVER}} GOOSE_MIGRATION_DIR={{GOOSE_MIGRATION_DIR}} GOOSE_TABLE={{GOOSE_TABLE}} goose {{command}}
+  just goose {{command}}
   find {{GOOSE_MIGRATION_DIR}} -type f -name "*.bak" | while read -r bak_file; do
   original_file="${bak_file%.bak}"
   mv "$bak_file" "$original_file"
@@ -30,7 +37,7 @@ goose_migrate command:
 # Creates a new migration file with the specified name
 [working-directory: 'server']
 db-create file:
-  GOOSE_DBSTRING="{{DB_CONNECTION}}" GOOSE_DRIVER={{GOOSE_DRIVER}} GOOSE_MIGRATION_DIR={{GOOSE_MIGRATION_DIR}} GOOSE_TABLE={{GOOSE_TABLE}} goose create {{file}} sql
+  just goose create {{file}} sql
 
 # Applies all pending migrations to upgrade the database schema
 db-upgrade:

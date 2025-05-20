@@ -32,8 +32,8 @@ func init() {
 	logger, err := zap.Config{
 		Level:       level,
 		Development: env != "prod",
-		Sampling: sampling,
-		Encoding: "console",
+		Sampling:    sampling,
+		Encoding:    "console",
 		EncoderConfig: zapcore.EncoderConfig{
 			TimeKey:        "timestamp",
 			LevelKey:       "level",
