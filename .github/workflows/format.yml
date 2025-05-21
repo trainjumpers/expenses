@@ -1,0 +1,28 @@
+name: Format
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  format:
+    name: Check Formatting
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./server 
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: true
+
+      - name: Check formatting
+        run: |
+          test -z "$(gofmt -l .)"
+          test -z "$(go vet ./...)"
