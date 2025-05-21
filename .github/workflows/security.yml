@@ -23,6 +23,6 @@ jobs:
       - name: Install dependencies
         run: go get -d
       - name: Run gosec
-        uses: securego/gosec@2
+        uses: securego/gosec@master
         with:
           args: ./...
