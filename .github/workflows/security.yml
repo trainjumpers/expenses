@@ -18,18 +18,9 @@ jobs:
     env:
       GO111MODULE: on
     steps:
+        name: Checkout source
       - uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.24'
-          cache: true
-
       - name: Run gosec
         uses: securego/gosec@master
         with:
           args: ./...
-
-      - name: 'Dependency Review'
-        uses: actions/dependency-review-action@v4

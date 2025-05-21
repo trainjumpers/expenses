@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ./server 
+        working-directory: ./server
     services:
       postgres:
         image: postgres:17
@@ -61,7 +61,4 @@ jobs:
       #     fail_ci_if_error: true
 
       - name: Build
-        defaults:
-      run:
-        working-directory: ./server 
-        run: go build -v ./... 
+        run: go build -v ./...
