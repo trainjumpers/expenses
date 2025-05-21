@@ -20,7 +20,9 @@ jobs:
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
+      - name: Install dependencies
+        run: go get -d
       - name: Run gosec
-        uses: securego/gosec@master
+        uses: securego/gosec@2
         with:
           args: ./...
