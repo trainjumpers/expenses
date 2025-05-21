@@ -1,7 +1,7 @@
 set unstable
 
 # Database connection string with environment variables
-DB_CONNECTION := "user=${DB_USER} dbname=${DB_NAME} password=${DB_PASSWORD} host=${DB_HOST} port=${DB_PORT} sslmode=verify-full"
+DB_CONNECTION := "user=${DB_USER} dbname=${DB_NAME} password=${DB_PASSWORD} host=${DB_HOST} port=${DB_PORT} sslmode=${DB_SSL_MODE}"
 # Database driver for migrations
 GOOSE_DRIVER := "postgres"
 # Table to track migration versions
