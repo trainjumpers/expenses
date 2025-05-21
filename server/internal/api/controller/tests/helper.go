@@ -93,7 +93,7 @@ func runMigrations() error {
 	cmd := exec.Command("just", "install")
 	_, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("failed to run migrations: %v", err)
+		return fmt.Errorf("failed to run migrations during 'just install': %v", err)
 	}
 	cmd = exec.Command("just", "db-upgrade")
 	cmd.Env = append(os.Environ(),
@@ -108,7 +108,7 @@ func runMigrations() error {
 	output, err := cmd.CombinedOutput()
 	fmt.Println("Migration output: ", string(output))
 	if err != nil {
-		return fmt.Errorf("failed to run migrations: %v", err)
+		return fmt.Errorf("failed to run migrations during 'just db-upgrade': %v", err)
 	}
 	return nil
 }
