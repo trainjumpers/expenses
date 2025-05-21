@@ -22,6 +22,7 @@ type TestEnv struct {
 	Container testcontainers.Container
 	AuthCtrl  *controllers.AuthController
 	TestUser  models.CreateUserInput
+	TestUser2 models.CreateUserInput
 }
 
 func SetupTestEnv(t *testing.T) *TestEnv {
@@ -80,11 +81,18 @@ func SetupTestEnv(t *testing.T) *TestEnv {
 		Name:     "Test User",
 	}
 
+	testUser2 := models.CreateUserInput{
+		Email:    "test2@example.com",
+		Password: "testpass123",
+		Name:     "Test User 2",
+	}
+
 	return &TestEnv{
 		DB:        testDB,
 		Container: container,
 		AuthCtrl:  authCtrl,
 		TestUser:  testUser,
+		TestUser2: testUser2,
 	}
 }
 

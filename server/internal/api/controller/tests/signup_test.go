@@ -39,7 +39,7 @@ func TestSignup(t *testing.T) {
 	router.POST("/signup", env.AuthCtrl.Signup)
 
 	t.Run("Successful Signup", func(t *testing.T) {
-		w, err := performPostRequest(router, "/signup", env.TestUser)
+		w, err := performPostRequest(router, "/signup", env.TestUser2)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusCreated, w.Code)
 
@@ -51,12 +51,12 @@ func TestSignup(t *testing.T) {
 		assert.Contains(t, response, "access_token")
 		assert.Contains(t, response, "refresh_token")
 		user := response["user"].(map[string]interface{})
-		assert.Equal(t, env.TestUser.Email, user["email"])
-		assert.Equal(t, env.TestUser.Name, user["name"])
+		assert.Equal(t, env.TestUser2.Email, user["email"])
+		assert.Equal(t, env.TestUser2.Name, user["name"])
 	})
 
 	t.Run("Duplicate Email Signup", func(t *testing.T) {
-		w, err := performPostRequest(router, "/signup", env.TestUser)
+		w, err := performPostRequest(router, "/signup", env.TestUser2)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusConflict, w.Code)
 	})
