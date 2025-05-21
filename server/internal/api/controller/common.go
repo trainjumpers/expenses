@@ -34,5 +34,4 @@ func handleError(c *gin.Context, err error) {
 		response["error"] = err.Error()
 	}
 	c.JSON(http.StatusInternalServerError, response)
-	return
 }

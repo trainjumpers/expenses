@@ -29,8 +29,12 @@ func main() {
 	}
 	logger.Infof("Starting server on port %d", port)
 	server := &http.Server{
-		Addr:    ":" + strconv.Itoa(port),
-		Handler: router,
+		Addr:              ":" + strconv.Itoa(port),
+		Handler:           router,
+		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       120 * time.Second,
 	}
 
 	quit := make(chan os.Signal, 1)
