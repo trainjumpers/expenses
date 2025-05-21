@@ -52,11 +52,11 @@ jobs:
           DB_PASSWORD: postgres
           DB_NAME: expenses_test
 
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
-        with:
-          file: ./server/coverage.txt
-          fail_ci_if_error: true
+      # - name: Upload coverage to Codecov
+      #   uses: codecov/codecov-action@v4
+      #   with:
+      #     file: ./server/coverage.txt
+      #     fail_ci_if_error: true
 
       - name: Build
         working-directory: ./server

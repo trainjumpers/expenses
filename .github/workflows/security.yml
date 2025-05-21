@@ -12,6 +12,8 @@ jobs:
   security:
     name: Security Checks
     runs-on: ubuntu-latest
+    env:
+      GO111MODULE: on
     steps:
       - uses: actions/checkout@v4
 
@@ -20,10 +22,6 @@ jobs:
         with:
           go-version: '1.24'
           cache: true
-
-      - name: Download dependencies
-        working-directory: ./server
-        run: go mod download
 
       - name: Run gosec
         uses: securego/gosec@master
