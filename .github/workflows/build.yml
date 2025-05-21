@@ -17,6 +17,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install just
+        run: |
+          curl -sL https://github.com/casey/just/releases/download/1.25.0/just-1.25.0-x86_64-unknown-linux-musl.tar.gz | tar xz
+          sudo mv just /usr/local/bin/just
+
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
