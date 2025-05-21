@@ -12,7 +12,9 @@ jobs:
   golangci:
     name: lint
     runs-on: ubuntu-latest
-    working-directory: ./server
+    defaults:
+      run:
+        working-directory: ./server 
     steps:
       - uses: actions/checkout@v3
 
@@ -31,7 +33,9 @@ jobs:
         run: go vet ./...
 
       - name: Install staticcheck
-        working-directory: ./server
+        defaults:
+      run:
+        working-directory: ./server 
         run: go install honnef.co/go/tools/cmd/staticcheck@0.6.1
 
       - name: Run staticcheck

@@ -10,7 +10,9 @@ jobs:
   format:
     name: Check Formatting
     runs-on: ubuntu-latest
-    working-directory: ./server
+    defaults:
+      run:
+        working-directory: ./server 
     steps:
       - uses: actions/checkout@v4
 

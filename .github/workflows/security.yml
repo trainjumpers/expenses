@@ -12,7 +12,9 @@ jobs:
   security:
     name: Security Checks
     runs-on: ubuntu-latest
-    working-directory: ./server
+    defaults:
+      run:
+        working-directory: ./server 
     env:
       GO111MODULE: on
     steps:
