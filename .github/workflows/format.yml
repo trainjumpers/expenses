@@ -20,6 +20,7 @@ jobs:
           cache: true
 
       - name: Check formatting
+        working-directory: ./server
         run: |
           test -z "$(gofmt -l .)"
           test -z "$(go vet ./...)" 

@@ -38,11 +38,12 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          key: ${{ runner.os }}-go-${{ hashFiles('server/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
 
       - name: Run tests
+        working-directory: ./server
         run: go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
         env:
           DB_HOST: localhost
@@ -54,8 +55,9 @@ jobs:
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
         with:
-          file: ./coverage.txt
+          file: ./server/coverage.txt
           fail_ci_if_error: true
 
       - name: Build
+        working-directory: ./server
         run: go build -v ./... 
