@@ -21,7 +21,7 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v4
       - name: Install dependencies
-        run: go get -d
+        run: go mod download
       - name: Run gosec
         uses: securego/gosec@master
         with:
