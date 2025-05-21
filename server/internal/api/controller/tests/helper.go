@@ -90,7 +90,12 @@ func SetupTestEnv(t *testing.T) *TestEnv {
 
 func runMigrations() error {
 	fmt.Println("Running migrations")
-	cmd := exec.Command("just", "db-upgrade")
+	cmd := exec.Command("just", "install")
+	_, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed to run migrations: %v", err)
+	}
+	cmd = exec.Command("just", "db-upgrade")
 	cmd.Env = append(os.Environ(),
 		"DB_SCHEMA=dev",
 		"DB_HOST="+os.Getenv("DB_HOST"),
