@@ -12,6 +12,7 @@ jobs:
   security:
     name: Security Checks
     runs-on: ubuntu-latest
+    working-directory: ./server
     env:
       GO111MODULE: on
     steps:
@@ -27,9 +28,6 @@ jobs:
         uses: securego/gosec@master
         with:
           args: ./...
-          working-directory: ./server
 
       - name: 'Dependency Review'
         uses: actions/dependency-review-action@v4
-        with:
-          working-directory: ./server

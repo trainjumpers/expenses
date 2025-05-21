@@ -10,9 +10,10 @@ jobs:
   build:
     name: Build and Test
     runs-on: ubuntu-latest
+    working-directory: ./server
     services:
       postgres:
-        image: postgres:latest
+        image: postgres:17
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -43,7 +44,6 @@ jobs:
             ${{ runner.os }}-go-
 
       - name: Run tests
-        working-directory: ./server
         run: go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
         env:
           DB_HOST: localhost

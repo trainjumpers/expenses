@@ -12,6 +12,7 @@ jobs:
   golangci:
     name: lint
     runs-on: ubuntu-latest
+    working-directory: ./server
     steps:
       - uses: actions/checkout@v3
 
@@ -21,15 +22,12 @@ jobs:
           go-version: '>=1.24.0'
 
       - name: Verify dependencies
-        working-directory: ./server
         run: go mod verify
 
       - name: Build
-        working-directory: ./server
         run: go build -v ./...
 
       - name: Run go vet
-        working-directory: ./server
         run: go vet ./...
 
       - name: Install staticcheck
@@ -37,13 +35,10 @@ jobs:
         run: go install honnef.co/go/tools/cmd/staticcheck@0.6.1
 
       - name: Run staticcheck
-        working-directory: ./server
         run: staticcheck ./...
 
       - name: Install golint
-        working-directory: ./server
         run: go install golang.org/x/lint/golint@latest
 
       - name: Run golint
-        working-directory: ./server
         run: golint ./...

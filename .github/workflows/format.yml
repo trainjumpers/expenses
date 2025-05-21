@@ -10,6 +10,7 @@ jobs:
   format:
     name: Check Formatting
     runs-on: ubuntu-latest
+    working-directory: ./server
     steps:
       - uses: actions/checkout@v4
 
@@ -20,7 +21,6 @@ jobs:
           cache: true
 
       - name: Check formatting
-        working-directory: ./server
         run: |
           test -z "$(gofmt -l .)"
           test -z "$(go vet ./...)"
