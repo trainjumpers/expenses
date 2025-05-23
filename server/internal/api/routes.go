@@ -2,6 +2,7 @@ package api
 
 import (
 	"expenses/internal/api/controller"
+	"expenses/internal/config"
 	"expenses/internal/service"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 )
 
 func Init(
+	cfg *config.Config,
 	authService *service.AuthService,
 	userService *service.UserService,
 ) *gin.Engine {
@@ -26,19 +28,19 @@ func Init(
 	}))
 
 	// Health check route
-	router.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{
+	router.GET("/health", func(ctx *gin.Context) {
+		ctx.JSON(200, gin.H{
 			"status":  "UP",
 			"message": "API is running",
 		})
 	})
-	router.GET("/", func(c *gin.Context) {
-		c.JSON(200, gin.H{
+	router.GET("/", func(ctx *gin.Context) {
+		ctx.JSON(200, gin.H{
 			"message": "Welcome to the expense tracker server",
 		})
 	})
 
-	authController := controller.NewAuthController(authService)
+	authController := controller.NewAuthController(cfg, authService)
 	api := router.Group("/api/v1")
 	{
 		base := api.Group("")

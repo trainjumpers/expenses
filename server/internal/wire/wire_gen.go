@@ -9,6 +9,7 @@ package wire
 import (
 	"expenses/internal/api"
 	"expenses/internal/api/controller"
+	"expenses/internal/config"
 	"expenses/internal/database/postgres"
 	"expenses/internal/repository"
 	"expenses/internal/service"
@@ -19,14 +20,18 @@ import (
 // Injectors from wire.go:
 
 func InitializeApplication() (*Provider, error) {
-	databaseManager, err := database.NewDatabaseManager()
+	configConfig, err := config.NewConfig()
 	if err != nil {
 		return nil, err
 	}
-	userRepository := repository.NewUserRepository(databaseManager)
+	databaseManager, err := database.NewDatabaseManager(configConfig)
+	if err != nil {
+		return nil, err
+	}
+	userRepository := repository.NewUserRepository(databaseManager, configConfig)
 	userService := service.NewUserService(userRepository)
-	authService := service.NewAuthService(userService)
-	engine := api.Init(authService, userService)
+	authService := service.NewAuthService(userService, configConfig)
+	engine := api.Init(configConfig, authService, userService)
 	provider := NewProvider(engine, databaseManager)
 	return provider, nil
 }
@@ -51,7 +56,7 @@ func NewProvider(handler *gin.Engine, dbManager *database.DatabaseManager) *Prov
 }
 
 var ProviderSet = wire.NewSet(
-	NewProvider, database.NewDatabaseManager, api.Init, controllerSet,
+	NewProvider, database.NewDatabaseManager, config.NewConfig, api.Init, controllerSet,
 	repositorySet,
 	serviceSet,
 )

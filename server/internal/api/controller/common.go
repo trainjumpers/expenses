@@ -2,14 +2,13 @@ package controller
 
 import (
 	"errors"
-	"expenses/internal/config"
 	customErrors "expenses/internal/errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
 
-func handleError(c *gin.Context, err error) {
+func handleError(ctx *gin.Context, stack bool, err error) {
 	if err == nil {
 		return
 	}
@@ -19,19 +18,19 @@ func handleError(c *gin.Context, err error) {
 		response := gin.H{
 			"message": authErr.Message,
 		}
-		if config.IsDev() {
+		if stack {
 			response["error"] = authErr.Err.Error()
 			response["stack"] = authErr.Stack
 		}
-		c.JSON(authErr.Status, response)
+		ctx.JSON(authErr.Status, response)
 		return
 	}
 
 	response := gin.H{
 		"message": "Something went wrong",
 	}
-	if config.IsDev() {
+	if stack {
 		response["error"] = err.Error()
 	}
-	c.JSON(http.StatusInternalServerError, response)
+	ctx.JSON(http.StatusInternalServerError, response)
 }

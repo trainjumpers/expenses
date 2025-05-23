@@ -27,9 +27,10 @@ type AuthService struct {
 		Tokens map[string]RefreshTokenData
 	}
 	userService *UserService
+	cfg         *config.Config
 }
 
-func NewAuthService(userService *UserService) *AuthService {
+func NewAuthService(userService *UserService, cfg *config.Config) *AuthService {
 	return &AuthService{
 		refreshTokenStore: struct {
 			sync.RWMutex
@@ -38,17 +39,18 @@ func NewAuthService(userService *UserService) *AuthService {
 			Tokens: make(map[string]RefreshTokenData),
 		},
 		userService: userService,
+		cfg:         cfg,
 	}
 }
 
 // Signup handles user registration and returns auth tokens
-func (a *AuthService) Signup(c *gin.Context, newUser models.CreateUserInput) (models.AuthResponse, error) {
+func (a *AuthService) Signup(ctx *gin.Context, newUser models.CreateUserInput) (models.AuthResponse, error) {
 	hashedPassword, err := a.hashPassword(newUser.Password)
 	if err != nil {
 		return models.AuthResponse{}, err
 	}
 	newUser.Password = hashedPassword
-	createdUser, err := a.userService.CreateUser(c, newUser)
+	createdUser, err := a.userService.CreateUser(ctx, newUser)
 	if err != nil {
 		if errors.CheckForeignKey(err, "unique_active_email") {
 			return models.AuthResponse{}, errors.NewUserAlreadyExistsError(err)
@@ -67,7 +69,7 @@ func (a *AuthService) Signup(c *gin.Context, newUser models.CreateUserInput) (mo
 	a.saveRefreshToken(refreshToken, RefreshTokenData{
 		UserId: createdUser.Id,
 		Email:  createdUser.Email,
-		Expiry: time.Now().Add(config.GetRefreshTokenDuration()),
+		Expiry: time.Now().Add(a.cfg.RefreshTokenDuration),
 	})
 	return models.AuthResponse{
 		User:         createdUser,
@@ -77,8 +79,8 @@ func (a *AuthService) Signup(c *gin.Context, newUser models.CreateUserInput) (mo
 }
 
 // Login handles user authentication and returns auth tokens
-func (a *AuthService) Login(c *gin.Context, loginInput models.LoginInput) (models.AuthResponse, error) {
-	user, err := a.userService.GetUserByEmail(c, loginInput.Email)
+func (a *AuthService) Login(ctx *gin.Context, loginInput models.LoginInput) (models.AuthResponse, error) {
+	user, err := a.userService.GetUserByEmail(ctx, loginInput.Email)
 	if err != nil {
 		return models.AuthResponse{}, errors.NewUserNotFoundError(err)
 	}
@@ -100,7 +102,7 @@ func (a *AuthService) Login(c *gin.Context, loginInput models.LoginInput) (model
 	a.saveRefreshToken(refreshToken, RefreshTokenData{
 		UserId: user.Id,
 		Email:  user.Email,
-		Expiry: time.Now().Add(config.GetRefreshTokenDuration()),
+		Expiry: time.Now().Add(a.cfg.RefreshTokenDuration),
 	})
 
 	return models.AuthResponse{
@@ -115,13 +117,13 @@ func (a *AuthService) Login(c *gin.Context, loginInput models.LoginInput) (model
 }
 
 // RefreshToken issues new auth tokens using a valid refresh token
-func (a *AuthService) RefreshToken(c *gin.Context, refreshToken string) (models.AuthResponse, error) {
+func (a *AuthService) RefreshToken(ctx *gin.Context, refreshToken string) (models.AuthResponse, error) {
 	data, ok := a.getRefreshTokenData(refreshToken)
 	if !ok {
 		return models.AuthResponse{}, errors.NewInvalidTokenError(fmt.Errorf("refresh token not found or expired"))
 	}
 
-	user, err := a.userService.GetUserById(c, data.UserId)
+	user, err := a.userService.GetUserById(ctx, data.UserId)
 	if err != nil {
 		return models.AuthResponse{}, errors.NewUserNotFoundError(err)
 	}
@@ -139,7 +141,7 @@ func (a *AuthService) RefreshToken(c *gin.Context, refreshToken string) (models.
 	a.saveRefreshToken(newRefreshToken, RefreshTokenData{
 		UserId: user.Id,
 		Email:  user.Email,
-		Expiry: time.Now().Add(config.GetRefreshTokenDuration()),
+		Expiry: time.Now().Add(a.cfg.RefreshTokenDuration),
 	})
 
 	a.deleteRefreshToken(refreshToken)
@@ -185,17 +187,17 @@ func (a *AuthService) issueAuthToken(userId int64, email string) (string, error)
 	claims := jwt.MapClaims{
 		"user_id": userId,
 		"email":   email,
-		"exp":     time.Now().Add(config.GetAccessTokenDuration()).Unix(),
+		"exp":     time.Now().Add(a.cfg.AccessTokenDuration).Unix(),
 		"iat":     time.Now().Unix(),
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString(config.GetJWTSecret())
+	return token.SignedString(a.cfg.JWTSecret)
 }
 
 func (a *AuthService) VerifyAuthToken(tokenString string) (jwt.MapClaims, error) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		return config.GetJWTSecret(), nil
+		return a.cfg.JWTSecret, nil
 	})
 	if err != nil {
 		return nil, err

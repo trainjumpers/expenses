@@ -1,7 +1,6 @@
 package helper
 
 import (
-	"expenses/internal/config"
 	"expenses/internal/errors"
 	"expenses/pkg/utils"
 	"fmt"
@@ -9,11 +8,6 @@ import (
 	"strconv"
 	"strings"
 )
-
-// GetPGSchema retrieves the PostgreSQL schema from the environment variable DB_SCHEMA.
-func GetPGSchema() string {
-	return config.GetSchema()
-}
 
 // CreateUpdateParams generates an SQL update clause and values from a struct pointer.
 func CreateUpdateParams(obj interface{}) (string, []interface{}, int, error) {
@@ -33,7 +27,7 @@ func CreateUpdateParams(obj interface{}) (string, []interface{}, int, error) {
 }
 
 // CreateInsertQuery generates an SQL insert clause and values from a struct pointer.
-func CreateInsertQuery(insertObj interface{}, outputObj interface{}, tableName string) (string, []interface{}, []interface{}, error) {
+func CreateInsertQuery(insertObj interface{}, outputObj interface{}, tableName string, schema string) (string, []interface{}, []interface{}, error) {
 	_, values, columns, err := extractDbFields(insertObj, true)
 	if err != nil {
 		return "", nil, nil, err
@@ -57,7 +51,7 @@ func CreateInsertQuery(insertObj interface{}, outputObj interface{}, tableName s
 	query := fmt.Sprintf(`
 		INSERT INTO %s.%s (%s)
 		VALUES (%s) RETURNING %s;`,
-		GetPGSchema(), tableName, columnsClause, placeholdersClause, strings.Join(dbFields, ", "))
+		schema, tableName, columnsClause, placeholdersClause, strings.Join(dbFields, ", "))
 	return query, values, ptrs, nil
 }
 

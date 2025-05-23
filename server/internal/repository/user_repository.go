@@ -2,6 +2,7 @@ package repository
 
 import (
 	"errors"
+	"expenses/internal/config"
 	"expenses/internal/database/helper"
 	database "expenses/internal/database/postgres"
 	commonErrors "expenses/internal/errors"
@@ -28,10 +29,10 @@ type UserRepository struct {
 	schema string
 }
 
-func NewUserRepository(db *database.DatabaseManager) *UserRepository {
+func NewUserRepository(db *database.DatabaseManager, cfg *config.Config) *UserRepository {
 	return &UserRepository{
 		db:     db.GetPool(),
-		schema: helper.GetPGSchema(),
+		schema: cfg.DBSchema,
 	}
 }
 
@@ -42,7 +43,7 @@ returns: User object of the created user
 */
 func (u *UserRepository) CreateUser(c *gin.Context, newUser models.CreateUserInput) (models.UserResponse, error) {
 	var user models.UserResponse
-	query, values, ptrs, err := helper.CreateInsertQuery(&newUser, &user, "user")
+	query, values, ptrs, err := helper.CreateInsertQuery(&newUser, &user, "user", u.schema)
 	if err != nil {
 		return models.UserResponse{}, err
 	}

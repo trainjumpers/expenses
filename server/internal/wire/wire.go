@@ -6,6 +6,7 @@ package wire
 import (
 	"expenses/internal/api"
 	"expenses/internal/api/controller"
+	"expenses/internal/config"
 	database "expenses/internal/database/postgres"
 	"expenses/internal/repository"
 	"expenses/internal/service"
@@ -39,6 +40,7 @@ func InitializeApplication() (*Provider, error) {
 var ProviderSet = wire.NewSet(
 	NewProvider,
 	database.NewDatabaseManager,
+	config.NewConfig,
 	api.Init,
 	controllerSet,
 	repositorySet,

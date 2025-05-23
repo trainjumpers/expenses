@@ -11,19 +11,19 @@ import (
 )
 
 // Protected is a middleware that checks if the request has a valid JWT token
-func Protected(authService *service.AuthService) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		tokenString := c.GetHeader("Authorization")
+func Protected(authService *service.AuthService, cfg *config.Config) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		tokenString := ctx.GetHeader("Authorization")
 		if tokenString == "" {
 			logger.Warn("Request received without authorization token")
 			response := gin.H{
 				"message": "please log in to continue",
 			}
-			if config.IsDev() {
+			if cfg.IsDev() {
 				response["error"] = "No authorization token provided"
 			}
-			c.JSON(http.StatusUnauthorized, response)
-			c.Abort()
+			ctx.JSON(http.StatusUnauthorized, response)
+			ctx.Abort()
 			return
 		}
 
@@ -33,11 +33,11 @@ func Protected(authService *service.AuthService) gin.HandlerFunc {
 			response := gin.H{
 				"message": "Invalid authorization format",
 			}
-			if config.IsDev() {
+			if cfg.IsDev() {
 				response["error"] = "Token must be in format: Bearer <token>"
 			}
-			c.JSON(http.StatusBadRequest, response)
-			c.Abort()
+			ctx.JSON(http.StatusBadRequest, response)
+			ctx.Abort()
 			return
 		}
 		tokenString = tokenParts[1]
@@ -47,11 +47,11 @@ func Protected(authService *service.AuthService) gin.HandlerFunc {
 			response := gin.H{
 				"message": "invalid token. please log in again",
 			}
-			if config.IsDev() {
+			if cfg.IsDev() {
 				response["error"] = err.Error()
 			}
-			c.JSON(http.StatusUnauthorized, response)
-			c.Abort()
+			ctx.JSON(http.StatusUnauthorized, response)
+			ctx.Abort()
 			return
 		}
 
@@ -61,15 +61,15 @@ func Protected(authService *service.AuthService) gin.HandlerFunc {
 			response := gin.H{
 				"message": "Something went wrong",
 			}
-			if config.IsDev() {
+			if cfg.IsDev() {
 				response["error"] = "Malformed user ID in token claims"
 			}
-			c.JSON(http.StatusInternalServerError, response)
-			c.Abort()
+			ctx.JSON(http.StatusInternalServerError, response)
+			ctx.Abort()
 			return
 		}
-		c.Set("authUserId", int64(userId))
+		ctx.Set("authUserId", int64(userId))
 		logger.Info("Request authenticated for user ID: ", int64(userId))
-		c.Next()
+		ctx.Next()
 	}
 }
