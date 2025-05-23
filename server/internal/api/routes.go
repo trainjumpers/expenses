@@ -1,15 +1,18 @@
 package api
 
 import (
-	controllers "expenses/internal/api/controller"
-	database "expenses/internal/database/postgres"
+	"expenses/internal/api/controller"
+	"expenses/internal/service"
 	"time"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
-func Init() *gin.Engine {
+func Init(
+	authService *service.AuthService,
+	userService *service.UserService,
+) *gin.Engine {
 	router := gin.New()
 	router.Use(gin.Logger())
 	router.Use(gin.Recovery())
@@ -35,10 +38,11 @@ func Init() *gin.Engine {
 		})
 	})
 
-	authController := controllers.NewAuthController(database.DbPool)
+	authController := controller.NewAuthController(authService)
 	api := router.Group("/api/v1")
 	{
 		base := api.Group("")
+		// Auth related routes
 		base.POST("/signup", authController.Signup)
 		base.POST("/login", authController.Login)
 		base.POST("/refresh", authController.RefreshToken)
