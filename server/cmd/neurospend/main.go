@@ -2,8 +2,7 @@ package main
 
 import (
 	"context"
-	"expenses/internal/api"
-	database "expenses/internal/database/postgres"
+	"expenses/internal/wire"
 	"expenses/pkg/logger"
 	"net/http"
 	"os"
@@ -17,26 +16,25 @@ import (
 
 func main() {
 	gin.SetMode(gin.ReleaseMode)
-
-	database.ConnectDatabase()
-	defer database.CloseDatabase()
-
-	router := api.Init()
 	port, err := strconv.Atoi(os.Getenv("SERVER_PORT"))
 	if err != nil {
 		logger.Warn("Invalid or missing server port number, defaulting to 8080")
 		port = 8080
 	}
 	logger.Infof("Starting server on port %d", port)
+	provider, err := wire.InitializeApplication()
+	if err != nil {
+		logger.Fatal("Failed to initialize application:", err)
+	}
+	defer provider.Close()
 	server := &http.Server{
 		Addr:              ":" + strconv.Itoa(port),
-		Handler:           router,
+		Handler:           provider.Handler,
 		ReadHeaderTimeout: 10 * time.Second,
 		ReadTimeout:       30 * time.Second,
 		WriteTimeout:      30 * time.Second,
 		IdleTimeout:       120 * time.Second,
 	}
-
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
 	go func() {
@@ -55,5 +53,5 @@ func main() {
 			logger.Fatal("Server closed unexpectedly")
 		}
 	}
-	logger.Debug("Server exited gracefully")
+	logger.Info("Server exited successfully")
 }

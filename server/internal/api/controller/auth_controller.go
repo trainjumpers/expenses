@@ -1,25 +1,21 @@
-package controllers
+package controller
 
 import (
 	"expenses/internal/models"
-	"expenses/internal/repository"
 	"expenses/internal/service"
 	"expenses/pkg/logger"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type AuthController struct {
 	authService *service.AuthService
 }
 
-func NewAuthController(db *pgxpool.Pool) *AuthController {
+func NewAuthController(authService *service.AuthService) *AuthController {
 	return &AuthController{
-		authService: service.NewAuthService(
-			service.NewUserService(repository.NewUserRepository(db)),
-		),
+		authService: authService,
 	}
 }
 

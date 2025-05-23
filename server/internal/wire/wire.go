@@ -1,0 +1,60 @@
+//go:build wireinject
+// +build wireinject
+
+package wire
+
+import (
+	"expenses/internal/api"
+	"expenses/internal/api/controller"
+	database "expenses/internal/database/postgres"
+	"expenses/internal/repository"
+	"expenses/internal/service"
+
+	"github.com/gin-gonic/gin"
+	"github.com/google/wire"
+)
+
+type Provider struct {
+	Handler   *gin.Engine
+	dbManager *database.DatabaseManager
+}
+
+// Close all connections app makes in various places
+func (p *Provider) Close() error {
+	return p.dbManager.Close()
+}
+
+func NewProvider(handler *gin.Engine, dbManager *database.DatabaseManager) *Provider {
+	return &Provider{
+		Handler:   handler,
+		dbManager: dbManager,
+	}
+}
+
+func InitializeApplication() (*Provider, error) {
+	wire.Build(ProviderSet)
+	return &Provider{}, nil
+}
+
+var ProviderSet = wire.NewSet(
+	NewProvider,
+	database.NewDatabaseManager,
+	api.Init,
+	controllerSet,
+	repositorySet,
+	serviceSet,
+)
+
+var controllerSet = wire.NewSet(
+	controller.NewAuthController,
+)
+
+var repositorySet = wire.NewSet(
+	repository.NewUserRepository,
+	wire.Bind(new(repository.UserRepositoryInterface), new(*repository.UserRepository)),
+)
+
+var serviceSet = wire.NewSet(
+	service.NewUserService,
+	service.NewAuthService,
+)

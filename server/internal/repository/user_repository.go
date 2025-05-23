@@ -3,6 +3,7 @@ package repository
 import (
 	"errors"
 	"expenses/internal/database/helper"
+	database "expenses/internal/database/postgres"
 	commonErrors "expenses/internal/errors"
 	"expenses/internal/models"
 	"expenses/pkg/logger"
@@ -27,9 +28,9 @@ type UserRepository struct {
 	schema string
 }
 
-func NewUserRepository(db *pgxpool.Pool) *UserRepository {
+func NewUserRepository(db *database.DatabaseManager) *UserRepository {
 	return &UserRepository{
-		db:     db,
+		db:     db.GetPool(),
 		schema: helper.GetPGSchema(),
 	}
 }
