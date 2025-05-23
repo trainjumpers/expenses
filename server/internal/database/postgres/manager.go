@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"expenses/internal/config"
 	"expenses/pkg/logger"
 	"fmt"
 	"os"
@@ -14,7 +15,7 @@ type DatabaseManager struct {
 	pool *pgxpool.Pool
 }
 
-func NewDatabaseManager() (*DatabaseManager, error) {
+func NewDatabaseManager(cfg *config.Config) (*DatabaseManager, error) {
 	host := os.Getenv("DB_HOST")
 	port, err := strconv.Atoi(os.Getenv("DB_PORT"))
 	if err != nil {
@@ -24,8 +25,8 @@ func NewDatabaseManager() (*DatabaseManager, error) {
 	dbname := os.Getenv("DB_NAME")
 	pass := os.Getenv("DB_PASSWORD")
 
-	psqlSetup := fmt.Sprintf("postgresql://%s:%s@%s:%d/%s?sslmode=verify-full",
-		user, pass, host, port, dbname)
+	psqlSetup := fmt.Sprintf("postgresql://%s:%s@%s:%d/%s?sslmode=verify-full&search_path=%s",
+		user, pass, host, port, dbname, cfg.DBSchema)
 
 	logger.Debug("Connecting to database")
 	pool, err := pgxpool.New(context.Background(), psqlSetup)
