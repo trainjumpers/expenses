@@ -4,6 +4,7 @@ import (
 	"errors"
 	customErrors "expenses/internal/errors"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -20,7 +21,17 @@ func handleError(ctx *gin.Context, stack bool, err error) {
 		}
 		if stack {
 			response["error"] = authErr.Err.Error()
-			response["stack"] = authErr.Stack
+			if authErr.Stack != "" {
+				stackLines := strings.Split(authErr.Stack, "\n")
+				nonEmptyLines := make([]string, 0, len(stackLines))
+				for _, line := range stackLines {
+					line = strings.ReplaceAll(line, "\t", "")
+					if line != "" {
+						nonEmptyLines = append(nonEmptyLines, line)
+					}
+				}
+				response["stack"] = nonEmptyLines
+			}
 		}
 		ctx.JSON(authErr.Status, response)
 		return
