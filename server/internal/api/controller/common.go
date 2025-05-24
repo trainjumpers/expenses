@@ -13,7 +13,7 @@ import (
 // trimming whitespace, and removing empty lines
 func cleanStackTrace(stack string) []string {
 	if stack == "" {
-		return nil
+		return []string{}
 	}
 
 	stackLines := strings.Split(stack, "\n")
