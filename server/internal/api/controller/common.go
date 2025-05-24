@@ -9,6 +9,24 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// cleanStackTrace processes a stack trace string by splitting it into lines,
+// trimming whitespace, and removing empty lines
+func cleanStackTrace(stack string) []string {
+	if stack == "" {
+		return nil
+	}
+
+	stackLines := strings.Split(stack, "\n")
+	nonEmptyLines := make([]string, 0, len(stackLines))
+	for _, line := range stackLines {
+		line = strings.TrimSpace(line)
+		if line != "" {
+			nonEmptyLines = append(nonEmptyLines, line)
+		}
+	}
+	return nonEmptyLines
+}
+
 func handleError(ctx *gin.Context, stack bool, err error) {
 	if err == nil {
 		return
@@ -21,17 +39,7 @@ func handleError(ctx *gin.Context, stack bool, err error) {
 		}
 		if stack {
 			response["error"] = authErr.Err.Error()
-			if authErr.Stack != "" {
-				stackLines := strings.Split(authErr.Stack, "\n")
-				nonEmptyLines := make([]string, 0, len(stackLines))
-				for _, line := range stackLines {
-					line = strings.ReplaceAll(line, "\t", "")
-					if line != "" {
-						nonEmptyLines = append(nonEmptyLines, line)
-					}
-				}
-				response["stack"] = nonEmptyLines
-			}
+			response["stack"] = cleanStackTrace(authErr.Stack)
 		}
 		ctx.JSON(authErr.Status, response)
 		return
