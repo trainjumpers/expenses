@@ -56,6 +56,12 @@ jobs:
         run: |
             PGPASSWORD=${{ env.DB_PASSWORD }} psql -U postgres -h 127.0.0.1 -p ${{ job.services.postgres.ports[5432] }} -d ${{ env.DB_NAME }} -tc "CREATE SCHEMA IF NOT EXISTS ${{ env.DB_SCHEMA }};"
 
+      - name: Install Just
+        uses: extractions/setup-just@v3
+
+      - name: Install dependencies
+        run: just install
+
       - name: Cache Go modules
         uses: actions/cache@v4
         with:
@@ -63,12 +69,6 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('server/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
-
-      - name: Install Just
-        uses: extractions/setup-just@v3
-
-      - name: Install dependencies
-        run: just install
 
       - name: Run migrations
         run: just db-upgrade
