@@ -75,3 +75,11 @@ db-downgrade-reset reset=default_downgrade:
 [working-directory: 'server']
 @server:
   air
+
+# Ginkgo test helpers
+[working-directory: 'server']
+@ginkgo command dir:
+  cd {{dir}} && ginkgo {{command}}
+
+@test:
+  cd server && just ginkgo "run ./..." "./"
