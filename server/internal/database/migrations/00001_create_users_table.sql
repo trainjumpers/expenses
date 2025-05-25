@@ -1,6 +1,5 @@
 -- +goose Up
 -- +goose StatementBegin
-CREATE SCHEMA IF NOT EXISTS ${DB_SCHEMA};
 CREATE TABLE ${DB_SCHEMA}.user (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
@@ -20,5 +19,4 @@ WHERE deleted_at IS NULL;
 -- +goose StatementBegin
 DROP INDEX IF EXISTS ${DB_SCHEMA}.unique_active_email;
 DROP TABLE IF EXISTS ${DB_SCHEMA}.user;
-DROP SCHEMA IF EXISTS ${DB_SCHEMA};
 -- +goose StatementEnd
