@@ -16,7 +16,7 @@ func TestErrors(t *testing.T) {
 }
 
 var _ = Describe("Error Formatting", func() {
-	Describe("FormatError", func() {
+	Describe("formatError", func() {
 		var (
 			originalErr error
 			message     string
@@ -30,7 +30,7 @@ var _ = Describe("Error Formatting", func() {
 			message = "test message"
 			errorType = "TestError"
 			status = http.StatusBadRequest
-			err = FormatError(status, message, originalErr, errorType)
+			err = formatError(status, message, originalErr, errorType)
 		})
 
 		It("should set the correct message", func() {

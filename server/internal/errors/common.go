@@ -60,8 +60,8 @@ func cleanStackTrace(stack string) []string {
 	return nonEmptyLines
 }
 
-// FormatError creates a new AuthError with stack trace
-func FormatError(status int, message string, err error, errorType string) *AuthError {
+// formatError creates a new AuthError with stack trace
+func formatError(status int, message string, err error, errorType string) *AuthError {
 	return &AuthError{
 		Message:   message,
 		Err:       err,
@@ -72,11 +72,11 @@ func FormatError(status int, message string, err error, errorType string) *AuthE
 }
 
 func New(err string) *AuthError {
-	return FormatError(http.StatusInternalServerError, "internal server error", errors.New(err), "InternalServerError")
+	return formatError(http.StatusInternalServerError, "internal server error", errors.New(err), "InternalServerError")
 }
 
 func NoFieldsToUpdateError() *AuthError {
-	return FormatError(http.StatusBadRequest, "no fields to update", fmt.Errorf("no fields to update"), "NoFieldsToUpdate")
+	return formatError(http.StatusBadRequest, "no fields to update", fmt.Errorf("no fields to update"), "NoFieldsToUpdate")
 }
 
 func CheckForeignKey(err error, fkKey string) bool {
