@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"expenses/internal/models"
+	"fmt"
 	"net/http"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -81,6 +82,29 @@ var _ = Describe("AuthController", func() {
 				defer resp.Body.Close()
 
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+			})
+
+			It("should return conflict for existing user", func() {
+				userInput := models.CreateUserInput{
+					Email:    "test1@example.com", // Using email from test seed
+					Name:     "Test User",
+					Password: "password123",
+				}
+
+				body, _ := json.Marshal(userInput)
+				req, err := http.NewRequest(http.MethodPost, baseURL+"/signup", bytes.NewBuffer(body))
+				Expect(err).NotTo(HaveOccurred())
+				req.Header.Set("Content-Type", "application/json")
+
+				resp, err := client.Do(req)
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+
+				Expect(resp.StatusCode).To(Equal(http.StatusConflict))
+				var response map[string]interface{}
+				err = json.NewDecoder(resp.Body).Decode(&response)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(response["message"]).To(Equal("User already exists"))
 			})
 		})
 	})
@@ -181,6 +205,9 @@ var _ = Describe("AuthController", func() {
 				data := response["data"].(map[string]interface{})
 				newAccessToken := data["access_token"].(string)
 				newRefreshToken := data["refresh_token"].(string)
+				Expect(newAccessToken).NotTo(BeEmpty())
+				Expect(newRefreshToken).NotTo(BeEmpty())
+				fmt.Println(newAccessToken, newRefreshToken, accessToken, refreshToken)
 				Expect(newAccessToken).NotTo(Equal(accessToken))
 				Expect(newRefreshToken).NotTo(Equal(refreshToken))
 			})
