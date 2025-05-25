@@ -7,10 +7,6 @@ unset DB_SEED_DIR
 export DB_SCHEMA=${DB_SCHEMA:-test}
 export DB_SEED_DIR=${DB_SEED_DIR:-./internal/database/seed/test}   # ← no trailing space!
 
-echo "DB_SCHEMA: $DB_SCHEMA"
-echo "DB_SEED_DIR: $DB_SEED_DIR"
-echo "DB_NAME: $DB_NAME"
-
 if [[ "$DB_SCHEMA" != "test" ]]; then
   echo "❌ Refusing to run e2e tests on non-test schema $DB_SCHEMA"
   exit 1
