@@ -58,8 +58,21 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
-      - name: Install Ginkgo
-        run: go install github.com/onsi/ginkgo/v2/ginkgo@latest
+      - name: Install Just
+        uses: extractions/setup-just@v3
+
+      - name: Install dependencies
+        run: just install
+
+      - name: Run migrations
+        run: just db-upgrade
+        env:
+          DB_HOST: ${{ env.DB_HOST }}
+          DB_PORT: ${{ env.DB_PORT }}
+          DB_USER: ${{ env.DB_USER }}
+          DB_PASSWORD: ${{ env.DB_PASSWORD }}
+          DB_NAME: ${{ env.DB_NAME }}
+          DB_SCHEMA: ${{ env.DB_SCHEMA }}
 
       - name: build server
         run: |
@@ -80,8 +93,13 @@ jobs:
           echo $! > server.pid
           # wait for health probe
           for i in {1..20}; do
-            curl -f http://localhost:${{ env.SERVER_PORT }}/health && break || sleep 1
+            if curl -f http://localhost:${{ env.SERVER_PORT }}/health; then
+              exit 0
+            fi
+            sleep 1
           done
+          echo "Server failed to become healthy after 20 attempts"
+          exit 1
 
       - name: Run tests
         run: ginkgo -r -p -race -cover -coverprofile=coverage.txt -covermode=atomic ./...
