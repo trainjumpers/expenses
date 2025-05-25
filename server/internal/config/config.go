@@ -9,6 +9,12 @@ import (
 	"time"
 )
 
+const (
+	EnvironmentDev  = "dev"
+	EnvironmentProd = "prod"
+	EnvironmentTest = "test"
+)
+
 type Config struct {
 	Environment          string
 	JWTSecret            []byte
@@ -21,7 +27,7 @@ func NewConfig() (*Config, error) {
 	config := &Config{}
 	config.Environment = strings.ToLower(os.Getenv("ENV"))
 	if config.Environment == "" {
-		config.Environment = "dev"
+		config.Environment = EnvironmentDev
 	}
 	jwtSecret := os.Getenv("JWT_SECRET")
 	if jwtSecret == "" {
@@ -45,14 +51,30 @@ func NewConfig() (*Config, error) {
 	return config, nil
 }
 
+// String returns a human-readable string representation of the Config
+func (cfg *Config) String() string {
+	return fmt.Sprintf(
+		"Config{Environment: %q, JWTSecret: %q, DBSchema: %q, AccessTokenDuration: %v, RefreshTokenDuration: %v}",
+		cfg.Environment,
+		"***",
+		cfg.DBSchema,
+		cfg.AccessTokenDuration,
+		cfg.RefreshTokenDuration,
+	)
+}
+
 // IsDev returns true if the environment is development
 func (cfg *Config) IsDev() bool {
-	return cfg.Environment == "dev"
+	return cfg.Environment == EnvironmentDev
 }
 
 // IsProd returns true if the environment is production
 func (cfg *Config) IsProd() bool {
-	return cfg.Environment == "prod"
+	return cfg.Environment == EnvironmentProd
+}
+
+func (cfg *Config) IsTest() bool {
+	return cfg.Environment == EnvironmentTest
 }
 
 // getEnvInt is a helper function to get an integer from environment variables

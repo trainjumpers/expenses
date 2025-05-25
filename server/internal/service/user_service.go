@@ -7,11 +7,22 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// UserServiceInterface defines the contract for user service operations
+type UserServiceInterface interface {
+	CreateUser(c *gin.Context, newUser models.CreateUserInput) (models.UserResponse, error)
+	GetUserByEmail(c *gin.Context, email string) (models.UserWithPassword, error)
+	GetUserById(c *gin.Context, userId int64) (models.UserResponse, error)
+	DeleteUser(c *gin.Context, userId int64) error
+	UpdateUser(c *gin.Context, userId int64, updatedUser models.UpdateUserInput) (models.UserResponse, error)
+}
+
+// UserService implements UserServiceInterface
 type UserService struct {
 	repo repository.UserRepositoryInterface
 }
 
-func NewUserService(repo repository.UserRepositoryInterface) *UserService {
+// NewUserService creates a new UserService instance that implements UserServiceInterface
+func NewUserService(repo repository.UserRepositoryInterface) UserServiceInterface {
 	return &UserService{repo: repo}
 }
 

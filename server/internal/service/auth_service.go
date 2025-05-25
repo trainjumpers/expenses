@@ -15,28 +15,35 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type RefreshTokenData struct {
-	UserId int64
-	Email  string
-	Expiry time.Time
+// AuthServiceInterface defines the contract for authentication service operations
+type AuthServiceInterface interface {
+	Signup(ctx *gin.Context, newUser models.CreateUserInput) (models.AuthResponse, error)
+	Login(ctx *gin.Context, loginInput models.LoginInput) (models.AuthResponse, error)
+	RefreshToken(ctx *gin.Context, refreshToken string) (models.AuthResponse, error)
+	VerifyAuthToken(tokenString string) (jwt.MapClaims, error)
+	// ExpireRefreshToken is a helper method for testing purposes only.
+	// DO NOT USE IN PRODUCTION.
+	ExpireRefreshToken(refreshToken string) error
 }
 
+// AuthService implements AuthServiceInterface
 type AuthService struct {
 	refreshTokenStore struct {
 		sync.RWMutex
-		Tokens map[string]RefreshTokenData
+		Tokens map[string]models.RefreshTokenData
 	}
-	userService *UserService
+	userService UserServiceInterface
 	cfg         *config.Config
 }
 
-func NewAuthService(userService *UserService, cfg *config.Config) *AuthService {
+// NewAuthService creates a new AuthService instance that implements AuthServiceInterface
+func NewAuthService(userService UserServiceInterface, cfg *config.Config) AuthServiceInterface {
 	return &AuthService{
 		refreshTokenStore: struct {
 			sync.RWMutex
-			Tokens map[string]RefreshTokenData
+			Tokens map[string]models.RefreshTokenData
 		}{
-			Tokens: make(map[string]RefreshTokenData),
+			Tokens: make(map[string]models.RefreshTokenData),
 		},
 		userService: userService,
 		cfg:         cfg,
@@ -66,7 +73,7 @@ func (a *AuthService) Signup(ctx *gin.Context, newUser models.CreateUserInput) (
 	if err != nil {
 		return models.AuthResponse{}, err
 	}
-	a.saveRefreshToken(refreshToken, RefreshTokenData{
+	a.saveRefreshToken(refreshToken, models.RefreshTokenData{
 		UserId: createdUser.Id,
 		Email:  createdUser.Email,
 		Expiry: time.Now().Add(a.cfg.RefreshTokenDuration),
@@ -99,7 +106,7 @@ func (a *AuthService) Login(ctx *gin.Context, loginInput models.LoginInput) (mod
 		return models.AuthResponse{}, errors.NewTokenGenerationError(err)
 	}
 
-	a.saveRefreshToken(refreshToken, RefreshTokenData{
+	a.saveRefreshToken(refreshToken, models.RefreshTokenData{
 		UserId: user.Id,
 		Email:  user.Email,
 		Expiry: time.Now().Add(a.cfg.RefreshTokenDuration),
@@ -138,7 +145,7 @@ func (a *AuthService) RefreshToken(ctx *gin.Context, refreshToken string) (model
 		return models.AuthResponse{}, errors.NewTokenGenerationError(err)
 	}
 
-	a.saveRefreshToken(newRefreshToken, RefreshTokenData{
+	a.saveRefreshToken(newRefreshToken, models.RefreshTokenData{
 		UserId: user.Id,
 		Email:  user.Email,
 		Expiry: time.Now().Add(a.cfg.RefreshTokenDuration),
@@ -152,18 +159,18 @@ func (a *AuthService) RefreshToken(ctx *gin.Context, refreshToken string) (model
 	}, nil
 }
 
-func (a *AuthService) saveRefreshToken(token string, data RefreshTokenData) {
+func (a *AuthService) saveRefreshToken(token string, data models.RefreshTokenData) {
 	a.refreshTokenStore.Lock()
 	defer a.refreshTokenStore.Unlock()
 	a.refreshTokenStore.Tokens[token] = data
 }
 
-func (a *AuthService) getRefreshTokenData(token string) (RefreshTokenData, bool) {
+func (a *AuthService) getRefreshTokenData(token string) (models.RefreshTokenData, bool) {
 	a.refreshTokenStore.RLock()
 	defer a.refreshTokenStore.RUnlock()
 	data, ok := a.refreshTokenStore.Tokens[token]
 	if !ok || data.Expiry.Before(time.Now()) {
-		return RefreshTokenData{}, false
+		return models.RefreshTokenData{}, false
 	}
 	return data, true
 }
@@ -219,4 +226,24 @@ func (a *AuthService) hashPassword(password string) (string, error) {
 func (a *AuthService) checkPasswordHash(password, hash string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 	return err == nil
+}
+
+// ExpireRefreshToken manually expires a refresh token for testing purposes
+func (a *AuthService) ExpireRefreshToken(refreshToken string) error {
+	if !a.cfg.IsTest() {
+		return errors.New("expiring refresh token is allowed only in test environment")
+	}
+
+	a.refreshTokenStore.Lock()
+	defer a.refreshTokenStore.Unlock()
+
+	data, exists := a.refreshTokenStore.Tokens[refreshToken]
+	if !exists {
+		return errors.NewInvalidTokenError(fmt.Errorf("refresh token not found"))
+	}
+
+	// Set expiry to past time
+	data.Expiry = time.Now().Add(-time.Hour)
+	a.refreshTokenStore.Tokens[refreshToken] = data
+	return nil
 }

@@ -12,8 +12,8 @@ import (
 
 func Init(
 	cfg *config.Config,
-	authService *service.AuthService,
-	userService *service.UserService,
+	authService service.AuthServiceInterface,
+	userService service.UserServiceInterface,
 ) *gin.Engine {
 	router := gin.New()
 	router.Use(gin.Logger())

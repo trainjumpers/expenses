@@ -5,6 +5,7 @@ import (
 	"expenses/internal/errors"
 	mock "expenses/internal/mock/repository"
 	"expenses/internal/models"
+	"os"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -16,22 +17,25 @@ import (
 
 var _ = Describe("AuthService", func() {
 	var (
-		authService *AuthService
-		userService *UserService
+		authService AuthServiceInterface
+		userService UserServiceInterface
 		mockRepo    *mock.MockUserRepository
 		cfg         *config.Config
 		ctx         *gin.Context
 	)
 
 	BeforeEach(func() {
+		// Set environment variables before creating config
+		os.Setenv("ENV", "test")
+		os.Setenv("JWT_SECRET", "test-secret")
+		os.Setenv("DB_SCHEMA", "test_schema")
+
 		ctx = &gin.Context{}
 		mockRepo = mock.NewMockUserRepository()
 		userService = NewUserService(mockRepo)
-		cfg = &config.Config{
-			JWTSecret:            []byte("test-secret"),
-			AccessTokenDuration:  time.Hour,
-			RefreshTokenDuration: 24 * time.Hour,
-		}
+		var err error
+		cfg, err = config.NewConfig()
+		Expect(err).NotTo(HaveOccurred())
 		authService = NewAuthService(userService, cfg)
 	})
 
@@ -170,12 +174,9 @@ var _ = Describe("AuthService", func() {
 			authResponse, err = authService.Signup(ctx, user)
 			Expect(err).NotTo(HaveOccurred())
 
-			// Manually expire the token
-			authService.refreshTokenStore.Lock()
-			data := authService.refreshTokenStore.Tokens[authResponse.RefreshToken]
-			data.Expiry = time.Now().Add(-time.Hour)
-			authService.refreshTokenStore.Tokens[authResponse.RefreshToken] = data
-			authService.refreshTokenStore.Unlock()
+			// Manually expire the token using the test helper method
+			err = authService.ExpireRefreshToken(authResponse.RefreshToken)
+			Expect(err).NotTo(HaveOccurred())
 
 			// Try to refresh tokens
 			_, err = authService.RefreshToken(ctx, authResponse.RefreshToken)

@@ -13,7 +13,7 @@ import (
 
 var _ = Describe("UserService", func() {
 	var (
-		userService *UserService
+		userService UserServiceInterface
 		mockRepo    *mock.MockUserRepository
 		ctx         *gin.Context
 	)

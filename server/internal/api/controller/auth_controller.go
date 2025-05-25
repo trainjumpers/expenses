@@ -11,45 +11,45 @@ import (
 )
 
 type AuthController struct {
-	authService *service.AuthService
-	cfg         *config.Config
+	*BaseController
+	authService service.AuthServiceInterface
 }
 
-func NewAuthController(cfg *config.Config, authService *service.AuthService) *AuthController {
+func NewAuthController(cfg *config.Config, authService service.AuthServiceInterface) *AuthController {
 	return &AuthController{
-		authService: authService,
-		cfg:         cfg,
+		BaseController: NewBaseController(cfg),
+		authService:    authService,
 	}
 }
 
 // GetAuthService returns the auth service instance
-func (a *AuthController) GetAuthService() *service.AuthService {
+func (a *AuthController) GetAuthService() service.AuthServiceInterface {
 	return a.authService
 }
 
 // Signup controller handles creation of a new user, and returns the user data along with an access token
 func (a *AuthController) Signup(ctx *gin.Context) {
 	var newUser models.CreateUserInput
-	if err := ctx.ShouldBindJSON(&newUser); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := a.BindJSON(ctx, &newUser); err != nil {
+		logger.Error("Failed to bind JSON: ", err)
 		return
 	}
 	logger.Infof("Received request to create user with email: %s", newUser.Email)
 	authResponse, err := a.authService.Signup(ctx, newUser)
 	if err != nil {
 		logger.Error("Failed to sign up user: ", err)
-		handleError(ctx, a.cfg.IsDev(), err)
+		a.HandleError(ctx, err)
 		return
 	}
 	logger.Infof("User created successfully with Id: %d", authResponse.User.Id)
-	ctx.JSON(http.StatusCreated, authResponse)
+	a.SendSuccess(ctx, http.StatusCreated, "User signed up successfully", authResponse)
 }
 
 // Login controller handles user login and sends back an access token
 func (a *AuthController) Login(ctx *gin.Context) {
 	var loginInput models.LoginInput
-	if err := ctx.ShouldBindJSON(&loginInput); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := a.BindJSON(ctx, &loginInput); err != nil {
+		logger.Error("Failed to bind JSON: ", err)
 		return
 	}
 	logger.Info("Received request to log in a user for email: ", loginInput.Email)
@@ -57,13 +57,12 @@ func (a *AuthController) Login(ctx *gin.Context) {
 	authResponse, err := a.authService.Login(ctx, loginInput)
 	if err != nil {
 		logger.Error("Failed to log in user: ", err)
-		handleError(ctx, a.cfg.IsDev(), err)
+		a.HandleError(ctx, err)
 		return
 	}
 
 	logger.Infof("User logged in successfully with Id: %d", authResponse.User.Id)
-	ctx.JSON(http.StatusOK, gin.H{
-		"message":       "User logged in successfully",
+	a.SendSuccess(ctx, http.StatusOK, "User logged in successfully", gin.H{
 		"user":          authResponse.User,
 		"access_token":  authResponse.AccessToken,
 		"refresh_token": authResponse.RefreshToken,
@@ -75,20 +74,19 @@ func (a *AuthController) RefreshToken(ctx *gin.Context) {
 	var req struct {
 		RefreshToken string `json:"refresh_token"`
 	}
-	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := a.BindJSON(ctx, &req); err != nil {
+		logger.Error("Failed to bind JSON: ", err)
 		return
 	}
 
 	authResponse, err := a.authService.RefreshToken(ctx, req.RefreshToken)
 	if err != nil {
 		logger.Error("Failed to refresh token: ", err)
-		handleError(ctx, a.cfg.IsDev(), err)
+		a.HandleError(ctx, err)
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{
-		"message":       "Token refreshed successfully",
+	a.SendSuccess(ctx, http.StatusOK, "Token refreshed successfully", gin.H{
 		"user":          authResponse.User,
 		"access_token":  authResponse.AccessToken,
 		"refresh_token": authResponse.RefreshToken,

@@ -11,7 +11,7 @@ import (
 )
 
 // Protected is a middleware that checks if the request has a valid JWT token
-func Protected(authService *service.AuthService, cfg *config.Config) gin.HandlerFunc {
+func Protected(authService service.AuthServiceInterface, cfg *config.Config) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		tokenString := ctx.GetHeader("Authorization")
 		if tokenString == "" {
