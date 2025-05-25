@@ -13,7 +13,7 @@ import (
 
 var _ = Describe("UserService", func() {
 	var (
-		userService *UserService
+		userService UserServiceInterface
 		mockRepo    *mock.MockUserRepository
 		ctx         *gin.Context
 	)
@@ -21,7 +21,7 @@ var _ = Describe("UserService", func() {
 	BeforeEach(func() {
 		ctx = &gin.Context{}
 		mockRepo = mock.NewMockUserRepository()
-		userService = &UserService{repo: mockRepo}
+		userService = NewUserService(mockRepo)
 	})
 
 	Describe("CreateUser", func() {

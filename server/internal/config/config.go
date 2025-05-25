@@ -73,3 +73,15 @@ func (cfg *Config) getEnvInt(key string, defaultValue int) (int, error) {
 	}
 	return defaultValue, nil
 }
+
+// String returns a human-readable string representation of the Config
+func (cfg *Config) String() string {
+	return fmt.Sprintf(
+		"Config{Environment: %q, JWTSecret: %q, DBSchema: %q, AccessTokenDuration: %v, RefreshTokenDuration: %v}",
+		cfg.Environment,
+		string(cfg.JWTSecret),
+		cfg.DBSchema,
+		cfg.AccessTokenDuration,
+		cfg.RefreshTokenDuration,
+	)
+}

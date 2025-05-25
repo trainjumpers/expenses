@@ -5,6 +5,7 @@ import (
 	"expenses/internal/errors"
 	mock "expenses/internal/mock/repository"
 	"expenses/internal/models"
+	"os"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -24,15 +25,17 @@ var _ = Describe("AuthService", func() {
 	)
 
 	BeforeEach(func() {
+		// Set environment variables before creating config
+		os.Setenv("ENV", "test")
+		os.Setenv("JWT_SECRET", "test-secret")
+		os.Setenv("DB_SCHEMA", "test_schema")
+
 		ctx = &gin.Context{}
 		mockRepo = mock.NewMockUserRepository()
 		userService = NewUserService(mockRepo)
-		cfg = &config.Config{
-			JWTSecret:            []byte("test-secret"),
-			Environment:          "test",
-			AccessTokenDuration:  time.Hour,
-			RefreshTokenDuration: 24 * time.Hour,
-		}
+		var err error
+		cfg, err = config.NewConfig()
+		Expect(err).NotTo(HaveOccurred())
 		authService = NewAuthService(userService, cfg)
 	})
 
