@@ -9,6 +9,18 @@ on:
   pull_request:
     branches: [ main ]
 
+env:
+  DB_HOST: localhost
+  DB_PORT: 5432
+  DB_USER: postgres
+  DB_PASSWORD: postgres
+  DB_NAME: "expenses_db_${{ github.run_id }}"
+  DB_SEED_DIR: ./internal/database/seed/test
+  DB_SSL_MODE: disable
+  DB_SCHEMA: test
+  SERVER_PORT: 8080
+  JWT_SECRET: "test-secret"
+
 jobs:
   test:
     name: Run Tests
@@ -20,9 +32,9 @@ jobs:
       postgres:
         image: postgres:17
         env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: expenses_test
+          POSTGRES_USER: ${{ env.DB_USER }}
+          POSTGRES_PASSWORD: ${{ env.DB_PASSWORD }}
+          POSTGRES_DB: ${{ env.DB_NAME }}
         ports:
           - 5432:5432
         options: >-
@@ -39,26 +51,89 @@ jobs:
         with:
           go-version: '1.24'
           cache: true
+      
+      - name: Create schema for tests
+        run: |
+            PGPASSWORD=${{ env.DB_PASSWORD }} psql -U postgres -h 127.0.0.1 -p ${{ job.services.postgres.ports[5432] }} -d ${{ env.DB_NAME }} -tc "CREATE SCHEMA IF NOT EXISTS ${{ env.DB_SCHEMA }};"
 
-      - name: Cache Go modules
+      - name: Install Just
+        uses: extractions/setup-just@v3
+
+      - name: Detect GOBIN
+        id: gobin
+        shell: bash
+        run: |
+          DIR="$(go env GOBIN)"
+          # go falls back to GOPATH/bin when GOBIN is unset, but DIR is still blank
+          if [ -z "$DIR" ]; then
+            DIR="$(go env GOPATH)/bin"
+          fi
+          echo "dir=$DIR" >>"$GITHUB_OUTPUT"
+      
+    
+      - name: Cache Go tool binaries
+        id: tool-cache
         uses: actions/cache@v4
         with:
-          path: ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('server/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
+          path: ${{ steps.gobin.outputs.dir }}
+          key: ${{ runner.os }}-go-tools-${{ hashFiles('justfile') }}-${{ hashFiles('**/go.sum') }}
+    
+      - name: Install CLIs
+        if: steps.tool-cache.outputs.cache-hit != 'true'
+        run: just install
 
-      - name: Install Ginkgo
-        run: go install github.com/onsi/ginkgo/v2/ginkgo@latest
+      - name: Run migrations
+        run: just db-upgrade
+        env:
+          DB_HOST: ${{ env.DB_HOST }}
+          DB_PORT: ${{ env.DB_PORT }}
+          DB_USER: ${{ env.DB_USER }}
+          DB_PASSWORD: ${{ env.DB_PASSWORD }}
+          DB_NAME: ${{ env.DB_NAME }}
+          DB_SCHEMA: ${{ env.DB_SCHEMA }}
+          DB_SSL_MODE: ${{ env.DB_SSL_MODE }}
+
+      - name: Run seed
+        run: just db-seed
+        env:
+          DB_HOST: ${{ env.DB_HOST }}
+          DB_PORT: ${{ env.DB_PORT }}
+          DB_USER: ${{ env.DB_USER }}
+          DB_PASSWORD: ${{ env.DB_PASSWORD }}
+          DB_NAME: ${{ env.DB_NAME }}
+          DB_SCHEMA: ${{ env.DB_SCHEMA }}
+          DB_SEED_DIR: ${{ env.DB_SEED_DIR }}
+          DB_SSL_MODE: ${{ env.DB_SSL_MODE }}
+
+      - name: build server
+        run: |
+          go build -o bin/server ./cmd/neurospend/
+
+      - name: Start server in background
+        env:
+          DB_HOST: ${{ env.DB_HOST }}
+          DB_PORT: ${{ env.DB_PORT }}
+          DB_USER: ${{ env.DB_USER }}
+          DB_PASSWORD: ${{ env.DB_PASSWORD }}
+          DB_NAME: ${{ env.DB_NAME }}
+          DB_SCHEMA: ${{ env.DB_SCHEMA }}
+          SERVER_PORT: ${{ env.SERVER_PORT }}
+          JWT_SECRET: ${{ env.JWT_SECRET }}
+        run: |
+          ./bin/server &
+          echo $! > server.pid
+          # wait for health probe
+          for i in {1..20}; do
+            if curl -f http://localhost:${{ env.SERVER_PORT }}/health; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Server failed to become healthy after 20 attempts"
+          exit 1
 
       - name: Run tests
         run: ginkgo -r -p -race -cover -coverprofile=coverage.txt -covermode=atomic ./...
-        env:
-          DB_HOST: localhost
-          DB_PORT: 5432
-          DB_USER: postgres
-          DB_PASSWORD: postgres
-          DB_NAME: expenses_test
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5

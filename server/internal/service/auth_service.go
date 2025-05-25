@@ -89,7 +89,7 @@ func (a *AuthService) Signup(ctx *gin.Context, newUser models.CreateUserInput) (
 func (a *AuthService) Login(ctx *gin.Context, loginInput models.LoginInput) (models.AuthResponse, error) {
 	user, err := a.userService.GetUserByEmail(ctx, loginInput.Email)
 	if err != nil {
-		return models.AuthResponse{}, errors.NewUserNotFoundError(err)
+		return models.AuthResponse{}, errors.NewInvalidCredentialsError(err)
 	}
 
 	if !a.checkPasswordHash(loginInput.Password, user.Password) {

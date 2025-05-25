@@ -24,9 +24,13 @@ func NewDatabaseManager(cfg *config.Config) (*DatabaseManager, error) {
 	user := os.Getenv("DB_USER")
 	dbname := os.Getenv("DB_NAME")
 	pass := os.Getenv("DB_PASSWORD")
+	sslmode := os.Getenv("DB_SSL_MODE")
+	if sslmode == "" {
+		sslmode = "verify-full"
+	}
 
-	psqlSetup := fmt.Sprintf("postgresql://%s:%s@%s:%d/%s?sslmode=verify-full&search_path=%s",
-		user, pass, host, port, dbname, cfg.DBSchema)
+	psqlSetup := fmt.Sprintf("postgresql://%s:%s@%s:%d/%s?sslmode=%s&search_path=%s",
+		user, pass, host, port, dbname, sslmode, cfg.DBSchema)
 
 	logger.Debug("Connecting to database")
 	pool, err := pgxpool.New(context.Background(), psqlSetup)
