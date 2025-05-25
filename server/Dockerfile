@@ -9,4 +9,4 @@ FROM alpine:latest
 WORKDIR /app
 COPY --from=builder /app/server .
 EXPOSE 8080
-CMD ["./server"] 
+CMD ["./server"]
