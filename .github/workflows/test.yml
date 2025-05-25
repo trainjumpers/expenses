@@ -16,6 +16,7 @@ env:
   DB_PASSWORD: postgres
   DB_NAME: "expenses_db_${{ github.run_id }}"
   DB_SEED_DIR: ./internal/database/seed/test
+  DB_SSL_MODE: disable
   DB_SCHEMA: test
   SERVER_PORT: 8080
   JWT_SECRET: "test-secret"
@@ -74,6 +75,7 @@ jobs:
           DB_PASSWORD: ${{ env.DB_PASSWORD }}
           DB_NAME: ${{ env.DB_NAME }}
           DB_SCHEMA: ${{ env.DB_SCHEMA }}
+          DB_SSL_MODE: ${{ env.DB_SSL_MODE }}
 
       - name: Run seed
         run: just db-seed
@@ -85,6 +87,7 @@ jobs:
           DB_NAME: ${{ env.DB_NAME }}
           DB_SCHEMA: ${{ env.DB_SCHEMA }}
           DB_SEED_DIR: ${{ env.DB_SEED_DIR }}
+          DB_SSL_MODE: ${{ env.DB_SSL_MODE }}
 
       - name: build server
         run: |
