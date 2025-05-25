@@ -29,9 +29,9 @@ func InitializeApplication() (*Provider, error) {
 		return nil, err
 	}
 	userRepository := repository.NewUserRepository(databaseManager, configConfig)
-	userService := service.NewUserService(userRepository)
-	authService := service.NewAuthService(userService, configConfig)
-	engine := api.Init(configConfig, authService, userService)
+	userServiceInterface := service.NewUserService(userRepository)
+	authServiceInterface := service.NewAuthService(userServiceInterface, configConfig)
+	engine := api.Init(configConfig, authServiceInterface, userServiceInterface)
 	provider := NewProvider(engine, databaseManager)
 	return provider, nil
 }

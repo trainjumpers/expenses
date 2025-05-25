@@ -15,28 +15,32 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type RefreshTokenData struct {
-	UserId int64
-	Email  string
-	Expiry time.Time
-}
-
+// AuthService implements AuthServiceInterface
 type AuthService struct {
 	refreshTokenStore struct {
 		sync.RWMutex
-		Tokens map[string]RefreshTokenData
+		Tokens map[string]models.RefreshTokenData
 	}
-	userService *UserService
+	userService UserServiceInterface
 	cfg         *config.Config
 }
 
-func NewAuthService(userService *UserService, cfg *config.Config) *AuthService {
+// AuthServiceInterface defines the contract for authentication service operations
+type AuthServiceInterface interface {
+	Signup(ctx *gin.Context, newUser models.CreateUserInput) (models.AuthResponse, error)
+	Login(ctx *gin.Context, loginInput models.LoginInput) (models.AuthResponse, error)
+	RefreshToken(ctx *gin.Context, refreshToken string) (models.AuthResponse, error)
+	VerifyAuthToken(tokenString string) (jwt.MapClaims, error)
+}
+
+// NewAuthService creates a new AuthService instance that implements AuthServiceInterface
+func NewAuthService(userService UserServiceInterface, cfg *config.Config) AuthServiceInterface {
 	return &AuthService{
 		refreshTokenStore: struct {
 			sync.RWMutex
-			Tokens map[string]RefreshTokenData
+			Tokens map[string]models.RefreshTokenData
 		}{
-			Tokens: make(map[string]RefreshTokenData),
+			Tokens: make(map[string]models.RefreshTokenData),
 		},
 		userService: userService,
 		cfg:         cfg,
@@ -66,7 +70,7 @@ func (a *AuthService) Signup(ctx *gin.Context, newUser models.CreateUserInput) (
 	if err != nil {
 		return models.AuthResponse{}, err
 	}
-	a.saveRefreshToken(refreshToken, RefreshTokenData{
+	a.saveRefreshToken(refreshToken, models.RefreshTokenData{
 		UserId: createdUser.Id,
 		Email:  createdUser.Email,
 		Expiry: time.Now().Add(a.cfg.RefreshTokenDuration),
@@ -99,7 +103,7 @@ func (a *AuthService) Login(ctx *gin.Context, loginInput models.LoginInput) (mod
 		return models.AuthResponse{}, errors.NewTokenGenerationError(err)
 	}
 
-	a.saveRefreshToken(refreshToken, RefreshTokenData{
+	a.saveRefreshToken(refreshToken, models.RefreshTokenData{
 		UserId: user.Id,
 		Email:  user.Email,
 		Expiry: time.Now().Add(a.cfg.RefreshTokenDuration),
@@ -138,7 +142,7 @@ func (a *AuthService) RefreshToken(ctx *gin.Context, refreshToken string) (model
 		return models.AuthResponse{}, errors.NewTokenGenerationError(err)
 	}
 
-	a.saveRefreshToken(newRefreshToken, RefreshTokenData{
+	a.saveRefreshToken(newRefreshToken, models.RefreshTokenData{
 		UserId: user.Id,
 		Email:  user.Email,
 		Expiry: time.Now().Add(a.cfg.RefreshTokenDuration),
@@ -152,18 +156,18 @@ func (a *AuthService) RefreshToken(ctx *gin.Context, refreshToken string) (model
 	}, nil
 }
 
-func (a *AuthService) saveRefreshToken(token string, data RefreshTokenData) {
+func (a *AuthService) saveRefreshToken(token string, data models.RefreshTokenData) {
 	a.refreshTokenStore.Lock()
 	defer a.refreshTokenStore.Unlock()
 	a.refreshTokenStore.Tokens[token] = data
 }
 
-func (a *AuthService) getRefreshTokenData(token string) (RefreshTokenData, bool) {
+func (a *AuthService) getRefreshTokenData(token string) (models.RefreshTokenData, bool) {
 	a.refreshTokenStore.RLock()
 	defer a.refreshTokenStore.RUnlock()
 	data, ok := a.refreshTokenStore.Tokens[token]
 	if !ok || data.Expiry.Before(time.Now()) {
-		return RefreshTokenData{}, false
+		return models.RefreshTokenData{}, false
 	}
 	return data, true
 }

@@ -12,10 +12,10 @@ import (
 
 type AuthController struct {
 	*BaseController
-	authService *service.AuthService
+	authService service.AuthServiceInterface
 }
 
-func NewAuthController(cfg *config.Config, authService *service.AuthService) *AuthController {
+func NewAuthController(cfg *config.Config, authService service.AuthServiceInterface) *AuthController {
 	return &AuthController{
 		BaseController: NewBaseController(cfg),
 		authService:    authService,
@@ -23,7 +23,7 @@ func NewAuthController(cfg *config.Config, authService *service.AuthService) *Au
 }
 
 // GetAuthService returns the auth service instance
-func (a *AuthController) GetAuthService() *service.AuthService {
+func (a *AuthController) GetAuthService() service.AuthServiceInterface {
 	return a.authService
 }
 

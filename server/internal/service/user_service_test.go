@@ -21,7 +21,7 @@ var _ = Describe("UserService", func() {
 	BeforeEach(func() {
 		ctx = &gin.Context{}
 		mockRepo = mock.NewMockUserRepository()
-		userService = NewUserService(mockRepo)
+		userService = &UserService{repo: mockRepo}
 	})
 
 	Describe("CreateUser", func() {

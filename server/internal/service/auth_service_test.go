@@ -16,8 +16,8 @@ import (
 
 var _ = Describe("AuthService", func() {
 	var (
-		authService *AuthService
-		userService *UserService
+		authService AuthServiceInterface
+		userService UserServiceInterface
 		mockRepo    *mock.MockUserRepository
 		cfg         *config.Config
 		ctx         *gin.Context
@@ -170,12 +170,13 @@ var _ = Describe("AuthService", func() {
 			authResponse, err = authService.Signup(ctx, user)
 			Expect(err).NotTo(HaveOccurred())
 
-			// Manually expire the token
-			authService.refreshTokenStore.Lock()
-			data := authService.refreshTokenStore.Tokens[authResponse.RefreshToken]
+			// Manually expire the token - cast to concrete type to access internal field
+			concreteAuthService := authService.(*AuthService)
+			concreteAuthService.refreshTokenStore.Lock()
+			data := concreteAuthService.refreshTokenStore.Tokens[authResponse.RefreshToken]
 			data.Expiry = time.Now().Add(-time.Hour)
-			authService.refreshTokenStore.Tokens[authResponse.RefreshToken] = data
-			authService.refreshTokenStore.Unlock()
+			concreteAuthService.refreshTokenStore.Tokens[authResponse.RefreshToken] = data
+			concreteAuthService.refreshTokenStore.Unlock()
 
 			// Try to refresh tokens
 			_, err = authService.RefreshToken(ctx, authResponse.RefreshToken)
