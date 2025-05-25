@@ -56,7 +56,7 @@ func (cfg *Config) String() string {
 	return fmt.Sprintf(
 		"Config{Environment: %q, JWTSecret: %q, DBSchema: %q, AccessTokenDuration: %v, RefreshTokenDuration: %v}",
 		cfg.Environment,
-		string(cfg.JWTSecret),
+		"***",
 		cfg.DBSchema,
 		cfg.AccessTokenDuration,
 		cfg.RefreshTokenDuration,
