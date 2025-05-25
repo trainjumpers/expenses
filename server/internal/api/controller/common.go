@@ -8,7 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func handleError(ctx *gin.Context, stack bool, err error) {
+func handleError(ctx *gin.Context, isDev bool, err error) {
 	if err == nil {
 		return
 	}
@@ -18,7 +18,7 @@ func handleError(ctx *gin.Context, stack bool, err error) {
 		response := gin.H{
 			"message": authErr.Message,
 		}
-		if stack {
+		if isDev {
 			response["error"] = authErr.Err.Error()
 			response["stack"] = authErr.Stack
 		}
@@ -29,7 +29,7 @@ func handleError(ctx *gin.Context, stack bool, err error) {
 	response := gin.H{
 		"message": "Something went wrong",
 	}
-	if stack {
+	if isDev {
 		response["error"] = err.Error()
 	}
 	ctx.JSON(http.StatusInternalServerError, response)
