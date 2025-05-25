@@ -9,11 +9,11 @@ import (
 )
 
 type AuthError struct {
-	Message   string // User-friendly message
-	Err       error  // Original error for debugging
-	Stack     string // Stack trace
-	ErrorType string // Type of error (e.g., "InvalidCredentials", "TokenGeneration")
-	Status    int    // HTTP status code
+	Message   string   // User-friendly message
+	Err       error    // Original error for debugging
+	Stack     []string // Stack trace
+	ErrorType string   // Type of error (e.g., "InvalidCredentials", "TokenGeneration")
+	Status    int      // HTTP status code
 }
 
 func (e *AuthError) Error() string {
@@ -25,7 +25,7 @@ func (e *AuthError) Unwrap() error {
 	return e.Err
 }
 
-func GetStackTrace(err error) string {
+func getStackTrace() []string {
 	const depth = 32
 	var pcs [depth]uintptr
 	n := runtime.Callers(3, pcs[:])
@@ -39,7 +39,25 @@ func GetStackTrace(err error) string {
 			break
 		}
 	}
-	return stack.String()
+	return cleanStackTrace(stack.String())
+}
+
+// cleanStackTrace processes a stack trace string by splitting it into lines,
+// trimming whitespace, and removing empty lines
+func cleanStackTrace(stack string) []string {
+	if stack == "" {
+		return []string{}
+	}
+
+	stackLines := strings.Split(stack, "\n")
+	nonEmptyLines := make([]string, 0, len(stackLines))
+	for _, line := range stackLines {
+		line = strings.TrimSpace(line)
+		if line != "" {
+			nonEmptyLines = append(nonEmptyLines, line)
+		}
+	}
+	return nonEmptyLines
 }
 
 // FormatError creates a new AuthError with stack trace
@@ -47,17 +65,10 @@ func FormatError(status int, message string, err error, errorType string) *AuthE
 	return &AuthError{
 		Message:   message,
 		Err:       err,
-		Stack:     GetStackTrace(err),
+		Stack:     getStackTrace(),
 		ErrorType: errorType,
 		Status:    status,
 	}
-}
-
-func IsErrorType(err error, errorType string) bool {
-	if authErr, ok := err.(*AuthError); ok {
-		return authErr.ErrorType == errorType
-	}
-	return false
 }
 
 func New(err string) *AuthError {

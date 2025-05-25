@@ -1,4 +1,5 @@
 name: golangci-lint
+
 on:
   push:
     branches: [ main ]
@@ -16,7 +17,7 @@ jobs:
       run:
         working-directory: ./server 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up Go
         uses: actions/setup-go@v5
