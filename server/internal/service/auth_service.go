@@ -231,7 +231,7 @@ func (a *AuthService) checkPasswordHash(password, hash string) bool {
 // ExpireRefreshToken manually expires a refresh token for testing purposes
 func (a *AuthService) ExpireRefreshToken(refreshToken string) error {
 	if !a.cfg.IsTest() {
-		return fmt.Errorf("expiring refresh token is allowed only in test environment")
+		return errors.New("expiring refresh token is allowed only in test environment")
 	}
 
 	a.refreshTokenStore.Lock()
@@ -239,7 +239,7 @@ func (a *AuthService) ExpireRefreshToken(refreshToken string) error {
 
 	data, exists := a.refreshTokenStore.Tokens[refreshToken]
 	if !exists {
-		return fmt.Errorf("refresh token not found")
+		return errors.NewInvalidTokenError(fmt.Errorf("refresh token not found"))
 	}
 
 	// Set expiry to past time
