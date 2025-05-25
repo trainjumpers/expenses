@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"expenses/internal/models"
-	"fmt"
 	"net/http"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -207,7 +206,6 @@ var _ = Describe("AuthController", func() {
 				newRefreshToken := data["refresh_token"].(string)
 				Expect(newAccessToken).NotTo(BeEmpty())
 				Expect(newRefreshToken).NotTo(BeEmpty())
-				fmt.Println(newAccessToken, newRefreshToken, accessToken, refreshToken)
 				Expect(newAccessToken).NotTo(Equal(accessToken))
 				Expect(newRefreshToken).NotTo(Equal(refreshToken))
 			})

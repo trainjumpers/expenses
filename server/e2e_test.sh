@@ -33,13 +33,20 @@ just db-seed
 go run cmd/neurospend/main.go &  SERVER_PID=$!
 echo "API started (pid $SERVER_PID); waiting for healthy status…"
 
+SERVER_HEALTHY=false
 for _ in {1..20}; do                                          
   if curl -fs "http://localhost:${SERVER_PORT}/health" >/dev/null; then
     echo "✅ Server healthy"
+    SERVER_HEALTHY=true
     break
   fi
   sleep 1
 done
+
+if [ "$SERVER_HEALTHY" = false ]; then
+  echo "❌ Server failed to become healthy within timeout period"
+  exit 1
+fi
 
 #####--- Run the tests ─────────────
 ginkgo -r ./                                                   
