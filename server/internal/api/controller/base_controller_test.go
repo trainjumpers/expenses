@@ -5,6 +5,7 @@ import (
 	"errors"
 	"expenses/internal/config"
 	customErrors "expenses/internal/errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -14,17 +15,10 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-// decodeJSONResponse is a helper function to decode JSON responses and handle errors
-func decodeJSONResponse(resp *http.Response) (map[string]interface{}, error) {
+// decodeJSON is a helper function to decode JSON from any io.Reader
+func decodeJSON(reader io.Reader) (map[string]interface{}, error) {
 	var response map[string]interface{}
-	err := json.NewDecoder(resp.Body).Decode(&response)
-	return response, err
-}
-
-// decodeJSONResponseRecorder is a helper function to decode JSON responses from httptest.ResponseRecorder
-func decodeJSONResponseRecorder(recorder *httptest.ResponseRecorder) (map[string]interface{}, error) {
-	var response map[string]interface{}
-	err := json.NewDecoder(recorder.Body).Decode(&response)
+	err := json.NewDecoder(reader).Decode(&response)
 	return response, err
 }
 
@@ -52,7 +46,7 @@ var _ = Describe("BaseController", func() {
 				baseController.HandleError(ctx, authErr)
 
 				Expect(recorder.Code).To(Equal(http.StatusUnauthorized))
-				response, err := decodeJSONResponseRecorder(recorder)
+				response, err := decodeJSON(recorder.Body)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(response["message"]).To(Equal("Authentication failed"))
 			})
@@ -64,7 +58,7 @@ var _ = Describe("BaseController", func() {
 				baseController.HandleError(ctx, err)
 
 				Expect(recorder.Code).To(Equal(http.StatusInternalServerError))
-				response, err := decodeJSONResponseRecorder(recorder)
+				response, err := decodeJSON(recorder.Body)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(response["message"]).To(Equal("Something went wrong"))
 			})
@@ -77,7 +71,7 @@ var _ = Describe("BaseController", func() {
 			baseController.SendSuccess(ctx, http.StatusOK, "Success", data)
 
 			Expect(recorder.Code).To(Equal(http.StatusOK))
-			response, err := decodeJSONResponseRecorder(recorder)
+			response, err := decodeJSON(recorder.Body)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(response["message"]).To(Equal("Success"))
 			Expect(response["data"]).To(HaveKey("key"))
@@ -87,7 +81,7 @@ var _ = Describe("BaseController", func() {
 			baseController.SendSuccess(ctx, http.StatusOK, "Success", nil)
 
 			Expect(recorder.Code).To(Equal(http.StatusOK))
-			response, err := decodeJSONResponseRecorder(recorder)
+			response, err := decodeJSON(recorder.Body)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(response["message"]).To(Equal("Success"))
 			Expect(response).NotTo(HaveKey("data"))
@@ -99,7 +93,7 @@ var _ = Describe("BaseController", func() {
 			baseController.SendError(ctx, http.StatusBadRequest, "Invalid input")
 
 			Expect(recorder.Code).To(Equal(http.StatusBadRequest))
-			response, err := decodeJSONResponseRecorder(recorder)
+			response, err := decodeJSON(recorder.Body)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(response["message"]).To(Equal("Invalid input"))
 		})

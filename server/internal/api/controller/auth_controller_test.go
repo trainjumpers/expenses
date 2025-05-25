@@ -34,7 +34,7 @@ var _ = Describe("AuthController", func() {
 
 				// Assertions
 				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
-				response, err := decodeJSONResponse(resp)
+				response, err := decodeJSON(resp.Body)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(response["message"]).To(Equal("User signed up successfully"))
 				Expect(response["data"]).To(HaveKey("user"))
@@ -99,7 +99,7 @@ var _ = Describe("AuthController", func() {
 				defer resp.Body.Close()
 
 				Expect(resp.StatusCode).To(Equal(http.StatusConflict))
-				response, err := decodeJSONResponse(resp)
+				response, err := decodeJSON(resp.Body)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(response["message"]).To(Equal("user already exists"))
 			})
@@ -124,7 +124,7 @@ var _ = Describe("AuthController", func() {
 				defer resp.Body.Close()
 
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
-				response, err := decodeJSONResponse(resp)
+				response, err := decodeJSON(resp.Body)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(response["message"]).To(Equal("User logged in successfully"))
 				Expect(response["data"]).To(HaveKey("access_token"))
@@ -190,7 +190,7 @@ var _ = Describe("AuthController", func() {
 				defer resp.Body.Close()
 
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
-				response, err := decodeJSONResponse(resp)
+				response, err := decodeJSON(resp.Body)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(response["message"]).To(Equal("Token refreshed successfully"))
 				Expect(response["data"]).To(HaveKey("access_token"))
