@@ -61,9 +61,15 @@ jobs:
 
       - name: Detect GOBIN
         id: gobin
+        shell: bash
         run: |
-          echo "dir=$(go env GOBIN || echo $(go env GOPATH)/bin)" >>"$GITHUB_OUTPUT"
-          mkdir -p "${{ steps.gobin.outputs.dir }}"
+          DIR="$(go env GOBIN)"
+          # go falls back to GOPATH/bin when GOBIN is unset, but DIR is still blank
+          if [ -z "$DIR" ]; then
+            DIR="$(go env GOPATH)/bin"
+          fi
+          echo "dir=$DIR" >>"$GITHUB_OUTPUT"
+      
     
       - name: Cache Go tool binaries
         id: tool-cache
