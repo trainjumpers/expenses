@@ -62,6 +62,7 @@ db-downgrade-reset reset=default_downgrade:
 @install: 
   go install github.com/air-verse/air@latest
   go install github.com/pressly/goose/v3/cmd/goose@latest
+  go install github.com/onsi/ginkgo/v2/ginkgo@latest
   go mod tidy
 
 # Starts the server with hot-reload using air
