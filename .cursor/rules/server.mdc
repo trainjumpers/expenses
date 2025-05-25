@@ -1,11 +1,6 @@
 ---
-description: 
-globs: 
-alwaysApply: false
----
----
 description: A Gin-based server for expense tracking with a layered architecture (controller, service, repository) and comprehensive error handling.
-globs: 
+globs: server/**
 alwaysApply: true
 ---
 
