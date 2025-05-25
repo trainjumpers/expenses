@@ -32,12 +32,12 @@ func NewConfig() (*Config, error) {
 	if config.DBSchema == "" {
 		return nil, errors.New("DB_SCHEMA environment variable is not set")
 	}
-	accessTokenHours, err := getEnvInt("ACCESS_TOKEN_HOURS", 12)
+	accessTokenHours, err := config.getEnvInt("ACCESS_TOKEN_HOURS", 12)
 	if err != nil {
 		return nil, fmt.Errorf("invalid ACCESS_TOKEN_HOURS: %w", err)
 	}
 	config.AccessTokenDuration = time.Duration(accessTokenHours) * time.Hour
-	refreshTokenDays, err := getEnvInt("REFRESH_TOKEN_DAYS", 7)
+	refreshTokenDays, err := config.getEnvInt("REFRESH_TOKEN_DAYS", 7)
 	if err != nil {
 		return nil, fmt.Errorf("invalid REFRESH_TOKEN_DAYS: %w", err)
 	}
@@ -56,7 +56,7 @@ func (cfg *Config) IsProd() bool {
 }
 
 // getEnvInt is a helper function to get an integer from environment variables
-func getEnvInt(key string, defaultValue int) (int, error) {
+func (cfg *Config) getEnvInt(key string, defaultValue int) (int, error) {
 	if value := os.Getenv(key); value != "" {
 		intValue, err := strconv.Atoi(value)
 		if err != nil {

@@ -40,6 +40,9 @@ func ExtractFields(obj interface{}, skipNull bool) ([]interface{}, []interface{}
 }
 
 func IsZeroValue(v reflect.Value) bool {
+	if !v.IsValid() {
+		return true
+	}
 	if v.Kind() == reflect.Ptr {
 		return v.IsNil()
 	}

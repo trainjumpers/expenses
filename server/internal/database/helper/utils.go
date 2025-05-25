@@ -5,6 +5,7 @@ import (
 	"expenses/pkg/utils"
 	"fmt"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -49,8 +50,7 @@ func CreateInsertQuery(insertObj interface{}, outputObj interface{}, tableName s
 		return "", nil, nil, err
 	}
 	query := fmt.Sprintf(`
-		INSERT INTO %s.%s (%s)
-		VALUES (%s) RETURNING %s;`,
+		INSERT INTO %s.%s (%s) VALUES (%s) RETURNING %s;`,
 		schema, tableName, columnsClause, placeholdersClause, strings.Join(dbFields, ", "))
 	return query, values, ptrs, nil
 }
@@ -72,16 +72,32 @@ func GetDbFieldsFromObject(obj interface{}) ([]interface{}, []string, error) {
 	return ptrs, dbFields, nil
 }
 
-// toSnakeCase converts a PascalCase or camelCase string to snake_case.
-func toSnakeCase(str string) string {
-	var result []rune
-	for i, r := range str {
-		if i > 0 && r >= 'A' && r <= 'Z' {
-			result = append(result, '_')
-		}
-		result = append(result, r)
+// ToSnakeCase converts a PascalCase or camelCase string to snake_case.
+func ToSnakeCase(str string) string {
+	// Step 1: Remove whitespaces
+	str = strings.TrimSpace(str)
+	if str == "" {
+		return ""
 	}
-	return strings.ToLower(string(result))
+	// Step 2: Convert CamelCase to snake_case
+	firstCap := regexp.MustCompile(`(.)([A-Z][a-z]+)`)       // First letter of the word is lowercase
+	allCap := regexp.MustCompile(`([a-z0-9])([A-Z])`)        // All letters are uppercase
+	letterNumber := regexp.MustCompile(`([A-Za-z])([0-9]+)`) // Letter followed by number
+	numberLetter := regexp.MustCompile(`([0-9]+)([A-Za-z])`) // Number followed by letter
+	snake := firstCap.ReplaceAllString(str, `${1}_${2}`)
+	snake = allCap.ReplaceAllString(snake, `${1}_${2}`)
+	snake = letterNumber.ReplaceAllString(snake, `${1}_${2}`)
+	snake = numberLetter.ReplaceAllString(snake, `${1}_${2}`)
+	// Step 3: normalize separators to underscores.
+	replacer := strings.NewReplacer(
+		"-", "_",
+		" ", "_",
+	)
+	snake = replacer.Replace(snake)
+	// Step 4: collapse any doubled underscores left over.
+	snake = strings.ReplaceAll(snake, "__", "_")
+	// Step 5: final canonical form — lower-case.
+	return strings.ToLower(snake)
 }
 
 // extractDbFields extracts pointers, values, and column names for exported struct fields.
@@ -91,7 +107,7 @@ func extractDbFields(obj interface{}, skipNull bool) ([]interface{}, []interface
 		return nil, nil, nil, err
 	}
 	for i, field := range fields {
-		fields[i] = toSnakeCase(field)
+		fields[i] = ToSnakeCase(field)
 	}
 	if len(fields) == 0 {
 		return nil, nil, nil, errors.NoFieldsToUpdateError()
