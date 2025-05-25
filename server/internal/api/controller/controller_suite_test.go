@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"expenses/internal/models"
+	"fmt"
 	"net/http"
 	"os"
 	"testing"
@@ -47,6 +48,8 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	defer resp.Body.Close()
 
+	fmt.Println(resp.StatusCode)
+	fmt.Println(resp.Body)
 	Expect(resp.StatusCode).To(Equal(http.StatusOK))
 	var response map[string]interface{}
 	err = json.NewDecoder(resp.Body).Decode(&response)
