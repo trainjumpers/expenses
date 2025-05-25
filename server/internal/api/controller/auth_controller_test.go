@@ -17,7 +17,7 @@ var _ = Describe("AuthController", func() {
 			It("should create a new user successfully", func() {
 				// Prepare test data
 				userInput := models.CreateUserInput{
-					Email:    "test@example.com",
+					Email:    "random@example.com",
 					Name:     "Test User",
 					Password: "password123",
 				}
@@ -104,7 +104,7 @@ var _ = Describe("AuthController", func() {
 				var response map[string]interface{}
 				err = json.NewDecoder(resp.Body).Decode(&response)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(response["message"]).To(Equal("User already exists"))
+				Expect(response["message"]).To(Equal("user already exists"))
 			})
 		})
 	})

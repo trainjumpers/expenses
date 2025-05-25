@@ -59,16 +59,22 @@ jobs:
       - name: Install Just
         uses: extractions/setup-just@v3
 
-      - name: Install dependencies
-        run: just install
-
-      - name: Cache Go modules
+      - name: Detect GOBIN
+        id: gobin
+        run: |
+          echo "dir=$(go env GOBIN || echo $(go env GOPATH)/bin)" >>"$GITHUB_OUTPUT"
+          mkdir -p "${{ steps.gobin.outputs.dir }}"
+    
+      - name: Cache Go tool binaries
+        id: tool-cache
         uses: actions/cache@v4
         with:
-          path: ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('server/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
+          path: ${{ steps.gobin.outputs.dir }}
+          key: ${{ runner.os }}-go-tools-${{ hashFiles('justfile') }}-${{ hashFiles('**/go.sum') }}
+    
+      - name: Install CLIs
+        if: steps.tool-cache.outputs.cache-hit != 'true'
+        run: just install
 
       - name: Run migrations
         run: just db-upgrade

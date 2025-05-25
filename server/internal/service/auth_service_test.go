@@ -125,7 +125,7 @@ var _ = Describe("AuthService", func() {
 
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(BeAssignableToTypeOf(&errors.AuthError{}))
-			Expect(err.(*errors.AuthError).ErrorType).To(Equal("UserNotFound"))
+			Expect(err.(*errors.AuthError).ErrorType).To(Equal("InvalidCredentials"))
 		})
 	})
 

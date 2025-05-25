@@ -30,7 +30,7 @@ goose command migration_dir:
 [working-directory: 'server']
 goose_migrate command:
   find {{GOOSE_MIGRATION_DIR}} -type f -exec sed -i.bak "s|\${DB_SCHEMA}|${DB_SCHEMA}|g" {} +
-  just goose {{command}} {{GOOSE_MIGRATION_DIR}}
+  just goose "{{command}}" "{{GOOSE_MIGRATION_DIR}}"
   find {{GOOSE_MIGRATION_DIR}} -type f -name "*.bak" | while read -r bak_file; do
   original_file="${bak_file%.bak}"
   mv "$bak_file" "$original_file"
