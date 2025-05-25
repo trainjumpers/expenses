@@ -1,13 +1,15 @@
 set unstable
 
 # Database connection string with environment variables
-DB_CONNECTION := "user=${DB_USER} dbname=${DB_NAME} password=${DB_PASSWORD} host=${DB_HOST} port=${DB_PORT} sslmode=verify-full"
+DB_CONNECTION := "user=${DB_USER} dbname=${DB_NAME} password=${DB_PASSWORD} host=${DB_HOST} port=${DB_PORT} sslmode=${DB_SSL_MODE:-verify-full}"
 # Database driver for migrations
 GOOSE_DRIVER := "postgres"
 # Table to track migration versions
 GOOSE_TABLE := "${DB_SCHEMA}.goose_db_version"
 # Directory containing migration files
 GOOSE_MIGRATION_DIR := "./internal/database/migrations"
+# Goose Seed directory. Seed data is used mostly for testing.
+GOOSE_SEED_DIR := "${DB_SEED_DIR:-./internal/database/seed/prod}"
 
 # Default version to downgrade to when resetting database
 default_downgrade := "0"
@@ -16,8 +18,8 @@ default_downgrade := "0"
 [private]
 [script("bash")]
 [working-directory: 'server']
-goose command:
-  GOOSE_DBSTRING="{{DB_CONNECTION}}" GOOSE_DRIVER={{GOOSE_DRIVER}} GOOSE_MIGRATION_DIR={{GOOSE_MIGRATION_DIR}} GOOSE_TABLE={{GOOSE_TABLE}} goose {{command}}
+goose command migration_dir:
+  GOOSE_DBSTRING="{{DB_CONNECTION}}" GOOSE_DRIVER={{GOOSE_DRIVER}} GOOSE_MIGRATION_DIR={{migration_dir}} GOOSE_TABLE={{GOOSE_TABLE}} goose {{command}}
 
 # Migration commands
 # Private helper function to execute database migrations
@@ -28,7 +30,7 @@ goose command:
 [working-directory: 'server']
 goose_migrate command:
   find {{GOOSE_MIGRATION_DIR}} -type f -exec sed -i.bak "s|\${DB_SCHEMA}|${DB_SCHEMA}|g" {} +
-  just goose {{command}}
+  just goose {{command}} {{GOOSE_MIGRATION_DIR}}
   find {{GOOSE_MIGRATION_DIR}} -type f -name "*.bak" | while read -r bak_file; do
   original_file="${bak_file%.bak}"
   mv "$bak_file" "$original_file"
@@ -42,6 +44,10 @@ db-create file:
 # Applies all pending migrations to upgrade the database schema
 db-upgrade:
   just goose_migrate "up"
+
+# Applies seed data to the database
+db-seed:
+  just goose "up --no-versioning" {{GOOSE_SEED_DIR}}
 
 # Reverts the most recent migration
 db-downgrade:
