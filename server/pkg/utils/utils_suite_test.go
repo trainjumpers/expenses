@@ -15,11 +15,12 @@ func TestUtils(t *testing.T) {
 }
 
 type TestStruct struct {
-	Name       string
-	Age        int
-	CreatedAt  time.Time
-	PtrField   *string
-	unexported string // This should be skipped
+	Name      string
+	Age       int
+	CreatedAt time.Time
+	PtrField  *string
+	//lint:ignore U1000 This is a test struct
+	unexported string
 }
 
 var _ = Describe("Mapper", func() {
@@ -59,6 +60,14 @@ var _ = Describe("Mapper", func() {
 				Expect(values[1]).To(Equal(30))
 			})
 
+			It("should skip unexported fields", func() {
+				input := &TestStruct{Name: "John", Age: 30}
+				_, _, fields, err := ExtractFields(input, false)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(fields).NotTo(ContainElement("unexported"))
+			})
+
 			It("should skip null fields when skipNull is true", func() {
 				input := &TestStruct{Name: "John"}
 				ptrs, values, fields, err := ExtractFields(input, true)
@@ -87,7 +96,8 @@ var _ = Describe("Mapper", func() {
 			Expect(IsZeroValue(reflect.ValueOf(42))).To(BeFalse())
 			Expect(IsZeroValue(reflect.ValueOf(zeroTime))).To(BeTrue())
 			Expect(IsZeroValue(reflect.ValueOf(nonZeroTime))).To(BeFalse())
-			Expect(IsZeroValue(reflect.ValueOf(nil))).To(BeTrue())
+			var nilInterface interface{}
+			Expect(IsZeroValue(reflect.ValueOf(nilInterface))).To(BeTrue())
 		})
 	})
 })

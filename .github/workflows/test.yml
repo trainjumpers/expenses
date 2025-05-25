@@ -1,5 +1,8 @@
 name: Test
 
+permissions:
+  contents: read
+
 on:
   push:
     branches: [ main ]
@@ -44,6 +47,9 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('server/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
+
+      - name: Install Ginkgo
+        run: go install github.com/onsi/ginkgo/v2/ginkgo@latest
 
       - name: Run tests
         run: ginkgo -r -p -race -cover -coverprofile=coverage.txt -covermode=atomic ./...
