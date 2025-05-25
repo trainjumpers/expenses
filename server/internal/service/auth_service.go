@@ -15,6 +15,17 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// AuthServiceInterface defines the contract for authentication service operations
+type AuthServiceInterface interface {
+	Signup(ctx *gin.Context, newUser models.CreateUserInput) (models.AuthResponse, error)
+	Login(ctx *gin.Context, loginInput models.LoginInput) (models.AuthResponse, error)
+	RefreshToken(ctx *gin.Context, refreshToken string) (models.AuthResponse, error)
+	VerifyAuthToken(tokenString string) (jwt.MapClaims, error)
+	// ExpireRefreshToken is a helper method for testing purposes only.
+	// DO NOT USE IN PRODUCTION.
+	ExpireRefreshToken(refreshToken string) error
+}
+
 // AuthService implements AuthServiceInterface
 type AuthService struct {
 	refreshTokenStore struct {
@@ -23,14 +34,6 @@ type AuthService struct {
 	}
 	userService UserServiceInterface
 	cfg         *config.Config
-}
-
-// AuthServiceInterface defines the contract for authentication service operations
-type AuthServiceInterface interface {
-	Signup(ctx *gin.Context, newUser models.CreateUserInput) (models.AuthResponse, error)
-	Login(ctx *gin.Context, loginInput models.LoginInput) (models.AuthResponse, error)
-	RefreshToken(ctx *gin.Context, refreshToken string) (models.AuthResponse, error)
-	VerifyAuthToken(tokenString string) (jwt.MapClaims, error)
 }
 
 // NewAuthService creates a new AuthService instance that implements AuthServiceInterface
@@ -223,4 +226,24 @@ func (a *AuthService) hashPassword(password string) (string, error) {
 func (a *AuthService) checkPasswordHash(password, hash string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 	return err == nil
+}
+
+// ExpireRefreshToken manually expires a refresh token for testing purposes
+func (a *AuthService) ExpireRefreshToken(refreshToken string) error {
+	if !a.cfg.IsTest() {
+		return fmt.Errorf("expiring refresh token is allowed only in test environment")
+	}
+
+	a.refreshTokenStore.Lock()
+	defer a.refreshTokenStore.Unlock()
+
+	data, exists := a.refreshTokenStore.Tokens[refreshToken]
+	if !exists {
+		return fmt.Errorf("refresh token not found")
+	}
+
+	// Set expiry to past time
+	data.Expiry = time.Now().Add(-time.Hour)
+	a.refreshTokenStore.Tokens[refreshToken] = data
+	return nil
 }

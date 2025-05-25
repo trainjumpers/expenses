@@ -29,6 +29,7 @@ var _ = Describe("AuthService", func() {
 		userService = NewUserService(mockRepo)
 		cfg = &config.Config{
 			JWTSecret:            []byte("test-secret"),
+			Environment:          "test",
 			AccessTokenDuration:  time.Hour,
 			RefreshTokenDuration: 24 * time.Hour,
 		}
@@ -170,13 +171,9 @@ var _ = Describe("AuthService", func() {
 			authResponse, err = authService.Signup(ctx, user)
 			Expect(err).NotTo(HaveOccurred())
 
-			// Manually expire the token - cast to concrete type to access internal field
-			concreteAuthService := authService.(*AuthService)
-			concreteAuthService.refreshTokenStore.Lock()
-			data := concreteAuthService.refreshTokenStore.Tokens[authResponse.RefreshToken]
-			data.Expiry = time.Now().Add(-time.Hour)
-			concreteAuthService.refreshTokenStore.Tokens[authResponse.RefreshToken] = data
-			concreteAuthService.refreshTokenStore.Unlock()
+			// Manually expire the token using the test helper method
+			err = authService.ExpireRefreshToken(authResponse.RefreshToken)
+			Expect(err).NotTo(HaveOccurred())
 
 			// Try to refresh tokens
 			_, err = authService.RefreshToken(ctx, authResponse.RefreshToken)

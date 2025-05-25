@@ -55,6 +55,10 @@ func (cfg *Config) IsProd() bool {
 	return cfg.Environment == "prod"
 }
 
+func (cfg *Config) IsTest() bool {
+	return cfg.Environment == "test"
+}
+
 // getEnvInt is a helper function to get an integer from environment variables
 func (cfg *Config) getEnvInt(key string, defaultValue int) (int, error) {
 	if value := os.Getenv(key); value != "" {
