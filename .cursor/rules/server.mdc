@@ -1,0 +1,23 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+The server directory contains code for a gin based server for the expense tracker. 
+The folder structure is as follows
+1. internal/api/controller
+    * This will contain all the code to manipulate the gin server. The requests get in here
+    * errors are handled here
+    * Ensure that it logs the start and end of this method.
+2. internal/config
+    * Various configs that can be loaded when necessary
+3. internal/errors
+    * custom error methods defined which can be used to correctly throw an error from service or repository layer. These errors are intercepted by the controller correctly to send the necessary status code
+4. internal/service
+    * This contains all the buisness logic. This should also have plenty of debug logs to ensure we know what is happening
+5. internal/models
+    * Various models to check for the servers input and response
+6. internal/repository
+    * Repo layer. This layer is responsbile for connecting to db and bringing in the data
+
+For testing, we are using ginkgo library. Ensure most functions should have unit tests to ensure everything is working as intended
