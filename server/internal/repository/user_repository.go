@@ -18,10 +18,12 @@ import (
 
 type UserRepositoryInterface interface {
 	CreateUser(c *gin.Context, newUser models.CreateUserInput) (models.UserResponse, error)
-	GetUserByEmail(c *gin.Context, email string) (models.UserWithPassword, error)
+	GetUserByEmailWithPassword(c *gin.Context, email string) (models.UserWithPassword, error)
+	GetUserByIdWithPassword(c *gin.Context, userId int64) (models.UserWithPassword, error)
 	GetUserById(c *gin.Context, userId int64) (models.UserResponse, error)
 	DeleteUser(c *gin.Context, userId int64) error
 	UpdateUser(c *gin.Context, userId int64, updatedUser models.UpdateUserInput) (models.UserResponse, error)
+	UpdateUserPassword(c *gin.Context, userId int64, password string) (models.UserResponse, error)
 }
 
 type UserRepository struct {
@@ -56,11 +58,11 @@ func (u *UserRepository) CreateUser(c *gin.Context, newUser models.CreateUserInp
 }
 
 /*
-GetUserByEmail returns a user by email
+GetUserByEmailWithPassword returns a user by email
 email: Email of the user to be fetched
-returns: User object of the fetched user
+returns: User object of the fetched user with password
 */
-func (u *UserRepository) GetUserByEmail(c *gin.Context, email string) (models.UserWithPassword, error) {
+func (u *UserRepository) GetUserByEmailWithPassword(c *gin.Context, email string) (models.UserWithPassword, error) {
 	var user models.UserWithPassword
 	ptrs, dbFields, err := helper.GetDbFieldsFromObject(&user)
 	if err != nil {
@@ -72,6 +74,30 @@ func (u *UserRepository) GetUserByEmail(c *gin.Context, email string) (models.Us
 		strings.Join(dbFields, ", "), u.schema)
 	logger.Info("Executing query to get a user by email: ", query)
 	err = u.db.QueryRow(c, query, email).Scan(ptrs...)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return models.UserWithPassword{}, commonErrors.NewUserNotFoundError(err)
+		}
+		return models.UserWithPassword{}, err
+	}
+	return user, nil
+}
+
+/*
+GetUserByIdWithPassword returns a user by Id
+userId: Id of the user to be fetched
+returns: User object of the fetched user with password
+*/
+func (u *UserRepository) GetUserByIdWithPassword(c *gin.Context, userId int64) (models.UserWithPassword, error) {
+	var user models.UserWithPassword
+	ptrs, dbFields, err := helper.GetDbFieldsFromObject(&user)
+	if err != nil {
+		return models.UserWithPassword{}, err
+	}
+	query := fmt.Sprintf(`
+		SELECT %s FROM %s.user WHERE id = $1 AND deleted_at IS NULL;`, strings.Join(dbFields, ", "), u.schema)
+	logger.Info("Executing query to get a user by Id: ", query)
+	err = u.db.QueryRow(c, query, userId).Scan(ptrs...)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return models.UserWithPassword{}, commonErrors.NewUserNotFoundError(err)
@@ -100,6 +126,9 @@ func (u *UserRepository) GetUserById(c *gin.Context, userId int64) (models.UserR
 	logger.Info("Executing query to get a user by Id: ", query)
 	err = u.db.QueryRow(c, query, userId).Scan(ptrs...)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return models.UserResponse{}, commonErrors.NewUserNotFoundError(err)
+		}
 		return models.UserResponse{}, err
 	}
 	return user, nil
@@ -119,6 +148,9 @@ func (u *UserRepository) DeleteUser(c *gin.Context, userId int64) error {
 	logger.Info("Executing query to delete a user by Id: ", query)
 	_, err := u.db.Exec(c, query, userId)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return commonErrors.NewUserNotFoundError(err)
+		}
 		return err
 	}
 	return nil
@@ -149,6 +181,34 @@ func (u *UserRepository) UpdateUser(c *gin.Context, userId int64, updatedUser mo
 	logger.Info("Executing query to update a user by Id: ", query)
 	err = u.db.QueryRow(c, query, append(argValues, userId)...).Scan(ptrs...)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return models.UserResponse{}, commonErrors.NewUserNotFoundError(err)
+		}
+		return models.UserResponse{}, err
+	}
+	return user, nil
+}
+
+/*
+UpdateUserPassword updates a user's password by Id
+userId: Id of the user to be updated
+password: Password of the user to be updated
+returns: User object of the updated user
+*/
+func (u *UserRepository) UpdateUserPassword(c *gin.Context, userId int64, password string) (models.UserResponse, error) {
+	var user models.UserResponse
+	ptrs, dbFields, err := helper.GetDbFieldsFromObject(&user)
+	if err != nil {
+		return models.UserResponse{}, err
+	}
+	query := fmt.Sprintf(`
+		UPDATE %s.user SET password = $1 WHERE id = $2 AND deleted_at IS NULL RETURNING %s;`, u.schema, strings.Join(dbFields, ", "))
+	logger.Info("Executing query to update a user's password by Id: ", query)
+	err = u.db.QueryRow(c, query, password, userId).Scan(ptrs...)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return models.UserResponse{}, commonErrors.NewUserNotFoundError(err)
+		}
 		return models.UserResponse{}, err
 	}
 	return user, nil

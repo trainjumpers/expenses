@@ -20,7 +20,7 @@ type AuthServiceInterface interface {
 	Signup(ctx *gin.Context, newUser models.CreateUserInput) (models.AuthResponse, error)
 	Login(ctx *gin.Context, loginInput models.LoginInput) (models.AuthResponse, error)
 	RefreshToken(ctx *gin.Context, refreshToken string) (models.AuthResponse, error)
-	VerifyAuthToken(tokenString string) (jwt.MapClaims, error)
+	UpdateUserPassword(ctx *gin.Context, userId int64, updatedUser models.UpdateUserPasswordInput) (models.UserResponse, error)
 	// ExpireRefreshToken is a helper method for testing purposes only.
 	// DO NOT USE IN PRODUCTION.
 	ExpireRefreshToken(refreshToken string) error
@@ -87,7 +87,7 @@ func (a *AuthService) Signup(ctx *gin.Context, newUser models.CreateUserInput) (
 
 // Login handles user authentication and returns auth tokens
 func (a *AuthService) Login(ctx *gin.Context, loginInput models.LoginInput) (models.AuthResponse, error) {
-	user, err := a.userService.GetUserByEmail(ctx, loginInput.Email)
+	user, err := a.userService.GetUserByEmailWithPassword(ctx, loginInput.Email)
 	if err != nil {
 		return models.AuthResponse{}, errors.NewInvalidCredentialsError(err)
 	}
@@ -159,6 +159,21 @@ func (a *AuthService) RefreshToken(ctx *gin.Context, refreshToken string) (model
 	}, nil
 }
 
+func (a *AuthService) UpdateUserPassword(ctx *gin.Context, userId int64, updatedUser models.UpdateUserPasswordInput) (models.UserResponse, error) {
+	userWithPassword, err := a.userService.GetUserByIdWithPassword(ctx, userId)
+	if err != nil {
+		return models.UserResponse{}, err
+	}
+	if !a.checkPasswordHash(updatedUser.OldPassword, userWithPassword.Password) {
+		return models.UserResponse{}, errors.NewInvalidCredentialsError(fmt.Errorf("old password is incorrect"))
+	}
+	hashedPassword, err := a.hashPassword(updatedUser.NewPassword)
+	if err != nil {
+		return models.UserResponse{}, err
+	}
+	return a.userService.UpdateUserPassword(ctx, userId, hashedPassword)
+}
+
 func (a *AuthService) saveRefreshToken(token string, data models.RefreshTokenData) {
 	a.refreshTokenStore.Lock()
 	defer a.refreshTokenStore.Unlock()
@@ -200,22 +215,6 @@ func (a *AuthService) issueAuthToken(userId int64, email string) (string, error)
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString(a.cfg.JWTSecret)
-}
-
-func (a *AuthService) VerifyAuthToken(tokenString string) (jwt.MapClaims, error) {
-	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		return a.cfg.JWTSecret, nil
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	claims, ok := token.Claims.(jwt.MapClaims)
-	if !ok || !token.Valid {
-		return nil, fmt.Errorf("invalid token")
-	}
-
-	return claims, nil
 }
 
 func (a *AuthService) hashPassword(password string) (string, error) {

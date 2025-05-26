@@ -10,10 +10,12 @@ import (
 // UserServiceInterface defines the contract for user service operations
 type UserServiceInterface interface {
 	CreateUser(c *gin.Context, newUser models.CreateUserInput) (models.UserResponse, error)
-	GetUserByEmail(c *gin.Context, email string) (models.UserWithPassword, error)
+	GetUserByEmailWithPassword(c *gin.Context, email string) (models.UserWithPassword, error)
+	GetUserByIdWithPassword(c *gin.Context, userId int64) (models.UserWithPassword, error)
 	GetUserById(c *gin.Context, userId int64) (models.UserResponse, error)
 	DeleteUser(c *gin.Context, userId int64) error
 	UpdateUser(c *gin.Context, userId int64, updatedUser models.UpdateUserInput) (models.UserResponse, error)
+	UpdateUserPassword(c *gin.Context, userId int64, password string) (models.UserResponse, error)
 }
 
 // UserService implements UserServiceInterface
@@ -30,8 +32,12 @@ func (u *UserService) CreateUser(c *gin.Context, newUser models.CreateUserInput)
 	return u.repo.CreateUser(c, newUser)
 }
 
-func (u *UserService) GetUserByEmail(c *gin.Context, email string) (models.UserWithPassword, error) {
-	return u.repo.GetUserByEmail(c, email)
+func (u *UserService) GetUserByEmailWithPassword(c *gin.Context, email string) (models.UserWithPassword, error) {
+	return u.repo.GetUserByEmailWithPassword(c, email)
+}
+
+func (u *UserService) GetUserByIdWithPassword(c *gin.Context, userId int64) (models.UserWithPassword, error) {
+	return u.repo.GetUserByIdWithPassword(c, userId)
 }
 
 func (u *UserService) GetUserById(c *gin.Context, userId int64) (models.UserResponse, error) {
@@ -44,4 +50,8 @@ func (u *UserService) DeleteUser(c *gin.Context, userId int64) error {
 
 func (u *UserService) UpdateUser(c *gin.Context, userId int64, updatedUser models.UpdateUserInput) (models.UserResponse, error) {
 	return u.repo.UpdateUser(c, userId, updatedUser)
+}
+
+func (u *UserService) UpdateUserPassword(c *gin.Context, userId int64, password string) (models.UserResponse, error) {
+	return u.repo.UpdateUserPassword(c, userId, password)
 }

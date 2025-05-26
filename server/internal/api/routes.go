@@ -2,6 +2,7 @@ package api
 
 import (
 	"expenses/internal/api/controller"
+	"expenses/internal/api/middleware"
 	"expenses/internal/config"
 	"expenses/internal/service"
 	"time"
@@ -41,6 +42,7 @@ func Init(
 	})
 
 	authController := controller.NewAuthController(cfg, authService)
+	userController := controller.NewUserController(cfg, userService, authService)
 	api := router.Group("/api/v1")
 	{
 		base := api.Group("")
@@ -48,6 +50,15 @@ func Init(
 		base.POST("/signup", authController.Signup)
 		base.POST("/login", authController.Login)
 		base.POST("/refresh", authController.RefreshToken)
+
+		// User related routes
+		user := base.Group("/user").Use(gin.HandlerFunc(middleware.Protected(cfg)))
+		{
+			user.GET("", userController.GetUserById)
+			user.DELETE("", userController.DeleteUser)
+			user.PATCH("", userController.UpdateUser)
+			user.POST("/password", userController.UpdateUserPassword)
+		}
 	}
 
 	return router

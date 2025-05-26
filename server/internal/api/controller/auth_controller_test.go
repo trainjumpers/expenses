@@ -82,6 +82,60 @@ var _ = Describe("AuthController", func() {
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 
+			It("should return bad request for missing name", func() {
+				userInput := models.CreateUserInput{
+					Email:    "test@example.com",
+					Password: "1234567890",
+				}
+
+				body, _ := json.Marshal(userInput)
+				req, err := http.NewRequest(http.MethodPost, baseURL+"/signup", bytes.NewBuffer(body))
+				Expect(err).NotTo(HaveOccurred())
+				req.Header.Set("Content-Type", "application/json")
+
+				resp, err := client.Do(req)
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+
+				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+			})
+
+			It("should return bad request for missing email", func() {
+				userInput := models.CreateUserInput{
+					Name:     "Test User",
+					Password: "1234567890",
+				}
+
+				body, _ := json.Marshal(userInput)
+				req, err := http.NewRequest(http.MethodPost, baseURL+"/signup", bytes.NewBuffer(body))
+				Expect(err).NotTo(HaveOccurred())
+				req.Header.Set("Content-Type", "application/json")
+
+				resp, err := client.Do(req)
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+
+				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+			})
+
+			It("should return bad request for missing password", func() {
+				userInput := models.CreateUserInput{
+					Email: "test@example.com",
+					Name:  "Test User",
+				}
+
+				body, _ := json.Marshal(userInput)
+				req, err := http.NewRequest(http.MethodPost, baseURL+"/signup", bytes.NewBuffer(body))
+				Expect(err).NotTo(HaveOccurred())
+				req.Header.Set("Content-Type", "application/json")
+
+				resp, err := client.Do(req)
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+
+				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+			})
+
 			It("should return conflict for existing user", func() {
 				userInput := models.CreateUserInput{
 					Email:    "test1@example.com", // Using email from test seed

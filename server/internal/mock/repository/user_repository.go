@@ -40,9 +40,18 @@ func (m *MockUserRepository) CreateUser(c *gin.Context, newUser models.CreateUse
 	}, nil
 }
 
-func (m *MockUserRepository) GetUserByEmail(c *gin.Context, email string) (models.UserWithPassword, error) {
+func (m *MockUserRepository) GetUserByEmailWithPassword(c *gin.Context, email string) (models.UserWithPassword, error) {
 	if user, exists := m.users[email]; exists {
 		return user, nil
+	}
+	return models.UserWithPassword{}, errors.NewUserNotFoundError(nil)
+}
+
+func (m *MockUserRepository) GetUserByIdWithPassword(c *gin.Context, userId int64) (models.UserWithPassword, error) {
+	for _, user := range m.users {
+		if user.Id == userId {
+			return user, nil
+		}
 	}
 	return models.UserWithPassword{}, errors.NewUserNotFoundError(nil)
 }
@@ -77,6 +86,21 @@ func (m *MockUserRepository) UpdateUser(c *gin.Context, userId int64, updatedUse
 				user.Name = updatedUser.Name
 				m.users[email] = user
 			}
+			return models.UserResponse{
+				Id:    user.Id,
+				Email: user.Email,
+				Name:  user.Name,
+			}, nil
+		}
+	}
+	return models.UserResponse{}, errors.NewUserNotFoundError(nil)
+}
+
+func (m *MockUserRepository) UpdateUserPassword(c *gin.Context, userId int64, password string) (models.UserResponse, error) {
+	for email, user := range m.users {
+		if user.Id == userId {
+			user.Password = password
+			m.users[email] = user
 			return models.UserResponse{
 				Id:    user.Id,
 				Email: user.Email,

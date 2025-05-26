@@ -26,7 +26,7 @@ just db-upgrade
 just db-seed
 
 #####--- Start the API server ───────
-go run cmd/neurospend/main.go &  SERVER_PID=$!
+go run cmd/neurospend/main.go > /dev/null 2>&1 & SERVER_PID=$!
 echo "API started (pid $SERVER_PID); waiting for healthy status…"
 
 SERVER_HEALTHY=false

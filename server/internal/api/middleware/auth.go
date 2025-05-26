@@ -2,16 +2,17 @@ package middleware
 
 import (
 	"expenses/internal/config"
-	"expenses/internal/service"
 	"expenses/pkg/logger"
+	"fmt"
 	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 // Protected is a middleware that checks if the request has a valid JWT token
-func Protected(authService service.AuthServiceInterface, cfg *config.Config) gin.HandlerFunc {
+func Protected(cfg *config.Config) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		tokenString := ctx.GetHeader("Authorization")
 		if tokenString == "" {
@@ -41,7 +42,7 @@ func Protected(authService service.AuthServiceInterface, cfg *config.Config) gin
 			return
 		}
 		tokenString = tokenParts[1]
-		claims, err := authService.VerifyAuthToken(tokenString)
+		claims, err := verifyAuthToken(tokenString, cfg)
 		if err != nil {
 			logger.Warn("Invalid token received: ", err)
 			response := gin.H{
@@ -72,4 +73,20 @@ func Protected(authService service.AuthServiceInterface, cfg *config.Config) gin
 		logger.Info("Request authenticated for user ID: ", int64(userId))
 		ctx.Next()
 	}
+}
+
+func verifyAuthToken(tokenString string, cfg *config.Config) (jwt.MapClaims, error) {
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		return cfg.JWTSecret, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok || !token.Valid {
+		return nil, fmt.Errorf("invalid token")
+	}
+
+	return claims, nil
 }
