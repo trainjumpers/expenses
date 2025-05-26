@@ -92,7 +92,7 @@ var _ = Describe("UserController", func() {
 
 			It("should return bad request for incorrect input", func() {
 				updateInput := map[string]interface{}{
-					"somerandomeparam": 123,
+					"somerandomparam": 123,
 				}
 
 				body, _ := json.Marshal(updateInput)
