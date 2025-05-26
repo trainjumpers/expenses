@@ -90,7 +90,7 @@ var _ = Describe("UserController", func() {
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 
-			It("should return bad request for incorrect input", func() {
+			It("should return bad request for invalid input", func() {
 				updateInput := map[string]interface{}{
 					"somerandomparam": 123,
 				}
@@ -106,6 +106,18 @@ var _ = Describe("UserController", func() {
 				defer resp.Body.Close()
 
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+			})
+
+			It("should be unauthorized for invalid token", func() {
+				req, err := http.NewRequest(http.MethodPatch, baseURL+"/user", bytes.NewBuffer([]byte("{}")))
+				Expect(err).NotTo(HaveOccurred())
+				req.Header.Set("Content-Type", "application/json")
+				req.Header.Set("Authorization", "Bearer invalid-token")
+
+				resp, err := client.Do(req)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
 			})
 		})
 	})
@@ -155,6 +167,7 @@ var _ = Describe("UserController", func() {
 				response, err = decodeJSON(resp.Body)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(response["message"]).To(Equal("User password updated successfully"))
+				Expect(response).NotTo(HaveKey("password"))
 
 				// Verify new password works by trying to login
 				loginInput := models.LoginInput{
@@ -206,6 +219,18 @@ var _ = Describe("UserController", func() {
 				defer resp.Body.Close()
 
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+			})
+
+			It("should be unauthorized for invalid token", func() {
+				req, err := http.NewRequest(http.MethodPost, baseURL+"/user/password", bytes.NewBuffer([]byte("{}")))
+				Expect(err).NotTo(HaveOccurred())
+				req.Header.Set("Content-Type", "application/json")
+				req.Header.Set("Authorization", "Bearer invalid-token")
+
+				resp, err := client.Do(req)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
 			})
 		})
 	})
