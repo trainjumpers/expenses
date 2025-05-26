@@ -157,6 +157,69 @@ var _ = Describe("AuthController", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(response["message"]).To(Equal("user already exists"))
 			})
+
+			It("should return bad request for SQL injection in email", func() {
+				userInput := models.CreateUserInput{
+					Email:    "test@example.com' OR '1'='1",
+					Name:     "Test User",
+					Password: "password123",
+				}
+
+				body, _ := json.Marshal(userInput)
+				req, err := http.NewRequest(http.MethodPost, baseURL+"/signup", bytes.NewBuffer(body))
+				Expect(err).NotTo(HaveOccurred())
+				req.Header.Set("Content-Type", "application/json")
+
+				resp, err := client.Do(req)
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+
+				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+				response, err := decodeJSON(resp.Body)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(response["message"]).To(ContainSubstring("Error:Field validation for 'Email'"))
+			})
+
+			It("should work fine for SQL injection in name", func() {
+				userInput := models.CreateUserInput{
+					Email:    "test@example.com",
+					Name:     "Test User'; DROP TABLE users; --",
+					Password: "password123",
+				}
+
+				body, _ := json.Marshal(userInput)
+				req, err := http.NewRequest(http.MethodPost, baseURL+"/signup", bytes.NewBuffer(body))
+				Expect(err).NotTo(HaveOccurred())
+				req.Header.Set("Content-Type", "application/json")
+
+				resp, err := client.Do(req)
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+
+				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+			})
+
+			It("should return bad request for complex SQL injection attempt", func() {
+				userInput := models.CreateUserInput{
+					Email:    "test@example.com' UNION SELECT * FROM users; --",
+					Name:     "Test User'; INSERT INTO users (email, name, password) VALUES ('hack@example.com', 'Hacker', 'password'); --",
+					Password: "password123' OR 1=1; --",
+				}
+
+				body, _ := json.Marshal(userInput)
+				req, err := http.NewRequest(http.MethodPost, baseURL+"/signup", bytes.NewBuffer(body))
+				Expect(err).NotTo(HaveOccurred())
+				req.Header.Set("Content-Type", "application/json")
+
+				resp, err := client.Do(req)
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+
+				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+				response, err := decodeJSON(resp.Body)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(response["message"]).To(ContainSubstring("Error:Field validation for 'Email'"))
+			})
 		})
 	})
 

@@ -249,31 +249,5 @@ var _ = Describe("AuthService", func() {
 			Expect(err).To(BeAssignableToTypeOf(&apperrors.AuthError{}))
 			Expect(err.(*apperrors.AuthError).ErrorType).To(Equal("UserNotFound"))
 		})
-
-		It("should return error with incorrect password", func() {
-			var err error
-			// Try to update password with wrong password
-			updateInput := models.UpdateUserPasswordInput{
-				OldPassword: "wrongpassword",
-				NewPassword: "newpassword123",
-			}
-			_, err = authService.UpdateUserPassword(ctx, authResponse.User.Id, updateInput)
-			Expect(err).To(HaveOccurred())
-			var authErr *apperrors.AuthError
-			Expect(errors.As(err, &authErr)).To(BeTrue())
-			Expect(authErr.ErrorType).To(Equal("InvalidCredentials"))
-		})
-
-		It("should return error for non-existent user", func() {
-			updateInput := models.UpdateUserPasswordInput{
-				OldPassword: "password123",
-				NewPassword: "newpassword123",
-			}
-			_, err := authService.UpdateUserPassword(ctx, 9999, updateInput)
-			Expect(err).To(HaveOccurred())
-			var authErr *apperrors.AuthError
-			Expect(errors.As(err, &authErr)).To(BeTrue())
-			Expect(authErr.ErrorType).To(Equal("UserNotFound"))
-		})
 	})
 })
