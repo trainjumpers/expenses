@@ -1,8 +1,9 @@
 package service
 
 import (
+	"errors"
 	"expenses/internal/config"
-	"expenses/internal/errors"
+	apperrors "expenses/internal/errors"
 	mock "expenses/internal/mock/repository"
 	"expenses/internal/models"
 	"os"
@@ -66,8 +67,9 @@ var _ = Describe("AuthService", func() {
 			// Try to create same user again
 			_, err = authService.Signup(ctx, newUser)
 			Expect(err).To(HaveOccurred())
-			Expect(err).To(BeAssignableToTypeOf(&errors.AuthError{}))
-			Expect(err.(*errors.AuthError).ErrorType).To(Equal("UserAlreadyExists"))
+			var authErr *apperrors.AuthError
+			Expect(errors.As(err, &authErr)).To(BeTrue())
+			Expect(authErr.ErrorType).To(Equal("UserAlreadyExists"))
 		})
 	})
 
@@ -114,16 +116,18 @@ var _ = Describe("AuthService", func() {
 			_, err = authService.Login(ctx, loginInput)
 
 			Expect(err).To(HaveOccurred())
-			Expect(err).To(BeAssignableToTypeOf(&errors.AuthError{}))
-			Expect(err.(*errors.AuthError).ErrorType).To(Equal("InvalidCredentials"))
+			var authErr *apperrors.AuthError
+			Expect(errors.As(err, &authErr)).To(BeTrue())
+			Expect(authErr.ErrorType).To(Equal("InvalidCredentials"))
 		})
 
 		It("should return error for non-existent user", func() {
 			_, err := authService.Login(ctx, loginInput)
 
 			Expect(err).To(HaveOccurred())
-			Expect(err).To(BeAssignableToTypeOf(&errors.AuthError{}))
-			Expect(err.(*errors.AuthError).ErrorType).To(Equal("InvalidCredentials"))
+			var authErr *apperrors.AuthError
+			Expect(errors.As(err, &authErr)).To(BeTrue())
+			Expect(authErr.ErrorType).To(Equal("InvalidCredentials"))
 		})
 	})
 
@@ -162,8 +166,9 @@ var _ = Describe("AuthService", func() {
 			_, err := authService.RefreshToken(ctx, "invalid-token")
 
 			Expect(err).To(HaveOccurred())
-			Expect(err).To(BeAssignableToTypeOf(&errors.AuthError{}))
-			Expect(err.(*errors.AuthError).ErrorType).To(Equal("InvalidToken"))
+			var authErr *apperrors.AuthError
+			Expect(errors.As(err, &authErr)).To(BeTrue())
+			Expect(authErr.ErrorType).To(Equal("InvalidToken"))
 		})
 
 		It("should return error with expired refresh token", func() {
@@ -180,8 +185,9 @@ var _ = Describe("AuthService", func() {
 			_, err = authService.RefreshToken(ctx, authResponse.RefreshToken)
 
 			Expect(err).To(HaveOccurred())
-			Expect(err).To(BeAssignableToTypeOf(&errors.AuthError{}))
-			Expect(err.(*errors.AuthError).ErrorType).To(Equal("InvalidToken"))
+			var authErr *apperrors.AuthError
+			Expect(errors.As(err, &authErr)).To(BeTrue())
+			Expect(authErr.ErrorType).To(Equal("InvalidToken"))
 		})
 	})
 
@@ -229,8 +235,8 @@ var _ = Describe("AuthService", func() {
 			}
 			_, err := authService.UpdateUserPassword(ctx, authResponse.User.Id, updateInput)
 			Expect(err).To(HaveOccurred())
-			Expect(err).To(BeAssignableToTypeOf(&errors.AuthError{}))
-			Expect(err.(*errors.AuthError).ErrorType).To(Equal("InvalidCredentials"))
+			Expect(err).To(BeAssignableToTypeOf(&apperrors.AuthError{}))
+			Expect(err.(*apperrors.AuthError).ErrorType).To(Equal("InvalidCredentials"))
 		})
 
 		It("should return error for non-existent user", func() {
@@ -240,8 +246,34 @@ var _ = Describe("AuthService", func() {
 			}
 			_, err := authService.UpdateUserPassword(ctx, 9999, updateInput)
 			Expect(err).To(HaveOccurred())
-			Expect(err).To(BeAssignableToTypeOf(&errors.AuthError{}))
-			Expect(err.(*errors.AuthError).ErrorType).To(Equal("UserNotFound"))
+			Expect(err).To(BeAssignableToTypeOf(&apperrors.AuthError{}))
+			Expect(err.(*apperrors.AuthError).ErrorType).To(Equal("UserNotFound"))
+		})
+
+		It("should return error with incorrect password", func() {
+			var err error
+			// Try to update password with wrong password
+			updateInput := models.UpdateUserPasswordInput{
+				OldPassword: "wrongpassword",
+				NewPassword: "newpassword123",
+			}
+			_, err = authService.UpdateUserPassword(ctx, authResponse.User.Id, updateInput)
+			Expect(err).To(HaveOccurred())
+			var authErr *apperrors.AuthError
+			Expect(errors.As(err, &authErr)).To(BeTrue())
+			Expect(authErr.ErrorType).To(Equal("InvalidCredentials"))
+		})
+
+		It("should return error for non-existent user", func() {
+			updateInput := models.UpdateUserPasswordInput{
+				OldPassword: "password123",
+				NewPassword: "newpassword123",
+			}
+			_, err := authService.UpdateUserPassword(ctx, 9999, updateInput)
+			Expect(err).To(HaveOccurred())
+			var authErr *apperrors.AuthError
+			Expect(errors.As(err, &authErr)).To(BeTrue())
+			Expect(authErr.ErrorType).To(Equal("UserNotFound"))
 		})
 	})
 })
