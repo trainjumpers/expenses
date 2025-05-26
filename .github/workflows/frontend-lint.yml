@@ -38,6 +38,4 @@ jobs:
         run: npm run lint
 
       - name: Run and check formatting
-        run: |
-          npm run format
-          git diff --exit-code
+        run: npx prettier --check .
