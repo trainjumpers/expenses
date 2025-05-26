@@ -27,7 +27,7 @@ func NewUserController(cfg *config.Config, userService service.UserServiceInterf
 // GetUserById returns a user by Id
 func (u *UserController) GetUserById(ctx *gin.Context) {
 	userId := ctx.GetInt64("authUserId")
-	logger.Infof("Recieved request to get a user by Id: %d", userId)
+	logger.Infof("Received request to get a user by Id: %d", userId)
 
 	user, err := u.userService.GetUserById(ctx, userId)
 	if err != nil {
@@ -43,7 +43,7 @@ func (u *UserController) GetUserById(ctx *gin.Context) {
 // DeleteUser deletes a user by Id
 func (u *UserController) DeleteUser(ctx *gin.Context) {
 	userId := ctx.GetInt64("authUserId")
-	logger.Infof("Recieved request to delete a user by Id: %d", userId)
+	logger.Infof("Received request to delete a user by Id: %d", userId)
 
 	err := u.userService.DeleteUser(ctx, userId)
 	if err != nil {
@@ -64,7 +64,7 @@ func (u *UserController) UpdateUser(ctx *gin.Context) {
 		logger.Error("Failed to bind JSON for updating user: ", err)
 		return
 	}
-	logger.Infof("Recieved request to update a user by Id: %d", userId)
+	logger.Infof("Received request to update a user by Id: %d", userId)
 	user, err := u.userService.UpdateUser(ctx, userId, updatedUser)
 	if err != nil {
 		logger.Error("Error updating user: ", err)
@@ -83,7 +83,7 @@ func (u *UserController) UpdateUserPassword(ctx *gin.Context) {
 		logger.Error("Failed to bind JSON for updating user password: ", err)
 		return
 	}
-	logger.Infof("Recieved request to update a user password by Id: %d", userId)
+	logger.Infof("Received request to update a user password by Id: %d", userId)
 	user, err := u.authService.UpdateUserPassword(ctx, userId, updatedUser)
 	if err != nil {
 		logger.Error("Error updating user password: ", err)
