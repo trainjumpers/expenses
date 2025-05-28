@@ -1,8 +1,7 @@
 import { API_BASE_URL } from "@/lib/constants/api";
 import { AuthResponse } from "@/lib/models/auth";
+import { handleApiError } from "@/lib/utils/toast";
 import { toast } from "sonner";
-
-import { handleApiError } from "../utils/toast";
 
 export async function login(
   email: string,
@@ -22,7 +21,7 @@ export async function login(
     }
     throw new Error(data.error || "Login failed");
   }
-  return data;
+  return data.data;
 }
 
 export async function signup(
@@ -51,5 +50,5 @@ export async function signup(
     }
     throw new Error(data.error || "Signup failed");
   }
-  return data;
+  return data.data;
 }
