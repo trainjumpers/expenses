@@ -28,6 +28,18 @@ export function setCookie(
   document.cookie = cookie;
 }
 
-export function deleteCookie(name: string) {
-  document.cookie = `${name}=; max-age=0; path=/; SameSite=Strict; Secure`;
+export function deleteCookie(
+  name: string,
+  options: {
+    secure?: boolean;
+    sameSite?: "Strict" | "Lax" | "None";
+  } = {}
+) {
+  let cookie = `${name}=; max-age=0; path=/`;
+  const sameSite = options.sameSite || "Strict";
+  cookie += `; SameSite=${sameSite}`;
+  if (options.secure !== false) {
+    cookie += "; Secure";
+  }
+  document.cookie = cookie;
 }
