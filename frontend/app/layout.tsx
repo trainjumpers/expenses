@@ -1,4 +1,7 @@
+import { ThemeHydrationFix } from "@/components/custom/common/ThemeHydrationFix";
+import { Toaster } from "@/components/ui/sonner";
 import type { Metadata } from "next";
+import { ThemeProvider } from "next-themes";
 import { Geist, Geist_Mono } from "next/font/google";
 
 import "./globals.css";
@@ -28,7 +31,31 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
+        <ThemeHydrationFix>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            {children}
+            <Toaster
+              position="top-right"
+              richColors
+              theme="dark"
+              toastOptions={{
+                classNames: {
+                  toast:
+                    "shadow-lg rounded-lg flex items-center p-4 text-xs gap-1.5",
+                  error: "[&>button]:!bg-red-300",
+                  info: "[&>button]:!bg-blue-300",
+                  success: "[&>button]:!bg-green-300",
+                  warning: "[&>button]:!bg-yellow-300",
+                },
+              }}
+            />
+          </ThemeProvider>
+        </ThemeHydrationFix>
       </body>
     </html>
   );
