@@ -25,7 +25,6 @@ export const handleApiError = (status: number, resource: string) => {
         `${resource.charAt(0).toUpperCase() + resource.slice(1)} already exists`
       );
       break;
-    case 500:
     default:
       toast.error(
         "Something went wrong. Contact support if the problem persists"

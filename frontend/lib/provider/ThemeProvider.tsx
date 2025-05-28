@@ -15,16 +15,7 @@ export function ThemeProvider({
   }, []);
   if (!mounted) {
     return (
-      <div
-        style={{
-          minHeight: "100vh",
-          width: "100vw",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          background: "#18181b",
-        }}
-      >
+      <div className="min-h-screen w-screen flex items-center justify-center bg-zinc-900">
         <Skeleton className="h-20 w-20 rounded-2xl" />
       </div>
     );

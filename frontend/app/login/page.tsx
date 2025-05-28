@@ -8,6 +8,7 @@ import { setCookie } from "@/lib/utils/cookies";
 import { useRouter } from "next/dist/client/components/navigation";
 import Link from "next/link";
 import { useState } from "react";
+import { ACCESS_TOKEN_EXPIRY, REFRESH_TOKEN_EXPIRY } from "@/lib/constants/cookie";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -25,10 +26,10 @@ export default function LoginPage() {
     try {
       const data = await login(formData.email, formData.password);
       setCookie("access_token", data.access_token, {
-        maxAge: 12 * 60 * 60 * 1000,
+        maxAge: ACCESS_TOKEN_EXPIRY,
       });
       setCookie("refresh_token", data.refresh_token, {
-        maxAge: 7 * 24 * 60 * 60 * 1000,
+        maxAge: REFRESH_TOKEN_EXPIRY,
       });
       router.push("/");
     } catch (err) {
