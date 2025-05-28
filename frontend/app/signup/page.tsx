@@ -9,6 +9,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+/**
+ * Renders a user registration page with a signup form.
+ *
+ * Displays input fields for name, email, and password, and handles user registration by submitting the form data to the signup API. On successful registration, authentication tokens are stored in cookies and the user is redirected to the home page. The form shows a loading state during submission and provides a link to the login page for existing users.
+ */
 export default function SignupPage() {
   const router = useRouter();
 

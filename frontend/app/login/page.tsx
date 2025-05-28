@@ -9,6 +9,13 @@ import { useRouter } from "next/dist/client/components/navigation";
 import Link from "next/link";
 import { useState } from "react";
 
+/**
+ * Renders a login page with a form for user authentication.
+ *
+ * Displays input fields for email and password, handles form submission, and manages authentication state. On successful login, sets authentication cookies and redirects the user to the home page.
+ *
+ * @remark Errors during login are logged to the console but not displayed to the user.
+ */
 export default function LoginPage() {
   const router = useRouter();
 

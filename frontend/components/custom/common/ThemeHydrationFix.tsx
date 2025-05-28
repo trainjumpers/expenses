@@ -3,6 +3,14 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { useEffect, useState } from "react";
 
+/**
+ * Prevents hydration mismatch by displaying a skeleton loader until the component is mounted, then renders its children.
+ *
+ * @param children - The content to render after hydration is complete.
+ *
+ * @remark
+ * This component is useful for avoiding UI inconsistencies between server and client during hydration, especially when theming or client-only logic is involved.
+ */
 export function ThemeHydrationFix({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => {

@@ -4,6 +4,17 @@ import { toast } from "sonner";
 
 import { handleApiError } from "../utils/toast";
 
+/**
+ * Authenticates a user with the provided email and password.
+ *
+ * Sends a POST request to the `/login` endpoint and returns authentication data on success.
+ *
+ * @param email - The user's email address.
+ * @param password - The user's password.
+ * @returns The authentication response data.
+ *
+ * @throws {Error} If authentication fails, with the error message from the API response or "Login failed".
+ */
 export async function login(
   email: string,
   password: string
@@ -25,6 +36,19 @@ export async function login(
   return data;
 }
 
+/**
+ * Registers a new user account with the provided name, email, and password.
+ *
+ * Sends a POST request to the `/signup` endpoint and returns the authentication response data on success.
+ *
+ * @param name - The user's display name.
+ * @param email - The user's email address.
+ * @param password - The user's chosen password.
+ * @returns The authentication response data for the newly created account.
+ *
+ * @throws {Error} If the signup fails, including when the account already exists or other API errors occur.
+ * @remark If the account already exists (HTTP 409), an informational toast is shown with an option to redirect to the login page.
+ */
 export async function signup(
   name: string,
   email: string,
