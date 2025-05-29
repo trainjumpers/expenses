@@ -37,7 +37,7 @@ export async function signup(
   const data = await response.json();
   if (!response.ok) {
     if (response.status === 409) {
-      toast.info("Account already exists. Please login", {
+      toast.info("Account already exists.", {
         action: {
           label: "Login",
           onClick: () => {

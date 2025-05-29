@@ -1,14 +1,16 @@
 import { API_BASE_URL } from "@/lib/constants/api";
+import { ACCESS_TOKEN_NAME } from "@/lib/constants/cookie";
 import { User } from "@/lib/models/user";
 import { getCookie } from "@/lib/utils/cookies";
 import { handleApiError } from "@/lib/utils/toast";
+import { toast } from "sonner";
 
 export async function getUser(): Promise<User> {
   const response = await fetch(`${API_BASE_URL}/user`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${getCookie("access_token")}`,
+      Authorization: `Bearer ${getCookie(ACCESS_TOKEN_NAME)}`,
     },
   });
   const data = await response.json();
@@ -24,7 +26,7 @@ export async function updateUser(user: Partial<User>): Promise<User> {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${getCookie("access_token")}`,
+      Authorization: `Bearer ${getCookie(ACCESS_TOKEN_NAME)}`,
     },
     body: JSON.stringify(user),
   });
@@ -44,7 +46,7 @@ export async function updatePassword(
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${getCookie("access_token")}`,
+      Authorization: `Bearer ${getCookie(ACCESS_TOKEN_NAME)}`,
     },
     body: JSON.stringify({
       old_password: currentPassword,
@@ -53,6 +55,10 @@ export async function updatePassword(
   });
   const data = await response.json();
   if (!response.ok) {
+    if (response.status === 401) {
+      toast.error("Current password is incorrect");
+      throw new Error("Current password is incorrect");
+    }
     handleApiError(response.status, "password");
     throw new Error(data.error || "Change password failed");
   }

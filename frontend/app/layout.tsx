@@ -1,8 +1,10 @@
+import DashboardSkeleton from "@/components/custom/Dashboard/DashboardSkeleton";
+import { ThemeProvider } from "@/components/custom/Provider/ThemeProvider";
+import { UserProvider } from "@/components/custom/Provider/UserProvider";
 import { Toaster } from "@/components/ui/sonner";
-import { ThemeProvider } from "@/lib/provider/ThemeProvider";
-import { UserProvider } from "@/lib/provider/UserProvider";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { Suspense } from "react";
 
 import "./globals.css";
 
@@ -37,11 +39,12 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <UserProvider>{children}</UserProvider>
+          <UserProvider>
+            <Suspense fallback={<DashboardSkeleton />}>{children}</Suspense>
+          </UserProvider>
           <Toaster
             position="top-right"
             richColors
-            theme="dark"
             toastOptions={{
               classNames: {
                 toast:
