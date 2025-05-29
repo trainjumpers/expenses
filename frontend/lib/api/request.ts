@@ -29,7 +29,7 @@ export async function apiRequest<T>(
       }
       if (!toastShown) {
         handleApiError(response.status, resourceName);
-        toast.error(errorMessage);
+        toastShown = true;
       }
       const errorMsg = (data as Record<string, unknown>)["error"];
       throw new Error(
