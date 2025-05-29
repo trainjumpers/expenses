@@ -54,6 +54,14 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     });
     setToken(authResponse.access_token);
     const user = await getUser();
+    setResource((prev) =>
+      prev
+        ? {
+            ...prev,
+            read: () => user,
+          }
+        : prev
+    );
     return user;
   };
 
@@ -95,6 +103,14 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     });
     setToken(authResponse.access_token);
     const user = await getUser();
+    setResource((prev) =>
+      prev
+        ? {
+            ...prev,
+            read: () => user,
+          }
+        : prev
+    );
     return user;
   };
 

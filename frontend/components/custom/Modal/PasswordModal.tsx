@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { useState } from "react";
+import { toast } from "sonner";
 
 interface PasswordModalProps {
   isOpen: boolean;
@@ -32,14 +33,27 @@ export function PasswordModal({ isOpen, onOpenChange }: PasswordModalProps) {
     setIsLoading(true);
     try {
       if (formData.newPassword !== formData.confirmPassword) {
-        console.error("Passwords don't match");
-        setIsLoading(false);
-        return;
+        const msg = "Passwordss don't match";
+        toast.error(msg);
+        throw new Error(msg);
+      }
+
+      // Add password strength validation
+      if (formData.newPassword.length < 8) {
+        const msg = "Password must be at least 8 characters long";
+        toast.error(msg);
+        throw new Error(msg);
       }
       await updatePassword(formData.currentPassword, formData.newPassword);
+      setFormData({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
       onOpenChange(false);
     } catch (error) {
       console.error(error);
+      // Add user-visible error handling (toast, form error state, etc.)
     } finally {
       setIsLoading(false);
     }

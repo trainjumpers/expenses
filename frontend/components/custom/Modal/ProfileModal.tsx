@@ -26,17 +26,24 @@ export function ProfileModal({ isOpen, onOpenChange }: ProfileModalProps) {
   });
 
   useEffect(() => {
+    const currentUser = user();
     setFormData({
-      name: user().name,
-      email: user().email,
+      name: currentUser?.name || "",
+      email: currentUser?.email || "",
     });
-  }, [user]);
+  }, [user]); // Or use a more stable identifier
 
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     setIsLoading(true);
     e.preventDefault();
+
+    if (!formData.name.trim()) {
+      setIsLoading(false);
+      return;
+    }
+
     try {
       await updateUser({
         name: formData.name,
@@ -44,6 +51,7 @@ export function ProfileModal({ isOpen, onOpenChange }: ProfileModalProps) {
       onOpenChange(false);
     } catch (error) {
       console.error(error);
+      // Add user-visible error handling here (toast, alert, etc.)
     } finally {
       setIsLoading(false);
     }

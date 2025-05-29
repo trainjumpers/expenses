@@ -2,6 +2,7 @@
 
 import { ProfileDropdown } from "@/components/custom/Navbar/ProfileDropdown";
 import { ToggleTheme } from "@/components/custom/Navbar/ToggleTheme";
+import { ACCESS_TOKEN_NAME } from "@/lib/constants/cookie";
 import { getCookie } from "@/lib/utils/cookies";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -11,7 +12,7 @@ export function Navbar() {
   const router = useRouter();
 
   useEffect(() => {
-    const accessToken = getCookie("access_token");
+    const accessToken = getCookie(ACCESS_TOKEN_NAME);
     if (!accessToken) {
       router.push("/login");
     }
