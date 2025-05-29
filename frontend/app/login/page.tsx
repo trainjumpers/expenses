@@ -6,7 +6,9 @@ import { Spinner } from "@/components/ui/spinner";
 import { login } from "@/lib/api/auth";
 import {
   ACCESS_TOKEN_EXPIRY,
+  ACCESS_TOKEN_NAME,
   REFRESH_TOKEN_EXPIRY,
+  REFRESH_TOKEN_NAME,
 } from "@/lib/constants/cookie";
 import { setCookie } from "@/lib/utils/cookies";
 import { useRouter } from "next/dist/client/components/navigation";
@@ -28,10 +30,10 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const data = await login(formData.email, formData.password);
-      setCookie("access_token", data.access_token, {
+      setCookie(ACCESS_TOKEN_NAME, data.access_token, {
         maxAge: ACCESS_TOKEN_EXPIRY,
       });
-      setCookie("refresh_token", data.refresh_token, {
+      setCookie(REFRESH_TOKEN_NAME, data.refresh_token, {
         maxAge: REFRESH_TOKEN_EXPIRY,
       });
       router.push("/");

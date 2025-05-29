@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { signup } from "@/lib/api/auth";
+import { ACCESS_TOKEN_NAME, REFRESH_TOKEN_NAME } from "@/lib/constants/cookie";
 import { setCookie } from "@/lib/utils/cookies";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -32,10 +33,10 @@ export default function SignupPage() {
         formData.email,
         formData.password
       );
-      setCookie("access_token", data.access_token, {
+      setCookie(ACCESS_TOKEN_NAME, data.access_token, {
         maxAge: 12 * 60 * 60 * 1000,
       });
-      setCookie("refresh_token", data.refresh_token, {
+      setCookie(REFRESH_TOKEN_NAME, data.refresh_token, {
         maxAge: 7 * 24 * 60 * 60 * 1000,
       });
       router.push("/");

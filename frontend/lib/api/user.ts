@@ -1,4 +1,5 @@
 import { API_BASE_URL } from "@/lib/constants/api";
+import { ACCESS_TOKEN_NAME } from "@/lib/constants/cookie";
 import { User } from "@/lib/models/user";
 import { getCookie } from "@/lib/utils/cookies";
 import { handleApiError } from "@/lib/utils/toast";
@@ -8,7 +9,7 @@ export async function getUser(): Promise<User> {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${getCookie("access_token")}`,
+      Authorization: `Bearer ${getCookie(ACCESS_TOKEN_NAME)}`,
     },
   });
   const data = await response.json();
@@ -24,7 +25,7 @@ export async function updateUser(user: Partial<User>): Promise<User> {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${getCookie("access_token")}`,
+      Authorization: `Bearer ${getCookie(ACCESS_TOKEN_NAME)}`,
     },
     body: JSON.stringify(user),
   });
@@ -44,7 +45,7 @@ export async function updatePassword(
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${getCookie("access_token")}`,
+      Authorization: `Bearer ${getCookie(ACCESS_TOKEN_NAME)}`,
     },
     body: JSON.stringify({
       old_password: currentPassword,
