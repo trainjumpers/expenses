@@ -27,14 +27,16 @@ type UserRepositoryInterface interface {
 }
 
 type UserRepository struct {
-	db     *pgxpool.Pool
-	schema string
+	db        *pgxpool.Pool
+	schema    string
+	tableName string
 }
 
 func NewUserRepository(db *database.DatabaseManager, cfg *config.Config) *UserRepository {
 	return &UserRepository{
-		db:     db.GetPool(),
-		schema: cfg.DBSchema,
+		db:        db.GetPool(),
+		schema:    cfg.DBSchema,
+		tableName: "user",
 	}
 }
 
@@ -45,7 +47,7 @@ returns: User object of the created user
 */
 func (u *UserRepository) CreateUser(c *gin.Context, newUser models.CreateUserInput) (models.UserResponse, error) {
 	var user models.UserResponse
-	query, values, ptrs, err := helper.CreateInsertQuery(&newUser, &user, "user", u.schema)
+	query, values, ptrs, err := helper.CreateInsertQuery(&newUser, &user, u.tableName, u.schema)
 	if err != nil {
 		return models.UserResponse{}, err
 	}
@@ -69,9 +71,9 @@ func (u *UserRepository) GetUserByEmailWithPassword(c *gin.Context, email string
 		return models.UserWithPassword{}, err
 	}
 	query := fmt.Sprintf(`
-		SELECT %s FROM %s.user 
+		SELECT %s FROM %s.%s 
 		WHERE email = $1 AND deleted_at IS NULL;`,
-		strings.Join(dbFields, ", "), u.schema)
+		strings.Join(dbFields, ", "), u.schema, u.tableName)
 	logger.Info("Executing query to get a user by email: ", query)
 	err = u.db.QueryRow(c, query, email).Scan(ptrs...)
 	if err != nil {
@@ -95,7 +97,7 @@ func (u *UserRepository) GetUserByIdWithPassword(c *gin.Context, userId int64) (
 		return models.UserWithPassword{}, err
 	}
 	query := fmt.Sprintf(`
-		SELECT %s FROM %s.user WHERE id = $1 AND deleted_at IS NULL;`, strings.Join(dbFields, ", "), u.schema)
+		SELECT %s FROM %s.%s WHERE id = $1 AND deleted_at IS NULL;`, strings.Join(dbFields, ", "), u.schema, u.tableName)
 	logger.Info("Executing query to get a user by Id: ", query)
 	err = u.db.QueryRow(c, query, userId).Scan(ptrs...)
 	if err != nil {
@@ -120,9 +122,9 @@ func (u *UserRepository) GetUserById(c *gin.Context, userId int64) (models.UserR
 	}
 	query := fmt.Sprintf(`
 		SELECT %s 
-		FROM %s.user 
+		FROM %s.%s 
 		WHERE id = $1 AND deleted_at IS NULL;`,
-		strings.Join(dbFields, ", "), u.schema)
+		strings.Join(dbFields, ", "), u.schema, u.tableName)
 	logger.Info("Executing query to get a user by Id: ", query)
 	err = u.db.QueryRow(c, query, userId).Scan(ptrs...)
 	if err != nil {
@@ -141,10 +143,10 @@ returns: nil
 */
 func (u *UserRepository) DeleteUser(c *gin.Context, userId int64) error {
 	query := fmt.Sprintf(`
-	UPDATE %s.user 
+	UPDATE %s.%s 
 	SET deleted_at = NOW() 
 	WHERE id = $1 AND deleted_at IS NULL;
-	`, u.schema)
+	`, u.schema, u.tableName)
 	logger.Info("Executing query to delete a user by Id: ", query)
 	_, err := u.db.Exec(c, query, userId)
 	if err != nil {
@@ -174,9 +176,9 @@ func (u *UserRepository) UpdateUser(c *gin.Context, userId int64, updatedUser mo
 	}
 
 	query := fmt.Sprintf(`
-		UPDATE %[1]s.user SET %[2]s 
+		UPDATE %s.%s SET %s 
 		WHERE id = $%d AND deleted_at IS NULL %s;`,
-		u.schema, fieldsClause, argIndex, "RETURNING "+strings.Join(dbFields, ", "))
+		u.schema, u.tableName, fieldsClause, argIndex, "RETURNING "+strings.Join(dbFields, ", "))
 
 	logger.Info("Executing query to update a user by Id: ", query)
 	err = u.db.QueryRow(c, query, append(argValues, userId)...).Scan(ptrs...)
@@ -202,7 +204,7 @@ func (u *UserRepository) UpdateUserPassword(c *gin.Context, userId int64, passwo
 		return models.UserResponse{}, err
 	}
 	query := fmt.Sprintf(`
-		UPDATE %s.user SET password = $1 WHERE id = $2 AND deleted_at IS NULL RETURNING %s;`, u.schema, strings.Join(dbFields, ", "))
+		UPDATE %s.%s SET password = $1 WHERE id = $2 AND deleted_at IS NULL RETURNING %s;`, u.schema, u.tableName, strings.Join(dbFields, ", "))
 	logger.Info("Executing query to update a user's password by Id: ", query)
 	err = u.db.QueryRow(c, query, password, userId).Scan(ptrs...)
 	if err != nil {

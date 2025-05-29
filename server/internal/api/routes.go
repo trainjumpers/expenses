@@ -15,6 +15,7 @@ func Init(
 	cfg *config.Config,
 	authService service.AuthServiceInterface,
 	userService service.UserServiceInterface,
+	accountService service.AccountServiceInterface,
 ) *gin.Engine {
 	router := gin.New()
 	router.Use(gin.Logger())
@@ -43,6 +44,7 @@ func Init(
 
 	authController := controller.NewAuthController(cfg, authService)
 	userController := controller.NewUserController(cfg, userService, authService)
+	accountController := controller.NewAccountController(cfg, accountService)
 	api := router.Group("/api/v1")
 	{
 		base := api.Group("")
@@ -58,6 +60,13 @@ func Init(
 			user.DELETE("", userController.DeleteUser)
 			user.PATCH("", userController.UpdateUser)
 			user.POST("/password", userController.UpdateUserPassword)
+
+			account := base.Group("/account").Use(gin.HandlerFunc(middleware.Protected(cfg)))
+			account.GET("", accountController.ListAccounts)
+			account.POST("", accountController.CreateAccount)
+			account.GET("/:accountId", accountController.GetAccount)
+			account.PATCH("/:accountId", accountController.UpdateAccount)
+			account.DELETE("/:accountId", accountController.DeleteAccount)
 		}
 	}
 

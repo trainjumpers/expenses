@@ -18,10 +18,12 @@ func TestController(t *testing.T) {
 }
 
 var (
-	client       *http.Client
-	baseURL      string
-	accessToken  string
-	refreshToken string
+	client        *http.Client
+	baseURL       string
+	accessToken   string
+	refreshToken  string
+	accessToken1  string
+	refreshToken1 string
 )
 
 var _ = BeforeSuite(func() {
@@ -55,4 +57,25 @@ var _ = BeforeSuite(func() {
 
 	accessToken = response["data"].(map[string]interface{})["access_token"].(string)
 	refreshToken = response["data"].(map[string]interface{})["refresh_token"].(string)
+
+	loginInput1 := models.LoginInput{
+		Email:    "test2@example.com",
+		Password: "password",
+	}
+	body1, _ := json.Marshal(loginInput1)
+	req1, err := http.NewRequest(http.MethodPost, baseURL+"/login", bytes.NewBuffer(body1))
+	Expect(err).NotTo(HaveOccurred())
+	req1.Header.Set("Content-Type", "application/json")
+	resp1, err := client.Do(req1)
+	Expect(err).NotTo(HaveOccurred())
+	defer resp1.Body.Close()
+	Expect(resp1.StatusCode).To(Equal(http.StatusOK))
+
+	var response1 map[string]interface{}
+	err = json.NewDecoder(resp1.Body).Decode(&response1)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(response1["message"]).To(Equal("User logged in successfully"))
+
+	accessToken1 = response1["data"].(map[string]interface{})["access_token"].(string)
+	refreshToken1 = response1["data"].(map[string]interface{})["refresh_token"].(string)
 })
