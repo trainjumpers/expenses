@@ -16,10 +16,10 @@ jobs:
       - uses: dkershner6/vercel-set-env-action@v1
         with:
           token: ${{ secrets.VERCEL_TOKEN }}
-          projectName: events-app
+          projectName: neurospend
           envVariableKeys: NEXT_PUBLIC_API_BASE_URL
         env:
-          NEXT_PUBLIC_API_BASE_URL: ${{ secrets.API_BASE_URL }}
+          NEXT_PUBLIC_API_BASE_URL: ${{ secrets.BASE_API_URL }}
 
       - uses: amondnet/vercel-action@v25
         with:
