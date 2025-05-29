@@ -42,7 +42,24 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     getCookie(ACCESS_TOKEN_NAME)
   );
   const [resource, setResource] = useState<UserResource | null>(null);
-  const [loading, setLoading] = useState(true);
+
+  const setUserResource = (func: () => User) => {
+    setResource((prev) =>
+      prev
+        ? {
+            ...prev,
+            read: func,
+          }
+        : {
+            read: func,
+            login,
+            logout,
+            update,
+            updatePassword,
+            signup,
+          }
+    );
+  };
 
   const login = async (email: string, password: string) => {
     const authResponse = await loginApi(email, password);
@@ -54,14 +71,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     });
     setToken(authResponse.access_token);
     const user = await getUser();
-    setResource((prev) =>
-      prev
-        ? {
-            ...prev,
-            read: () => user,
-          }
-        : prev
-    );
+    setUserResource(() => user);
     return user;
   };
 
@@ -74,14 +84,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 
   const update = async (user: Partial<User>) => {
     const updatedUser = await updateUser(user);
-    setResource((prev) =>
-      prev
-        ? {
-            ...prev,
-            read: () => updatedUser,
-          }
-        : prev
-    );
+    setUserResource(() => updatedUser);
     return updatedUser;
   };
 
@@ -103,63 +106,32 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     });
     setToken(authResponse.access_token);
     const user = await getUser();
-    setResource((prev) =>
-      prev
-        ? {
-            ...prev,
-            read: () => user,
-          }
-        : prev
-    );
+    setUserResource(() => user);
     return user;
   };
 
   useEffect(() => {
-    setLoading(true);
     if (!token) {
       if (
         typeof window !== "undefined" &&
         window.location.pathname !== "/login"
       ) {
         window.location.href = "/login";
-        setResource({
-          read: () => ({ id: 0, name: "", email: "" }),
-          login,
-          logout,
-          update,
-          updatePassword,
-          signup,
-        });
-        setLoading(false);
+        setUserResource(() => ({ id: 0, name: "", email: "" }));
         return;
       }
-      setResource({
-        read: () => {
-          throw new Error("No access token. Redirecting to login.");
-        },
-        login,
-        logout,
-        update,
-        updatePassword,
-        signup,
+      setUserResource(() => {
+        throw new Error("No access token. Redirecting to login.");
       });
-      setLoading(false);
       return;
     }
     const userResource = createResource<User>(getUser);
-    setResource({
-      read: () => {
-        const user = userResource.read();
-        if (!user) throw new Error("User not found");
-        return user;
-      },
-      login,
-      logout,
-      update,
-      updatePassword,
-      signup,
+    setUserResource(() => {
+      const user = userResource.read();
+      if (!user) throw new Error("User not found");
+      return user;
     });
-    setLoading(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   useEffect(() => {
@@ -171,10 +143,6 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     }, 10000);
     return () => clearInterval(interval);
   }, [token]);
-
-  if (loading || !resource) {
-    return null; // or a loading spinner
-  }
 
   return (
     <UserContext.Provider value={resource}>{children}</UserContext.Provider>

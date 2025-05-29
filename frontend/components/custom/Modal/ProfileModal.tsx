@@ -19,19 +19,19 @@ interface ProfileModalProps {
 }
 
 export function ProfileModal({ isOpen, onOpenChange }: ProfileModalProps) {
-  const { read: user, update: updateUser } = useUser();
+  const { read, update: updateUser } = useUser();
+  const user = read();
   const [formData, setFormData] = useState({
-    name: user().name,
-    email: user().email,
+    name: user.name,
+    email: user.email,
   });
 
   useEffect(() => {
-    const currentUser = user();
     setFormData({
-      name: currentUser?.name || "",
-      email: currentUser?.email || "",
+      name: user.name,
+      email: user.email,
     });
-  }, [user]); // Or use a more stable identifier
+  }, [user.name, user.email]);
 
   const [isLoading, setIsLoading] = useState(false);
 

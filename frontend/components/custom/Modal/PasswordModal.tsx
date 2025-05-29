@@ -33,7 +33,7 @@ export function PasswordModal({ isOpen, onOpenChange }: PasswordModalProps) {
     setIsLoading(true);
     try {
       if (formData.newPassword !== formData.confirmPassword) {
-        const msg = "Passwordss don't match";
+        const msg = "Passwords don't match";
         toast.error(msg);
         throw new Error(msg);
       }
