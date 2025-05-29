@@ -29,3 +29,6 @@ jobs:
         run: vercel build --token=${{ secrets.VERCEL_TOKEN }}
       - name: Deploy Project Artifacts to Vercel
         run: vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }}
+      - name: Pass Vercel URL to Next.js
+        run: |
+          echo "Deployed the app on: $(vercel url --token=${{ secrets.VERCEL_TOKEN }})" >> $GITHUB_STEP_SUMMARY
