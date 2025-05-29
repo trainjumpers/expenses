@@ -1,22 +1,16 @@
 "use client";
 
+import { useUser } from "@/components/custom/Provider/UserProvider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
-import { login } from "@/lib/api/auth";
-import {
-  ACCESS_TOKEN_EXPIRY,
-  ACCESS_TOKEN_NAME,
-  REFRESH_TOKEN_EXPIRY,
-  REFRESH_TOKEN_NAME,
-} from "@/lib/constants/cookie";
-import { setCookie } from "@/lib/utils/cookies";
-import { useRouter } from "next/dist/client/components/navigation";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useState } from "react";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { login } = useUser();
 
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [loading, setLoading] = useState(false);
@@ -29,13 +23,7 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      const data = await login(formData.email, formData.password);
-      setCookie(ACCESS_TOKEN_NAME, data.access_token, {
-        maxAge: ACCESS_TOKEN_EXPIRY,
-      });
-      setCookie(REFRESH_TOKEN_NAME, data.refresh_token, {
-        maxAge: REFRESH_TOKEN_EXPIRY,
-      });
+      await login(formData.email, formData.password);
       router.push("/");
     } catch (err) {
       console.log(err);
