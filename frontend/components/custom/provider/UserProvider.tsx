@@ -1,16 +1,27 @@
 "use client";
 
+import { login as loginApi, signup as signupApi } from "@/lib/api/auth";
 import {
   getUser,
   updatePassword as updatePasswordApi,
   updateUser,
 } from "@/lib/api/user";
-import { login as loginApi } from "@/lib/api/auth";
-import { ACCESS_TOKEN_EXPIRY, ACCESS_TOKEN_NAME, REFRESH_TOKEN_EXPIRY, REFRESH_TOKEN_NAME } from "@/lib/constants/cookie";
+import {
+  ACCESS_TOKEN_EXPIRY,
+  ACCESS_TOKEN_NAME,
+  REFRESH_TOKEN_EXPIRY,
+  REFRESH_TOKEN_NAME,
+} from "@/lib/constants/cookie";
 import { User } from "@/lib/models/user";
 import { deleteCookie, getCookie, setCookie } from "@/lib/utils/cookies";
 import { createResource } from "@/lib/utils/suspense";
-import React, { ReactNode, createContext, useContext, useState, useEffect } from "react";
+import React, {
+  ReactNode,
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 
 type UserResource = {
   read: () => User;
@@ -21,12 +32,15 @@ type UserResource = {
     currentPassword: string,
     newPassword: string
   ) => Promise<User>;
+  signup: (name: string, email: string, password: string) => Promise<User>;
 };
 
 const UserContext = createContext<UserResource | null>(null);
 
 export const UserProvider = ({ children }: { children: ReactNode }) => {
-  const [token, setToken] = useState<string | undefined>(() => getCookie(ACCESS_TOKEN_NAME));
+  const [token, setToken] = useState<string | undefined>(() =>
+    getCookie(ACCESS_TOKEN_NAME)
+  );
   const [resource, setResource] = useState<UserResource | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -52,6 +66,14 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 
   const update = async (user: Partial<User>) => {
     const updatedUser = await updateUser(user);
+    setResource((prev) =>
+      prev
+        ? {
+            ...prev,
+            read: () => updatedUser,
+          }
+        : prev
+    );
     return updatedUser;
   };
 
@@ -63,10 +85,26 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     return updatedUser;
   };
 
+  const signup = async (name: string, email: string, password: string) => {
+    const authResponse = await signupApi(name, email, password);
+    setCookie(ACCESS_TOKEN_NAME, authResponse.access_token, {
+      maxAge: ACCESS_TOKEN_EXPIRY,
+    });
+    setCookie(REFRESH_TOKEN_NAME, authResponse.refresh_token, {
+      maxAge: REFRESH_TOKEN_EXPIRY,
+    });
+    setToken(authResponse.access_token);
+    const user = await getUser();
+    return user;
+  };
+
   useEffect(() => {
     setLoading(true);
     if (!token) {
-      if (typeof window !== "undefined" && window.location.pathname !== "/login") {
+      if (
+        typeof window !== "undefined" &&
+        window.location.pathname !== "/login"
+      ) {
         window.location.href = "/login";
         setResource({
           read: () => ({ id: 0, name: "", email: "" }),
@@ -74,6 +112,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
           logout,
           update,
           updatePassword,
+          signup,
         });
         setLoading(false);
         return;
@@ -86,6 +125,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         logout,
         update,
         updatePassword,
+        signup,
       });
       setLoading(false);
       return;
@@ -101,6 +141,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       logout,
       update,
       updatePassword,
+      signup,
     });
     setLoading(false);
   }, [token]);
@@ -125,7 +166,6 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 };
 
 export function useUser() {
-  console.log("useUser");
   const resource = useContext(UserContext);
   if (!resource) {
     throw new Error("useUser must be used within a UserProvider");

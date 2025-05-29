@@ -19,7 +19,7 @@ interface ProfileModalProps {
 }
 
 export function ProfileModal({ isOpen, onOpenChange }: ProfileModalProps) {
-  const { read: user, updateUser } = useUser();
+  const { read: user, update: updateUser } = useUser();
   const [formData, setFormData] = useState({
     name: user().name,
     email: user().email,
