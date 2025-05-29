@@ -2,7 +2,6 @@ import { User } from "./user";
 
 export interface AuthResponse {
   access_token: string;
-  data: User;
-  message: string;
+  user: User;
   refresh_token: string;
 }

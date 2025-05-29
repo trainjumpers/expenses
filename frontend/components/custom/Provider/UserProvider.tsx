@@ -47,9 +47,8 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       maxAge: REFRESH_TOKEN_EXPIRY,
     });
     setToken(authResponse.access_token);
-    const user = await getUser();
-    setUserResource(() => user);
-    return user;
+    setUserResource(() => authResponse.user);
+    return authResponse.user;
   };
 
   const logout = () => {
@@ -82,9 +81,8 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       maxAge: REFRESH_TOKEN_EXPIRY,
     });
     setToken(authResponse.access_token);
-    const user = await getUser();
-    setUserResource(() => user);
-    return user;
+    setUserResource(() => authResponse.user);
+    return authResponse.user;
   };
 
   const setUserResource = (func: () => User) => {
