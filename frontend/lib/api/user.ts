@@ -6,61 +6,82 @@ import { handleApiError } from "@/lib/utils/toast";
 import { toast } from "sonner";
 
 export async function getUser(): Promise<User> {
-  const response = await fetch(`${API_BASE_URL}/user`, {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${getCookie(ACCESS_TOKEN_NAME)}`,
-    },
-  });
-  const data = await response.json();
-  if (!response.ok) {
-    handleApiError(response.status, "user");
-    throw new Error(data.error || "Failed to get user");
+  let toastShown = false;
+  try {
+    const response = await fetch(`${API_BASE_URL}/user`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${getCookie(ACCESS_TOKEN_NAME)}`,
+      },
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      toastShown = true;
+      handleApiError(response.status, "user");
+      throw new Error(data.error || "Failed to get user");
+    }
+    return data.data;
+  } catch (err) {
+    if (!toastShown) toast.error("Something went wrong. Please try again.");
+    throw err;
   }
-  return data.data;
 }
 
 export async function updateUser(user: Partial<User>): Promise<User> {
-  const response = await fetch(`${API_BASE_URL}/user`, {
-    method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${getCookie(ACCESS_TOKEN_NAME)}`,
-    },
-    body: JSON.stringify(user),
-  });
-  const data = await response.json();
-  if (!response.ok) {
-    handleApiError(response.status, "user");
-    throw new Error(data.error || "Failed to update user");
+  let toastShown = false;
+  try {
+    const response = await fetch(`${API_BASE_URL}/user`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${getCookie(ACCESS_TOKEN_NAME)}`,
+      },
+      body: JSON.stringify(user),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      toastShown = true;
+      handleApiError(response.status, "user");
+      throw new Error(data.error || "Failed to update user");
+    }
+    return data.data;
+  } catch (err) {
+    if (!toastShown) toast.error("Something went wrong. Please try again.");
+    throw err;
   }
-  return data.data;
 }
 
 export async function updatePassword(
   currentPassword: string,
   newPassword: string
 ): Promise<User> {
-  const response = await fetch(`${API_BASE_URL}/user/password`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${getCookie(ACCESS_TOKEN_NAME)}`,
-    },
-    body: JSON.stringify({
-      old_password: currentPassword,
-      new_password: newPassword,
-    }),
-  });
-  const data = await response.json();
-  if (!response.ok) {
-    if (response.status === 401) {
-      toast.error("Current password is incorrect");
-      throw new Error("Current password is incorrect");
+  let toastShown = false;
+  try {
+    const response = await fetch(`${API_BASE_URL}/user/password`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${getCookie(ACCESS_TOKEN_NAME)}`,
+      },
+      body: JSON.stringify({
+        old_password: currentPassword,
+        new_password: newPassword,
+      }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      toastShown = true;
+      if (response.status === 401) {
+        toast.error("Current password is incorrect");
+        throw new Error("Current password is incorrect");
+      }
+      handleApiError(response.status, "password");
+      throw new Error(data.error || "Change password failed");
     }
-    handleApiError(response.status, "password");
-    throw new Error(data.error || "Change password failed");
+    return data.data;
+  } catch (err) {
+    if (!toastShown) toast.error("Something went wrong. Please try again.");
+    throw err;
   }
-  return data.data;
 }

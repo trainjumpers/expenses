@@ -7,21 +7,28 @@ export async function login(
   email: string,
   password: string
 ): Promise<AuthResponse> {
-  const response = await fetch(`${API_BASE_URL}/login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }),
-  });
-  const data = await response.json();
-  if (!response.ok) {
-    if (response.status === 401) {
-      toast.error("The email or password is incorrect");
-    } else {
-      handleApiError(response.status, "user");
+  let toastShown = false;
+  try {
+    const response = await fetch(`${API_BASE_URL}/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      toastShown = true;
+      if (response.status === 401) {
+        toast.error("The email or password is incorrect");
+      } else {
+        handleApiError(response.status, "user");
+      }
+      throw new Error(data.error || "Login failed");
     }
-    throw new Error(data.error || "Login failed");
+    return data.data;
+  } catch (err) {
+    if (!toastShown) toast.error("Something went wrong. Please try again.");
+    throw err;
   }
-  return data.data;
 }
 
 export async function signup(
@@ -29,26 +36,33 @@ export async function signup(
   email: string,
   password: string
 ): Promise<AuthResponse> {
-  const response = await fetch(`${API_BASE_URL}/signup`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name, email, password }),
-  });
-  const data = await response.json();
-  if (!response.ok) {
-    if (response.status === 409) {
-      toast.info("Account already exists.", {
-        action: {
-          label: "Login",
-          onClick: () => {
-            window.location.href = "/login";
+  let toastShown = false;
+  try {
+    const response = await fetch(`${API_BASE_URL}/signup`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, email, password }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      toastShown = true;
+      if (response.status === 409) {
+        toast.info("Account already exists.", {
+          action: {
+            label: "Login",
+            onClick: () => {
+              window.location.href = "/login";
+            },
           },
-        },
-      });
-    } else {
-      handleApiError(response.status, "user");
+        });
+      } else {
+        handleApiError(response.status, "user");
+      }
+      throw new Error(data.error || "Signup failed");
     }
-    throw new Error(data.error || "Signup failed");
+    return data.data;
+  } catch (err) {
+    if (!toastShown) toast.error("Something went wrong. Please try again.");
+    throw err;
   }
-  return data.data;
 }
