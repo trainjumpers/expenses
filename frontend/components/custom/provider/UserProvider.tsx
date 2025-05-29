@@ -38,29 +38,6 @@ type UserResource = {
 const UserContext = createContext<UserResource | null>(null);
 
 export const UserProvider = ({ children }: { children: ReactNode }) => {
-  const [token, setToken] = useState<string | undefined>(() =>
-    getCookie(ACCESS_TOKEN_NAME)
-  );
-  const [resource, setResource] = useState<UserResource | null>(null);
-
-  const setUserResource = (func: () => User) => {
-    setResource((prev) =>
-      prev
-        ? {
-            ...prev,
-            read: func,
-          }
-        : {
-            read: func,
-            login,
-            logout,
-            update,
-            updatePassword,
-            signup,
-          }
-    );
-  };
-
   const login = async (email: string, password: string) => {
     const authResponse = await loginApi(email, password);
     setCookie(ACCESS_TOKEN_NAME, authResponse.access_token, {
@@ -109,6 +86,38 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     setUserResource(() => user);
     return user;
   };
+
+  const setUserResource = (func: () => User) => {
+    setResource((prev) =>
+      prev
+        ? {
+            ...prev,
+            read: func,
+          }
+        : {
+            read: func,
+            login,
+            logout,
+            update,
+            updatePassword,
+            signup,
+          }
+    );
+  };
+
+  const [token, setToken] = useState<string | undefined>(() =>
+    getCookie(ACCESS_TOKEN_NAME)
+  );
+  const [resource, setResource] = useState<UserResource>(() => ({
+    read: () => {
+      return { id: 0, name: "", email: "" };
+    },
+    login,
+    logout,
+    update,
+    updatePassword,
+    signup,
+  }));
 
   useEffect(() => {
     if (!token) {
