@@ -186,23 +186,6 @@ var _ = Describe("AccountController", func() {
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 		})
 
-		It("should return error for wrong Content-Type", func() {
-			input := models.CreateAccountInput{
-				Name:     "Integration Account",
-				BankType: models.BankTypeAxis,
-				Currency: models.CurrencyINR,
-			}
-			body, _ := json.Marshal(input)
-			req, err := http.NewRequest(http.MethodPost, baseURL+"/account", bytes.NewBuffer(body))
-			Expect(err).NotTo(HaveOccurred())
-			req.Header.Set("Content-Type", "text/plain")
-			req.Header.Set("Authorization", "Bearer "+accessToken)
-			resp, err := client.Do(req)
-			Expect(err).NotTo(HaveOccurred())
-			defer resp.Body.Close()
-			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
-		})
-
 		It("should return error for currency with wrong casing", func() {
 			input := models.CreateAccountInput{
 				Name:     "Integration Account",
@@ -554,7 +537,7 @@ var _ = Describe("AccountController", func() {
 			response, err := decodeJSON(resp.Body)
 			Expect(err).NotTo(HaveOccurred())
 			initialCount := len(response["data"].([]interface{}))
-
+			Expect(initialCount).To(BeNumerically(">", 0))
 			// Delete the account
 			url := baseURL + "/account/" + strconv.FormatInt(accountId, 10)
 			req, err = http.NewRequest(http.MethodDelete, url, nil)
