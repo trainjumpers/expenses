@@ -31,7 +31,9 @@ func InitializeApplication() (*Provider, error) {
 	userRepository := repository.NewUserRepository(databaseManager, configConfig)
 	userServiceInterface := service.NewUserService(userRepository)
 	authServiceInterface := service.NewAuthService(userServiceInterface, configConfig)
-	engine := api.Init(configConfig, authServiceInterface, userServiceInterface)
+	accountRepository := repository.NewAccountRepository(databaseManager, configConfig)
+	accountServiceInterface := service.NewAccountService(accountRepository)
+	engine := api.Init(configConfig, authServiceInterface, userServiceInterface, accountServiceInterface)
 	provider := NewProvider(engine, databaseManager)
 	return provider, nil
 }
@@ -63,6 +65,6 @@ var ProviderSet = wire.NewSet(
 
 var controllerSet = wire.NewSet(controller.NewAuthController)
 
-var repositorySet = wire.NewSet(repository.NewUserRepository, wire.Bind(new(repository.UserRepositoryInterface), new(*repository.UserRepository)))
+var repositorySet = wire.NewSet(repository.NewUserRepository, wire.Bind(new(repository.UserRepositoryInterface), new(*repository.UserRepository)), repository.NewAccountRepository, wire.Bind(new(repository.AccountRepositoryInterface), new(*repository.AccountRepository)))
 
-var serviceSet = wire.NewSet(service.NewUserService, service.NewAuthService)
+var serviceSet = wire.NewSet(service.NewUserService, service.NewAuthService, service.NewAccountService)
