@@ -131,7 +131,7 @@ var _ = Describe("AccountController", func() {
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 		})
 
-		It("should return error if current currency not exists", func() {
+		It("should return error if currency does not exists", func() {
 			input := models.CreateAccountInput{
 				Name:     "Integration Account",
 				BankType: models.BankTypeAxis,
