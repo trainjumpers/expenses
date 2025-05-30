@@ -27,6 +27,8 @@ var (
 	refreshToken  string
 	accessToken1  string
 	refreshToken1 string
+	accessToken2  string
+	refreshToken2 string
 )
 
 var _ = BeforeSuite(func() {
@@ -97,6 +99,27 @@ var _ = BeforeSuite(func() {
 
 	accessToken1 = response1["data"].(map[string]interface{})["access_token"].(string)
 	refreshToken1 = response1["data"].(map[string]interface{})["refresh_token"].(string)
+
+	loginInput2 := models.LoginInput{
+		Email:    "test3@example.com",
+		Password: "password",
+	}
+	body2, _ := json.Marshal(loginInput2)
+	req2, err := http.NewRequest(http.MethodPost, baseURL+"/login", bytes.NewBuffer(body2))
+	Expect(err).NotTo(HaveOccurred())
+	req2.Header.Set("Content-Type", "application/json")
+	resp2, err := client.Do(req2)
+	Expect(err).NotTo(HaveOccurred())
+	defer resp2.Body.Close()
+	Expect(resp2.StatusCode).To(Equal(http.StatusOK))
+
+	var response2 map[string]interface{}
+	err = json.NewDecoder(resp2.Body).Decode(&response2)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(response2["message"]).To(Equal("User logged in successfully"))
+
+	accessToken2 = response2["data"].(map[string]interface{})["access_token"].(string)
+	refreshToken2 = response2["data"].(map[string]interface{})["refresh_token"].(string)
 })
 
 // decodeJSON is a helper function to decode JSON from any io.Reader

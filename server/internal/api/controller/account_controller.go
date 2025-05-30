@@ -24,7 +24,7 @@ func NewAccountController(cfg *config.Config, accountService service.AccountServ
 }
 
 func (a *AccountController) CreateAccount(ctx *gin.Context) {
-	logger.Infof("[AccountController] Start CreateAccount")
+	logger.Info("Creating a new account for the user: ", ctx.GetInt64("authUserId"))
 	var input models.CreateAccountInput
 	if err := a.BindJSON(ctx, &input); err != nil {
 		logger.Error("[AccountController] Failed to bind JSON: ", err)
@@ -37,17 +37,17 @@ func (a *AccountController) CreateAccount(ctx *gin.Context) {
 		a.HandleError(ctx, err)
 		return
 	}
-	logger.Infof("[AccountController] End CreateAccount")
+	logger.Infof("Account created successfully with ID: ", account.Id, " for user: ", input.CreatedBy)
 	a.SendSuccess(ctx, http.StatusCreated, "Account created successfully", account)
 }
 
 func (a *AccountController) GetAccount(ctx *gin.Context) {
-	logger.Infof("[AccountController] Start GetAccount")
 	accountId, err := strconv.ParseInt(ctx.Param("accountId"), 10, 64)
 	if err != nil {
 		a.SendError(ctx, http.StatusBadRequest, "invalid account id")
 		return
 	}
+	logger.Info("Fetching account details for user: ", ctx.GetInt64("authUserId"), " and account ID: ", accountId)
 	userId := ctx.GetInt64("authUserId")
 	account, err := a.accountService.GetAccountById(ctx, accountId, userId)
 	if err != nil {
@@ -55,12 +55,12 @@ func (a *AccountController) GetAccount(ctx *gin.Context) {
 		a.HandleError(ctx, err)
 		return
 	}
-	logger.Infof("[AccountController] End GetAccount")
+	logger.Infof("Account retrieved successfully with ID: ", account.Id, " for user: ", userId)
 	a.SendSuccess(ctx, http.StatusOK, "Account retrieved successfully", account)
 }
 
 func (a *AccountController) UpdateAccount(ctx *gin.Context) {
-	logger.Infof("[AccountController] Start UpdateAccount")
+	logger.Infof("Start UpdateAccount for user: ", ctx.GetInt64("authUserId"))
 	accountId, err := strconv.ParseInt(ctx.Param("accountId"), 10, 64)
 	if err != nil {
 		a.SendError(ctx, http.StatusBadRequest, "invalid account id")
@@ -78,12 +78,12 @@ func (a *AccountController) UpdateAccount(ctx *gin.Context) {
 		a.HandleError(ctx, err)
 		return
 	}
-	logger.Infof("[AccountController] End UpdateAccount")
+	logger.Infof("Account updated successfully with ID: ", account.Id, " for user: ", userId)
 	a.SendSuccess(ctx, http.StatusOK, "Account updated successfully", account)
 }
 
 func (a *AccountController) DeleteAccount(ctx *gin.Context) {
-	logger.Infof("[AccountController] Start DeleteAccount")
+	logger.Infof("Start DeleteAccount for user: ", ctx.GetInt64("authUserId"))
 	accountId, err := strconv.ParseInt(ctx.Param("accountId"), 10, 64)
 	if err != nil {
 		a.SendError(ctx, http.StatusBadRequest, "invalid account id")
@@ -96,12 +96,12 @@ func (a *AccountController) DeleteAccount(ctx *gin.Context) {
 		a.HandleError(ctx, err)
 		return
 	}
-	logger.Infof("[AccountController] End DeleteAccount")
+	logger.Infof("Successfully deleted account with ID: ", accountId, " for user: ", userId)
 	a.SendSuccess(ctx, http.StatusNoContent, "", nil)
 }
 
 func (a *AccountController) ListAccounts(ctx *gin.Context) {
-	logger.Infof("[AccountController] Start ListAccounts")
+	logger.Info("Fetching accounts for user: ", ctx.GetInt64("authUserId"))
 	userId := ctx.GetInt64("authUserId")
 	accounts, err := a.accountService.ListAccounts(ctx, userId)
 	if err != nil {
@@ -109,6 +109,6 @@ func (a *AccountController) ListAccounts(ctx *gin.Context) {
 		a.HandleError(ctx, err)
 		return
 	}
-	logger.Infof("[AccountController] End ListAccounts")
+	logger.Infof("Accounts retrieved successfully for user: ", userId)
 	a.SendSuccess(ctx, http.StatusOK, "Accounts retrieved successfully", accounts)
 }

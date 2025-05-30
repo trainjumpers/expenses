@@ -16,6 +16,7 @@ func Init(
 	authService service.AuthServiceInterface,
 	userService service.UserServiceInterface,
 	accountService service.AccountServiceInterface,
+	categoryService service.CategoryServiceInterface,
 ) *gin.Engine {
 	router := gin.New()
 	if cfg.Environment != "test" {
@@ -47,6 +48,7 @@ func Init(
 	authController := controller.NewAuthController(cfg, authService)
 	userController := controller.NewUserController(cfg, userService, authService)
 	accountController := controller.NewAccountController(cfg, accountService)
+	categoryController := controller.NewCategoryController(cfg, categoryService)
 	api := router.Group("/api/v1")
 	{
 		base := api.Group("")
@@ -63,12 +65,21 @@ func Init(
 			user.PATCH("", userController.UpdateUser)
 			user.POST("/password", userController.UpdateUserPassword)
 
+			// Account routes
 			account := base.Group("/account").Use(gin.HandlerFunc(middleware.Protected(cfg)))
 			account.GET("", accountController.ListAccounts)
 			account.POST("", accountController.CreateAccount)
 			account.GET("/:accountId", accountController.GetAccount)
 			account.PATCH("/:accountId", accountController.UpdateAccount)
 			account.DELETE("/:accountId", accountController.DeleteAccount)
+
+			// Category routes
+			category := base.Group("/category").Use(gin.HandlerFunc(middleware.Protected(cfg)))
+			category.GET("", categoryController.ListCategories)
+			category.POST("", categoryController.CreateCategory)
+			category.GET("/:categoryId", categoryController.GetCategory)
+			category.PATCH("/:categoryId", categoryController.UpdateCategory)
+			category.DELETE("/:categoryId", categoryController.DeleteCategory)
 		}
 	}
 
