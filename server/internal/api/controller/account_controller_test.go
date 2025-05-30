@@ -478,7 +478,7 @@ var _ = Describe("AccountController", func() {
 			// Ensure account is not deleted
 			req, err = http.NewRequest(http.MethodGet, url, nil)
 			Expect(err).NotTo(HaveOccurred())
-			req.Header.Set("Authorization", "Bearer "+accessToken1)
+			req.Header.Set("Authorization", "Bearer "+accessToken)
 			resp, err = client.Do(req)
 			Expect(err).NotTo(HaveOccurred())
 			defer resp.Body.Close()
@@ -487,7 +487,7 @@ var _ = Describe("AccountController", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(response["message"]).To(Equal("Account retrieved successfully"))
 			Expect(response["data"]).To(HaveKey("id"))
-			Expect(response["data"].(map[string]interface{})["id"]).To(Equal(accountId))
+			Expect(response["data"].(map[string]interface{})["id"]).To(Equal(float64(accountId)))
 		})
 
 		It("should return error for invalid account id format in delete", func() {
