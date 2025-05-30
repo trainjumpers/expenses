@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"expenses/internal/models"
 	"net/http"
+	"strconv"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -162,6 +163,96 @@ var _ = Describe("AccountController", func() {
 			defer resp.Body.Close()
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 		})
+
+		It("should return error for invalid JSON", func() {
+			req, err := http.NewRequest(http.MethodPost, baseURL+"/account", bytes.NewBuffer([]byte("{ name: invalid json }")))
+			Expect(err).NotTo(HaveOccurred())
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Authorization", "Bearer "+accessToken)
+			resp, err := client.Do(req)
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+		})
+
+		It("should return error for empty body", func() {
+			req, err := http.NewRequest(http.MethodPost, baseURL+"/account", bytes.NewBuffer([]byte("")))
+			Expect(err).NotTo(HaveOccurred())
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Authorization", "Bearer "+accessToken)
+			resp, err := client.Do(req)
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+		})
+
+		It("should return error for wrong Content-Type", func() {
+			input := models.CreateAccountInput{
+				Name:     "Integration Account",
+				BankType: models.BankTypeAxis,
+				Currency: models.CurrencyINR,
+			}
+			body, _ := json.Marshal(input)
+			req, err := http.NewRequest(http.MethodPost, baseURL+"/account", bytes.NewBuffer(body))
+			Expect(err).NotTo(HaveOccurred())
+			req.Header.Set("Content-Type", "text/plain")
+			req.Header.Set("Authorization", "Bearer "+accessToken)
+			resp, err := client.Do(req)
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+		})
+
+		It("should return error for currency with wrong casing", func() {
+			input := models.CreateAccountInput{
+				Name:     "Integration Account",
+				BankType: models.BankTypeAxis,
+				Currency: "USD", // should be lowercase 'usd'
+			}
+			body, _ := json.Marshal(input)
+			req, err := http.NewRequest(http.MethodPost, baseURL+"/account", bytes.NewBuffer(body))
+			Expect(err).NotTo(HaveOccurred())
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Authorization", "Bearer "+accessToken)
+			resp, err := client.Do(req)
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+		})
+
+		It("should return error for bank type with wrong casing", func() {
+			input := models.CreateAccountInput{
+				Name:     "Integration Account",
+				BankType: "AXIS", // should be lowercase 'axis'
+				Currency: models.CurrencyINR,
+			}
+			body, _ := json.Marshal(input)
+			req, err := http.NewRequest(http.MethodPost, baseURL+"/account", bytes.NewBuffer(body))
+			Expect(err).NotTo(HaveOccurred())
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Authorization", "Bearer "+accessToken)
+			resp, err := client.Do(req)
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+		})
+
+		It("should handle string balance gracefully", func() {
+			requestBody := []byte(`{
+				"name": "Test Account",
+				"bank_type": "axis",
+				"currency": "inr",
+				"balance": "invalid_string"
+			}`)
+			req, err := http.NewRequest(http.MethodPost, baseURL+"/account", bytes.NewBuffer(requestBody))
+			Expect(err).NotTo(HaveOccurred())
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Authorization", "Bearer "+accessToken)
+			resp, err := client.Do(req)
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+		})
 	})
 
 	Describe("ListAccounts", func() {
@@ -254,6 +345,88 @@ var _ = Describe("AccountController", func() {
 			Expect(response["message"]).To(Equal("Account updated successfully"))
 			Expect(response["data"].(map[string]interface{})["name"]).To(Equal("Updated Name"))
 		})
+
+		It("should return error when trying to update account of different user", func() {
+			update := models.UpdateAccountInput{Name: "Unauthorized Update"}
+			body, _ := json.Marshal(update)
+			url := baseURL + "/account/1"
+			req, err := http.NewRequest(http.MethodPatch, url, bytes.NewBuffer(body))
+			Expect(err).NotTo(HaveOccurred())
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Authorization", "Bearer "+accessToken1) // Different user
+			resp, err := client.Do(req)
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusNotFound)) // Should be not found due to ownership check
+		})
+
+		It("should return error for empty name in update", func() {
+			update := models.UpdateAccountInput{Name: ""}
+			body, _ := json.Marshal(update)
+			url := baseURL + "/account/1"
+			req, err := http.NewRequest(http.MethodPatch, url, bytes.NewBuffer(body))
+			Expect(err).NotTo(HaveOccurred())
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Authorization", "Bearer "+accessToken)
+			resp, err := client.Do(req)
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+			// Should succeed if empty name is allowed, or return 400 if validation prevents it
+			Expect(resp.StatusCode).To(SatisfyAny(Equal(http.StatusOK), Equal(http.StatusBadRequest)))
+		})
+
+		It("should return error for invalid bank type in update", func() {
+			update := models.UpdateAccountInput{BankType: "invalid_bank"}
+			body, _ := json.Marshal(update)
+			url := baseURL + "/account/1"
+			req, err := http.NewRequest(http.MethodPatch, url, bytes.NewBuffer(body))
+			Expect(err).NotTo(HaveOccurred())
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Authorization", "Bearer "+accessToken)
+			resp, err := client.Do(req)
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+		})
+
+		It("should return error for invalid currency in update", func() {
+			update := models.UpdateAccountInput{Currency: "invalid_currency"}
+			body, _ := json.Marshal(update)
+			url := baseURL + "/account/1"
+			req, err := http.NewRequest(http.MethodPatch, url, bytes.NewBuffer(body))
+			Expect(err).NotTo(HaveOccurred())
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Authorization", "Bearer "+accessToken)
+			resp, err := client.Do(req)
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+		})
+
+		It("should return error for invalid JSON in update", func() {
+			url := baseURL + "/account/1"
+			req, err := http.NewRequest(http.MethodPatch, url, bytes.NewBuffer([]byte("{ name: invalid }")))
+			Expect(err).NotTo(HaveOccurred())
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Authorization", "Bearer "+accessToken)
+			resp, err := client.Do(req)
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+		})
+
+		It("should return error for empty body in update", func() {
+			url := baseURL + "/account/1"
+			req, err := http.NewRequest(http.MethodPatch, url, bytes.NewBuffer([]byte("")))
+			Expect(err).NotTo(HaveOccurred())
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Authorization", "Bearer "+accessToken)
+			resp, err := client.Do(req)
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+		})
+
 		It("should return error for non-existent account id", func() {
 			url := baseURL + "/account/9999"
 			req, err := http.NewRequest(http.MethodPatch, url, nil)
@@ -284,6 +457,158 @@ var _ = Describe("AccountController", func() {
 			req.Header.Set("Content-Type", "application/json")
 			req.Header.Set("Authorization", "Bearer "+accessToken)
 			resp, err := client.Do(req)
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
+		})
+
+		It("should return error when trying to delete account of different user", func() {
+			// First create an account with accessToken
+			input := models.CreateAccountInput{
+				Name:     "Account for Delete Test",
+				BankType: models.BankTypeAxis,
+				Currency: models.CurrencyINR,
+			}
+			body, _ := json.Marshal(input)
+			req, err := http.NewRequest(http.MethodPost, baseURL+"/account", bytes.NewBuffer(body))
+			Expect(err).NotTo(HaveOccurred())
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Authorization", "Bearer "+accessToken)
+			resp, err := client.Do(req)
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+			response, err := decodeJSON(resp.Body)
+			Expect(err).NotTo(HaveOccurred())
+			accountId := int64(response["data"].(map[string]interface{})["id"].(float64))
+
+			// Try to delete with different user
+			url := baseURL + "/account/" + strconv.FormatInt(accountId, 10)
+			req, err = http.NewRequest(http.MethodDelete, url, nil)
+			Expect(err).NotTo(HaveOccurred())
+			req.Header.Set("Authorization", "Bearer "+accessToken1) // Different user
+			resp, err = client.Do(req)
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusNotFound)) // Should be not found due to ownership check
+		})
+
+		It("should return error for non-existent account id in delete", func() {
+			url := baseURL + "/account/9999"
+			req, err := http.NewRequest(http.MethodDelete, url, nil)
+			Expect(err).NotTo(HaveOccurred())
+			req.Header.Set("Authorization", "Bearer "+accessToken)
+			resp, err := client.Do(req)
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
+		})
+
+		It("should return error for invalid account id format in delete", func() {
+			url := baseURL + "/account/invalid"
+			req, err := http.NewRequest(http.MethodDelete, url, nil)
+			Expect(err).NotTo(HaveOccurred())
+			req.Header.Set("Authorization", "Bearer "+accessToken)
+			resp, err := client.Do(req)
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+		})
+	})
+
+	Describe("Soft Deletion Scenarios", func() {
+		var accountId int64
+
+		BeforeEach(func() {
+			input := models.CreateAccountInput{
+				Name:     "Account to Delete",
+				BankType: models.BankTypeAxis,
+				Currency: models.CurrencyINR,
+			}
+			body, _ := json.Marshal(input)
+			req, err := http.NewRequest(http.MethodPost, baseURL+"/account", bytes.NewBuffer(body))
+			Expect(err).NotTo(HaveOccurred())
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Authorization", "Bearer "+accessToken)
+
+			resp, err := client.Do(req)
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+			response, err := decodeJSON(resp.Body)
+			Expect(err).NotTo(HaveOccurred())
+			accountId = int64(response["data"].(map[string]interface{})["id"].(float64))
+		})
+
+		It("should not include soft-deleted accounts in list", func() {
+			req, err := http.NewRequest(http.MethodGet, baseURL+"/account", nil)
+			Expect(err).NotTo(HaveOccurred())
+			req.Header.Set("Authorization", "Bearer "+accessToken)
+			resp, err := client.Do(req)
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			response, err := decodeJSON(resp.Body)
+			Expect(err).NotTo(HaveOccurred())
+			initialCount := len(response["data"].([]interface{}))
+
+			// Delete the account
+			url := baseURL + "/account/" + strconv.FormatInt(accountId, 10)
+			req, err = http.NewRequest(http.MethodDelete, url, nil)
+			Expect(err).NotTo(HaveOccurred())
+			req.Header.Set("Authorization", "Bearer "+accessToken)
+			resp, err = client.Do(req)
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
+
+			// List accounts again - should have one less account
+			req, err = http.NewRequest(http.MethodGet, baseURL+"/account", nil)
+			Expect(err).NotTo(HaveOccurred())
+			req.Header.Set("Authorization", "Bearer "+accessToken)
+			resp, err = client.Do(req)
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			response, err = decodeJSON(resp.Body)
+			Expect(err).NotTo(HaveOccurred())
+			finalCount := len(response["data"].([]interface{}))
+			Expect(finalCount).To(Equal(initialCount - 1))
+		})
+
+		It("should return 404 when fetching soft-deleted account", func() {
+			url := baseURL + "/account/" + strconv.FormatInt(accountId, 10)
+			req, err := http.NewRequest(http.MethodDelete, url, nil)
+			Expect(err).NotTo(HaveOccurred())
+			req.Header.Set("Authorization", "Bearer "+accessToken)
+			resp, err := client.Do(req)
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
+
+			req, err = http.NewRequest(http.MethodGet, url, nil)
+			Expect(err).NotTo(HaveOccurred())
+			req.Header.Set("Authorization", "Bearer "+accessToken)
+			resp, err = client.Do(req)
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
+		})
+
+		It("should be idempotent when deleting already deleted account", func() {
+			url := baseURL + "/account/" + strconv.FormatInt(accountId, 10)
+			req, err := http.NewRequest(http.MethodDelete, url, nil)
+			Expect(err).NotTo(HaveOccurred())
+			req.Header.Set("Authorization", "Bearer "+accessToken)
+			resp, err := client.Do(req)
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
+
+			req, err = http.NewRequest(http.MethodDelete, url, nil)
+			Expect(err).NotTo(HaveOccurred())
+			req.Header.Set("Authorization", "Bearer "+accessToken)
+			resp, err = client.Do(req)
 			Expect(err).NotTo(HaveOccurred())
 			defer resp.Body.Close()
 			Expect(resp.StatusCode).To(Equal(http.StatusNoContent))

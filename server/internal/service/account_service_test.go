@@ -128,16 +128,6 @@ var _ = Describe("AccountService", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(acc.Balance).To(Equal(0.0))
 		})
-		It("should return error if bank type is invalid", func() {
-			update := models.UpdateAccountInput{BankType: "invalid"}
-			_, err := accountService.UpdateAccount(ctx, created.Id, 4, update)
-			Expect(err).To(HaveOccurred())
-		})
-		It("should return error if currency is invalid", func() {
-			update := models.UpdateAccountInput{Currency: "invalid"}
-			_, err := accountService.UpdateAccount(ctx, created.Id, 4, update)
-			Expect(err).To(HaveOccurred())
-		})
 		It("should return error for non-existent id", func() {
 			update := models.UpdateAccountInput{Name: "Updated Name"}
 			_, err := accountService.UpdateAccount(ctx, 9999, 4, update)
