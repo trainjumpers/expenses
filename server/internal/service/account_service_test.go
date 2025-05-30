@@ -36,7 +36,6 @@ var _ = Describe("AccountService", func() {
 			Expect(acc.Name).To(Equal(input.Name))
 			Expect(acc.Balance).To(Equal(0.0))
 		})
-
 		It("should create a new account with provided balance", func() {
 			bal := 100.5
 			input := models.CreateAccountInput{
@@ -102,6 +101,42 @@ var _ = Describe("AccountService", func() {
 			acc, err := accountService.UpdateAccount(ctx, created.Id, 4, update)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(acc.Name).To(Equal("Updated Name"))
+		})
+		It("should update account balance", func() {
+			balance := 100.5
+			update := models.UpdateAccountInput{Balance: &balance}
+			acc, err := accountService.UpdateAccount(ctx, created.Id, 4, update)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(acc.Balance).To(Equal(100.5))
+		})
+		It("should update account bank type", func() {
+			update := models.UpdateAccountInput{BankType: models.BankTypeHDFC}
+			acc, err := accountService.UpdateAccount(ctx, created.Id, 4, update)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(acc.BankType).To(Equal(models.BankTypeHDFC))
+		})
+		It("should update account currency", func() {
+			update := models.UpdateAccountInput{Currency: models.CurrencyUSD}
+			acc, err := accountService.UpdateAccount(ctx, created.Id, 4, update)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(acc.Currency).To(Equal(models.CurrencyUSD))
+		})
+		It("should set account balance to 0 if provided balance is 0", func() {
+			balance := 0.0
+			update := models.UpdateAccountInput{Balance: &balance}
+			acc, err := accountService.UpdateAccount(ctx, created.Id, 4, update)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(acc.Balance).To(Equal(0.0))
+		})
+		It("should return error if bank type is invalid", func() {
+			update := models.UpdateAccountInput{BankType: "invalid"}
+			_, err := accountService.UpdateAccount(ctx, created.Id, 4, update)
+			Expect(err).To(HaveOccurred())
+		})
+		It("should return error if currency is invalid", func() {
+			update := models.UpdateAccountInput{Currency: "invalid"}
+			_, err := accountService.UpdateAccount(ctx, created.Id, 4, update)
+			Expect(err).To(HaveOccurred())
 		})
 		It("should return error for non-existent id", func() {
 			update := models.UpdateAccountInput{Name: "Updated Name"}

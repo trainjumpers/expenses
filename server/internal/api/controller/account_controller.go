@@ -97,7 +97,7 @@ func (a *AccountController) DeleteAccount(ctx *gin.Context) {
 		return
 	}
 	logger.Infof("[AccountController] End DeleteAccount")
-	a.SendSuccess(ctx, http.StatusNoContent, "Account deleted successfully", nil)
+	a.SendSuccess(ctx, http.StatusNoContent, "", nil)
 }
 
 func (a *AccountController) ListAccounts(ctx *gin.Context) {

@@ -69,7 +69,10 @@ var _ = Describe("AccountController", func() {
 			Expect(err).NotTo(HaveOccurred())
 			req.Header.Set("Content-Type", "application/json")
 			req.Header.Set("Authorization", "Bearer "+"invalid token")
-
+			resp, err := client.Do(req)
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 		})
 
 		It("should create account with default balance if not provided", func() {
@@ -86,12 +89,78 @@ var _ = Describe("AccountController", func() {
 			resp, err := client.Do(req)
 			Expect(err).NotTo(HaveOccurred())
 			defer resp.Body.Close()
-			// Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
 			response, err := decodeJSON(resp.Body)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(response["message"]).To(Equal("Account created successfully"))
 			Expect(response["data"]).To(HaveKey("id"))
 			Expect(response["data"].(map[string]interface{})["balance"]).To(Equal(0.0))
+		})
+
+		It("should have a valid bank type", func() {
+			input := models.CreateAccountInput{
+				Name:     "Integration Account",
+				BankType: "invalid",
+				Currency: models.CurrencyINR,
+			}
+			body, _ := json.Marshal(input)
+			req, err := http.NewRequest(http.MethodPost, baseURL+"/account", bytes.NewBuffer(body))
+			Expect(err).NotTo(HaveOccurred())
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Authorization", "Bearer "+accessToken)
+			resp, err := client.Do(req)
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+		})
+
+		It("should have a valid currency", func() {
+			input := models.CreateAccountInput{
+				Name:     "Integration Account",
+				BankType: models.BankTypeAxis,
+				Currency: "invalid",
+			}
+			body, _ := json.Marshal(input)
+			req, err := http.NewRequest(http.MethodPost, baseURL+"/account", bytes.NewBuffer(body))
+			Expect(err).NotTo(HaveOccurred())
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Authorization", "Bearer "+accessToken)
+			resp, err := client.Do(req)
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+		})
+
+		It("should return error if current currency not exists", func() {
+			input := models.CreateAccountInput{
+				Name:     "Integration Account",
+				BankType: models.BankTypeAxis,
+			}
+			body, _ := json.Marshal(input)
+			req, err := http.NewRequest(http.MethodPost, baseURL+"/account", bytes.NewBuffer(body))
+			Expect(err).NotTo(HaveOccurred())
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Authorization", "Bearer "+accessToken)
+			resp, err := client.Do(req)
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+		})
+
+		It("should return error if name is empty", func() {
+			input := models.CreateAccountInput{
+				BankType: models.BankTypeAxis,
+				Currency: models.CurrencyINR,
+			}
+			body, _ := json.Marshal(input)
+			req, err := http.NewRequest(http.MethodPost, baseURL+"/account", bytes.NewBuffer(body))
+			Expect(err).NotTo(HaveOccurred())
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Authorization", "Bearer "+accessToken)
+			resp, err := client.Do(req)
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 		})
 	})
 
