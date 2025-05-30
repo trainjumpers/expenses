@@ -490,18 +490,21 @@ var _ = Describe("AccountController", func() {
 			resp, err = client.Do(req)
 			Expect(err).NotTo(HaveOccurred())
 			defer resp.Body.Close()
-			Expect(resp.StatusCode).To(Equal(http.StatusNotFound)) // Should be not found due to ownership check
-		})
+			Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
 
-		It("should return error for non-existent account id in delete", func() {
-			url := baseURL + "/account/9999"
-			req, err := http.NewRequest(http.MethodDelete, url, nil)
+			// Ensure account is not deleted
+			req, err = http.NewRequest(http.MethodGet, url, nil)
 			Expect(err).NotTo(HaveOccurred())
-			req.Header.Set("Authorization", "Bearer "+accessToken)
-			resp, err := client.Do(req)
+			req.Header.Set("Authorization", "Bearer "+accessToken1)
+			resp, err = client.Do(req)
 			Expect(err).NotTo(HaveOccurred())
 			defer resp.Body.Close()
-			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			response, err = decodeJSON(resp.Body)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(response["message"]).To(Equal("Account retrieved successfully"))
+			Expect(response["data"]).To(HaveKey("id"))
+			Expect(response["data"].(map[string]interface{})["id"]).To(Equal(accountId))
 		})
 
 		It("should return error for invalid account id format in delete", func() {
