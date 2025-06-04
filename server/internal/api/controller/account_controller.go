@@ -37,7 +37,7 @@ func (a *AccountController) CreateAccount(ctx *gin.Context) {
 		a.HandleError(ctx, err)
 		return
 	}
-	logger.Infof("Account created successfully with ID: ", account.Id, " for user: ", input.CreatedBy)
+	logger.Infof("Account created successfully with ID: %d for user: %d", account.Id, input.CreatedBy)
 	a.SendSuccess(ctx, http.StatusCreated, "Account created successfully", account)
 }
 
