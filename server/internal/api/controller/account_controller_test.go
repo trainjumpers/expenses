@@ -534,7 +534,7 @@ var _ = Describe("AccountController", func() {
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 		})
 
-		It("should return error for non-existent account id", func() {
+		It("should be idempotent when deleting non-existent account id", func() {
 			url := baseURL + "/account/99999"
 			req, err := http.NewRequest(http.MethodDelete, url, nil)
 			Expect(err).NotTo(HaveOccurred())
