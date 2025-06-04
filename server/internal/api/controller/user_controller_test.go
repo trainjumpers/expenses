@@ -47,6 +47,17 @@ var _ = Describe("UserController", func() {
 
 				Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
 			})
+
+			It("should return unauthorized for missing authorization header", func() {
+				req, err := http.NewRequest(http.MethodGet, baseURL+"/user", nil)
+				Expect(err).NotTo(HaveOccurred())
+
+				resp, err := client.Do(req)
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+
+				Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
+			})
 		})
 	})
 
@@ -90,6 +101,19 @@ var _ = Describe("UserController", func() {
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 
+			It("should return bad request for empty body", func() {
+				req, err := http.NewRequest(http.MethodPatch, baseURL+"/user", bytes.NewBuffer([]byte("")))
+				Expect(err).NotTo(HaveOccurred())
+				req.Header.Set("Content-Type", "application/json")
+				req.Header.Set("Authorization", "Bearer "+accessToken)
+
+				resp, err := client.Do(req)
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+
+				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+			})
+
 			It("should return bad request for invalid input", func() {
 				updateInput := map[string]interface{}{
 					"somerandomparam": 123,
@@ -113,6 +137,17 @@ var _ = Describe("UserController", func() {
 				Expect(err).NotTo(HaveOccurred())
 				req.Header.Set("Content-Type", "application/json")
 				req.Header.Set("Authorization", "Bearer invalid-token")
+
+				resp, err := client.Do(req)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
+			})
+
+			It("should be unauthorized for missing authorization header", func() {
+				req, err := http.NewRequest(http.MethodPatch, baseURL+"/user", bytes.NewBuffer([]byte("{}")))
+				Expect(err).NotTo(HaveOccurred())
+				req.Header.Set("Content-Type", "application/json")
 
 				resp, err := client.Do(req)
 				Expect(err).NotTo(HaveOccurred())
@@ -221,6 +256,19 @@ var _ = Describe("UserController", func() {
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 
+			It("should return bad request for empty body", func() {
+				req, err := http.NewRequest(http.MethodPost, baseURL+"/user/password", bytes.NewBuffer([]byte("")))
+				Expect(err).NotTo(HaveOccurred())
+				req.Header.Set("Content-Type", "application/json")
+				req.Header.Set("Authorization", "Bearer "+accessToken)
+
+				resp, err := client.Do(req)
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+
+				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+			})
+
 			It("should be unauthorized for invalid token", func() {
 				req, err := http.NewRequest(http.MethodPost, baseURL+"/user/password", bytes.NewBuffer([]byte("{}")))
 				Expect(err).NotTo(HaveOccurred())
@@ -231,6 +279,53 @@ var _ = Describe("UserController", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
+			})
+
+			It("should be unauthorized for missing authorization header", func() {
+				req, err := http.NewRequest(http.MethodPost, baseURL+"/user/password", bytes.NewBuffer([]byte("{}")))
+				Expect(err).NotTo(HaveOccurred())
+				req.Header.Set("Content-Type", "application/json")
+
+				resp, err := client.Do(req)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
+			})
+
+			It("should return bad request for missing old password", func() {
+				updateInput := models.UpdateUserPasswordInput{
+					NewPassword: "newpassword123",
+				}
+
+				body, _ := json.Marshal(updateInput)
+				req, err := http.NewRequest(http.MethodPost, baseURL+"/user/password", bytes.NewBuffer(body))
+				Expect(err).NotTo(HaveOccurred())
+				req.Header.Set("Content-Type", "application/json")
+				req.Header.Set("Authorization", "Bearer "+accessToken)
+
+				resp, err := client.Do(req)
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+
+				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+			})
+
+			It("should return bad request for missing new password", func() {
+				updateInput := models.UpdateUserPasswordInput{
+					OldPassword: "password",
+				}
+
+				body, _ := json.Marshal(updateInput)
+				req, err := http.NewRequest(http.MethodPost, baseURL+"/user/password", bytes.NewBuffer(body))
+				Expect(err).NotTo(HaveOccurred())
+				req.Header.Set("Content-Type", "application/json")
+				req.Header.Set("Authorization", "Bearer "+accessToken)
+
+				resp, err := client.Do(req)
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+
+				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 		})
 	})
@@ -292,6 +387,17 @@ var _ = Describe("UserController", func() {
 				req, err := http.NewRequest(http.MethodDelete, baseURL+"/user", nil)
 				Expect(err).NotTo(HaveOccurred())
 				req.Header.Set("Authorization", "Bearer invalid-token")
+
+				resp, err := client.Do(req)
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+
+				Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
+			})
+
+			It("should return unauthorized for missing authorization header", func() {
+				req, err := http.NewRequest(http.MethodDelete, baseURL+"/user", nil)
+				Expect(err).NotTo(HaveOccurred())
 
 				resp, err := client.Do(req)
 				Expect(err).NotTo(HaveOccurred())

@@ -220,6 +220,30 @@ var _ = Describe("AuthController", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(response["message"]).To(ContainSubstring("Error:Field validation for 'Email'"))
 			})
+
+			It("should return bad request for invalid JSON", func() {
+				req, err := http.NewRequest(http.MethodPost, baseURL+"/signup", bytes.NewBuffer([]byte("{ invalid json }")))
+				Expect(err).NotTo(HaveOccurred())
+				req.Header.Set("Content-Type", "application/json")
+
+				resp, err := client.Do(req)
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+
+				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+			})
+
+			It("should return bad request for empty body", func() {
+				req, err := http.NewRequest(http.MethodPost, baseURL+"/signup", bytes.NewBuffer([]byte("")))
+				Expect(err).NotTo(HaveOccurred())
+				req.Header.Set("Content-Type", "application/json")
+
+				resp, err := client.Do(req)
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+
+				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+			})
 		})
 	})
 
@@ -285,6 +309,64 @@ var _ = Describe("AuthController", func() {
 
 				Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
 			})
+
+			It("should return bad request for invalid JSON", func() {
+				req, err := http.NewRequest(http.MethodPost, baseURL+"/login", bytes.NewBuffer([]byte("{ invalid json }")))
+				Expect(err).NotTo(HaveOccurred())
+				req.Header.Set("Content-Type", "application/json")
+
+				resp, err := client.Do(req)
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+
+				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+			})
+
+			It("should return bad request for empty body", func() {
+				req, err := http.NewRequest(http.MethodPost, baseURL+"/login", bytes.NewBuffer([]byte("")))
+				Expect(err).NotTo(HaveOccurred())
+				req.Header.Set("Content-Type", "application/json")
+
+				resp, err := client.Do(req)
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+
+				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+			})
+
+			It("should return bad request for missing email", func() {
+				loginInput := models.LoginInput{
+					Password: "password123",
+				}
+
+				body, _ := json.Marshal(loginInput)
+				req, err := http.NewRequest(http.MethodPost, baseURL+"/login", bytes.NewBuffer(body))
+				Expect(err).NotTo(HaveOccurred())
+				req.Header.Set("Content-Type", "application/json")
+
+				resp, err := client.Do(req)
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+
+				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+			})
+
+			It("should return bad request for missing password", func() {
+				loginInput := models.LoginInput{
+					Email: "test@example.com",
+				}
+
+				body, _ := json.Marshal(loginInput)
+				req, err := http.NewRequest(http.MethodPost, baseURL+"/login", bytes.NewBuffer(body))
+				Expect(err).NotTo(HaveOccurred())
+				req.Header.Set("Content-Type", "application/json")
+
+				resp, err := client.Do(req)
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+
+				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+			})
 		})
 	})
 
@@ -330,6 +412,49 @@ var _ = Describe("AuthController", func() {
 					RefreshToken string `json:"refresh_token"`
 				}{
 					RefreshToken: "invalid-refresh-token",
+				}
+
+				body, _ := json.Marshal(refreshInput)
+				req, err := http.NewRequest(http.MethodPost, baseURL+"/refresh", bytes.NewBuffer(body))
+				Expect(err).NotTo(HaveOccurred())
+				req.Header.Set("Content-Type", "application/json")
+
+				resp, err := client.Do(req)
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+
+				Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
+			})
+
+			It("should return bad request for invalid JSON", func() {
+				req, err := http.NewRequest(http.MethodPost, baseURL+"/refresh", bytes.NewBuffer([]byte("{ invalid json }")))
+				Expect(err).NotTo(HaveOccurred())
+				req.Header.Set("Content-Type", "application/json")
+
+				resp, err := client.Do(req)
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+
+				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+			})
+
+			It("should return bad request for empty body", func() {
+				req, err := http.NewRequest(http.MethodPost, baseURL+"/refresh", bytes.NewBuffer([]byte("")))
+				Expect(err).NotTo(HaveOccurred())
+				req.Header.Set("Content-Type", "application/json")
+
+				resp, err := client.Do(req)
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+
+				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+			})
+
+			It("should return bad request for missing refresh token", func() {
+				refreshInput := struct {
+					RefreshToken string `json:"refresh_token"`
+				}{
+					RefreshToken: "",
 				}
 
 				body, _ := json.Marshal(refreshInput)
