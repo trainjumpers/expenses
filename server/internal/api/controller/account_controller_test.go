@@ -282,6 +282,21 @@ var _ = Describe("AccountController", func() {
 			Expect(response["message"]).To(Equal("Account retrieved successfully"))
 			Expect(response["data"]).To(HaveKey("id"))
 		})
+
+		It("should return error for invalid account id format", func() {
+			url := baseURL + "/account/invalid_id"
+			req, err := http.NewRequest(http.MethodGet, url, nil)
+			Expect(err).NotTo(HaveOccurred())
+			req.Header.Set("Authorization", "Bearer "+accessToken)
+			resp, err := client.Do(req)
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+			response, err := decodeJSON(resp.Body)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(response["message"]).To(Equal("invalid account id"))
+		})
+
 		It("should return error for non-existent account id", func() {
 			url := baseURL + "/account/9999"
 			req, err := http.NewRequest(http.MethodGet, url, nil)
@@ -420,6 +435,24 @@ var _ = Describe("AccountController", func() {
 			defer resp.Body.Close()
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 		})
+
+		It("should return error for invalid account id format in update", func() {
+			update := models.UpdateAccountInput{Name: "Updated Name"}
+			body, _ := json.Marshal(update)
+			url := baseURL + "/account/invalid_id"
+			req, err := http.NewRequest(http.MethodPatch, url, bytes.NewBuffer(body))
+			Expect(err).NotTo(HaveOccurred())
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Authorization", "Bearer "+accessToken)
+			resp, err := client.Do(req)
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+			response, err := decodeJSON(resp.Body)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(response["message"]).To(Equal("invalid account id"))
+		})
+
 		It("should return error for non-existent user id", func() {
 			url := baseURL + "/account/1"
 			req, err := http.NewRequest(http.MethodPatch, url, nil)
@@ -499,6 +532,17 @@ var _ = Describe("AccountController", func() {
 			Expect(err).NotTo(HaveOccurred())
 			defer resp.Body.Close()
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+		})
+
+		It("should return error for non-existent account id", func() {
+			url := baseURL + "/account/99999"
+			req, err := http.NewRequest(http.MethodDelete, url, nil)
+			Expect(err).NotTo(HaveOccurred())
+			req.Header.Set("Authorization", "Bearer "+accessToken)
+			resp, err := client.Do(req)
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
 		})
 	})
 
