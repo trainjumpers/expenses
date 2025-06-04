@@ -33,7 +33,7 @@ func (a *AccountController) CreateAccount(ctx *gin.Context) {
 	input.CreatedBy = ctx.GetInt64("authUserId")
 	account, err := a.accountService.CreateAccount(ctx, input)
 	if err != nil {
-		logger.Error("[AccountController] Error creating account: ", err)
+		logger.Error("Error creating account: ", err)
 		a.HandleError(ctx, err)
 		return
 	}

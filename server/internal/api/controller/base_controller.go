@@ -21,11 +21,6 @@ func NewBaseController(cfg *config.Config) *BaseController {
 	}
 }
 
-// GetConfig returns the configuration instance
-func (b *BaseController) GetConfig() *config.Config {
-	return b.cfg
-}
-
 // HandleError handles errors in a consistent way across all controllers
 func (b *BaseController) HandleError(ctx *gin.Context, err error) {
 	if err == nil {
@@ -37,7 +32,7 @@ func (b *BaseController) HandleError(ctx *gin.Context, err error) {
 		response := gin.H{
 			"message": authErr.Message,
 		}
-		if b.cfg.IsDev() {
+		if b.cfg.IsDev() || b.cfg.IsTest() {
 			response["error"] = authErr.Err.Error()
 			response["stack"] = authErr.Stack
 		}
@@ -48,7 +43,7 @@ func (b *BaseController) HandleError(ctx *gin.Context, err error) {
 	response := gin.H{
 		"message": "Something went wrong",
 	}
-	if b.cfg.IsDev() {
+	if b.cfg.IsDev() || b.cfg.IsTest() {
 		response["error"] = err.Error()
 	}
 	ctx.JSON(http.StatusInternalServerError, response)

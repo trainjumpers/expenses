@@ -18,7 +18,9 @@ func Init(
 	accountService service.AccountServiceInterface,
 ) *gin.Engine {
 	router := gin.New()
-	router.Use(gin.Logger())
+	if cfg.Environment != "test" {
+		router.Use(gin.Logger()) // Disable logger when running tests
+	}
 	router.Use(gin.Recovery())
 	router.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"http://localhost:3000", "https://neurospend.vercel.app"},

@@ -1,12 +1,15 @@
-package controller
+package controller_test
 
 import (
 	"bytes"
 	"encoding/json"
 	"expenses/internal/models"
+	"expenses/internal/server"
+	"io"
 	"net/http"
 	"os"
 	"testing"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -27,13 +30,29 @@ var (
 )
 
 var _ = BeforeSuite(func() {
+	server.StartAsync()
 	port := os.Getenv("SERVER_PORT")
 	if port == "" {
 		port = "8080"
 	}
 
 	client = &http.Client{}
-	baseURL = "http://localhost:" + port + "/api/v1"
+	baseURL = "http://localhost:" + port
+	healthCheckSuccess := false
+
+	for i := 0; i < 10; i++ {
+		resp, err := http.Get(baseURL + "/health")
+		if err == nil && resp.StatusCode == 200 {
+			healthCheckSuccess = true
+			break
+		}
+		time.Sleep(1 * time.Second)
+	}
+	if !healthCheckSuccess {
+		panic("could not connect to server")
+	}
+
+	baseURL += "/api/v1"
 
 	// Login to a test user
 	loginInput := models.LoginInput{
@@ -79,3 +98,10 @@ var _ = BeforeSuite(func() {
 	accessToken1 = response1["data"].(map[string]interface{})["access_token"].(string)
 	refreshToken1 = response1["data"].(map[string]interface{})["refresh_token"].(string)
 })
+
+// decodeJSON is a helper function to decode JSON from any io.Reader
+func decodeJSON(reader io.Reader) (map[string]interface{}, error) {
+	var response map[string]interface{}
+	err := json.NewDecoder(reader).Decode(&response)
+	return response, err
+}

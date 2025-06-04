@@ -6,7 +6,7 @@ unset DB_SEED_DIR
 
 export DB_SCHEMA=${DB_SCHEMA:-test}
 export DB_SEED_DIR=${DB_SEED_DIR:-./internal/database/seed/test}   # ← no trailing space!
-export SERVER_QUIET=${SERVER_QUIET:-true}     # Control server output, default to quiet
+export ENV=${ENV:-test}
 
 if [[ "$DB_SCHEMA" != "test" ]]; then
   echo "❌ Refusing to run e2e tests on non-test schema $DB_SCHEMA"
@@ -25,29 +25,6 @@ trap cleanup EXIT
 echo "⏫ Running migrations into $DB_SCHEMA/$DB_NAME"
 just db-upgrade                                                
 just db-seed
-
-#####--- Start the API server ───────
-if [ "$SERVER_QUIET" = "true" ]; then
-  go run cmd/neurospend/main.go > /dev/null 2>&1 & SERVER_PID=$!
-else
-  go run cmd/neurospend/main.go & SERVER_PID=$!
-fi
-echo "API started (pid $SERVER_PID); waiting for healthy status…"
-
-SERVER_HEALTHY=false
-for _ in {1..20}; do                                          
-  if curl -fs "http://localhost:${SERVER_PORT}/health" >/dev/null; then
-    echo "✅ Server healthy"
-    SERVER_HEALTHY=true
-    break
-  fi
-  sleep 1
-done
-
-if [ "$SERVER_HEALTHY" = false ]; then
-  echo "❌ Server failed to become healthy within timeout period"
-  exit 1
-fi
 
 #####--- Run the tests ─────────────
 ginkgo -r ./                                                   
