@@ -92,7 +92,7 @@ var _ = Describe("CategoryController", func() {
 
 		It("should allow same category name for different users", func() {
 			input := models.CreateCategoryInput{
-				Name: "Shoppingfor different user",
+				Name: "Shopping for different user",
 				Icon: "shopping-icon",
 			}
 			body, _ := json.Marshal(input)

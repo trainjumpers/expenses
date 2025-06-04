@@ -24,7 +24,7 @@ func NewCategoryController(cfg *config.Config, categoryService service.CategoryS
 }
 
 func (c *CategoryController) CreateCategory(ctx *gin.Context) {
-	logger.Info("Recieved request to create a new category for user: ", ctx.GetInt64("authUserId"))
+	logger.Info("Received request to create a new category for user: ", ctx.GetInt64("authUserId"))
 	var input models.CreateCategoryInput
 	if err := c.BindJSON(ctx, &input); err != nil {
 		logger.Error("[CategoryController] Failed to bind JSON: ", err)
