@@ -21,6 +21,7 @@ env:
   DB_NAME: "expenses_db_${{ github.run_id }}"
   DB_SEED_DIR: ./internal/database/seed/test
   DB_SSL_MODE: disable
+  ENV: test
   DB_SCHEMA: test
   SERVER_PORT: 8080
   JWT_SECRET: "test-secret"
@@ -88,56 +89,12 @@ jobs:
 
       - name: Run migrations
         run: just db-upgrade
-        env:
-          DB_HOST: ${{ env.DB_HOST }}
-          DB_PORT: ${{ env.DB_PORT }}
-          DB_USER: ${{ env.DB_USER }}
-          DB_PASSWORD: ${{ env.DB_PASSWORD }}
-          DB_NAME: ${{ env.DB_NAME }}
-          DB_SCHEMA: ${{ env.DB_SCHEMA }}
-          DB_SSL_MODE: ${{ env.DB_SSL_MODE }}
 
       - name: Run seed
         run: just db-seed
-        env:
-          DB_HOST: ${{ env.DB_HOST }}
-          DB_PORT: ${{ env.DB_PORT }}
-          DB_USER: ${{ env.DB_USER }}
-          DB_PASSWORD: ${{ env.DB_PASSWORD }}
-          DB_NAME: ${{ env.DB_NAME }}
-          DB_SCHEMA: ${{ env.DB_SCHEMA }}
-          DB_SEED_DIR: ${{ env.DB_SEED_DIR }}
-          DB_SSL_MODE: ${{ env.DB_SSL_MODE }}
-
-      - name: build server
-        run: |
-          go build -o bin/server ./cmd/neurospend/
-
-      - name: Start server in background
-        env:
-          DB_HOST: ${{ env.DB_HOST }}
-          DB_PORT: ${{ env.DB_PORT }}
-          DB_USER: ${{ env.DB_USER }}
-          DB_PASSWORD: ${{ env.DB_PASSWORD }}
-          DB_NAME: ${{ env.DB_NAME }}
-          DB_SCHEMA: ${{ env.DB_SCHEMA }}
-          SERVER_PORT: ${{ env.SERVER_PORT }}
-          JWT_SECRET: ${{ env.JWT_SECRET }}
-        run: |
-          ./bin/server &
-          echo $! > server.pid
-          # wait for health probe
-          for i in {1..20}; do
-            if curl -f http://localhost:${{ env.SERVER_PORT }}/health; then
-              exit 0
-            fi
-            sleep 1
-          done
-          echo "Server failed to become healthy after 20 attempts"
-          exit 1
 
       - name: Run tests
-        run: ginkgo -r -p -race -cover -coverprofile=coverage.txt -covermode=atomic ./...
+        run: ginkgo -r -race -cover -coverpkg=./... -coverprofile=coverage.txt -covermode=atomic ./...  
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5

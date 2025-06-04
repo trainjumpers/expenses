@@ -24,6 +24,9 @@ func init() {
 			Initial:    100,
 			Thereafter: 100,
 		}
+	} else if env == "test" {
+		level = zap.NewAtomicLevelAt(zap.PanicLevel)
+		sampling = nil
 	} else {
 		level = zap.NewAtomicLevelAt(zap.DebugLevel)
 		sampling = nil

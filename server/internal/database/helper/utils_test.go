@@ -49,6 +49,14 @@ var _ = Describe("Database Helper Utils", func() {
 			_, _, _, err := helper.CreateUpdateParams(obj)
 			Expect(err).To(HaveOccurred())
 		})
+
+		It("should return error when trying to update with no fields", func() {
+			obj := &TestStruct{}
+
+			_, _, _, err := helper.CreateUpdateParams(obj)
+			Expect(err).To(HaveOccurred())
+		})
+
 	})
 
 	Describe("CreateInsertQuery", func() {

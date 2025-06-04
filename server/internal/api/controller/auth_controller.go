@@ -22,11 +22,6 @@ func NewAuthController(cfg *config.Config, authService service.AuthServiceInterf
 	}
 }
 
-// GetAuthService returns the auth service instance
-func (a *AuthController) GetAuthService() service.AuthServiceInterface {
-	return a.authService
-}
-
 // Signup controller handles creation of a new user, and returns the user data along with an access token
 func (a *AuthController) Signup(ctx *gin.Context) {
 	var newUser models.CreateUserInput
