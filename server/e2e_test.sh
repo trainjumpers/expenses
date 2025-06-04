@@ -9,7 +9,7 @@ export DB_SEED_DIR=${DB_SEED_DIR:-./internal/database/seed/test}   # ← no trai
 export ENV=${ENV:-test}
 
 if [[ "$DB_SCHEMA" != "test" ]]; then
-  echo "❌ Refusing to run e2e tests on non-test schema $DB_SCHEMA"
+  echo "Refusing to run e2e tests on non-test schema $DB_SCHEMA"
   exit 1
 fi                                
 
@@ -17,14 +17,12 @@ cleanup() {
   echo "Cleaning up..."
   echo "y" | just db-downgrade-reset || true
   kill -- -$$
-  echo "Done ✔"
+  echo "Done"
 }
-trap cleanup EXIT                                             
+trap cleanup EXIT                                     
 
-#####--- Migrate + seed ─────────────
-echo "⏫ Running migrations into $DB_SCHEMA/$DB_NAME"
-just db-upgrade                                                
+echo "Running migrations into $DB_SCHEMA/$DB_NAME"
+just db-upgrade                              
 just db-seed
 
-#####--- Run the tests ─────────────
-ginkgo -r ./                                                   
+ginkgo -r -p -race ./...

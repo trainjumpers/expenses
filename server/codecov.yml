@@ -16,7 +16,5 @@ ignore:
   - internal/database/migration/**
   - internal/database/postgres/**
   - internal/mock/**
-  - internal/models/**
-  - internal/repository/**
   - internal/server/**
   - pkg/logger/**
