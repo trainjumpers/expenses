@@ -56,10 +56,13 @@ var repositorySet = wire.NewSet(
 	wire.Bind(new(repository.UserRepositoryInterface), new(*repository.UserRepository)),
 	repository.NewAccountRepository,
 	wire.Bind(new(repository.AccountRepositoryInterface), new(*repository.AccountRepository)),
+	repository.NewCategoryRepository,
+	wire.Bind(new(repository.CategoryRepositoryInterface), new(*repository.CategoryRepository)),
 )
 
 var serviceSet = wire.NewSet(
 	service.NewUserService,
 	service.NewAuthService,
 	service.NewAccountService,
+	service.NewCategoryService,
 )

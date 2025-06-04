@@ -76,10 +76,8 @@ db-downgrade-reset reset=default_downgrade:
 @server:
   air
 
-# Ginkgo test helpers
-[working-directory: 'server']
-@ginkgo command dir:
-  cd {{dir}} && ginkgo {{command}}
-
 @test:
-  cd server && just ginkgo "run ./..." "./"
+  cd server && bash e2e_test.sh
+
+@test-coverage:
+  cd server && COVERAGE=true bash e2e_test.sh

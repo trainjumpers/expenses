@@ -74,6 +74,7 @@ func (a *AuthController) RefreshToken(ctx *gin.Context) {
 		return
 	}
 
+	logger.Info("Received request to refresh token")
 	authResponse, err := a.authService.RefreshToken(ctx, req.RefreshToken)
 	if err != nil {
 		logger.Error("Failed to refresh token: ", err)
@@ -81,6 +82,7 @@ func (a *AuthController) RefreshToken(ctx *gin.Context) {
 		return
 	}
 
+	logger.Infof("Token refreshed successfully for user Id: %d", authResponse.User.Id)
 	a.SendSuccess(ctx, http.StatusOK, "Token refreshed successfully", gin.H{
 		"user":          authResponse.User,
 		"access_token":  authResponse.AccessToken,
