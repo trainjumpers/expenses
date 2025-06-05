@@ -16,7 +16,7 @@ func Protected(cfg *config.Config) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		tokenString := ctx.GetHeader("Authorization")
 		if tokenString == "" {
-			logger.Warn("Request received without authorization token")
+			logger.Warnf("Request received without authorization token")
 			response := gin.H{
 				"message": "please log in to continue",
 			}
@@ -30,7 +30,7 @@ func Protected(cfg *config.Config) gin.HandlerFunc {
 
 		tokenParts := strings.Fields(strings.TrimSpace(tokenString))
 		if len(tokenParts) != 2 || tokenParts[0] != "Bearer" {
-			logger.Warn("Invalid token format received")
+			logger.Warnf("Invalid token format received")
 			response := gin.H{
 				"message": "Invalid authorization format",
 			}
@@ -44,7 +44,7 @@ func Protected(cfg *config.Config) gin.HandlerFunc {
 		tokenString = tokenParts[1]
 		claims, err := verifyAuthToken(tokenString, cfg)
 		if err != nil {
-			logger.Warn("Invalid token received: ", err)
+			logger.Warnf("Invalid token received: %v", err)
 			response := gin.H{
 				"message": "invalid token. please log in again",
 			}
@@ -58,7 +58,7 @@ func Protected(cfg *config.Config) gin.HandlerFunc {
 
 		userId, ok := claims["user_id"].(float64)
 		if !ok {
-			logger.Error("Malformed user ID in token claims")
+			logger.Errorf("Malformed user ID in token claims")
 			response := gin.H{
 				"message": "Something went wrong",
 			}
@@ -70,7 +70,7 @@ func Protected(cfg *config.Config) gin.HandlerFunc {
 			return
 		}
 		ctx.Set("authUserId", int64(userId))
-		logger.Info("Request authenticated for user ID: ", int64(userId))
+		logger.Infof("Request authenticated for user ID %d", int64(userId))
 		ctx.Next()
 	}
 }

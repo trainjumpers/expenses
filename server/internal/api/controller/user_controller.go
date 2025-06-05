@@ -27,32 +27,32 @@ func NewUserController(cfg *config.Config, userService service.UserServiceInterf
 // GetUserById returns a user by Id
 func (u *UserController) GetUserById(ctx *gin.Context) {
 	userId := ctx.GetInt64("authUserId")
-	logger.Infof("Received request to get a user by Id: %d", userId)
+	logger.Infof("Fetching user details for ID %d", userId)
 
 	user, err := u.userService.GetUserById(ctx, userId)
 	if err != nil {
-		logger.Error("Error getting user by Id: ", err)
+		logger.Errorf("Error getting user by ID: %v", err)
 		u.HandleError(ctx, err)
 		return
 	}
 
-	logger.Infof("User retrieved successfully: %+v", user)
+	logger.Infof("User retrieved successfully for ID %d", userId)
 	u.SendSuccess(ctx, http.StatusOK, "User retrieved successfully", user)
 }
 
 // DeleteUser deletes a user by Id
 func (u *UserController) DeleteUser(ctx *gin.Context) {
 	userId := ctx.GetInt64("authUserId")
-	logger.Infof("Received request to delete a user by Id: %d", userId)
+	logger.Infof("Starting user deletion for ID %d", userId)
 
 	err := u.userService.DeleteUser(ctx, userId)
 	if err != nil {
-		logger.Error("Error deleting user: ", err)
+		logger.Errorf("Error deleting user: %v", err)
 		u.HandleError(ctx, err)
 		return
 	}
 
-	logger.Infof("User deleted successfully: %d", userId)
+	logger.Infof("User deleted successfully with ID %d", userId)
 	u.SendSuccess(ctx, http.StatusNoContent, "User deleted successfully", nil)
 }
 
@@ -61,17 +61,17 @@ func (u *UserController) UpdateUser(ctx *gin.Context) {
 	userId := ctx.GetInt64("authUserId")
 	var updatedUser models.UpdateUserInput
 	if err := u.BindJSON(ctx, &updatedUser); err != nil {
-		logger.Error("Failed to bind JSON for updating user: ", err)
+		logger.Errorf("Failed to bind JSON for updating user: %v", err)
 		return
 	}
-	logger.Infof("Received request to update a user by Id: %d", userId)
+	logger.Infof("Starting user update for ID %d", userId)
 	user, err := u.userService.UpdateUser(ctx, userId, updatedUser)
 	if err != nil {
-		logger.Error("Error updating user: ", err)
+		logger.Errorf("Error updating user: %v", err)
 		u.HandleError(ctx, err)
 		return
 	}
-	logger.Infof("User updated successfully: %+v", user)
+	logger.Infof("User updated successfully for ID %d", userId)
 	u.SendSuccess(ctx, http.StatusOK, "User updated successfully", user)
 }
 
@@ -80,17 +80,17 @@ func (u *UserController) UpdateUserPassword(ctx *gin.Context) {
 	userId := ctx.GetInt64("authUserId")
 	var updatedUser models.UpdateUserPasswordInput
 	if err := u.BindJSON(ctx, &updatedUser); err != nil {
-		logger.Error("Failed to bind JSON for updating user password: ", err)
+		logger.Errorf("Failed to bind JSON for updating user password: %v", err)
 		return
 	}
-	logger.Infof("Received request to update a user password by Id: %d", userId)
+	logger.Infof("Starting password update for user ID %d", userId)
 	user, err := u.authService.UpdateUserPassword(ctx, userId, updatedUser)
 	if err != nil {
-		logger.Error("Error updating user password: ", err)
+		logger.Errorf("Error updating user password: %v", err)
 		u.HandleError(ctx, err)
 		return
 	}
 
-	logger.Infof("User password updated successfully: %+v", user)
+	logger.Infof("User password updated successfully for ID %d", userId)
 	u.SendSuccess(ctx, http.StatusOK, "User password updated successfully", user)
 }
