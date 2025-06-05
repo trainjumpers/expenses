@@ -77,11 +77,7 @@ func (b *BaseController) BindJSON(ctx *gin.Context, obj interface{}) error {
 		b.SendError(ctx, http.StatusBadRequest, err.Error())
 		return err
 	}
-
-	// Trim whitespace from all string fields
 	b.trimStringFields(obj)
-
-	// Re-validate using Gin's internal validator after trimming
 	if err := binding.Validator.ValidateStruct(obj); err != nil {
 		b.SendError(ctx, http.StatusBadRequest, err.Error())
 		return err

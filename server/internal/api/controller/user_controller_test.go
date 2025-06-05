@@ -85,6 +85,52 @@ var _ = Describe("UserController", func() {
 				data := response["data"].(map[string]interface{})
 				Expect(data["name"]).To(Equal("Updated Name"))
 			})
+
+			It("should trim whitespace from user name and update successfully", func() {
+				updateInput := models.UpdateUserInput{
+					Name: "  Trimmed Name  ", // Name with leading and trailing whitespace
+				}
+
+				body, _ := json.Marshal(updateInput)
+				req, err := http.NewRequest(http.MethodPatch, baseURL+"/user", bytes.NewBuffer(body))
+				Expect(err).NotTo(HaveOccurred())
+				req.Header.Set("Content-Type", "application/json")
+				req.Header.Set("Authorization", "Bearer "+accessToken)
+
+				resp, err := client.Do(req)
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				response, err := decodeJSON(resp.Body)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(response["message"]).To(Equal("User updated successfully"))
+				data := response["data"].(map[string]interface{})
+				Expect(data["name"]).To(Equal("Trimmed Name")) // Should be trimmed
+			})
+
+			It("should trim complex whitespace characters from user name", func() {
+				updateInput := models.UpdateUserInput{
+					Name: "\t  Complex Whitespace Name  \n", // Name with tabs and newlines
+				}
+
+				body, _ := json.Marshal(updateInput)
+				req, err := http.NewRequest(http.MethodPatch, baseURL+"/user", bytes.NewBuffer(body))
+				Expect(err).NotTo(HaveOccurred())
+				req.Header.Set("Content-Type", "application/json")
+				req.Header.Set("Authorization", "Bearer "+accessToken)
+
+				resp, err := client.Do(req)
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				response, err := decodeJSON(resp.Body)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(response["message"]).To(Equal("User updated successfully"))
+				data := response["data"].(map[string]interface{})
+				Expect(data["name"]).To(Equal("Complex Whitespace Name")) // Should be trimmed
+			})
 		})
 
 		Context("with invalid input", func() {
@@ -112,6 +158,48 @@ var _ = Describe("UserController", func() {
 				defer resp.Body.Close()
 
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+			})
+
+			It("should return bad request for whitespace-only name", func() {
+				updateInput := models.UpdateUserInput{
+					Name: "   ",
+				}
+
+				body, _ := json.Marshal(updateInput)
+				req, err := http.NewRequest(http.MethodPatch, baseURL+"/user", bytes.NewBuffer(body))
+				Expect(err).NotTo(HaveOccurred())
+				req.Header.Set("Content-Type", "application/json")
+				req.Header.Set("Authorization", "Bearer "+accessToken)
+
+				resp, err := client.Do(req)
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+
+				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+				response, err := decodeJSON(resp.Body)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(response["message"]).To(Equal("no fields to update"))
+			})
+
+			It("should return bad request for tabs and newlines only in name", func() {
+				updateInput := models.UpdateUserInput{
+					Name: "\t\n  \r  ", // Only various whitespace characters
+				}
+
+				body, _ := json.Marshal(updateInput)
+				req, err := http.NewRequest(http.MethodPatch, baseURL+"/user", bytes.NewBuffer(body))
+				Expect(err).NotTo(HaveOccurred())
+				req.Header.Set("Content-Type", "application/json")
+				req.Header.Set("Authorization", "Bearer "+accessToken)
+
+				resp, err := client.Do(req)
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+
+				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+				response, err := decodeJSON(resp.Body)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(response["message"]).To(ContainSubstring("no fields to update"))
 			})
 
 			It("should return bad request for invalid input", func() {
@@ -221,6 +309,68 @@ var _ = Describe("UserController", func() {
 
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			})
+
+			It("should trim whitespace from passwords and update successfully", func() {
+				// Create a new user
+				userInput := models.CreateUserInput{
+					Email:    "passwordWhitespaceUpdate@example.com",
+					Name:     "Test password whitespace update",
+					Password: "password123",
+				}
+
+				body, _ := json.Marshal(userInput)
+				req, err := http.NewRequest(http.MethodPost, baseURL+"/signup", bytes.NewBuffer(body))
+				Expect(err).NotTo(HaveOccurred())
+				req.Header.Set("Content-Type", "application/json")
+
+				resp, err := client.Do(req)
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+
+				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+				response, err := decodeJSON(resp.Body)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(response["data"]).To(HaveKey("access_token"))
+
+				newAccessToken := response["data"].(map[string]interface{})["access_token"].(string)
+
+				updateInput := models.UpdateUserPasswordInput{
+					OldPassword: "  password123  ",    // Old password with whitespace
+					NewPassword: "  newpassword123  ", // New password with whitespace
+				}
+
+				body, _ = json.Marshal(updateInput)
+				req, err = http.NewRequest(http.MethodPost, baseURL+"/user/password", bytes.NewBuffer(body))
+				Expect(err).NotTo(HaveOccurred())
+				req.Header.Set("Content-Type", "application/json")
+				req.Header.Set("Authorization", "Bearer "+newAccessToken)
+
+				resp, err = client.Do(req)
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				response, err = decodeJSON(resp.Body)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(response["message"]).To(Equal("User password updated successfully"))
+
+				// Verify new password works (trimmed version) by trying to login
+				loginInput := models.LoginInput{
+					Email:    "passwordWhitespaceUpdate@example.com",
+					Password: "newpassword123", // Trimmed password should work
+				}
+
+				body, _ = json.Marshal(loginInput)
+				req, err = http.NewRequest(http.MethodPost, baseURL+"/login", bytes.NewBuffer(body))
+				Expect(err).NotTo(HaveOccurred())
+				req.Header.Set("Content-Type", "application/json")
+
+				resp, err = client.Do(req)
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			})
 		})
 
 		Context("with invalid input", func() {
@@ -267,6 +417,50 @@ var _ = Describe("UserController", func() {
 				defer resp.Body.Close()
 
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+			})
+
+			It("should return bad request for whitespace-only old password", func() {
+				updateInput := models.UpdateUserPasswordInput{
+					OldPassword: "   ", // Only whitespace - will become empty after trimming
+					NewPassword: "newpassword123",
+				}
+
+				body, _ := json.Marshal(updateInput)
+				req, err := http.NewRequest(http.MethodPost, baseURL+"/user/password", bytes.NewBuffer(body))
+				Expect(err).NotTo(HaveOccurred())
+				req.Header.Set("Content-Type", "application/json")
+				req.Header.Set("Authorization", "Bearer "+accessToken)
+
+				resp, err := client.Do(req)
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+
+				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+				response, err := decodeJSON(resp.Body)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(response["message"]).To(ContainSubstring("required"))
+			})
+
+			It("should return bad request for whitespace-only new password", func() {
+				updateInput := models.UpdateUserPasswordInput{
+					OldPassword: "password123",
+					NewPassword: "   ", // Only whitespace - will become empty after trimming
+				}
+
+				body, _ := json.Marshal(updateInput)
+				req, err := http.NewRequest(http.MethodPost, baseURL+"/user/password", bytes.NewBuffer(body))
+				Expect(err).NotTo(HaveOccurred())
+				req.Header.Set("Content-Type", "application/json")
+				req.Header.Set("Authorization", "Bearer "+accessToken)
+
+				resp, err := client.Do(req)
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+
+				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+				response, err := decodeJSON(resp.Body)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(response["message"]).To(ContainSubstring("validation"))
 			})
 
 			It("should be unauthorized for invalid token", func() {
