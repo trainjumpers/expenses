@@ -102,3 +102,8 @@ func (b *BaseController) BindForm(ctx *gin.Context, obj interface{}) error {
 	}
 	return nil
 }
+
+// GetAuthenticatedUserId extracts the authenticated user ID from the gin context
+func (b *BaseController) GetAuthenticatedUserId(ctx *gin.Context) int64 {
+	return ctx.GetInt64("authUserId")
+}

@@ -24,13 +24,13 @@ func NewCategoryController(cfg *config.Config, categoryService service.CategoryS
 }
 
 func (c *CategoryController) CreateCategory(ctx *gin.Context) {
-	logger.Infof("Creating new category for user %d", ctx.GetInt64("authUserId"))
+	logger.Infof("Creating new category for user %d", c.GetAuthenticatedUserId(ctx))
 	var input models.CreateCategoryInput
 	if err := c.BindJSON(ctx, &input); err != nil {
 		logger.Errorf("Failed to bind JSON: %v", err)
 		return
 	}
-	input.CreatedBy = ctx.GetInt64("authUserId")
+	input.CreatedBy = c.GetAuthenticatedUserId(ctx)
 	category, err := c.categoryService.CreateCategory(ctx, input)
 	if err != nil {
 		logger.Errorf("Error creating category: %v", err)
@@ -42,13 +42,13 @@ func (c *CategoryController) CreateCategory(ctx *gin.Context) {
 }
 
 func (c *CategoryController) GetCategory(ctx *gin.Context) {
-	logger.Infof("Fetching category details for user %d", ctx.GetInt64("authUserId"))
+	logger.Infof("Fetching category details for user %d", c.GetAuthenticatedUserId(ctx))
 	categoryId, err := strconv.ParseInt(ctx.Param("categoryId"), 10, 64)
 	if err != nil {
 		c.SendError(ctx, http.StatusBadRequest, "invalid category id")
 		return
 	}
-	userId := ctx.GetInt64("authUserId")
+	userId := c.GetAuthenticatedUserId(ctx)
 	category, err := c.categoryService.GetCategoryById(ctx, categoryId, userId)
 	if err != nil {
 		logger.Errorf("Error getting category: %v", err)
@@ -60,7 +60,7 @@ func (c *CategoryController) GetCategory(ctx *gin.Context) {
 }
 
 func (c *CategoryController) ListCategories(ctx *gin.Context) {
-	userId := ctx.GetInt64("authUserId")
+	userId := c.GetAuthenticatedUserId(ctx)
 	logger.Infof("Fetching categories for user %d", userId)
 	categories, err := c.categoryService.ListCategories(ctx, userId)
 	if err != nil {
@@ -73,7 +73,7 @@ func (c *CategoryController) ListCategories(ctx *gin.Context) {
 }
 
 func (c *CategoryController) UpdateCategory(ctx *gin.Context) {
-	userId := ctx.GetInt64("authUserId")
+	userId := c.GetAuthenticatedUserId(ctx)
 	logger.Infof("Starting category update for user %d", userId)
 	categoryId, err := strconv.ParseInt(ctx.Param("categoryId"), 10, 64)
 	if err != nil {
@@ -96,7 +96,7 @@ func (c *CategoryController) UpdateCategory(ctx *gin.Context) {
 }
 
 func (c *CategoryController) DeleteCategory(ctx *gin.Context) {
-	userId := ctx.GetInt64("authUserId")
+	userId := c.GetAuthenticatedUserId(ctx)
 	logger.Infof("Starting category deletion for user %d", userId)
 	categoryId, err := strconv.ParseInt(ctx.Param("categoryId"), 10, 64)
 	if err != nil {

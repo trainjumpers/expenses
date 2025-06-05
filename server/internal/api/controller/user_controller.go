@@ -26,7 +26,7 @@ func NewUserController(cfg *config.Config, userService service.UserServiceInterf
 
 // GetUserById returns a user by Id
 func (u *UserController) GetUserById(ctx *gin.Context) {
-	userId := ctx.GetInt64("authUserId")
+	userId := u.GetAuthenticatedUserId(ctx)
 	logger.Infof("Fetching user details for ID %d", userId)
 
 	user, err := u.userService.GetUserById(ctx, userId)
@@ -42,7 +42,7 @@ func (u *UserController) GetUserById(ctx *gin.Context) {
 
 // DeleteUser deletes a user by Id
 func (u *UserController) DeleteUser(ctx *gin.Context) {
-	userId := ctx.GetInt64("authUserId")
+	userId := u.GetAuthenticatedUserId(ctx)
 	logger.Infof("Starting user deletion for ID %d", userId)
 
 	err := u.userService.DeleteUser(ctx, userId)
@@ -58,7 +58,7 @@ func (u *UserController) DeleteUser(ctx *gin.Context) {
 
 // UpdateUser updates a user by Id
 func (u *UserController) UpdateUser(ctx *gin.Context) {
-	userId := ctx.GetInt64("authUserId")
+	userId := u.GetAuthenticatedUserId(ctx)
 	var updatedUser models.UpdateUserInput
 	if err := u.BindJSON(ctx, &updatedUser); err != nil {
 		logger.Errorf("Failed to bind JSON for updating user: %v", err)
@@ -77,7 +77,7 @@ func (u *UserController) UpdateUser(ctx *gin.Context) {
 
 // Update User Password
 func (u *UserController) UpdateUserPassword(ctx *gin.Context) {
-	userId := ctx.GetInt64("authUserId")
+	userId := u.GetAuthenticatedUserId(ctx)
 	var updatedUser models.UpdateUserPasswordInput
 	if err := u.BindJSON(ctx, &updatedUser); err != nil {
 		logger.Errorf("Failed to bind JSON for updating user password: %v", err)
