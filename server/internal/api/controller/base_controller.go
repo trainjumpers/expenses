@@ -5,8 +5,11 @@ import (
 	"expenses/internal/config"
 	customErrors "expenses/internal/errors"
 	"net/http"
+	"reflect"
+	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
 )
 
 // BaseController provides common functionality for all controllers
@@ -68,12 +71,71 @@ func (b *BaseController) SendError(ctx *gin.Context, statusCode int, message str
 }
 
 // BindJSON binds JSON request body to the provided struct and handles errors
+// It also automatically trims whitespace from all string fields and re-validates using Gin's validator
 func (b *BaseController) BindJSON(ctx *gin.Context, obj interface{}) error {
 	if err := ctx.ShouldBindJSON(obj); err != nil {
 		b.SendError(ctx, http.StatusBadRequest, err.Error())
 		return err
 	}
+
+	// Trim whitespace from all string fields
+	b.trimStringFields(obj)
+
+	// Re-validate using Gin's internal validator after trimming
+	if err := binding.Validator.ValidateStruct(obj); err != nil {
+		b.SendError(ctx, http.StatusBadRequest, err.Error())
+		return err
+	}
+
 	return nil
+}
+
+// trimStringFields recursively trims whitespace from all string fields in a struct
+func (b *BaseController) trimStringFields(obj interface{}) {
+	if obj == nil {
+		return
+	}
+	val := reflect.ValueOf(obj)
+	if val.Kind() == reflect.Ptr {
+		if val.IsNil() {
+			return
+		}
+		val = val.Elem()
+	}
+
+	if val.Kind() != reflect.Struct {
+		return
+	}
+
+	for i := 0; i < val.NumField(); i++ {
+		field := val.Field(i)
+		if !field.CanSet() {
+			continue
+		}
+		switch field.Kind() {
+		case reflect.String:
+			trimmed := strings.TrimSpace(field.String())
+			field.SetString(trimmed)
+		case reflect.Ptr:
+			if !field.IsNil() && field.Elem().Kind() == reflect.String {
+				trimmed := strings.TrimSpace(field.Elem().String())
+				field.Elem().SetString(trimmed)
+			} else if !field.IsNil() && field.Elem().Kind() == reflect.Struct {
+				b.trimStringFields(field.Interface())
+			}
+		case reflect.Struct:
+			b.trimStringFields(field.Addr().Interface())
+		case reflect.Slice:
+			for j := 0; j < field.Len(); j++ {
+				elem := field.Index(j)
+				if elem.Kind() == reflect.Struct {
+					b.trimStringFields(elem.Addr().Interface())
+				} else if elem.Kind() == reflect.Ptr && !elem.IsNil() && elem.Elem().Kind() == reflect.Struct {
+					b.trimStringFields(elem.Interface())
+				}
+			}
+		}
+	}
 }
 
 // BindQuery binds query parameters to the provided struct and handles errors
