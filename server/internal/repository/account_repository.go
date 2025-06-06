@@ -115,7 +115,7 @@ func (r *AccountRepository) DeleteAccount(c *gin.Context, accountId int64, userI
 }
 
 func (r *AccountRepository) ListAccounts(c *gin.Context, userId int64) ([]models.AccountResponse, error) {
-	var accounts []models.AccountResponse
+	accounts := make([]models.AccountResponse, 0)
 	var account models.AccountResponse
 	ptrs, dbFields, err := helper.GetDbFieldsFromObject(&account)
 	if err != nil {

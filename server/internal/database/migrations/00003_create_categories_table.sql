@@ -14,6 +14,12 @@ CREATE TABLE IF NOT EXISTS ${DB_SCHEMA}.categories (
 CREATE UNIQUE INDEX IF NOT EXISTS unique_category_name_created_by
     ON ${DB_SCHEMA}.categories (name, created_by);
 
+CREATE TRIGGER update_categories_modtime
+BEFORE UPDATE ON ${DB_SCHEMA}.categories
+FOR EACH ROW
+EXECUTE FUNCTION update_modified_column();
+
 -- +goose Down
 -- SQL in this section is executed when the migration is rolled back.
-DROP TABLE IF EXISTS ${DB_SCHEMA}.categories CASCADE; 
+DROP TRIGGER IF EXISTS update_categories_modtime ON ${DB_SCHEMA}.categories;
+DROP TABLE IF EXISTS ${DB_SCHEMA}.categories; 
