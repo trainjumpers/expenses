@@ -47,7 +47,7 @@ func (r *CategoryRepository) CreateCategory(c *gin.Context, input models.CreateC
 		return models.CategoryResponse{}, err
 	}
 
-	logger.Infof("Executing query to create category: %s", query)
+	logger.Debugf("Executing query to create category: %s", query)
 	err = r.db.QueryRow(c, query, values...).Scan(ptrs...)
 	if err != nil {
 		if customErrors.CheckForeignKey(err, "unique_category_name_created_by") {
@@ -70,7 +70,7 @@ func (r *CategoryRepository) GetCategoryById(c *gin.Context, categoryId int64, u
 	}
 
 	query := fmt.Sprintf(`SELECT %s FROM %s.%s WHERE id = $1 AND created_by = $2`, strings.Join(dbFields, ", "), r.schema, r.tableName)
-	logger.Infof("Executing query to get category by ID: %s", query)
+	logger.Debugf("Executing query to get category by ID: %s", query)
 
 	err = r.db.QueryRow(c, query, categoryId, userId).Scan(ptrs...)
 	if err != nil {
@@ -93,7 +93,7 @@ func (r *CategoryRepository) ListCategories(c *gin.Context, userId int64) ([]mod
 	}
 
 	query := fmt.Sprintf(`SELECT %s FROM %s.%s WHERE created_by = $1 ORDER BY id DESC;`, strings.Join(dbFields, ", "), r.schema, r.tableName)
-	logger.Infof("Executing query to list categories: %s", query)
+	logger.Debugf("Executing query to list categories: %s", query)
 
 	rows, err := r.db.Query(c, query, userId)
 	if err != nil {
@@ -134,7 +134,7 @@ func (r *CategoryRepository) UpdateCategory(c *gin.Context, categoryId int64, us
 	}
 
 	query := fmt.Sprintf(`UPDATE %s.%s SET %s WHERE id = $%d AND created_by = $%d RETURNING %s;`, r.schema, r.tableName, fieldsClause, argIndex, argIndex+1, strings.Join(dbFields, ", "))
-	logger.Infof("Executing query to update category: %s", query)
+	logger.Debugf("Executing query to update category: %s", query)
 
 	argValues = append(argValues, categoryId, userId)
 	err = r.db.QueryRow(c, query, argValues...).Scan(ptrs...)
@@ -156,7 +156,7 @@ func (r *CategoryRepository) DeleteCategory(c *gin.Context, categoryId int64, us
 	logger.Debugf("Deleting category ID %d for user %d", categoryId, userId)
 
 	query := fmt.Sprintf(`DELETE FROM %s.%s WHERE id = $1 AND created_by = $2;`, r.schema, r.tableName)
-	logger.Infof("Executing query to delete category: %s", query)
+	logger.Debugf("Executing query to delete category: %s", query)
 
 	result, err := r.db.Exec(c, query, categoryId, userId)
 	if err != nil {

@@ -44,7 +44,7 @@ func (r *AccountRepository) CreateAccount(c *gin.Context, input models.CreateAcc
 	if err != nil {
 		return account, err
 	}
-	logger.Infof("Executing query to create account: %s", query)
+	logger.Debugf("Executing query to create account: %s", query)
 	err = r.db.QueryRow(c, query, values...).Scan(ptrs...)
 	if err != nil {
 		return account, err
@@ -64,7 +64,7 @@ func (r *AccountRepository) GetAccountById(c *gin.Context, accountId int64, user
 		FROM %s.%s
 		WHERE id = $1 AND created_by = $2`,
 		strings.Join(dbFields, ", "), r.schema, r.tableName)
-	logger.Infof("Executing query to get account by ID: %s", query)
+	logger.Debugf("Executing query to get account by ID: %s", query)
 	err = r.db.QueryRow(c, query, accountId, userId).Scan(ptrs...)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -86,7 +86,7 @@ func (r *AccountRepository) UpdateAccount(c *gin.Context, accountId int64, userI
 		return account, err
 	}
 	query := fmt.Sprintf(`UPDATE %s.%s SET %s WHERE id = $%d AND created_by = $%d RETURNING %s;`, r.schema, r.tableName, fieldsClause, argIndex, argIndex+1, strings.Join(dbFields, ", "))
-	logger.Infof("Executing query to update account: %s", query)
+	logger.Debugf("Executing query to update account: %s", query)
 	argValues = append(argValues, accountId, userId)
 	err = r.db.QueryRow(c, query, argValues...).Scan(ptrs...)
 	if err != nil {
@@ -103,7 +103,7 @@ func (r *AccountRepository) DeleteAccount(c *gin.Context, accountId int64, userI
 		DELETE FROM %s.%s
 		WHERE id = $1 AND created_by = $2`,
 		r.schema, r.tableName)
-	logger.Infof("Executing query to delete account: %s", query)
+	logger.Debugf("Executing query to delete account: %s", query)
 	_, err := r.db.Exec(c, query, accountId, userId)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -127,7 +127,7 @@ func (r *AccountRepository) ListAccounts(c *gin.Context, userId int64) ([]models
 		WHERE created_by = $1
 		ORDER BY created_at DESC`,
 		strings.Join(dbFields, ", "), r.schema, r.tableName)
-	logger.Infof("Executing query to list accounts: %s", query)
+	logger.Debugf("Executing query to list accounts: %s", query)
 	rows, err := r.db.Query(c, query, userId)
 	if err != nil {
 		return accounts, err

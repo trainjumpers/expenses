@@ -23,12 +23,17 @@ type Config struct {
 	RefreshTokenDuration time.Duration
 }
 
+func GetEnvironment() string {
+	env := strings.ToLower(os.Getenv("ENV"))
+	if env == "" {
+		env = EnvironmentDev
+	}
+	return env
+}
+
 func NewConfig() (*Config, error) {
 	config := &Config{}
-	config.Environment = strings.ToLower(os.Getenv("ENV"))
-	if config.Environment == "" {
-		config.Environment = EnvironmentDev
-	}
+	config.Environment = GetEnvironment()
 	jwtSecret := os.Getenv("JWT_SECRET")
 	if jwtSecret == "" {
 		return nil, errors.New("JWT_SECRET environment variable is not set")

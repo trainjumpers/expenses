@@ -51,7 +51,7 @@ func (u *UserRepository) CreateUser(c *gin.Context, newUser models.CreateUserInp
 	if err != nil {
 		return models.UserResponse{}, err
 	}
-	logger.Infof("Executing query to create user: %s", query)
+	logger.Debugf("Executing query to create user: %s", query)
 	err = u.db.QueryRow(c, query, values...).Scan(ptrs...)
 	if err != nil {
 		return models.UserResponse{}, err
@@ -74,7 +74,7 @@ func (u *UserRepository) GetUserByEmailWithPassword(c *gin.Context, email string
 		SELECT %s FROM %s.%s 
 		WHERE email = $1 AND deleted_at IS NULL;`,
 		strings.Join(dbFields, ", "), u.schema, u.tableName)
-	logger.Infof("Executing query to get user by email: %s", query)
+	logger.Debugf("Executing query to get user by email: %s", query)
 	err = u.db.QueryRow(c, query, email).Scan(ptrs...)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -98,7 +98,7 @@ func (u *UserRepository) GetUserByIdWithPassword(c *gin.Context, userId int64) (
 	}
 	query := fmt.Sprintf(`
 		SELECT %s FROM %s.%s WHERE id = $1 AND deleted_at IS NULL;`, strings.Join(dbFields, ", "), u.schema, u.tableName)
-	logger.Infof("Executing query to get user by ID: %s", query)
+	logger.Debugf("Executing query to get user by ID: %s", query)
 	err = u.db.QueryRow(c, query, userId).Scan(ptrs...)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -125,7 +125,7 @@ func (u *UserRepository) GetUserById(c *gin.Context, userId int64) (models.UserR
 		FROM %s.%s 
 		WHERE id = $1 AND deleted_at IS NULL;`,
 		strings.Join(dbFields, ", "), u.schema, u.tableName)
-	logger.Infof("Executing query to get user by ID: %s", query)
+	logger.Debugf("Executing query to get user by ID: %s", query)
 	err = u.db.QueryRow(c, query, userId).Scan(ptrs...)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -147,7 +147,7 @@ func (u *UserRepository) DeleteUser(c *gin.Context, userId int64) error {
 	SET deleted_at = NOW() 
 	WHERE id = $1 AND deleted_at IS NULL;
 	`, u.schema, u.tableName)
-	logger.Infof("Executing query to delete user: %s", query)
+	logger.Debugf("Executing query to delete user: %s", query)
 	_, err := u.db.Exec(c, query, userId)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -180,7 +180,7 @@ func (u *UserRepository) UpdateUser(c *gin.Context, userId int64, updatedUser mo
 		WHERE id = $%d AND deleted_at IS NULL %s;`,
 		u.schema, u.tableName, fieldsClause, argIndex, "RETURNING "+strings.Join(dbFields, ", "))
 
-	logger.Infof("Executing query to update user: %s", query)
+	logger.Debugf("Executing query to update user: %s", query)
 	err = u.db.QueryRow(c, query, append(argValues, userId)...).Scan(ptrs...)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -205,7 +205,7 @@ func (u *UserRepository) UpdateUserPassword(c *gin.Context, userId int64, passwo
 	}
 	query := fmt.Sprintf(`
 		UPDATE %s.%s SET password = $1 WHERE id = $2 AND deleted_at IS NULL RETURNING %s;`, u.schema, u.tableName, strings.Join(dbFields, ", "))
-	logger.Infof("Executing query to update user password: %s", query)
+	logger.Debugf("Executing query to update user password: %s", query)
 	err = u.db.QueryRow(c, query, password, userId).Scan(ptrs...)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
