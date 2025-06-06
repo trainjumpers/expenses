@@ -22,3 +22,6 @@ The folder structure is as follows
     * Repo layer. This layer is responsible for connecting to db and bringing in the data
 
 For testing, we are using ginkgo library. Ensure most functions should have unit tests to ensure everything is working as intended
+
+All API calls request bodies are trimmed to ensure consistency
+Debug logging should be plenty, limit info logging to specific use cases

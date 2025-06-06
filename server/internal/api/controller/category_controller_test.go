@@ -59,6 +59,115 @@ var _ = Describe("CategoryController", func() {
 			Expect(response["data"].(map[string]interface{})["icon"]).To(BeNil())
 		})
 
+		It("should trim whitespace from category name and create successfully", func() {
+			input := models.CreateCategoryInput{
+				Name: "  Whitespace Category  ", // Name with leading and trailing whitespace
+				Icon: "space-icon",
+			}
+			body, _ := json.Marshal(input)
+			req, err := http.NewRequest(http.MethodPost, baseURL+"/category", bytes.NewBuffer(body))
+			Expect(err).NotTo(HaveOccurred())
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Authorization", "Bearer "+accessToken)
+
+			resp, err := client.Do(req)
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+			response, err := decodeJSON(resp.Body)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(response["message"]).To(Equal("Category created successfully"))
+			Expect(response["data"]).To(HaveKey("id"))
+			Expect(response["data"].(map[string]interface{})["name"]).To(Equal("Whitespace Category")) // Should be trimmed
+			Expect(response["data"].(map[string]interface{})["icon"]).To(Equal("space-icon"))
+		})
+
+		It("should trim complex whitespace characters from category name", func() {
+			input := models.CreateCategoryInput{
+				Name: "\t  Complex Tab Category  \n", // Name with tabs and newlines
+				Icon: "tab-icon",
+			}
+			body, _ := json.Marshal(input)
+			req, err := http.NewRequest(http.MethodPost, baseURL+"/category", bytes.NewBuffer(body))
+			Expect(err).NotTo(HaveOccurred())
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Authorization", "Bearer "+accessToken)
+
+			resp, err := client.Do(req)
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+			response, err := decodeJSON(resp.Body)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(response["message"]).To(Equal("Category created successfully"))
+			Expect(response["data"]).To(HaveKey("id"))
+			Expect(response["data"].(map[string]interface{})["name"]).To(Equal("Complex Tab Category")) // Should be trimmed
+			Expect(response["data"].(map[string]interface{})["icon"]).To(Equal("tab-icon"))
+		})
+
+		It("should trim whitespace from icon field", func() {
+			input := models.CreateCategoryInput{
+				Name: "Icon Whitespace Test",
+				Icon: "  trimmed-icon  ", // Icon with whitespace
+			}
+			body, _ := json.Marshal(input)
+			req, err := http.NewRequest(http.MethodPost, baseURL+"/category", bytes.NewBuffer(body))
+			Expect(err).NotTo(HaveOccurred())
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Authorization", "Bearer "+accessToken)
+
+			resp, err := client.Do(req)
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+			response, err := decodeJSON(resp.Body)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(response["message"]).To(Equal("Category created successfully"))
+			Expect(response["data"]).To(HaveKey("id"))
+			Expect(response["data"].(map[string]interface{})["name"]).To(Equal("Icon Whitespace Test"))
+			Expect(response["data"].(map[string]interface{})["icon"]).To(Equal("trimmed-icon")) // Should be trimmed
+		})
+
+		It("should return error for whitespace-only category name", func() {
+			input := models.CreateCategoryInput{
+				Name: "   ", // Only whitespace - will become empty after trimming
+				Icon: "error-icon",
+			}
+			body, _ := json.Marshal(input)
+			req, err := http.NewRequest(http.MethodPost, baseURL+"/category", bytes.NewBuffer(body))
+			Expect(err).NotTo(HaveOccurred())
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Authorization", "Bearer "+accessToken)
+
+			resp, err := client.Do(req)
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+			response, err := decodeJSON(resp.Body)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(response["message"]).To(ContainSubstring("required"))
+		})
+
+		It("should return error for tabs and newlines only in category name", func() {
+			input := models.CreateCategoryInput{
+				Name: "\t\n  \r  ", // Only various whitespace characters
+				Icon: "error-icon",
+			}
+			body, _ := json.Marshal(input)
+			req, err := http.NewRequest(http.MethodPost, baseURL+"/category", bytes.NewBuffer(body))
+			Expect(err).NotTo(HaveOccurred())
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Authorization", "Bearer "+accessToken)
+
+			resp, err := client.Do(req)
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+			response, err := decodeJSON(resp.Body)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(response["message"]).To(ContainSubstring("required"))
+		})
+
 		It("should return error when category name already exists for same user", func() {
 			input := models.CreateCategoryInput{
 				Name: "Transportation check existing",
@@ -309,6 +418,62 @@ var _ = Describe("CategoryController", func() {
 			Expect(response["data"].(map[string]interface{})["name"]).To(Equal("Updated Category Name"))
 		})
 
+		It("should trim whitespace from category name during update", func() {
+			update := models.UpdateCategoryInput{Name: "  Trimmed Update Name  "} // Name with whitespace
+			body, _ := json.Marshal(update)
+			url := baseURL + "/category/" + strconv.FormatInt(categoryId, 10)
+			req, err := http.NewRequest(http.MethodPatch, url, bytes.NewBuffer(body))
+			Expect(err).NotTo(HaveOccurred())
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Authorization", "Bearer "+accessToken)
+
+			resp, err := client.Do(req)
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			response, err := decodeJSON(resp.Body)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(response["message"]).To(Equal("Category updated successfully"))
+			Expect(response["data"].(map[string]interface{})["name"]).To(Equal("Trimmed Update Name")) // Should be trimmed
+		})
+
+		It("should trim complex whitespace from category name during update", func() {
+			update := models.UpdateCategoryInput{Name: "\t  Complex Update Name  \n"} // Name with tabs and newlines
+			body, _ := json.Marshal(update)
+			url := baseURL + "/category/" + strconv.FormatInt(categoryId, 10)
+			req, err := http.NewRequest(http.MethodPatch, url, bytes.NewBuffer(body))
+			Expect(err).NotTo(HaveOccurred())
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Authorization", "Bearer "+accessToken)
+
+			resp, err := client.Do(req)
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			response, err := decodeJSON(resp.Body)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(response["message"]).To(Equal("Category updated successfully"))
+			Expect(response["data"].(map[string]interface{})["name"]).To(Equal("Complex Update Name")) // Should be trimmed
+		})
+
+		It("should return error for whitespace-only category name during update", func() {
+			update := models.UpdateCategoryInput{Name: "   "} // Only whitespace - will become empty after trimming
+			body, _ := json.Marshal(update)
+			url := baseURL + "/category/" + strconv.FormatInt(categoryId, 10)
+			req, err := http.NewRequest(http.MethodPatch, url, bytes.NewBuffer(body))
+			Expect(err).NotTo(HaveOccurred())
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Authorization", "Bearer "+accessToken)
+
+			resp, err := client.Do(req)
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+			response, err := decodeJSON(resp.Body)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(response["message"]).To(Equal("no fields to update"))
+		})
+
 		It("should update category icon successfully", func() {
 			newIcon := "new-icon"
 			update := models.UpdateCategoryInput{Icon: &newIcon}
@@ -327,6 +492,26 @@ var _ = Describe("CategoryController", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(response["message"]).To(Equal("Category updated successfully"))
 			Expect(response["data"].(map[string]interface{})["icon"]).To(Equal(newIcon))
+		})
+
+		It("should trim whitespace from icon during update", func() {
+			newIcon := "  trimmed-update-icon  " // Icon with whitespace
+			update := models.UpdateCategoryInput{Icon: &newIcon}
+			body, _ := json.Marshal(update)
+			url := baseURL + "/category/" + strconv.FormatInt(categoryId, 10)
+			req, err := http.NewRequest(http.MethodPatch, url, bytes.NewBuffer(body))
+			Expect(err).NotTo(HaveOccurred())
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Authorization", "Bearer "+accessToken)
+
+			resp, err := client.Do(req)
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			response, err := decodeJSON(resp.Body)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(response["message"]).To(Equal("Category updated successfully"))
+			Expect(response["data"].(map[string]interface{})["icon"]).To(Equal("trimmed-update-icon")) // Should be trimmed
 		})
 
 		It("should update both name and icon successfully", func() {
@@ -351,6 +536,30 @@ var _ = Describe("CategoryController", func() {
 			Expect(response["message"]).To(Equal("Category updated successfully"))
 			Expect(response["data"].(map[string]interface{})["name"]).To(Equal("Complete Update"))
 			Expect(response["data"].(map[string]interface{})["icon"]).To(Equal(newIcon))
+		})
+
+		It("should trim whitespace from both name and icon during update", func() {
+			newIcon := "  complete-trimmed-icon  " // Icon with whitespace
+			update := models.UpdateCategoryInput{
+				Name: "  Complete Whitespace Update  ", // Name with whitespace
+				Icon: &newIcon,
+			}
+			body, _ := json.Marshal(update)
+			url := baseURL + "/category/" + strconv.FormatInt(categoryId, 10)
+			req, err := http.NewRequest(http.MethodPatch, url, bytes.NewBuffer(body))
+			Expect(err).NotTo(HaveOccurred())
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Authorization", "Bearer "+accessToken)
+
+			resp, err := client.Do(req)
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			response, err := decodeJSON(resp.Body)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(response["message"]).To(Equal("Category updated successfully"))
+			Expect(response["data"].(map[string]interface{})["name"]).To(Equal("Complete Whitespace Update")) // Should be trimmed
+			Expect(response["data"].(map[string]interface{})["icon"]).To(Equal("complete-trimmed-icon"))      // Should be trimmed
 		})
 
 		It("should return error for non-existent category id", func() {

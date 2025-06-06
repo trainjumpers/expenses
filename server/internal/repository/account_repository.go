@@ -44,7 +44,7 @@ func (r *AccountRepository) CreateAccount(c *gin.Context, input models.CreateAcc
 	if err != nil {
 		return account, err
 	}
-	logger.Info("Executing query to create account: ", query)
+	logger.Debugf("Executing query to create account: %s", query)
 	err = r.db.QueryRow(c, query, values...).Scan(ptrs...)
 	if err != nil {
 		return account, err
@@ -58,8 +58,13 @@ func (r *AccountRepository) GetAccountById(c *gin.Context, accountId int64, user
 	if err != nil {
 		return account, err
 	}
-	query := fmt.Sprintf(`SELECT %s FROM %s.%s WHERE id = $1 AND created_by = $2 AND deleted_at IS NULL;`, strings.Join(dbFields, ", "), r.schema, r.tableName)
-	logger.Info("Executing query to get account by id: ", query)
+
+	query := fmt.Sprintf(`
+		SELECT %s
+		FROM %s.%s
+		WHERE id = $1 AND created_by = $2`,
+		strings.Join(dbFields, ", "), r.schema, r.tableName)
+	logger.Debugf("Executing query to get account by ID: %s", query)
 	err = r.db.QueryRow(c, query, accountId, userId).Scan(ptrs...)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -80,8 +85,8 @@ func (r *AccountRepository) UpdateAccount(c *gin.Context, accountId int64, userI
 	if err != nil {
 		return account, err
 	}
-	query := fmt.Sprintf(`UPDATE %s.%s SET %s WHERE id = $%d AND created_by = $%d AND deleted_at IS NULL RETURNING %s;`, r.schema, r.tableName, fieldsClause, argIndex, argIndex+1, strings.Join(dbFields, ", "))
-	logger.Info("Executing query to update account: ", query)
+	query := fmt.Sprintf(`UPDATE %s.%s SET %s WHERE id = $%d AND created_by = $%d RETURNING %s;`, r.schema, r.tableName, fieldsClause, argIndex, argIndex+1, strings.Join(dbFields, ", "))
+	logger.Debugf("Executing query to update account: %s", query)
 	argValues = append(argValues, accountId, userId)
 	err = r.db.QueryRow(c, query, argValues...).Scan(ptrs...)
 	if err != nil {
@@ -94,8 +99,11 @@ func (r *AccountRepository) UpdateAccount(c *gin.Context, accountId int64, userI
 }
 
 func (r *AccountRepository) DeleteAccount(c *gin.Context, accountId int64, userId int64) error {
-	query := fmt.Sprintf(`UPDATE %s.%s SET deleted_at = NOW() WHERE id = $1 AND created_by = $2 AND deleted_at IS NULL;`, r.schema, r.tableName)
-	logger.Info("Executing query to delete account: ", query)
+	query := fmt.Sprintf(`
+		DELETE FROM %s.%s
+		WHERE id = $1 AND created_by = $2`,
+		r.schema, r.tableName)
+	logger.Debugf("Executing query to delete account: %s", query)
 	_, err := r.db.Exec(c, query, accountId, userId)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -107,27 +115,28 @@ func (r *AccountRepository) DeleteAccount(c *gin.Context, accountId int64, userI
 }
 
 func (r *AccountRepository) ListAccounts(c *gin.Context, userId int64) ([]models.AccountResponse, error) {
-	_, dbFields, err := helper.GetDbFieldsFromObject(&models.AccountResponse{})
+	var accounts []models.AccountResponse
+	var account models.AccountResponse
+	ptrs, dbFields, err := helper.GetDbFieldsFromObject(&account)
 	if err != nil {
-		return nil, err
+		return accounts, err
 	}
-	query := fmt.Sprintf(`SELECT %s FROM %s.%s WHERE created_by = $1 AND deleted_at IS NULL ORDER BY id DESC;`, strings.Join(dbFields, ", "), r.schema, r.tableName)
-	logger.Info("Executing query to list accounts: ", query)
+	query := fmt.Sprintf(`
+		SELECT %s
+		FROM %s.%s
+		WHERE created_by = $1
+		ORDER BY created_at DESC`,
+		strings.Join(dbFields, ", "), r.schema, r.tableName)
+	logger.Debugf("Executing query to list accounts: %s", query)
 	rows, err := r.db.Query(c, query, userId)
 	if err != nil {
-		return nil, err
+		return accounts, err
 	}
 	defer rows.Close()
-	var accounts []models.AccountResponse
 	for rows.Next() {
-		var account models.AccountResponse
-		ptrs, _, err := helper.GetDbFieldsFromObject(&account)
+		err := rows.Scan(ptrs...)
 		if err != nil {
-			return nil, err
-		}
-		err = rows.Scan(ptrs...)
-		if err != nil {
-			return nil, err
+			return accounts, err
 		}
 		accounts = append(accounts, account)
 	}

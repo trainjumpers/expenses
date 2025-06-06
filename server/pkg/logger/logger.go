@@ -1,6 +1,7 @@
 package logger
 
 import (
+	"expenses/internal/config"
 	"os"
 	"strings"
 
@@ -11,30 +12,51 @@ import (
 var Info, Error, Debug, Warn, Fatal func(args ...interface{})
 var Infof, Errorf, Debugf, Warnf, Fatalf func(template string, args ...interface{})
 
-func init() {
-	env := strings.ToLower(os.Getenv("ENV"))
-	var level zap.AtomicLevel
-	var sampling *zap.SamplingConfig
-	if env == "" {
-		env = "dev"
+func getLoggingLevel() zap.AtomicLevel {
+	switch strings.ToLower(os.Getenv("LOGGING_LEVEL")) {
+	case "debug":
+		return zap.NewAtomicLevelAt(zap.DebugLevel)
+	case "info":
+		return zap.NewAtomicLevelAt(zap.InfoLevel)
+	case "warn":
+		return zap.NewAtomicLevelAt(zap.WarnLevel)
+	case "error":
+		return zap.NewAtomicLevelAt(zap.ErrorLevel)
+	case "panic":
+		return zap.NewAtomicLevelAt(zap.PanicLevel)
+	case "fatal":
+		return zap.NewAtomicLevelAt(zap.FatalLevel)
+	default:
+		switch config.GetEnvironment() {
+		case config.EnvironmentProd:
+			return zap.NewAtomicLevelAt(zap.InfoLevel)
+		case config.EnvironmentDev:
+			return zap.NewAtomicLevelAt(zap.DebugLevel)
+		case config.EnvironmentTest:
+			return zap.NewAtomicLevelAt(zap.PanicLevel)
+		default:
+			return zap.NewAtomicLevelAt(zap.InfoLevel)
+		}
 	}
-	if env == "prod" {
-		level = zap.NewAtomicLevelAt(zap.InfoLevel)
-		sampling = &zap.SamplingConfig{
+}
+
+func getSamplingConfig() *zap.SamplingConfig {
+	if config.GetEnvironment() == config.EnvironmentProd {
+		return &zap.SamplingConfig{
 			Initial:    100,
 			Thereafter: 100,
 		}
-	} else if env == "test" {
-		level = zap.NewAtomicLevelAt(zap.PanicLevel)
-		sampling = nil
-	} else {
-		level = zap.NewAtomicLevelAt(zap.DebugLevel)
-		sampling = nil
 	}
+	return nil
+}
+
+func init() {
+	level := getLoggingLevel()
+	sampling := getSamplingConfig()
 
 	logger, err := zap.Config{
 		Level:       level,
-		Development: env != "prod",
+		Development: config.GetEnvironment() != config.EnvironmentProd,
 		Sampling:    sampling,
 		Encoding:    "console",
 		EncoderConfig: zapcore.EncoderConfig{

@@ -24,20 +24,20 @@ func NewAccountController(cfg *config.Config, accountService service.AccountServ
 }
 
 func (a *AccountController) CreateAccount(ctx *gin.Context) {
-	logger.Info("Creating a new account for the user: ", ctx.GetInt64("authUserId"))
+	logger.Infof("Creating new account for user %d", a.GetAuthenticatedUserId(ctx))
 	var input models.CreateAccountInput
 	if err := a.BindJSON(ctx, &input); err != nil {
-		logger.Error("[AccountController] Failed to bind JSON: ", err)
+		logger.Errorf("Failed to bind JSON: %v", err)
 		return
 	}
-	input.CreatedBy = ctx.GetInt64("authUserId")
+	input.CreatedBy = a.GetAuthenticatedUserId(ctx)
 	account, err := a.accountService.CreateAccount(ctx, input)
 	if err != nil {
-		logger.Error("Error creating account: ", err)
+		logger.Errorf("Error creating account: %v", err)
 		a.HandleError(ctx, err)
 		return
 	}
-	logger.Infof("Account created successfully with ID: %d for user: %d", account.Id, input.CreatedBy)
+	logger.Infof("Account created successfully with ID %d for user %d", account.Id, input.CreatedBy)
 	a.SendSuccess(ctx, http.StatusCreated, "Account created successfully", account)
 }
 
@@ -47,20 +47,20 @@ func (a *AccountController) GetAccount(ctx *gin.Context) {
 		a.SendError(ctx, http.StatusBadRequest, "invalid account id")
 		return
 	}
-	logger.Info("Fetching account details for user: ", ctx.GetInt64("authUserId"), " and account ID: ", accountId)
-	userId := ctx.GetInt64("authUserId")
+	logger.Infof("Fetching account details for user %d and account ID %d", a.GetAuthenticatedUserId(ctx), accountId)
+	userId := a.GetAuthenticatedUserId(ctx)
 	account, err := a.accountService.GetAccountById(ctx, accountId, userId)
 	if err != nil {
-		logger.Error("[AccountController] Error getting account: ", err)
+		logger.Errorf("Error getting account: %v", err)
 		a.HandleError(ctx, err)
 		return
 	}
-	logger.Infof("Account retrieved successfully with ID: ", account.Id, " for user: ", userId)
+	logger.Infof("Account retrieved successfully with ID %d for user %d", account.Id, userId)
 	a.SendSuccess(ctx, http.StatusOK, "Account retrieved successfully", account)
 }
 
 func (a *AccountController) UpdateAccount(ctx *gin.Context) {
-	logger.Infof("Start UpdateAccount for user: ", ctx.GetInt64("authUserId"))
+	logger.Infof("Starting update account for user %d", a.GetAuthenticatedUserId(ctx))
 	accountId, err := strconv.ParseInt(ctx.Param("accountId"), 10, 64)
 	if err != nil {
 		a.SendError(ctx, http.StatusBadRequest, "invalid account id")
@@ -68,47 +68,47 @@ func (a *AccountController) UpdateAccount(ctx *gin.Context) {
 	}
 	var input models.UpdateAccountInput
 	if err := a.BindJSON(ctx, &input); err != nil {
-		logger.Error("[AccountController] Failed to bind JSON: ", err)
+		logger.Errorf("Failed to bind JSON: %v", err)
 		return
 	}
-	userId := ctx.GetInt64("authUserId")
+	userId := a.GetAuthenticatedUserId(ctx)
 	account, err := a.accountService.UpdateAccount(ctx, accountId, userId, input)
 	if err != nil {
-		logger.Error("[AccountController] Error updating account: ", err)
+		logger.Errorf("Error updating account: %v", err)
 		a.HandleError(ctx, err)
 		return
 	}
-	logger.Infof("Account updated successfully with ID: ", account.Id, " for user: ", userId)
+	logger.Infof("Account updated successfully with ID %d for user %d", account.Id, userId)
 	a.SendSuccess(ctx, http.StatusOK, "Account updated successfully", account)
 }
 
 func (a *AccountController) DeleteAccount(ctx *gin.Context) {
-	logger.Infof("Start DeleteAccount for user: ", ctx.GetInt64("authUserId"))
+	logger.Infof("Starting delete account for user %d", a.GetAuthenticatedUserId(ctx))
 	accountId, err := strconv.ParseInt(ctx.Param("accountId"), 10, 64)
 	if err != nil {
 		a.SendError(ctx, http.StatusBadRequest, "invalid account id")
 		return
 	}
-	userId := ctx.GetInt64("authUserId")
+	userId := a.GetAuthenticatedUserId(ctx)
 	err = a.accountService.DeleteAccount(ctx, accountId, userId)
 	if err != nil {
-		logger.Error("[AccountController] Error deleting account: ", err)
+		logger.Errorf("Error deleting account: %v", err)
 		a.HandleError(ctx, err)
 		return
 	}
-	logger.Infof("Successfully deleted account with ID: ", accountId, " for user: ", userId)
+	logger.Infof("Successfully deleted account with ID %d for user %d", accountId, userId)
 	a.SendSuccess(ctx, http.StatusNoContent, "", nil)
 }
 
 func (a *AccountController) ListAccounts(ctx *gin.Context) {
-	logger.Info("Fetching accounts for user: ", ctx.GetInt64("authUserId"))
-	userId := ctx.GetInt64("authUserId")
+	logger.Infof("Fetching accounts for user %d", a.GetAuthenticatedUserId(ctx))
+	userId := a.GetAuthenticatedUserId(ctx)
 	accounts, err := a.accountService.ListAccounts(ctx, userId)
 	if err != nil {
-		logger.Error("[AccountController] Error listing accounts: ", err)
+		logger.Errorf("Error listing accounts: %v", err)
 		a.HandleError(ctx, err)
 		return
 	}
-	logger.Infof("Accounts retrieved successfully for user: ", userId)
+	logger.Infof("Accounts retrieved successfully for user %d", userId)
 	a.SendSuccess(ctx, http.StatusOK, "Accounts retrieved successfully", accounts)
 }

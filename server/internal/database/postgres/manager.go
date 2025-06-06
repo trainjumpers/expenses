@@ -32,12 +32,12 @@ func NewDatabaseManager(cfg *config.Config) (*DatabaseManager, error) {
 	psqlSetup := fmt.Sprintf("postgresql://%s:%s@%s:%d/%s?sslmode=%s&search_path=%s",
 		user, pass, host, port, dbname, sslmode, cfg.DBSchema)
 
-	logger.Debug("Connecting to database")
+	logger.Debugf("Connecting to database")
 	pool, err := pgxpool.New(context.Background(), psqlSetup)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
-	logger.Debug("Database connected successfully")
+	logger.Debugf("Database connected successfully")
 
 	return &DatabaseManager{
 		pool: pool,
@@ -46,13 +46,13 @@ func NewDatabaseManager(cfg *config.Config) (*DatabaseManager, error) {
 
 func (dm *DatabaseManager) GetPool() *pgxpool.Pool {
 	if dm.pool == nil {
-		logger.Fatal("Database connection is not initialized")
+		logger.Fatalf("Database connection is not initialized")
 	}
 	return dm.pool
 }
 
 func (dm *DatabaseManager) Close() error {
 	dm.pool.Close()
-	logger.Debug("Database connection closed")
+	logger.Debugf("Database connection closed")
 	return nil
 }

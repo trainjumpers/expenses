@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"expenses/internal/config"
@@ -20,6 +21,28 @@ func decodeJSON(reader io.Reader) (map[string]interface{}, error) {
 	var response map[string]interface{}
 	err := json.NewDecoder(reader).Decode(&response)
 	return response, err
+}
+
+// Test structs for whitespace trimming validation
+type TestBasicStruct struct {
+	Name        string `json:"name" binding:"required"`
+	Email       string `json:"email" binding:"required,email"`
+	Description string `json:"description"`
+}
+
+type TestNestedStruct struct {
+	User    TestBasicStruct `json:"user" binding:"required"`
+	Company string          `json:"company" binding:"required"`
+}
+
+type TestPointerStruct struct {
+	Name        *string `json:"name" binding:"required"`
+	Description *string `json:"description"`
+}
+
+type TestSliceStruct struct {
+	Users []TestBasicStruct `json:"users" binding:"required"`
+	Tags  []string          `json:"tags"`
 }
 
 var _ = Describe("BaseController", func() {
@@ -201,6 +224,306 @@ var _ = Describe("BaseController", func() {
 			err := baseController.BindForm(ctx, &testStruct)
 			Expect(err).To(HaveOccurred())
 			Expect(recorder.Code).To(Equal(http.StatusBadRequest))
+		})
+	})
+
+	Describe("Whitespace Trimming Functionality", func() {
+		Context("trimStringFields method", func() {
+			It("should trim whitespace from basic string fields", func() {
+				testStruct := &TestBasicStruct{
+					Name:        "  John Doe  ",
+					Email:       " john@example.com ",
+					Description: "   Some description   ",
+				}
+
+				baseController.trimStringFields(testStruct)
+
+				Expect(testStruct.Name).To(Equal("John Doe"))
+				Expect(testStruct.Email).To(Equal("john@example.com"))
+				Expect(testStruct.Description).To(Equal("Some description"))
+			})
+
+			It("should trim whitespace from nested struct fields", func() {
+				testStruct := &TestNestedStruct{
+					User: TestBasicStruct{
+						Name:        "  Jane Doe  ",
+						Email:       " jane@example.com ",
+						Description: "   User description   ",
+					},
+					Company: "  ACME Corp  ",
+				}
+
+				baseController.trimStringFields(testStruct)
+
+				Expect(testStruct.User.Name).To(Equal("Jane Doe"))
+				Expect(testStruct.User.Email).To(Equal("jane@example.com"))
+				Expect(testStruct.User.Description).To(Equal("User description"))
+				Expect(testStruct.Company).To(Equal("ACME Corp"))
+			})
+
+			It("should trim whitespace from pointer string fields", func() {
+				name := "  John Pointer  "
+				description := "   Pointer description   "
+				testStruct := &TestPointerStruct{
+					Name:        &name,
+					Description: &description,
+				}
+
+				baseController.trimStringFields(testStruct)
+
+				Expect(*testStruct.Name).To(Equal("John Pointer"))
+				Expect(*testStruct.Description).To(Equal("Pointer description"))
+			})
+
+			It("should handle nil pointers without panicking", func() {
+				testStruct := &TestPointerStruct{
+					Name:        nil,
+					Description: nil,
+				}
+
+				Expect(func() {
+					baseController.trimStringFields(testStruct)
+				}).ToNot(Panic())
+
+				Expect(testStruct.Name).To(BeNil())
+				Expect(testStruct.Description).To(BeNil())
+			})
+
+			It("should trim whitespace from slice of structs", func() {
+				testStruct := &TestSliceStruct{
+					Users: []TestBasicStruct{
+						{
+							Name:        "  User One  ",
+							Email:       " user1@example.com ",
+							Description: "   First user   ",
+						},
+						{
+							Name:        "  User Two  ",
+							Email:       " user2@example.com ",
+							Description: "   Second user   ",
+						},
+					},
+					Tags: []string{"  tag1  ", " tag2 ", "   tag3   "},
+				}
+
+				baseController.trimStringFields(testStruct)
+
+				Expect(testStruct.Users[0].Name).To(Equal("User One"))
+				Expect(testStruct.Users[0].Email).To(Equal("user1@example.com"))
+				Expect(testStruct.Users[0].Description).To(Equal("First user"))
+
+				Expect(testStruct.Users[1].Name).To(Equal("User Two"))
+				Expect(testStruct.Users[1].Email).To(Equal("user2@example.com"))
+				Expect(testStruct.Users[1].Description).To(Equal("Second user"))
+
+				// Note: Direct string slices are not trimmed in current implementation
+				Expect(testStruct.Tags[0]).To(Equal("  tag1  "))
+			})
+
+			It("should handle empty and whitespace-only strings", func() {
+				testStruct := &TestBasicStruct{
+					Name:        "   ",
+					Email:       "",
+					Description: "  \t\n  ",
+				}
+
+				baseController.trimStringFields(testStruct)
+
+				Expect(testStruct.Name).To(Equal(""))
+				Expect(testStruct.Email).To(Equal(""))
+				Expect(testStruct.Description).To(Equal(""))
+			})
+
+			It("should handle edge case whitespace characters", func() {
+				testStruct := &TestBasicStruct{
+					Name:        "\t  John Doe  \n",
+					Email:       " \r john@example.com \t ",
+					Description: "\n   Some description \r\n   ",
+				}
+
+				baseController.trimStringFields(testStruct)
+
+				Expect(testStruct.Name).To(Equal("John Doe"))
+				Expect(testStruct.Email).To(Equal("john@example.com"))
+				Expect(testStruct.Description).To(Equal("Some description"))
+			})
+		})
+
+		Context("BindJSON with whitespace handling", func() {
+			var (
+				req *http.Request
+				w   *httptest.ResponseRecorder
+				ctx *gin.Context
+			)
+
+			BeforeEach(func() {
+				w = httptest.NewRecorder()
+				ctx, _ = gin.CreateTestContext(w)
+			})
+
+			It("should successfully bind and trim valid input", func() {
+				requestBody := map[string]interface{}{
+					"name":        "  John Doe  ",
+					"email":       "test@example.com",
+					"description": "   Some description   ",
+				}
+				jsonBody, _ := json.Marshal(requestBody)
+
+				req, _ = http.NewRequest("POST", "/test", bytes.NewBuffer(jsonBody))
+				req.Header.Set("Content-Type", "application/json")
+				ctx.Request = req
+
+				var testStruct TestBasicStruct
+				err := baseController.BindJSON(ctx, &testStruct)
+
+				Expect(err).ToNot(HaveOccurred())
+				Expect(testStruct.Name).To(Equal("John Doe"))
+				Expect(testStruct.Email).To(Equal("test@example.com"))
+				Expect(testStruct.Description).To(Equal("Some description"))
+			})
+
+			It("should fail validation when required field becomes empty after trimming", func() {
+				requestBody := map[string]interface{}{
+					"name":        "   ", // This will become empty after trimming
+					"email":       " john@example.com ",
+					"description": "   Some description   ",
+				}
+				jsonBody, _ := json.Marshal(requestBody)
+
+				req, _ = http.NewRequest("POST", "/test", bytes.NewBuffer(jsonBody))
+				req.Header.Set("Content-Type", "application/json")
+				ctx.Request = req
+
+				var testStruct TestBasicStruct
+				err := baseController.BindJSON(ctx, &testStruct)
+
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("Error:Field validation"))
+				Expect(w.Code).To(Equal(http.StatusBadRequest))
+			})
+
+			It("should fail validation when email becomes invalid after trimming", func() {
+				requestBody := map[string]interface{}{
+					"name":        "John Doe",
+					"email":       " invalid-email ", // Still invalid after trimming
+					"description": "Some description",
+				}
+				jsonBody, _ := json.Marshal(requestBody)
+
+				req, _ = http.NewRequest("POST", "/test", bytes.NewBuffer(jsonBody))
+				req.Header.Set("Content-Type", "application/json")
+				ctx.Request = req
+
+				var testStruct TestBasicStruct
+				err := baseController.BindJSON(ctx, &testStruct)
+
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("email"))
+				Expect(w.Code).To(Equal(http.StatusBadRequest))
+			})
+
+			It("should fail validation when email field becomes empty after trimming", func() {
+				requestBody := map[string]interface{}{
+					"name":        "John Doe",
+					"email":       "   ", // This will become empty after trimming, triggering email validation
+					"description": "Some description",
+				}
+				jsonBody, _ := json.Marshal(requestBody)
+
+				req, _ = http.NewRequest("POST", "/test", bytes.NewBuffer(jsonBody))
+				req.Header.Set("Content-Type", "application/json")
+				ctx.Request = req
+
+				var testStruct TestBasicStruct
+				err := baseController.BindJSON(ctx, &testStruct)
+
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("email"))
+				Expect(w.Code).To(Equal(http.StatusBadRequest))
+			})
+
+			It("should handle nested struct validation with whitespace", func() {
+				requestBody := map[string]interface{}{
+					"user": map[string]interface{}{
+						"name":        "   ", // Will become empty after trimming
+						"email":       " user@example.com ",
+						"description": "User description",
+					},
+					"company": "  ACME Corp  ",
+				}
+				jsonBody, _ := json.Marshal(requestBody)
+
+				req, _ = http.NewRequest("POST", "/test", bytes.NewBuffer(jsonBody))
+				req.Header.Set("Content-Type", "application/json")
+				ctx.Request = req
+
+				var testStruct TestNestedStruct
+				err := baseController.BindJSON(ctx, &testStruct)
+
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("Error:Field validation"))
+				Expect(w.Code).To(Equal(http.StatusBadRequest))
+			})
+
+			It("should handle nested struct email validation with whitespace", func() {
+				requestBody := map[string]interface{}{
+					"user": map[string]interface{}{
+						"name":        "John Doe",
+						"email":       "   ", // Will become empty after trimming, triggering email validation
+						"description": "User description",
+					},
+					"company": "  ACME Corp  ",
+				}
+				jsonBody, _ := json.Marshal(requestBody)
+
+				req, _ = http.NewRequest("POST", "/test", bytes.NewBuffer(jsonBody))
+				req.Header.Set("Content-Type", "application/json")
+				ctx.Request = req
+
+				var testStruct TestNestedStruct
+				err := baseController.BindJSON(ctx, &testStruct)
+
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("email"))
+				Expect(w.Code).To(Equal(http.StatusBadRequest))
+			})
+
+			It("should handle invalid JSON gracefully", func() {
+				req, _ = http.NewRequest("POST", "/test", bytes.NewBuffer([]byte("invalid json")))
+				req.Header.Set("Content-Type", "application/json")
+				ctx.Request = req
+
+				var testStruct TestBasicStruct
+				err := baseController.BindJSON(ctx, &testStruct)
+
+				Expect(err).To(HaveOccurred())
+				Expect(w.Code).To(Equal(http.StatusBadRequest))
+			})
+
+			It("should trim all string fields in complex nested structure", func() {
+				requestBody := map[string]interface{}{
+					"user": map[string]interface{}{
+						"name":        "  Jane Doe  ",
+						"email":       "jane@example.com",
+						"description": "   User description   ",
+					},
+					"company": "  ACME Corp  ",
+				}
+				jsonBody, _ := json.Marshal(requestBody)
+
+				req, _ = http.NewRequest("POST", "/test", bytes.NewBuffer(jsonBody))
+				req.Header.Set("Content-Type", "application/json")
+				ctx.Request = req
+
+				var testStruct TestNestedStruct
+				err := baseController.BindJSON(ctx, &testStruct)
+
+				Expect(err).ToNot(HaveOccurred())
+				Expect(testStruct.User.Name).To(Equal("Jane Doe"))
+				Expect(testStruct.User.Email).To(Equal("jane@example.com"))
+				Expect(testStruct.User.Description).To(Equal("User description"))
+				Expect(testStruct.Company).To(Equal("ACME Corp"))
+			})
 		})
 	})
 })

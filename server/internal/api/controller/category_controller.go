@@ -24,57 +24,57 @@ func NewCategoryController(cfg *config.Config, categoryService service.CategoryS
 }
 
 func (c *CategoryController) CreateCategory(ctx *gin.Context) {
-	logger.Info("Received request to create a new category for user: ", ctx.GetInt64("authUserId"))
+	logger.Infof("Creating new category for user %d", c.GetAuthenticatedUserId(ctx))
 	var input models.CreateCategoryInput
 	if err := c.BindJSON(ctx, &input); err != nil {
-		logger.Error("[CategoryController] Failed to bind JSON: ", err)
+		logger.Errorf("Failed to bind JSON: %v", err)
 		return
 	}
-	input.CreatedBy = ctx.GetInt64("authUserId")
+	input.CreatedBy = c.GetAuthenticatedUserId(ctx)
 	category, err := c.categoryService.CreateCategory(ctx, input)
 	if err != nil {
-		logger.Error("[CategoryController] Error creating category: ", err)
+		logger.Errorf("Error creating category: %v", err)
 		c.HandleError(ctx, err)
 		return
 	}
-	logger.Info("Successfully created category with ID: ", category.Id, " for user: ", input.CreatedBy)
+	logger.Infof("Category created successfully with ID %d for user %d", category.Id, input.CreatedBy)
 	c.SendSuccess(ctx, http.StatusCreated, "Category created successfully", category)
 }
 
 func (c *CategoryController) GetCategory(ctx *gin.Context) {
-	logger.Info("Received request to get category details for user: ", ctx.GetInt64("authUserId"))
+	logger.Infof("Fetching category details for user %d", c.GetAuthenticatedUserId(ctx))
 	categoryId, err := strconv.ParseInt(ctx.Param("categoryId"), 10, 64)
 	if err != nil {
 		c.SendError(ctx, http.StatusBadRequest, "invalid category id")
 		return
 	}
-	userId := ctx.GetInt64("authUserId")
+	userId := c.GetAuthenticatedUserId(ctx)
 	category, err := c.categoryService.GetCategoryById(ctx, categoryId, userId)
 	if err != nil {
-		logger.Error("[CategoryController] Error getting category: ", err)
+		logger.Errorf("Error getting category: %v", err)
 		c.HandleError(ctx, err)
 		return
 	}
-	logger.Infof("Successfully retrieved category with ID: ", category.Id, " for user: ", userId)
+	logger.Infof("Category retrieved successfully with ID %d for user %d", category.Id, userId)
 	c.SendSuccess(ctx, http.StatusOK, "Category retrieved successfully", category)
 }
 
 func (c *CategoryController) ListCategories(ctx *gin.Context) {
-	userId := ctx.GetInt64("authUserId")
-	logger.Info("Received request to list categories for user: ", userId)
+	userId := c.GetAuthenticatedUserId(ctx)
+	logger.Infof("Fetching categories for user %d", userId)
 	categories, err := c.categoryService.ListCategories(ctx, userId)
 	if err != nil {
-		logger.Error("[CategoryController] Error listing categories: ", err)
+		logger.Errorf("Error listing categories: %v", err)
 		c.HandleError(ctx, err)
 		return
 	}
-	logger.Infof("Successfully retrieved categories for user: ", userId)
+	logger.Infof("Categories retrieved successfully for user %d", userId)
 	c.SendSuccess(ctx, http.StatusOK, "Categories retrieved successfully", categories)
 }
 
 func (c *CategoryController) UpdateCategory(ctx *gin.Context) {
-	userId := ctx.GetInt64("authUserId")
-	logger.Infof("Received request to update category for user: ", userId)
+	userId := c.GetAuthenticatedUserId(ctx)
+	logger.Infof("Starting category update for user %d", userId)
 	categoryId, err := strconv.ParseInt(ctx.Param("categoryId"), 10, 64)
 	if err != nil {
 		c.SendError(ctx, http.StatusBadRequest, "invalid category id")
@@ -82,22 +82,22 @@ func (c *CategoryController) UpdateCategory(ctx *gin.Context) {
 	}
 	var input models.UpdateCategoryInput
 	if err := c.BindJSON(ctx, &input); err != nil {
-		logger.Error("[CategoryController] Failed to bind JSON: ", err)
+		logger.Errorf("Failed to bind JSON: %v", err)
 		return
 	}
 	category, err := c.categoryService.UpdateCategory(ctx, categoryId, userId, input)
 	if err != nil {
-		logger.Error("[CategoryController] Error updating category: ", err)
+		logger.Errorf("Error updating category: %v", err)
 		c.HandleError(ctx, err)
 		return
 	}
-	logger.Infof("Category updated successfully with ID: ", category.Id, " for user: ", userId)
+	logger.Infof("Category updated successfully with ID %d for user %d", category.Id, userId)
 	c.SendSuccess(ctx, http.StatusOK, "Category updated successfully", category)
 }
 
 func (c *CategoryController) DeleteCategory(ctx *gin.Context) {
-	userId := ctx.GetInt64("authUserId")
-	logger.Infof("Received request to delete category for user: ", userId)
+	userId := c.GetAuthenticatedUserId(ctx)
+	logger.Infof("Starting category deletion for user %d", userId)
 	categoryId, err := strconv.ParseInt(ctx.Param("categoryId"), 10, 64)
 	if err != nil {
 		c.SendError(ctx, http.StatusBadRequest, "invalid category id")
@@ -105,10 +105,10 @@ func (c *CategoryController) DeleteCategory(ctx *gin.Context) {
 	}
 	err = c.categoryService.DeleteCategory(ctx, categoryId, userId)
 	if err != nil {
-		logger.Error("[CategoryController] Error deleting category: ", err)
+		logger.Errorf("Error deleting category: %v", err)
 		c.HandleError(ctx, err)
 		return
 	}
-	logger.Infof("Successfully deleted category with ID: ", categoryId, " for user: ", userId)
+	logger.Infof("Category deleted successfully with ID %d for user %d", categoryId, userId)
 	c.SendSuccess(ctx, http.StatusNoContent, "", nil)
 }
