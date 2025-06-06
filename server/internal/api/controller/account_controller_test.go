@@ -265,6 +265,19 @@ var _ = Describe("AccountController", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(response["message"]).To(Equal("Invalid authorization format"))
 		})
+		It("should return empty list for user with no accounts", func() {
+			req, err := http.NewRequest(http.MethodGet, baseURL+"/account", nil)
+			Expect(err).NotTo(HaveOccurred())
+			req.Header.Set("Authorization", "Bearer "+accessToken2)
+			resp, err := client.Do(req)
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			response, err := decodeJSON(resp.Body)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(response["message"]).To(Equal("Accounts retrieved successfully"))
+			Expect(len(response["data"].([]interface{}))).To(Equal(0))
+		})
 	})
 
 	Describe("GetAccount", func() {

@@ -304,7 +304,7 @@ var _ = Describe("CategoryController", func() {
 			response, err := decodeJSON(resp.Body)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(response["message"]).To(Equal("Categories retrieved successfully"))
-			Expect(response["data"]).To(BeNil())
+			Expect(len(response["data"].([]interface{}))).To(Equal(0))
 		})
 
 		It("should return error for invalid authorization", func() {

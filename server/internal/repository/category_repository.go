@@ -87,7 +87,7 @@ func (r *CategoryRepository) GetCategoryById(c *gin.Context, categoryId int64, u
 func (r *CategoryRepository) ListCategories(c *gin.Context, userId int64) ([]models.CategoryResponse, error) {
 	logger.Debugf("Fetching categories for user %d", userId)
 
-	var categories []models.CategoryResponse
+	categories := make([]models.CategoryResponse, 0)
 	var category models.CategoryResponse
 	ptrs, dbFields, err := helper.GetDbFieldsFromObject(&category)
 	if err != nil {
