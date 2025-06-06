@@ -87,9 +87,11 @@ func (r *CategoryRepository) GetCategoryById(c *gin.Context, categoryId int64, u
 func (r *CategoryRepository) ListCategories(c *gin.Context, userId int64) ([]models.CategoryResponse, error) {
 	logger.Debugf("Fetching categories for user %d", userId)
 
-	_, dbFields, err := helper.GetDbFieldsFromObject(&models.CategoryResponse{})
+	var categories []models.CategoryResponse
+	var category models.CategoryResponse
+	ptrs, dbFields, err := helper.GetDbFieldsFromObject(&category)
 	if err != nil {
-		return nil, err
+		return categories, err
 	}
 
 	query := fmt.Sprintf(`SELECT %s FROM %s.%s WHERE created_by = $1 ORDER BY id DESC;`, strings.Join(dbFields, ", "), r.schema, r.tableName)
@@ -97,20 +99,14 @@ func (r *CategoryRepository) ListCategories(c *gin.Context, userId int64) ([]mod
 
 	rows, err := r.db.Query(c, query, userId)
 	if err != nil {
-		return nil, err
+		return categories, err
 	}
 	defer rows.Close()
 
-	var categories []models.CategoryResponse
 	for rows.Next() {
-		var category models.CategoryResponse
-		ptrs, _, err := helper.GetDbFieldsFromObject(&category)
+		err := rows.Scan(ptrs...)
 		if err != nil {
-			return nil, err
-		}
-		err = rows.Scan(ptrs...)
-		if err != nil {
-			return nil, err
+			return categories, err
 		}
 		categories = append(categories, category)
 	}
