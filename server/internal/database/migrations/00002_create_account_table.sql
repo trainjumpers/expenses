@@ -1,6 +1,5 @@
 -- +goose Up
--- SQL migration for creating the accounts table
-
+-- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS ${DB_SCHEMA}.account (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
@@ -18,7 +17,10 @@ CREATE TRIGGER update_account_modtime
 BEFORE UPDATE ON ${DB_SCHEMA}.account
 FOR EACH ROW
 EXECUTE FUNCTION update_modified_column();
+-- +goose StatementEnd
 
 -- +goose Down
+-- +goose StatementBegin
 DROP TRIGGER IF EXISTS update_account_modtime ON ${DB_SCHEMA}.account;
-DROP TABLE IF EXISTS ${DB_SCHEMA}.account; 
+DROP TABLE IF EXISTS ${DB_SCHEMA}.account;
+-- +goose StatementEnd

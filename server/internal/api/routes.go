@@ -17,6 +17,7 @@ func Init(
 	userService service.UserServiceInterface,
 	accountService service.AccountServiceInterface,
 	categoryService service.CategoryServiceInterface,
+	transactionService service.TransactionServiceInterface,
 ) *gin.Engine {
 	router := gin.New()
 	if cfg.Environment != "test" {
@@ -49,6 +50,7 @@ func Init(
 	userController := controller.NewUserController(cfg, userService, authService)
 	accountController := controller.NewAccountController(cfg, accountService)
 	categoryController := controller.NewCategoryController(cfg, categoryService)
+	transactionController := controller.NewTransactionController(cfg, transactionService)
 	api := router.Group("/api/v1")
 	{
 		base := api.Group("")
@@ -80,6 +82,14 @@ func Init(
 			category.GET("/:categoryId", categoryController.GetCategory)
 			category.PATCH("/:categoryId", categoryController.UpdateCategory)
 			category.DELETE("/:categoryId", categoryController.DeleteCategory)
+
+			// Transaction routes
+			transaction := base.Group("/transaction").Use(gin.HandlerFunc(middleware.Protected(cfg)))
+			transaction.GET("", transactionController.ListTransactions)
+			transaction.POST("", transactionController.CreateTransaction)
+			transaction.GET("/:transactionId", transactionController.GetTransaction)
+			transaction.PATCH("/:transactionId", transactionController.UpdateTransaction)
+			transaction.DELETE("/:transactionId", transactionController.DeleteTransaction)
 		}
 	}
 

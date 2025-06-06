@@ -20,7 +20,7 @@ type UserWithPassword struct {
 }
 
 type UpdateUserInput struct {
-	Name string `json:"name,omitempty"`
+	Name string `json:"name" binding:"omitempty"`
 }
 
 type LoginInput struct {

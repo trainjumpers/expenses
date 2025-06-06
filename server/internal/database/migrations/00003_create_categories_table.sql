@@ -1,6 +1,5 @@
 -- +goose Up
--- SQL in this section is executed when the migration is applied.
-
+-- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS ${DB_SCHEMA}.categories (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
@@ -18,8 +17,10 @@ CREATE TRIGGER update_categories_modtime
 BEFORE UPDATE ON ${DB_SCHEMA}.categories
 FOR EACH ROW
 EXECUTE FUNCTION update_modified_column();
+-- +goose StatementEnd
 
 -- +goose Down
--- SQL in this section is executed when the migration is rolled back.
+-- +goose StatementBegin
 DROP TRIGGER IF EXISTS update_categories_modtime ON ${DB_SCHEMA}.categories;
 DROP TABLE IF EXISTS ${DB_SCHEMA}.categories; 
+-- +goose StatementEnd
