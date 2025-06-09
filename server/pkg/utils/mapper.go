@@ -48,3 +48,17 @@ func IsZeroValue(v reflect.Value) bool {
 	}
 	return reflect.DeepEqual(v.Interface(), reflect.Zero(v.Type()).Interface())
 }
+
+func ConvertStruct(src interface{}, dst interface{}) {
+	srcVal := reflect.ValueOf(src).Elem()
+	dstVal := reflect.ValueOf(dst).Elem()
+	srcType := srcVal.Type()
+	dstType := dstVal.Type()
+	for i := 0; i < dstType.NumField(); i++ {
+		dstField := dstType.Field(i)
+		srcField, ok := srcType.FieldByName(dstField.Name)
+		if ok && srcField.Type == dstField.Type {
+			dstVal.Field(i).Set(srcVal.FieldByName(dstField.Name))
+		}
+	}
+}

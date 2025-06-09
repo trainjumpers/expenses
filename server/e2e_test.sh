@@ -23,4 +23,8 @@ echo "Running migrations into $DB_SCHEMA/$DB_NAME"
 just db-upgrade                              
 just db-seed
 
-ginkgo -r -race -cover -coverprofile=coverage.txt -covermode=atomic -coverpkg=./... ./...
+FOCUS_STRING=""
+if [[ $# -gt 0 ]]; then
+  FOCUS_STRING="$1"
+fi
+ginkgo -r -race -cover -coverprofile=coverage.txt -covermode=atomic -coverpkg=./... --focus "$FOCUS_STRING" ./...

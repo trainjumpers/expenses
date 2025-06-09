@@ -100,4 +100,86 @@ var _ = Describe("Mapper", func() {
 			Expect(IsZeroValue(reflect.ValueOf(nilInterface))).To(BeTrue())
 		})
 	})
+
+	Describe("ConvertStruct", func() {
+		type SrcStruct struct {
+			Name            string
+			Age             int
+			Address         string
+			unexportedField bool
+		}
+
+		type DstStruct struct {
+			Name    string
+			Age     int
+			Address string
+		}
+
+		type DstPartialStruct struct {
+			Name string
+			Age  int
+		}
+
+		type DstExtraStruct struct {
+			Name    string
+			Age     int
+			Address string
+			Extra   string
+		}
+
+		type DstWrongTypeStruct struct {
+			Name string
+			Age  string // Mismatched type
+		}
+
+		var src *SrcStruct
+
+		BeforeEach(func() {
+			src = &SrcStruct{
+				Name:            "John Doe",
+				Age:             30,
+				Address:         "123 Main St",
+				unexportedField: true,
+			}
+		})
+
+		Context("with identical structs", func() {
+			It("should copy all matching fields", func() {
+				dst := &DstStruct{}
+				ConvertStruct(src, dst)
+				Expect(dst.Name).To(Equal(src.Name))
+				Expect(dst.Age).To(Equal(src.Age))
+				Expect(dst.Address).To(Equal(src.Address))
+			})
+		})
+
+		Context("with destination struct having a subset of fields", func() {
+			It("should copy only the common fields", func() {
+				dst := &DstPartialStruct{}
+				ConvertStruct(src, dst)
+				Expect(dst.Name).To(Equal(src.Name))
+				Expect(dst.Age).To(Equal(src.Age))
+			})
+		})
+
+		Context("with destination struct having extra fields", func() {
+			It("should copy common fields and leave extra fields with their default values", func() {
+				dst := &DstExtraStruct{Extra: "initial"}
+				ConvertStruct(src, dst)
+				Expect(dst.Name).To(Equal(src.Name))
+				Expect(dst.Age).To(Equal(src.Age))
+				Expect(dst.Address).To(Equal(src.Address))
+				Expect(dst.Extra).To(Equal("initial"))
+			})
+		})
+
+		Context("with fields of different types", func() {
+			It("should not copy fields with mismatched types", func() {
+				dst := &DstWrongTypeStruct{Name: "old name", Age: "old age"}
+				ConvertStruct(src, dst)
+				Expect(dst.Name).To(Equal(src.Name))
+				Expect(dst.Age).To(Equal("old age"))
+			})
+		})
+	})
 })

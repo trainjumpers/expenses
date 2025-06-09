@@ -39,11 +39,14 @@ goose_migrate command:
 # Creates a new migration file with the specified name
 [working-directory: 'server']
 db-create file:
-  just goose create {{file}} sql
+  GOOSE_MIGRATION_DIR={{GOOSE_MIGRATION_DIR}} goose create "{{file}}" sql
 
 # Applies all pending migrations to upgrade the database schema
 db-upgrade:
   just goose_migrate "up"
+
+db-status:
+  just goose "status" {{GOOSE_MIGRATION_DIR}}
 
 # Applies seed data to the database
 db-seed:
