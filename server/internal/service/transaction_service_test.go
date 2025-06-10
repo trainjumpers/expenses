@@ -425,7 +425,7 @@ var _ = Describe("TransactionService", func() {
 			// Create category and account for different user
 			cat7, _ := categoryMockRepo.CreateCategory(ctx, models.CreateCategoryInput{Name: "User7Category", CreatedBy: 7})
 			acc7, _ := accountMockRepo.CreateAccount(ctx, models.CreateAccountInput{Name: "User7Account", BankType: "sbi", Currency: "inr", CreatedBy: 7})
-			
+
 			// Create a transaction for a different user with same details
 			amount := 300.0
 			userTwoInput := models.CreateTransactionInput{
