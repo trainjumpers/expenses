@@ -220,6 +220,62 @@ var _ = Describe("UserController", func() {
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 
+			It("should return not found when user doesn't exist", func() {
+				// Create a new user
+				userInput := models.CreateUserInput{
+					Email:    "userToUpdateNotExists@example.com",
+					Name:     "Test user for update not exists",
+					Password: "password123",
+				}
+
+				body, _ := json.Marshal(userInput)
+				req, err := http.NewRequest(http.MethodPost, baseURL+"/signup", bytes.NewBuffer(body))
+				Expect(err).NotTo(HaveOccurred())
+				req.Header.Set("Content-Type", "application/json")
+
+				resp, err := client.Do(req)
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+
+				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+				response, err := decodeJSON(resp.Body)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(response["data"]).To(HaveKey("access_token"))
+
+				tokenForDeletedUser := response["data"].(map[string]interface{})["access_token"].(string)
+
+				// Delete the user
+				req, err = http.NewRequest(http.MethodDelete, baseURL+"/user", nil)
+				Expect(err).NotTo(HaveOccurred())
+				req.Header.Set("Authorization", "Bearer "+tokenForDeletedUser)
+
+				resp, err = client.Do(req)
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+
+				Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
+
+				// Now try to update the deleted user - should get 404
+				updateInput := models.UpdateUserInput{
+					Name: "Updated Name",
+				}
+
+				body, _ = json.Marshal(updateInput)
+				req, err = http.NewRequest(http.MethodPatch, baseURL+"/user", bytes.NewBuffer(body))
+				Expect(err).NotTo(HaveOccurred())
+				req.Header.Set("Content-Type", "application/json")
+				req.Header.Set("Authorization", "Bearer "+tokenForDeletedUser)
+
+				resp, err = client.Do(req)
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+
+				Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
+				response, err = decodeJSON(resp.Body)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(response["message"]).To(Equal("user not found"))
+			})
+
 			It("should be unauthorized for invalid token", func() {
 				req, err := http.NewRequest(http.MethodPatch, baseURL+"/user", bytes.NewBuffer([]byte("{}")))
 				Expect(err).NotTo(HaveOccurred())
@@ -521,6 +577,63 @@ var _ = Describe("UserController", func() {
 
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
+
+			It("should return not found when user doesn't exist", func() {
+				// Create a new user
+				userInput := models.CreateUserInput{
+					Email:    "userToPasswordUpdateNotExists@example.com",
+					Name:     "Test user for password update not exists",
+					Password: "password123",
+				}
+
+				body, _ := json.Marshal(userInput)
+				req, err := http.NewRequest(http.MethodPost, baseURL+"/signup", bytes.NewBuffer(body))
+				Expect(err).NotTo(HaveOccurred())
+				req.Header.Set("Content-Type", "application/json")
+
+				resp, err := client.Do(req)
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+
+				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+				response, err := decodeJSON(resp.Body)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(response["data"]).To(HaveKey("access_token"))
+
+				tokenForDeletedUser := response["data"].(map[string]interface{})["access_token"].(string)
+
+				// Delete the user
+				req, err = http.NewRequest(http.MethodDelete, baseURL+"/user", nil)
+				Expect(err).NotTo(HaveOccurred())
+				req.Header.Set("Authorization", "Bearer "+tokenForDeletedUser)
+
+				resp, err = client.Do(req)
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+
+				Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
+
+				// Now try to update password for the deleted user - should get 404
+				updateInput := models.UpdateUserPasswordInput{
+					OldPassword: "password123",
+					NewPassword: "newpassword123",
+				}
+
+				body, _ = json.Marshal(updateInput)
+				req, err = http.NewRequest(http.MethodPost, baseURL+"/user/password", bytes.NewBuffer(body))
+				Expect(err).NotTo(HaveOccurred())
+				req.Header.Set("Content-Type", "application/json")
+				req.Header.Set("Authorization", "Bearer "+tokenForDeletedUser)
+
+				resp, err = client.Do(req)
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+
+				Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
+				response, err = decodeJSON(resp.Body)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(response["message"]).To(Equal("user not found"))
+			})
 		})
 	})
 
@@ -598,6 +711,55 @@ var _ = Describe("UserController", func() {
 				defer resp.Body.Close()
 
 				Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
+			})
+		})
+
+		Context("when user doesn't exist", func() {
+			It("should return not found when user doesn't exist", func() {
+				// Create a new user
+				userInput := models.CreateUserInput{
+					Email:    "userToDeleteNotExists@example.com",
+					Name:     "Test user for delete not exists",
+					Password: "password123",
+				}
+
+				body, _ := json.Marshal(userInput)
+				req, err := http.NewRequest(http.MethodPost, baseURL+"/signup", bytes.NewBuffer(body))
+				Expect(err).NotTo(HaveOccurred())
+				req.Header.Set("Content-Type", "application/json")
+
+				resp, err := client.Do(req)
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+
+				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+				response, err := decodeJSON(resp.Body)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(response["data"]).To(HaveKey("access_token"))
+
+				tokenForDeletedUser := response["data"].(map[string]interface{})["access_token"].(string)
+
+				// Delete the user first time
+				req, err = http.NewRequest(http.MethodDelete, baseURL+"/user", nil)
+				Expect(err).NotTo(HaveOccurred())
+				req.Header.Set("Authorization", "Bearer "+tokenForDeletedUser)
+
+				resp, err = client.Do(req)
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+
+				Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
+
+				// Now try to delete the already deleted user - should get 404
+				req, err = http.NewRequest(http.MethodDelete, baseURL+"/user", nil)
+				Expect(err).NotTo(HaveOccurred())
+				req.Header.Set("Authorization", "Bearer "+tokenForDeletedUser)
+
+				resp, err = client.Do(req)
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+
+				Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
 			})
 		})
 	})

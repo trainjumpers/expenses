@@ -181,5 +181,43 @@ var _ = Describe("Mapper", func() {
 				Expect(dst.Age).To(Equal("old age"))
 			})
 		})
+
+		Context("with nil or non-pointer inputs", func() {
+			It("should do nothing if src is nil", func() {
+				dst := &DstStruct{Name: "test"}
+				ConvertStruct(nil, dst)
+				Expect(dst.Name).To(Equal("test"))
+			})
+
+			It("should do nothing if dst is nil", func() {
+				src := &SrcStruct{Name: "test"}
+				Expect(func() { ConvertStruct(src, nil) }).ToNot(Panic())
+			})
+
+			It("should do nothing if src is a nil pointer", func() {
+				var nilSrc *SrcStruct
+				dst := &DstStruct{Name: "test"}
+				ConvertStruct(nilSrc, dst)
+				Expect(dst.Name).To(Equal("test"))
+			})
+
+			It("should do nothing if dst is a nil pointer", func() {
+				src := &SrcStruct{Name: "test"}
+				var nilDst *DstStruct
+				Expect(func() { ConvertStruct(src, nilDst) }).ToNot(Panic())
+			})
+
+			It("should do nothing for non-pointer src", func() {
+				dst := &DstStruct{Name: "test"}
+				ConvertStruct(*src, dst)
+				Expect(dst.Name).To(Equal("test"))
+			})
+
+			It("should do nothing for non-pointer dst", func() {
+				dst := DstStruct{Name: "test"}
+				ConvertStruct(src, dst)
+				Expect(dst.Name).To(Equal("test"))
+			})
+		})
 	})
 })

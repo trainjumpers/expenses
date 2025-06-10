@@ -50,8 +50,24 @@ func IsZeroValue(v reflect.Value) bool {
 }
 
 func ConvertStruct(src interface{}, dst interface{}) {
-	srcVal := reflect.ValueOf(src).Elem()
-	dstVal := reflect.ValueOf(dst).Elem()
+	if src == nil || dst == nil {
+		return
+	}
+	srcReflect := reflect.ValueOf(src)
+	if srcReflect.Kind() != reflect.Ptr || srcReflect.IsNil() {
+		return
+	}
+	dstReflect := reflect.ValueOf(dst)
+	if dstReflect.Kind() != reflect.Ptr || dstReflect.IsNil() {
+		return
+	}
+	srcVal := srcReflect.Elem()
+	dstVal := dstReflect.Elem()
+
+	if srcVal.Kind() != reflect.Struct || dstVal.Kind() != reflect.Struct {
+		return
+	}
+
 	srcType := srcVal.Type()
 	dstType := dstVal.Type()
 	for i := 0; i < dstType.NumField(); i++ {
