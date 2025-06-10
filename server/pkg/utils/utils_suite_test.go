@@ -23,7 +23,7 @@ type TestStruct struct {
 	unexported string
 }
 
-var _ = Describe("Mapper", func() {
+var _ = Describe("Utils", func() {
 	Describe("ExtractFields", func() {
 		Context("with invalid inputs", func() {
 			It("should return error for nil input", func() {
