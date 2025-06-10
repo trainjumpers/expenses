@@ -10,49 +10,69 @@ import (
 type MockTransactionRepository struct {
 	transactions map[int64]models.TransactionResponse
 	nextId       int64
+	categoryMap  map[int64][]int64
 }
 
 func NewMockTransactionRepository() *MockTransactionRepository {
 	return &MockTransactionRepository{
 		transactions: make(map[int64]models.TransactionResponse),
 		nextId:       1,
+		categoryMap:  make(map[int64][]int64),
 	}
 }
 
-func (m *MockTransactionRepository) CreateTransaction(c *gin.Context, input models.CreateTransactionInput) (models.TransactionResponse, error) {
+func (m *MockTransactionRepository) CreateTransaction(c *gin.Context, input models.CreateBaseTransactionInput, categoryIds []int64) (models.TransactionResponse, error) {
 	// Check for duplicate transaction based on composite uniqueness: created_by + date + name + description + amount
 	for _, tx := range m.transactions {
 		if tx.CreatedBy == input.CreatedBy &&
 			tx.Date.Format("2006-01-02") == input.Date.Format("2006-01-02") &&
 			tx.Name == input.Name &&
 			tx.Amount == *input.Amount {
-
-			// Handle description comparison (both NULL or both same value)
 			existingDesc := ""
 			if tx.Description != nil {
 				existingDesc = *tx.Description
 			}
 			inputDesc := input.Description
-
 			if existingDesc == inputDesc {
 				return models.TransactionResponse{}, customErrors.NewTransactionAlreadyExistsError(nil)
 			}
 		}
 	}
 
-	tx := models.TransactionResponse{
-		Id:        m.nextId,
-		Name:      input.Name,
-		Amount:    *input.Amount,
-		Date:      input.Date,
-		CreatedBy: input.CreatedBy,
-	}
-	if input.Description != "" {
-		tx.Description = &input.Description
-	}
-	m.transactions[m.nextId] = tx
+	// Create new transaction
+	newId := m.nextId
 	m.nextId++
+
+	baseTx := models.TransactionBaseResponse{
+		Id:          newId,
+		Name:        input.Name,
+		Description: &input.Description,
+		Amount:      *input.Amount,
+		Date:        input.Date,
+		CreatedBy:   input.CreatedBy,
+		AccountId:   input.AccountId,
+	}
+
+	tx := models.TransactionResponse{
+		TransactionBaseResponse: baseTx,
+		CategoryIds:             categoryIds,
+	}
+
+	m.transactions[newId] = tx
+	m.categoryMap[newId] = categoryIds
+
 	return tx, nil
+}
+
+func (m *MockTransactionRepository) UpdateCategoryMapping(c *gin.Context, transactionId int64, userId int64, categoryIds []int64) error {
+	tx, ok := m.transactions[transactionId]
+	if !ok || tx.CreatedBy != userId {
+		return customErrors.NewTransactionNotFoundError(nil)
+	}
+	m.categoryMap[transactionId] = categoryIds
+	tx.CategoryIds = categoryIds
+	m.transactions[transactionId] = tx
+	return nil
 }
 
 func (m *MockTransactionRepository) GetTransactionById(c *gin.Context, transactionId int64, userId int64) (models.TransactionResponse, error) {
@@ -63,10 +83,10 @@ func (m *MockTransactionRepository) GetTransactionById(c *gin.Context, transacti
 	return tx, nil
 }
 
-func (m *MockTransactionRepository) UpdateTransaction(c *gin.Context, transactionId int64, userId int64, input models.UpdateTransactionInput) (models.TransactionResponse, error) {
+func (m *MockTransactionRepository) UpdateTransaction(c *gin.Context, transactionId int64, userId int64, input models.UpdateBaseTransactionInput) error {
 	tx, ok := m.transactions[transactionId]
 	if !ok || tx.CreatedBy != userId {
-		return models.TransactionResponse{}, customErrors.NewTransactionNotFoundError(nil)
+		return customErrors.NewTransactionNotFoundError(nil)
 	}
 
 	// Create updated transaction for duplicate checking
@@ -82,6 +102,9 @@ func (m *MockTransactionRepository) UpdateTransaction(c *gin.Context, transactio
 	}
 	if !input.Date.IsZero() {
 		updatedTx.Date = input.Date
+	}
+	if input.AccountId != nil {
+		updatedTx.AccountId = *input.AccountId
 	}
 
 	// Check for conflicts with other transactions (excluding the current one)
@@ -103,7 +126,7 @@ func (m *MockTransactionRepository) UpdateTransaction(c *gin.Context, transactio
 			}
 
 			if existingDesc == updatedDesc {
-				return models.TransactionResponse{}, customErrors.NewTransactionAlreadyExistsError(nil)
+				return customErrors.NewTransactionAlreadyExistsError(nil)
 			}
 		}
 	}
@@ -121,8 +144,11 @@ func (m *MockTransactionRepository) UpdateTransaction(c *gin.Context, transactio
 	if !input.Date.IsZero() {
 		tx.Date = input.Date
 	}
+	if input.AccountId != nil {
+		tx.AccountId = *input.AccountId
+	}
 	m.transactions[transactionId] = tx
-	return tx, nil
+	return nil
 }
 
 func (m *MockTransactionRepository) DeleteTransaction(c *gin.Context, transactionId int64, userId int64) error {

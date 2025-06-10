@@ -13,8 +13,3 @@ func NewCategoryNotFoundError(err error) *AuthError {
 func NewCategoryAlreadyExistsError(err error) *AuthError {
 	return formatError(http.StatusConflict, "category with this name already exists for this user", err, "CategoryAlreadyExists")
 }
-
-// CategoryInvalidInputError returns an error for invalid category input
-func NewCategoryInvalidInputError(message string, err error) *AuthError {
-	return formatError(http.StatusBadRequest, message, err, "CategoryInvalidInput")
-}

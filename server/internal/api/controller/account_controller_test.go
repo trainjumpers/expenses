@@ -480,12 +480,35 @@ var _ = Describe("AccountController", func() {
 
 	Describe("DeleteAccount", func() {
 		It("should delete account by id", func() {
-			url := baseURL + "/account/1"
-			req, err := http.NewRequest(http.MethodDelete, url, nil)
+			// Create a new one
+			balance := 10.0
+			input := models.CreateAccountInput{
+				Name:     "Integration Account",
+				BankType: models.BankTypeAxis,
+				Currency: models.CurrencyINR,
+				Balance:  &balance,
+			}
+			body, _ := json.Marshal(input)
+			req, err := http.NewRequest(http.MethodPost, baseURL+"/account", bytes.NewBuffer(body))
 			Expect(err).NotTo(HaveOccurred())
 			req.Header.Set("Content-Type", "application/json")
 			req.Header.Set("Authorization", "Bearer "+accessToken)
+
 			resp, err := client.Do(req)
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+			response, err := decodeJSON(resp.Body)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(response["message"]).To(Equal("Account created successfully"))
+			accountId := response["data"].(map[string]interface{})["id"].(float64)
+
+			url := baseURL + "/account/" + strconv.FormatFloat(accountId, 'f', 0, 64)
+			req, err = http.NewRequest(http.MethodDelete, url, nil)
+			Expect(err).NotTo(HaveOccurred())
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Authorization", "Bearer "+accessToken)
+			resp, err = client.Do(req)
 			Expect(err).NotTo(HaveOccurred())
 			defer resp.Body.Close()
 			Expect(resp.StatusCode).To(Equal(http.StatusNoContent))

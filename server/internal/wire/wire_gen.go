@@ -36,7 +36,7 @@ func InitializeApplication() (*Provider, error) {
 	categoryRepository := repository.NewCategoryRepository(databaseManager, configConfig)
 	categoryServiceInterface := service.NewCategoryService(categoryRepository)
 	transactionRepository := repository.NewTransactionRepository(databaseManager, configConfig)
-	transactionServiceInterface := service.NewTransactionService(transactionRepository)
+	transactionServiceInterface := service.NewTransactionService(transactionRepository, categoryRepository, accountRepository)
 	engine := api.Init(configConfig, authServiceInterface, userServiceInterface, accountServiceInterface, categoryServiceInterface, transactionServiceInterface)
 	provider := NewProvider(engine, databaseManager)
 	return provider, nil

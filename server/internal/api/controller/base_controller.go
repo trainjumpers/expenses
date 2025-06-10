@@ -46,8 +46,10 @@ func (b *BaseController) HandleError(ctx *gin.Context, err error) {
 	response := gin.H{
 		"message": "Something went wrong",
 	}
+	unhandledErr := customErrors.New(err.Error())
 	if b.cfg.IsDev() || b.cfg.IsTest() {
-		response["error"] = err.Error()
+		response["error"] = unhandledErr.Err.Error()
+		response["stack"] = unhandledErr.Stack
 	}
 	ctx.JSON(http.StatusInternalServerError, response)
 }
