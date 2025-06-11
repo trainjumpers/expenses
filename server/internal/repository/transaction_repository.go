@@ -4,16 +4,14 @@ import (
 	"errors"
 	"expenses/internal/config"
 	"expenses/internal/database/helper"
-	database "expenses/internal/database/postgres"
+	database "expenses/internal/database/manager"
 	customErrors "expenses/internal/errors"
 	"expenses/internal/models"
-	"expenses/pkg/logger"
 	"fmt"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type TransactionRepositoryInterface interface {
@@ -26,15 +24,15 @@ type TransactionRepositoryInterface interface {
 }
 
 type TransactionRepository struct {
-	db                              *pgxpool.Pool
+	db                              database.DatabaseManager
 	schema                          string
 	tableName                       string
 	transactionCategoryMappingTable string
 }
 
-func NewTransactionRepository(db *database.DatabaseManager, cfg *config.Config) *TransactionRepository {
+func NewTransactionRepository(db database.DatabaseManager, cfg *config.Config) *TransactionRepository {
 	return &TransactionRepository{
-		db:                              db.GetPool(),
+		db:                              db,
 		schema:                          cfg.DBSchema,
 		tableName:                       "transaction",
 		transactionCategoryMappingTable: "transaction_category_mapping",
@@ -49,42 +47,37 @@ var baseTransactionQuery = `
 `
 
 func (r *TransactionRepository) CreateTransaction(c *gin.Context, transactionInput models.CreateBaseTransactionInput, categoryIds []int64) (models.TransactionResponse, error) {
-	logger.Debugf("Creating transaction for user %d", transactionInput.CreatedBy)
-
-	tx, err := r.db.Begin(c)
-	if err != nil {
-		return models.TransactionResponse{}, err
-	}
-	defer tx.Rollback(c)
-
+	var transactionResponse models.TransactionResponse
 	var transaction models.TransactionBaseResponse
-	query, values, ptrs, err := helper.CreateInsertQuery(&transactionInput, &transaction, r.tableName, r.schema)
-	if err != nil {
-		return models.TransactionResponse{}, err
-	}
-	logger.Debugf("Executing query to create transaction: %s", query)
-	err = tx.QueryRow(c, query, values...).Scan(ptrs...)
-	if err != nil {
-		if customErrors.CheckForeignKey(err, "idx_transaction_unique_composite") {
-			return models.TransactionResponse{}, customErrors.NewTransactionAlreadyExistsError(err)
+
+	err := r.db.WithTxn(c, func(tx pgx.Tx) error {
+		query, values, ptrs, err := helper.CreateInsertQuery(&transactionInput, &transaction, r.tableName, r.schema)
+		if err != nil {
+			return err
 		}
+		err = tx.QueryRow(c, query, values...).Scan(ptrs...)
+		if err != nil {
+			if customErrors.CheckForeignKey(err, "idx_transaction_unique_composite") {
+				return customErrors.NewTransactionAlreadyExistsError(err)
+			}
+			return err
+		}
+
+		if err := r.addMappings(c, tx, transaction.Id, categoryIds); err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	if err != nil {
 		return models.TransactionResponse{}, err
 	}
 
-	if err := r.addMappings(c, tx, transaction.Id, categoryIds); err != nil {
-		return models.TransactionResponse{}, err
-	}
-
-	if err := tx.Commit(c); err != nil {
-		return models.TransactionResponse{}, err
-	}
-
-	logger.Debugf("Transaction created successfully with ID %d", transaction.Id)
-	transactionResponse := models.TransactionResponse{
+	transactionResponse = models.TransactionResponse{
 		TransactionBaseResponse: transaction,
 		CategoryIds:             categoryIds,
 	}
-	logger.Debugf("Returning transaction response: %+v", transactionResponse)
 	return transactionResponse, nil
 }
 
@@ -108,12 +101,9 @@ func scanTransaction(row pgx.Row) (models.TransactionResponse, error) {
 }
 
 func (r *TransactionRepository) GetTransactionById(c *gin.Context, transactionId int64, userId int64) (models.TransactionResponse, error) {
-	logger.Debugf("Fetching transaction ID %d for user %d", transactionId, userId)
-
 	baseQuery := fmt.Sprintf(baseTransactionQuery, r.schema, r.tableName, r.schema, r.transactionCategoryMappingTable)
 	query := baseQuery + ` WHERE t.id = $1 AND t.created_by = $2 AND t.deleted_at IS NULL GROUP BY t.id`
-	logger.Debugf("Executing optimized query to get transaction by id: %s", query)
-	row := r.db.QueryRow(c, query, transactionId, userId)
+	row := r.db.FetchOne(c, query, transactionId, userId)
 	resp, err := scanTransaction(row)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -121,13 +111,10 @@ func (r *TransactionRepository) GetTransactionById(c *gin.Context, transactionId
 		}
 		return resp, err
 	}
-	logger.Debugf("Transaction retrieved successfully: %s", resp.Name)
 	return resp, nil
 }
 
 func (r *TransactionRepository) UpdateTransaction(c *gin.Context, transactionId int64, userId int64, transactionUpdate models.UpdateBaseTransactionInput) error {
-	logger.Debugf("Updating transaction ID %d for user %d", transactionId, userId)
-
 	fieldsClause, argValues, argIndex, err := helper.CreateUpdateParams(&transactionUpdate)
 	if err != nil {
 		return err
@@ -145,9 +132,8 @@ func (r *TransactionRepository) UpdateTransaction(c *gin.Context, transactionId 
 	RETURNING %s;`,
 		r.schema, r.tableName, fieldsClause, argIndex, argIndex+1, strings.Join(dbFields, ", "))
 
-	logger.Debugf("Executing query to update transaction: %s", query)
 	argValues = append(argValues, transactionId, userId)
-	err = r.db.QueryRow(c, query, argValues...).Scan(ptrs...)
+	err = r.db.FetchOne(c, query, argValues...).Scan(ptrs...)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return customErrors.NewTransactionNotFoundError(err)
@@ -158,36 +144,27 @@ func (r *TransactionRepository) UpdateTransaction(c *gin.Context, transactionId 
 		return err
 	}
 
-	logger.Debugf("Transaction updated successfully: %s", transaction.Name)
 	return nil
 }
 
 func (r *TransactionRepository) DeleteTransaction(c *gin.Context, transactionId int64, userId int64) error {
-	logger.Debugf("Deleting transaction ID %d for user %d", transactionId, userId)
-
 	query := fmt.Sprintf(`UPDATE %s.%s SET deleted_at = NOW() WHERE id = $1 AND created_by = $2 AND deleted_at IS NULL;`, r.schema, r.tableName)
-	logger.Debugf("Executing query to delete transaction: %s", query)
-	result, err := r.db.Exec(c, query, transactionId, userId)
+	rowsAffected, err := r.db.ExecuteQuery(c, query, transactionId, userId)
 	if err != nil {
 		return err
 	}
 
-	rowsAffected := result.RowsAffected()
 	if rowsAffected == 0 {
 		return customErrors.NewTransactionNotFoundError(fmt.Errorf("transaction with id %d not found", transactionId))
 	}
 
-	logger.Debugf("Transaction deleted successfully with ID %d", transactionId)
 	return nil
 }
 
 func (r *TransactionRepository) ListTransactions(c *gin.Context, userId int64) ([]models.TransactionResponse, error) {
-	logger.Debugf("Fetching transactions for user %d", userId)
-
 	baseQuery := fmt.Sprintf(baseTransactionQuery, r.schema, r.tableName, r.schema, r.transactionCategoryMappingTable)
 	query := baseQuery + ` WHERE t.created_by = $1 AND t.deleted_at IS NULL GROUP BY t.id ORDER BY t.date DESC`
-	logger.Debugf("Executing optimized query to list transactions: %s", query)
-	rows, err := r.db.Query(c, query, userId)
+	rows, err := r.db.FetchAll(c, query, userId)
 	if err != nil {
 		return nil, err
 	}
@@ -201,7 +178,6 @@ func (r *TransactionRepository) ListTransactions(c *gin.Context, userId int64) (
 		}
 		transactions = append(transactions, resp)
 	}
-	logger.Debugf("Found %d transactions for user %d", len(transactions), userId)
 	return transactions, nil
 }
 
@@ -237,18 +213,13 @@ func (r *TransactionRepository) updateMapping(c *gin.Context, tx pgx.Tx, mapping
 }
 
 func (r *TransactionRepository) UpdateCategoryMapping(c *gin.Context, transactionId int64, userId int64, categoryIds []int64) error {
-	logger.Debugf("Updating category mapping for transaction ID %d for user %d", transactionId, userId)
+	err := r.db.WithTxn(c, func(tx pgx.Tx) error {
+		return r.updateMapping(c, tx, r.transactionCategoryMappingTable, "transaction_id", "category_id", transactionId, categoryIds)
+	})
 
-	tx, err := r.db.Begin(c)
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback(c) // Rollback is a no-op if the transaction has been committed
 
-	err = r.updateMapping(c, tx, r.transactionCategoryMappingTable, "transaction_id", "category_id", transactionId, categoryIds)
-	if err != nil {
-		return err
-	}
-	logger.Debugf("Category mapping updated successfully for transaction ID %d", transactionId)
-	return tx.Commit(c)
+	return nil
 }

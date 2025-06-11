@@ -4,16 +4,14 @@ import (
 	"errors"
 	"expenses/internal/config"
 	"expenses/internal/database/helper"
-	database "expenses/internal/database/postgres"
+	database "expenses/internal/database/manager"
 	customErrors "expenses/internal/errors"
 	"expenses/internal/models"
-	"expenses/pkg/logger"
 	"fmt"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type AccountRepositoryInterface interface {
@@ -25,14 +23,14 @@ type AccountRepositoryInterface interface {
 }
 
 type AccountRepository struct {
-	db        *pgxpool.Pool
+	db        database.DatabaseManager
 	schema    string
 	tableName string
 }
 
-func NewAccountRepository(db *database.DatabaseManager, cfg *config.Config) *AccountRepository {
+func NewAccountRepository(db database.DatabaseManager, cfg *config.Config) *AccountRepository {
 	return &AccountRepository{
-		db:        db.GetPool(),
+		db:        db,
 		schema:    cfg.DBSchema,
 		tableName: "account",
 	}
@@ -44,8 +42,7 @@ func (r *AccountRepository) CreateAccount(c *gin.Context, input models.CreateAcc
 	if err != nil {
 		return account, err
 	}
-	logger.Debugf("Executing query to create account: %s", query)
-	err = r.db.QueryRow(c, query, values...).Scan(ptrs...)
+	err = r.db.FetchOne(c, query, values...).Scan(ptrs...)
 	if err != nil {
 		return account, err
 	}
@@ -64,8 +61,7 @@ func (r *AccountRepository) GetAccountById(c *gin.Context, accountId int64, user
 		FROM %s.%s
 		WHERE id = $1 AND created_by = $2`,
 		strings.Join(dbFields, ", "), r.schema, r.tableName)
-	logger.Debugf("Executing query to get account by ID: %s", query)
-	err = r.db.QueryRow(c, query, accountId, userId).Scan(ptrs...)
+	err = r.db.FetchOne(c, query, accountId, userId).Scan(ptrs...)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return account, customErrors.NewAccountNotFoundError(err)
@@ -86,9 +82,8 @@ func (r *AccountRepository) UpdateAccount(c *gin.Context, accountId int64, userI
 		return account, err
 	}
 	query := fmt.Sprintf(`UPDATE %s.%s SET %s WHERE id = $%d AND created_by = $%d RETURNING %s;`, r.schema, r.tableName, fieldsClause, argIndex, argIndex+1, strings.Join(dbFields, ", "))
-	logger.Debugf("Executing query to update account: %s", query)
 	argValues = append(argValues, accountId, userId)
-	err = r.db.QueryRow(c, query, argValues...).Scan(ptrs...)
+	err = r.db.FetchOne(c, query, argValues...).Scan(ptrs...)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return account, customErrors.NewAccountNotFoundError(err)
@@ -103,13 +98,12 @@ func (r *AccountRepository) DeleteAccount(c *gin.Context, accountId int64, userI
 		DELETE FROM %s.%s
 		WHERE id = $1 AND created_by = $2`,
 		r.schema, r.tableName)
-	logger.Debugf("Executing query to delete account: %s", query)
-	_, err := r.db.Exec(c, query, accountId, userId)
+	rowsAffected, err := r.db.ExecuteQuery(c, query, accountId, userId)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return customErrors.NewAccountNotFoundError(err)
-		}
 		return err
+	}
+	if rowsAffected == 0 {
+		return customErrors.NewAccountNotFoundError(errors.New("account not found or not owned by user"))
 	}
 	return nil
 }
@@ -127,8 +121,7 @@ func (r *AccountRepository) ListAccounts(c *gin.Context, userId int64) ([]models
 		WHERE created_by = $1
 		ORDER BY created_at DESC`,
 		strings.Join(dbFields, ", "), r.schema, r.tableName)
-	logger.Debugf("Executing query to list accounts: %s", query)
-	rows, err := r.db.Query(c, query, userId)
+	rows, err := r.db.FetchAll(c, query, userId)
 	if err != nil {
 		return accounts, err
 	}

@@ -12,17 +12,13 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// TransactionFunc is a function type for transaction operations
-type TransactionFunc func(tx pgx.Tx) error
-
-// LockFunc is a function type for lock operations with transaction
-type LockFunc func(tx pgx.Tx) error
-
-type DatabaseManager struct {
+// PostgresDatabaseManager implements the DatabaseManager interface for PostgreSQL
+type PostgresDatabaseManager struct {
 	pool *pgxpool.Pool
 }
 
-func NewDatabaseManager(cfg *config.Config) (*DatabaseManager, error) {
+// NewPostgresDatabaseManager creates a new PostgreSQL database manager
+func NewPostgresDatabaseManager(cfg *config.Config) (DatabaseManager, error) {
 	host := os.Getenv("DB_HOST")
 	port, err := strconv.Atoi(os.Getenv("DB_PORT"))
 	if err != nil {
@@ -46,14 +42,14 @@ func NewDatabaseManager(cfg *config.Config) (*DatabaseManager, error) {
 	}
 	logger.Debugf("Database connected successfully")
 
-	return &DatabaseManager{
+	return &PostgresDatabaseManager{
 		pool: pool,
 	}, nil
 }
 
 // ExecuteQuery executes a query that doesn't return rows (INSERT, UPDATE, DELETE)
 // Returns the number of rows affected and any error
-func (dm *DatabaseManager) ExecuteQuery(ctx context.Context, query string, args ...interface{}) (rowsAffected int64, err error) {
+func (dm *PostgresDatabaseManager) ExecuteQuery(ctx context.Context, query string, args ...interface{}) (rowsAffected int64, err error) {
 	logger.Debugf("Executing query: %s", query)
 
 	result, err := dm.pool.Exec(ctx, query, args...)
@@ -62,18 +58,19 @@ func (dm *DatabaseManager) ExecuteQuery(ctx context.Context, query string, args 
 		return 0, err
 	}
 
+	logger.Debugf("Query executed successfully, rows affected: %d", result.RowsAffected())
 	return result.RowsAffected(), nil
 }
 
 // FetchOne executes a query and returns a single row
 // Returns error if no rows found or multiple rows returned
-func (dm *DatabaseManager) FetchOne(ctx context.Context, query string, args ...interface{}) pgx.Row {
+func (dm *PostgresDatabaseManager) FetchOne(ctx context.Context, query string, args ...interface{}) pgx.Row {
 	logger.Debugf("Fetching single row: %s", query)
 	return dm.pool.QueryRow(ctx, query, args...)
 }
 
 // FetchAll executes a query and returns multiple rows
-func (dm *DatabaseManager) FetchAll(ctx context.Context, query string, args ...interface{}) (pgx.Rows, error) {
+func (dm *PostgresDatabaseManager) FetchAll(ctx context.Context, query string, args ...interface{}) (pgx.Rows, error) {
 	logger.Debugf("Fetching multiple rows: %s", query)
 
 	rows, err := dm.pool.Query(ctx, query, args...)
@@ -81,13 +78,12 @@ func (dm *DatabaseManager) FetchAll(ctx context.Context, query string, args ...i
 		logger.Errorf("Failed to fetch rows: %v", err)
 		return nil, err
 	}
-
 	return rows, nil
 }
 
 // WithTxn executes a function within a transaction
 // Automatically commits on success, rolls back on error
-func (dm *DatabaseManager) WithTxn(ctx context.Context, fn TransactionFunc) error {
+func (dm *PostgresDatabaseManager) WithTxn(ctx context.Context, fn TransactionFunc) error {
 	logger.Debugf("Starting transaction")
 
 	tx, err := dm.pool.Begin(ctx)
@@ -126,7 +122,7 @@ func (dm *DatabaseManager) WithTxn(ctx context.Context, fn TransactionFunc) erro
 
 // WithLock executes a function with a table lock within a transaction
 // Automatically starts transaction, commits on success, rolls back on error
-func (dm *DatabaseManager) WithLock(ctx context.Context, lockQuery string, fn LockFunc) error {
+func (dm *PostgresDatabaseManager) WithLock(ctx context.Context, lockQuery string, fn LockFunc) error {
 	logger.Debugf("Starting transaction with lock: %s", lockQuery)
 
 	return dm.WithTxn(ctx, func(tx pgx.Tx) error {
@@ -145,7 +141,7 @@ func (dm *DatabaseManager) WithLock(ctx context.Context, lockQuery string, fn Lo
 }
 
 // Close closes the database connection pool
-func (dm *DatabaseManager) Close() error {
+func (dm *PostgresDatabaseManager) Close() error {
 	dm.pool.Close()
 	logger.Debugf("Database connection closed")
 	return nil

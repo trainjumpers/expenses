@@ -10,7 +10,7 @@ import (
 	"expenses/internal/api"
 	"expenses/internal/api/controller"
 	"expenses/internal/config"
-	"expenses/internal/database/postgres"
+	"expenses/internal/database/manager"
 	"expenses/internal/repository"
 	"expenses/internal/service"
 	"github.com/gin-gonic/gin"
@@ -36,7 +36,7 @@ func InitializeApplication() (*Provider, error) {
 	categoryRepository := repository.NewCategoryRepository(databaseManager, configConfig)
 	categoryServiceInterface := service.NewCategoryService(categoryRepository)
 	transactionRepository := repository.NewTransactionRepository(databaseManager, configConfig)
-	transactionServiceInterface := service.NewTransactionService(transactionRepository, categoryRepository, accountRepository)
+	transactionServiceInterface := service.NewTransactionService(transactionRepository, categoryRepository, accountRepository, databaseManager)
 	engine := api.Init(configConfig, authServiceInterface, userServiceInterface, accountServiceInterface, categoryServiceInterface, transactionServiceInterface)
 	provider := NewProvider(engine, databaseManager)
 	return provider, nil
@@ -46,7 +46,7 @@ func InitializeApplication() (*Provider, error) {
 
 type Provider struct {
 	Handler   *gin.Engine
-	dbManager *database.DatabaseManager
+	dbManager database.DatabaseManager
 }
 
 // Close all connections app makes in various places
@@ -54,7 +54,7 @@ func (p *Provider) Close() error {
 	return p.dbManager.Close()
 }
 
-func NewProvider(handler *gin.Engine, dbManager *database.DatabaseManager) *Provider {
+func NewProvider(handler *gin.Engine, dbManager database.DatabaseManager) *Provider {
 	return &Provider{
 		Handler:   handler,
 		dbManager: dbManager,

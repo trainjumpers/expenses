@@ -715,7 +715,7 @@ var _ = Describe("UserController", func() {
 		})
 
 		Context("when user doesn't exist", func() {
-			It("should return no content when user doesn't exist", func() {
+			It("should return error when user doesn't exist", func() {
 				// Create a new user
 				userInput := models.CreateUserInput{
 					Email:    "userToDeleteNotExists@example.com",
@@ -759,7 +759,7 @@ var _ = Describe("UserController", func() {
 				Expect(err).NotTo(HaveOccurred())
 				defer resp.Body.Close()
 
-				Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
+				Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 			})
 		})
 	})

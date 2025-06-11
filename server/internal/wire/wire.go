@@ -7,7 +7,7 @@ import (
 	"expenses/internal/api"
 	"expenses/internal/api/controller"
 	"expenses/internal/config"
-	database "expenses/internal/database/postgres"
+	database "expenses/internal/database/manager"
 	"expenses/internal/repository"
 	"expenses/internal/service"
 
@@ -17,7 +17,7 @@ import (
 
 type Provider struct {
 	Handler   *gin.Engine
-	dbManager *database.DatabaseManager
+	dbManager database.DatabaseManager
 }
 
 // Close all connections app makes in various places
@@ -25,7 +25,7 @@ func (p *Provider) Close() error {
 	return p.dbManager.Close()
 }
 
-func NewProvider(handler *gin.Engine, dbManager *database.DatabaseManager) *Provider {
+func NewProvider(handler *gin.Engine, dbManager database.DatabaseManager) *Provider {
 	return &Provider{
 		Handler:   handler,
 		dbManager: dbManager,

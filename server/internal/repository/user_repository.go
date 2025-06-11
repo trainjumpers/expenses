@@ -4,16 +4,14 @@ import (
 	"errors"
 	"expenses/internal/config"
 	"expenses/internal/database/helper"
-	database "expenses/internal/database/postgres"
+	database "expenses/internal/database/manager"
 	commonErrors "expenses/internal/errors"
 	"expenses/internal/models"
-	"expenses/pkg/logger"
 	"fmt"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type UserRepositoryInterface interface {
@@ -27,14 +25,14 @@ type UserRepositoryInterface interface {
 }
 
 type UserRepository struct {
-	db        *pgxpool.Pool
+	db        database.DatabaseManager
 	schema    string
 	tableName string
 }
 
-func NewUserRepository(db *database.DatabaseManager, cfg *config.Config) *UserRepository {
+func NewUserRepository(db database.DatabaseManager, cfg *config.Config) *UserRepository {
 	return &UserRepository{
-		db:        db.GetPool(),
+		db:        db,
 		schema:    cfg.DBSchema,
 		tableName: "user",
 	}
@@ -51,8 +49,7 @@ func (u *UserRepository) CreateUser(c *gin.Context, newUser models.CreateUserInp
 	if err != nil {
 		return models.UserResponse{}, err
 	}
-	logger.Debugf("Executing query to create user: %s", query)
-	err = u.db.QueryRow(c, query, values...).Scan(ptrs...)
+	err = u.db.FetchOne(c, query, values...).Scan(ptrs...)
 	if err != nil {
 		return models.UserResponse{}, err
 	}
@@ -74,8 +71,7 @@ func (u *UserRepository) GetUserByEmailWithPassword(c *gin.Context, email string
 		SELECT %s FROM %s.%s 
 		WHERE email = $1 AND deleted_at IS NULL;`,
 		strings.Join(dbFields, ", "), u.schema, u.tableName)
-	logger.Debugf("Executing query to get user by email: %s", query)
-	err = u.db.QueryRow(c, query, email).Scan(ptrs...)
+	err = u.db.FetchOne(c, query, email).Scan(ptrs...)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return models.UserWithPassword{}, commonErrors.NewUserNotFoundError(err)
@@ -98,8 +94,7 @@ func (u *UserRepository) GetUserByIdWithPassword(c *gin.Context, userId int64) (
 	}
 	query := fmt.Sprintf(`
 		SELECT %s FROM %s.%s WHERE id = $1 AND deleted_at IS NULL;`, strings.Join(dbFields, ", "), u.schema, u.tableName)
-	logger.Debugf("Executing query to get user by ID: %s", query)
-	err = u.db.QueryRow(c, query, userId).Scan(ptrs...)
+	err = u.db.FetchOne(c, query, userId).Scan(ptrs...)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return models.UserWithPassword{}, commonErrors.NewUserNotFoundError(err)
@@ -125,8 +120,7 @@ func (u *UserRepository) GetUserById(c *gin.Context, userId int64) (models.UserR
 		FROM %s.%s 
 		WHERE id = $1 AND deleted_at IS NULL;`,
 		strings.Join(dbFields, ", "), u.schema, u.tableName)
-	logger.Debugf("Executing query to get user by ID: %s", query)
-	err = u.db.QueryRow(c, query, userId).Scan(ptrs...)
+	err = u.db.FetchOne(c, query, userId).Scan(ptrs...)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return models.UserResponse{}, commonErrors.NewUserNotFoundError(err)
@@ -147,14 +141,16 @@ func (u *UserRepository) DeleteUser(c *gin.Context, userId int64) error {
 	SET deleted_at = NOW() 
 	WHERE id = $1 AND deleted_at IS NULL;
 	`, u.schema, u.tableName)
-	logger.Debugf("Executing query to delete user: %s", query)
-	_, err := u.db.Exec(c, query, userId)
+
+	rowsAffected, err := u.db.ExecuteQuery(c, query, userId)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return commonErrors.NewUserNotFoundError(err)
-		}
 		return err
 	}
+
+	if rowsAffected == 0 {
+		return commonErrors.NewUserNotFoundError(errors.New("user not found or already deleted"))
+	}
+
 	return nil
 }
 
@@ -180,8 +176,7 @@ func (u *UserRepository) UpdateUser(c *gin.Context, userId int64, updatedUser mo
 		WHERE id = $%d AND deleted_at IS NULL %s;`,
 		u.schema, u.tableName, fieldsClause, argIndex, "RETURNING "+strings.Join(dbFields, ", "))
 
-	logger.Debugf("Executing query to update user: %s", query)
-	err = u.db.QueryRow(c, query, append(argValues, userId)...).Scan(ptrs...)
+	err = u.db.FetchOne(c, query, append(argValues, userId)...).Scan(ptrs...)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return models.UserResponse{}, commonErrors.NewUserNotFoundError(err)
@@ -205,8 +200,7 @@ func (u *UserRepository) UpdateUserPassword(c *gin.Context, userId int64, passwo
 	}
 	query := fmt.Sprintf(`
 		UPDATE %s.%s SET password = $1 WHERE id = $2 AND deleted_at IS NULL RETURNING %s;`, u.schema, u.tableName, strings.Join(dbFields, ", "))
-	logger.Debugf("Executing query to update user password: %s", query)
-	err = u.db.QueryRow(c, query, password, userId).Scan(ptrs...)
+	err = u.db.FetchOne(c, query, password, userId).Scan(ptrs...)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return models.UserResponse{}, commonErrors.NewUserNotFoundError(err)

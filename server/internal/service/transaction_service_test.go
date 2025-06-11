@@ -1,6 +1,7 @@
 package service
 
 import (
+	mockDatabase "expenses/internal/mock/database"
 	repository "expenses/internal/mock/repository"
 	"expenses/internal/models"
 	"time"
@@ -16,6 +17,7 @@ var _ = Describe("TransactionService", func() {
 		mockRepo           *repository.MockTransactionRepository
 		categoryMockRepo   *repository.MockCategoryRepository
 		accountMockRepo    *repository.MockAccountRepository
+		mockDB             *mockDatabase.MockDatabaseManager
 		ctx                *gin.Context
 		testDate           time.Time
 	)
@@ -25,7 +27,8 @@ var _ = Describe("TransactionService", func() {
 		mockRepo = repository.NewMockTransactionRepository()
 		categoryMockRepo = repository.NewMockCategoryRepository()
 		accountMockRepo = repository.NewMockAccountRepository()
-		transactionService = NewTransactionService(mockRepo, categoryMockRepo, accountMockRepo)
+		mockDB = mockDatabase.NewMockDatabaseManager()
+		transactionService = NewTransactionService(mockRepo, categoryMockRepo, accountMockRepo, mockDB)
 		testDate, _ = time.Parse("2006-01-02", "2023-01-01")
 	})
 
