@@ -122,12 +122,12 @@ func (dm *PostgresDatabaseManager) WithTxn(ctx context.Context, fn TransactionFu
 
 // WithLock executes a function with a table lock within a transaction
 // Automatically starts transaction, commits on success, rolls back on error
-func (dm *PostgresDatabaseManager) WithLock(ctx context.Context, lockQuery string, fn LockFunc) error {
-	logger.Debugf("Starting transaction with lock: %s", lockQuery)
+func (dm *PostgresDatabaseManager) WithLock(ctx context.Context, lockKey string, fn LockFunc) error {
+	logger.Debugf("Starting transaction with lock: %s", lockKey)
 
 	return dm.WithTxn(ctx, func(tx pgx.Tx) error {
 		// Acquire the lock
-		_, err := tx.Exec(ctx, lockQuery)
+		_, err := tx.Exec(ctx, "SELECT pg_advisory_xact_lock($1)", lockKey)
 		if err != nil {
 			logger.Errorf("Failed to acquire lock: %v", err)
 			return fmt.Errorf("failed to acquire lock: %w", err)
