@@ -162,6 +162,7 @@ func (r *TransactionRepository) DeleteTransaction(c *gin.Context, transactionId 
 }
 
 func (r *TransactionRepository) ListTransactions(c *gin.Context, userId int64) ([]models.TransactionResponse, error) {
+	transactions := make([]models.TransactionResponse, 0)
 	baseQuery := fmt.Sprintf(baseTransactionQuery, r.schema, r.tableName, r.schema, r.transactionCategoryMappingTable)
 	query := baseQuery + ` WHERE t.created_by = $1 AND t.deleted_at IS NULL GROUP BY t.id ORDER BY t.date DESC`
 	rows, err := r.db.FetchAll(c, query, userId)
@@ -170,7 +171,6 @@ func (r *TransactionRepository) ListTransactions(c *gin.Context, userId int64) (
 	}
 	defer rows.Close()
 
-	var transactions []models.TransactionResponse
 	for rows.Next() {
 		resp, err := scanTransaction(rows)
 		if err != nil {

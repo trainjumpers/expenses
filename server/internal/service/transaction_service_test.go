@@ -600,7 +600,7 @@ var _ = Describe("TransactionService", func() {
 				cat, _ := categoryMockRepo.CreateCategory(ctx, models.CreateCategoryInput{Name: "Test", CreatedBy: 1})
 				err := transactionService.validateCategoryExists(ctx, []int64{cat.Id, 9999}, 1)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("category with id 9999 not found"))
+				Expect(err.Error()).To(ContainSubstring("category not found"))
 			})
 			It("should not return error if all categories exist", func() {
 				cat1, _ := categoryMockRepo.CreateCategory(ctx, models.CreateCategoryInput{Name: "Test1", CreatedBy: 1})

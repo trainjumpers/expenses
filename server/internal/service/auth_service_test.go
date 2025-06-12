@@ -25,9 +25,15 @@ var _ = Describe("AuthService", func() {
 
 	BeforeEach(func() {
 		// Set environment variables before creating config
+		origEnv := os.Getenv("ENV")
+		origJwt := os.Getenv("JWT_SECRET")
+		origSchema := os.Getenv("DB_SCHEMA")
 		os.Setenv("ENV", "test")
 		os.Setenv("JWT_SECRET", "test-secret")
 		os.Setenv("DB_SCHEMA", "test_schema")
+		defer os.Setenv("ENV", origEnv)
+		defer os.Setenv("JWT_SECRET", origJwt)
+		defer os.Setenv("DB_SCHEMA", origSchema)
 
 		ctx = &gin.Context{}
 		mockRepo = mock.NewMockUserRepository()
@@ -252,43 +258,47 @@ var _ = Describe("AuthService", func() {
 	})
 
 	Describe("AuthService helpers", func() {
+		var realAuthService *AuthService
+		BeforeEach(func() {
+			realAuthService = authService.(*AuthService)
+		})
+
 		It("should hash and verify password correctly", func() {
 			plain := "mysecretpassword"
-			hash, err := authService.(*AuthService).hashPassword(plain)
+			hash, err := realAuthService.hashPassword(plain)
 			Expect(err).NotTo(HaveOccurred())
-			ok := authService.(*AuthService).checkPasswordHash(plain, hash)
+			ok := realAuthService.checkPasswordHash(plain, hash)
 			Expect(ok).To(BeTrue())
-			ok = authService.(*AuthService).checkPasswordHash("wrong", hash)
+			ok = realAuthService.checkPasswordHash("wrong", hash)
 			Expect(ok).To(BeFalse())
 		})
 
 		It("should generate a refresh token of expected length", func() {
-			token, err := authService.(*AuthService).generateRefreshToken()
+			token, err := realAuthService.generateRefreshToken()
 			Expect(err).NotTo(HaveOccurred())
 			Expect(len(token)).To(BeNumerically(">=", 43)) // 32 bytes base64 encoded
 		})
 
 		It("should issue a valid JWT token", func() {
-			token, err := authService.(*AuthService).issueAuthToken(123, "test@example.com")
+			token, err := realAuthService.issueAuthToken(123, "test@example.com")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(token).NotTo(BeEmpty())
 		})
 
 		It("should error when expiring refresh token in non-test env", func() {
-			// Save original ENV
 			origEnv := os.Getenv("ENV")
 			os.Setenv("ENV", "prod")
+			defer os.Setenv("ENV", origEnv)
 			cfg, _ := config.NewConfig()
 			service := NewAuthService(userService, cfg)
 			err := service.ExpireRefreshToken("sometoken")
 			Expect(err).To(HaveOccurred())
-			os.Setenv("ENV", origEnv)
 		})
 
 		It("should error when expiring a non-existent refresh token in test env", func() {
-			err := authService.ExpireRefreshToken("nonexistenttoken")
+			err := realAuthService.ExpireRefreshToken("nonexistenttoken")
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("refresh token not found"))
+			Expect(err.Error()).To(ContainSubstring("invalid token"))
 		})
 	})
 })

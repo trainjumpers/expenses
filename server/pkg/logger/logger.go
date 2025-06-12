@@ -12,7 +12,7 @@ import (
 var Info, Error, Debug, Warn, Fatal func(args ...interface{})
 var Infof, Errorf, Debugf, Warnf, Fatalf func(template string, args ...interface{})
 
-func getLoggingLevel() zap.AtomicLevel {
+func GetLoggingLevel() zap.AtomicLevel {
 	switch strings.ToLower(os.Getenv("LOGGING_LEVEL")) {
 	case "debug":
 		return zap.NewAtomicLevelAt(zap.DebugLevel)
@@ -40,7 +40,7 @@ func getLoggingLevel() zap.AtomicLevel {
 	}
 }
 
-func getSamplingConfig() *zap.SamplingConfig {
+func GetSamplingConfig() *zap.SamplingConfig {
 	if config.GetEnvironment() == config.EnvironmentProd {
 		return &zap.SamplingConfig{
 			Initial:    100,
@@ -51,8 +51,8 @@ func getSamplingConfig() *zap.SamplingConfig {
 }
 
 func init() {
-	level := getLoggingLevel()
-	sampling := getSamplingConfig()
+	level := GetLoggingLevel()
+	sampling := GetSamplingConfig()
 
 	logger, err := zap.Config{
 		Level:       level,
