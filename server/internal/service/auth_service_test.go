@@ -250,4 +250,45 @@ var _ = Describe("AuthService", func() {
 			Expect(err.(*apperrors.AuthError).ErrorType).To(Equal("UserNotFound"))
 		})
 	})
+
+	Describe("AuthService helpers", func() {
+		It("should hash and verify password correctly", func() {
+			plain := "mysecretpassword"
+			hash, err := authService.(*AuthService).hashPassword(plain)
+			Expect(err).NotTo(HaveOccurred())
+			ok := authService.(*AuthService).checkPasswordHash(plain, hash)
+			Expect(ok).To(BeTrue())
+			ok = authService.(*AuthService).checkPasswordHash("wrong", hash)
+			Expect(ok).To(BeFalse())
+		})
+
+		It("should generate a refresh token of expected length", func() {
+			token, err := authService.(*AuthService).generateRefreshToken()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(len(token)).To(BeNumerically(">=", 43)) // 32 bytes base64 encoded
+		})
+
+		It("should issue a valid JWT token", func() {
+			token, err := authService.(*AuthService).issueAuthToken(123, "test@example.com")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(token).NotTo(BeEmpty())
+		})
+
+		It("should error when expiring refresh token in non-test env", func() {
+			// Save original ENV
+			origEnv := os.Getenv("ENV")
+			os.Setenv("ENV", "prod")
+			cfg, _ := config.NewConfig()
+			service := NewAuthService(userService, cfg)
+			err := service.ExpireRefreshToken("sometoken")
+			Expect(err).To(HaveOccurred())
+			os.Setenv("ENV", origEnv)
+		})
+
+		It("should error when expiring a non-existent refresh token in test env", func() {
+			err := authService.ExpireRefreshToken("nonexistenttoken")
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("refresh token not found"))
+		})
+	})
 })
