@@ -1,8 +1,6 @@
 package controller_test
 
 import (
-	"bytes"
-	"encoding/json"
 	"expenses/internal/models"
 	"net/http"
 	"strconv"
@@ -36,18 +34,8 @@ var _ = Describe("TransactionController", func() {
 				Date:        testDate,
 				AccountId:   1,
 			}
-			body, _ := json.Marshal(input)
-			req, err := http.NewRequest(http.MethodPost, baseURL+"/transaction", bytes.NewBuffer(body))
-			Expect(err).NotTo(HaveOccurred())
-			req.Header.Set("Content-Type", "application/json")
-			req.Header.Set("Authorization", "Bearer "+accessToken)
-
-			resp, err := client.Do(req)
-			Expect(err).NotTo(HaveOccurred())
-			defer resp.Body.Close()
+			resp, response := testHelper.MakeRequest(http.MethodPost, "/transaction", accessToken, input)
 			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
-			response, err := decodeJSON(resp.Body)
-			Expect(err).NotTo(HaveOccurred())
 			Expect(response["message"]).To(Equal("Transaction created successfully"))
 			Expect(response["data"]).To(HaveKey("id"))
 		})
@@ -61,17 +49,8 @@ var _ = Describe("TransactionController", func() {
 				"category_ids": []int64{1, 2},
 				"account_id":   2,
 			}
-			body, _ := json.Marshal(input)
-			req, err := http.NewRequest(http.MethodPost, baseURL+"/transaction", bytes.NewBuffer(body))
-			Expect(err).NotTo(HaveOccurred())
-			req.Header.Set("Content-Type", "application/json")
-			req.Header.Set("Authorization", "Bearer "+accessToken)
-			resp, err := client.Do(req)
-			Expect(err).NotTo(HaveOccurred())
-			defer resp.Body.Close()
+			resp, response := testHelper.MakeRequest(http.MethodPost, "/transaction", accessToken, input)
 			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
-			response, err := decodeJSON(resp.Body)
-			Expect(err).NotTo(HaveOccurred())
 			Expect(response["message"]).To(Equal("Transaction created successfully"))
 			data := response["data"].(map[string]interface{})
 			Expect(data["category_ids"]).To(ContainElements(float64(1), float64(2)))
@@ -86,17 +65,8 @@ var _ = Describe("TransactionController", func() {
 				Date:      testDate,
 				AccountId: 1,
 			}
-			body, _ := json.Marshal(input)
-			req, err := http.NewRequest(http.MethodPost, baseURL+"/transaction", bytes.NewBuffer(body))
-			Expect(err).NotTo(HaveOccurred())
-			req.Header.Set("Content-Type", "application/json")
-			req.Header.Set("Authorization", "Bearer "+accessToken)
-			resp, err := client.Do(req)
-			Expect(err).NotTo(HaveOccurred())
-			defer resp.Body.Close()
+			resp, response := testHelper.MakeRequest(http.MethodPost, "/transaction", accessToken, input)
 			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
-			response, err := decodeJSON(resp.Body)
-			Expect(err).NotTo(HaveOccurred())
 			Expect(response["message"]).To(Equal("Transaction created successfully"))
 			Expect(response["data"]).To(HaveKey("id"))
 		})
@@ -110,17 +80,8 @@ var _ = Describe("TransactionController", func() {
 					Date:      testDate,
 					AccountId: 1,
 				}
-				body, _ := json.Marshal(input)
-				req, err := http.NewRequest(http.MethodPost, baseURL+"/transaction", bytes.NewBuffer(body))
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Content-Type", "application/json")
-				req.Header.Set("Authorization", "Bearer "+accessToken)
-				resp, err := client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
+				resp, response := testHelper.MakeRequest(http.MethodPost, "/transaction", accessToken, input)
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
-				response, err := decodeJSON(resp.Body)
-				Expect(err).NotTo(HaveOccurred())
 				Expect(response["message"]).To(ContainSubstring("Error:Field validation"))
 			})
 
@@ -131,17 +92,8 @@ var _ = Describe("TransactionController", func() {
 					Date:      testDate,
 					AccountId: 1,
 				}
-				body, _ := json.Marshal(input)
-				req, err := http.NewRequest(http.MethodPost, baseURL+"/transaction", bytes.NewBuffer(body))
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Content-Type", "application/json")
-				req.Header.Set("Authorization", "Bearer "+accessToken)
-				resp, err := client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
+				resp, response := testHelper.MakeRequest(http.MethodPost, "/transaction", accessToken, input)
 				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
-				response, err := decodeJSON(resp.Body)
-				Expect(err).NotTo(HaveOccurred())
 				Expect(response["message"]).To(Equal("Transaction created successfully"))
 				Expect(response["data"]).To(HaveKey("id"))
 			})
@@ -153,17 +105,8 @@ var _ = Describe("TransactionController", func() {
 					Date:      futureDate, // Invalid: future date
 					AccountId: 1,
 				}
-				body, _ := json.Marshal(input)
-				req, err := http.NewRequest(http.MethodPost, baseURL+"/transaction", bytes.NewBuffer(body))
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Content-Type", "application/json")
-				req.Header.Set("Authorization", "Bearer "+accessToken)
-				resp, err := client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
+				resp, response := testHelper.MakeRequest(http.MethodPost, "/transaction", accessToken, input)
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
-				response, err := decodeJSON(resp.Body)
-				Expect(err).NotTo(HaveOccurred())
 				Expect(response["message"]).To(Equal("transaction date cannot be in the future"))
 			})
 
@@ -179,17 +122,8 @@ var _ = Describe("TransactionController", func() {
 					Date:      testDate,
 					AccountId: 1,
 				}
-				body, _ := json.Marshal(input)
-				req, err := http.NewRequest(http.MethodPost, baseURL+"/transaction", bytes.NewBuffer(body))
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Content-Type", "application/json")
-				req.Header.Set("Authorization", "Bearer "+accessToken)
-				resp, err := client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
+				resp, response := testHelper.MakeRequest(http.MethodPost, "/transaction", accessToken, input)
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
-				response, err := decodeJSON(resp.Body)
-				Expect(err).NotTo(HaveOccurred())
 				Expect(response["message"]).To(ContainSubstring("Error:Field validation"))
 			})
 
@@ -206,17 +140,8 @@ var _ = Describe("TransactionController", func() {
 					Date:        testDate,
 					AccountId:   1,
 				}
-				body, _ := json.Marshal(input)
-				req, err := http.NewRequest(http.MethodPost, baseURL+"/transaction", bytes.NewBuffer(body))
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Content-Type", "application/json")
-				req.Header.Set("Authorization", "Bearer "+accessToken)
-				resp, err := client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
+				resp, response := testHelper.MakeRequest(http.MethodPost, "/transaction", accessToken, input)
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
-				response, err := decodeJSON(resp.Body)
-				Expect(err).NotTo(HaveOccurred())
 				Expect(response["message"]).To(ContainSubstring("Error:Field validation"))
 			})
 
@@ -228,17 +153,8 @@ var _ = Describe("TransactionController", func() {
 					Date:        testDate,
 					AccountId:   1,
 				}
-				body, _ := json.Marshal(input)
-				req, err := http.NewRequest(http.MethodPost, baseURL+"/transaction", bytes.NewBuffer(body))
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Content-Type", "application/json")
-				req.Header.Set("Authorization", "Bearer "+accessToken)
-				resp, err := client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
+				resp, response := testHelper.MakeRequest(http.MethodPost, "/transaction", accessToken, input)
 				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
-				response, err := decodeJSON(resp.Body)
-				Expect(err).NotTo(HaveOccurred())
 
 				// Check that the returned data has trimmed values
 				data := response["data"].(map[string]interface{})
@@ -255,17 +171,8 @@ var _ = Describe("TransactionController", func() {
 					"category_ids": []int64{9999},
 					"account_id":   2,
 				}
-				body, _ := json.Marshal(input)
-				req, err := http.NewRequest(http.MethodPost, baseURL+"/transaction", bytes.NewBuffer(body))
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Content-Type", "application/json")
-				req.Header.Set("Authorization", "Bearer "+accessToken)
-				resp, err := client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
+				resp, response := testHelper.MakeRequest(http.MethodPost, "/transaction", accessToken, input)
 				Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
-				response, err := decodeJSON(resp.Body)
-				Expect(err).NotTo(HaveOccurred())
 				Expect(response["message"]).To(ContainSubstring("category not found"))
 			})
 
@@ -277,17 +184,8 @@ var _ = Describe("TransactionController", func() {
 					"date":        testDate.Format(time.RFC3339),
 					"account_id":  9999,
 				}
-				body, _ := json.Marshal(input)
-				req, err := http.NewRequest(http.MethodPost, baseURL+"/transaction", bytes.NewBuffer(body))
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Content-Type", "application/json")
-				req.Header.Set("Authorization", "Bearer "+accessToken)
-				resp, err := client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
+				resp, response := testHelper.MakeRequest(http.MethodPost, "/transaction", accessToken, input)
 				Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
-				response, err := decodeJSON(resp.Body)
-				Expect(err).NotTo(HaveOccurred())
 				Expect(response["message"]).To(ContainSubstring("account not found"))
 			})
 
@@ -300,17 +198,8 @@ var _ = Describe("TransactionController", func() {
 					"category_ids": []int64{1, 2},
 					"account_id":   3,
 				}
-				body, _ := json.Marshal(input)
-				req, err := http.NewRequest(http.MethodPost, baseURL+"/transaction", bytes.NewBuffer(body))
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Content-Type", "application/json")
-				req.Header.Set("Authorization", "Bearer "+accessToken1)
-				resp, err := client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
+				resp, response := testHelper.MakeRequest(http.MethodPost, "/transaction", accessToken1, input)
 				Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
-				response, err := decodeJSON(resp.Body)
-				Expect(err).NotTo(HaveOccurred())
 				Expect(response["message"]).To(ContainSubstring("category not found"))
 			})
 		})
@@ -322,53 +211,28 @@ var _ = Describe("TransactionController", func() {
 				Date:      testDate,
 				AccountId: 1,
 			}
-			body, _ := json.Marshal(input)
-			req, err := http.NewRequest(http.MethodPost, baseURL+"/transaction", bytes.NewBuffer(body))
-			Expect(err).NotTo(HaveOccurred())
-			req.Header.Set("Content-Type", "application/json")
-			req.Header.Set("Authorization", "Bearer "+"invalid token")
-			resp, err := client.Do(req)
-			Expect(err).NotTo(HaveOccurred())
-			defer resp.Body.Close()
+			resp, _ := testHelper.MakeRequest(http.MethodPost, "/transaction", "invalid token", input)
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 		})
 
 		It("should return error for invalid JSON", func() {
-			req, err := http.NewRequest(http.MethodPost, baseURL+"/transaction", bytes.NewBuffer([]byte("{ name: invalid json }")))
-			Expect(err).NotTo(HaveOccurred())
-			req.Header.Set("Content-Type", "application/json")
-			req.Header.Set("Authorization", "Bearer "+accessToken)
-			resp, err := client.Do(req)
-			Expect(err).NotTo(HaveOccurred())
-			defer resp.Body.Close()
+			resp, _ := testHelper.MakeRequest(http.MethodPost, "/transaction", accessToken, "{ name: invalid json }")
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 		})
 
 		It("should return error for empty body", func() {
-			req, err := http.NewRequest(http.MethodPost, baseURL+"/transaction", bytes.NewBuffer([]byte("")))
-			Expect(err).NotTo(HaveOccurred())
-			req.Header.Set("Content-Type", "application/json")
-			req.Header.Set("Authorization", "Bearer "+accessToken)
-			resp, err := client.Do(req)
-			Expect(err).NotTo(HaveOccurred())
-			defer resp.Body.Close()
+			resp, _ := testHelper.MakeRequest(http.MethodPost, "/transaction", accessToken, "")
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 		})
 
 		It("should handle string amount gracefully", func() {
-			requestBody := []byte(`{
+			requestBody := `{
 				"name": "Test Transaction",
 				"amount": "invalid_string",
 				"date": "2023-01-01T00:00:00Z",
 				"account_id": 1
-			}`)
-			req, err := http.NewRequest(http.MethodPost, baseURL+"/transaction", bytes.NewBuffer(requestBody))
-			Expect(err).NotTo(HaveOccurred())
-			req.Header.Set("Content-Type", "application/json")
-			req.Header.Set("Authorization", "Bearer "+accessToken)
-			resp, err := client.Do(req)
-			Expect(err).NotTo(HaveOccurred())
-			defer resp.Body.Close()
+			}`
+			resp, _ := testHelper.MakeRequest(http.MethodPost, "/transaction", accessToken, requestBody)
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 		})
 
@@ -380,29 +244,12 @@ var _ = Describe("TransactionController", func() {
 				Date:      testDate,
 				AccountId: 1,
 			}
-			body, _ := json.Marshal(input)
-			req, err := http.NewRequest(http.MethodPost, baseURL+"/transaction", bytes.NewBuffer(body))
-			Expect(err).NotTo(HaveOccurred())
-			req.Header.Set("Content-Type", "application/json")
-			req.Header.Set("Authorization", "Bearer "+accessToken)
-
-			resp, err := client.Do(req)
-			Expect(err).NotTo(HaveOccurred())
-			defer resp.Body.Close()
+			resp, response := testHelper.MakeRequest(http.MethodPost, "/transaction", accessToken, input)
 			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
-			response, err := decodeJSON(resp.Body)
-			Expect(err).NotTo(HaveOccurred())
 			Expect(response["message"]).To(Equal("Transaction created successfully"))
 			Expect(response["data"]).To(HaveKey("id"))
 
-			req, err = http.NewRequest(http.MethodPost, baseURL+"/transaction", bytes.NewBuffer(body))
-			Expect(err).NotTo(HaveOccurred())
-			req.Header.Set("Content-Type", "application/json")
-			req.Header.Set("Authorization", "Bearer "+accessToken)
-
-			resp, err = client.Do(req)
-			Expect(err).NotTo(HaveOccurred())
-			defer resp.Body.Close()
+			resp, _ = testHelper.MakeRequest(http.MethodPost, "/transaction", accessToken, input)
 			Expect(resp.StatusCode).To(Equal(http.StatusConflict))
 		})
 
@@ -416,14 +263,7 @@ var _ = Describe("TransactionController", func() {
 				"category_ids": []int64{99999}, // Invalid category ID
 				"account_id":   2,
 			}
-			body, _ := json.Marshal(input)
-			req, err := http.NewRequest(http.MethodPost, baseURL+"/transaction", bytes.NewBuffer(body))
-			Expect(err).NotTo(HaveOccurred())
-			req.Header.Set("Content-Type", "application/json")
-			req.Header.Set("Authorization", "Bearer "+accessToken)
-			resp, err := client.Do(req)
-			Expect(err).NotTo(HaveOccurred())
-			defer resp.Body.Close()
+			resp, _ := testHelper.MakeRequest(http.MethodPost, "/transaction", accessToken, input)
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 		})
 
@@ -437,14 +277,7 @@ var _ = Describe("TransactionController", func() {
 				"category_ids": []int64{1},
 				"account_id":   99999, // Invalid account ID
 			}
-			body, _ := json.Marshal(input)
-			req, err := http.NewRequest(http.MethodPost, baseURL+"/transaction", bytes.NewBuffer(body))
-			Expect(err).NotTo(HaveOccurred())
-			req.Header.Set("Content-Type", "application/json")
-			req.Header.Set("Authorization", "Bearer "+accessToken)
-			resp, err := client.Do(req)
-			Expect(err).NotTo(HaveOccurred())
-			defer resp.Body.Close()
+			resp, _ := testHelper.MakeRequest(http.MethodPost, "/transaction", accessToken, input)
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 		})
 
@@ -454,17 +287,8 @@ var _ = Describe("TransactionController", func() {
 				"name": "Other User Category for Create",
 				"icon": "other-icon-create",
 			}
-			catBody, _ := json.Marshal(catInput)
-			catReq, err := http.NewRequest(http.MethodPost, baseURL+"/category", bytes.NewBuffer(catBody))
-			Expect(err).NotTo(HaveOccurred())
-			catReq.Header.Set("Content-Type", "application/json")
-			catReq.Header.Set("Authorization", "Bearer "+accessToken1)
-			catResp, err := client.Do(catReq)
-			Expect(err).NotTo(HaveOccurred())
-			defer catResp.Body.Close()
+			catResp, catResponse := testHelper.MakeRequest(http.MethodPost, "/category", accessToken1, catInput)
 			Expect(catResp.StatusCode).To(Equal(http.StatusCreated))
-			catResponse, err := decodeJSON(catResp.Body)
-			Expect(err).NotTo(HaveOccurred())
 			otherCategoryId := int64(catResponse["data"].(map[string]interface{})["id"].(float64))
 
 			amount := 200.00
@@ -476,14 +300,7 @@ var _ = Describe("TransactionController", func() {
 				"category_ids": []int64{otherCategoryId},
 				"account_id":   2,
 			}
-			body, _ := json.Marshal(input)
-			req, err := http.NewRequest(http.MethodPost, baseURL+"/transaction", bytes.NewBuffer(body))
-			Expect(err).NotTo(HaveOccurred())
-			req.Header.Set("Content-Type", "application/json")
-			req.Header.Set("Authorization", "Bearer "+accessToken)
-			resp, err := client.Do(req)
-			Expect(err).NotTo(HaveOccurred())
-			defer resp.Body.Close()
+			resp, _ := testHelper.MakeRequest(http.MethodPost, "/transaction", accessToken, input)
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 		})
 
@@ -495,17 +312,8 @@ var _ = Describe("TransactionController", func() {
 				"currency":  "inr",
 				"balance":   10.0,
 			}
-			accBody, _ := json.Marshal(accInput)
-			accReq, err := http.NewRequest(http.MethodPost, baseURL+"/account", bytes.NewBuffer(accBody))
-			Expect(err).NotTo(HaveOccurred())
-			accReq.Header.Set("Content-Type", "application/json")
-			accReq.Header.Set("Authorization", "Bearer "+accessToken1)
-			accResp, err := client.Do(accReq)
-			Expect(err).NotTo(HaveOccurred())
-			defer accResp.Body.Close()
+			accResp, accResponse := testHelper.MakeRequest(http.MethodPost, "/account", accessToken1, accInput)
 			Expect(accResp.StatusCode).To(Equal(http.StatusCreated))
-			accResponse, err := decodeJSON(accResp.Body)
-			Expect(err).NotTo(HaveOccurred())
 			otherAccountId := int64(accResponse["data"].(map[string]interface{})["id"].(float64))
 
 			amount := 200.00
@@ -516,60 +324,30 @@ var _ = Describe("TransactionController", func() {
 				"date":        testDate.Format(time.RFC3339),
 				"account_id":  otherAccountId,
 			}
-			body, _ := json.Marshal(input)
-			req, err := http.NewRequest(http.MethodPost, baseURL+"/transaction", bytes.NewBuffer(body))
-			Expect(err).NotTo(HaveOccurred())
-			req.Header.Set("Content-Type", "application/json")
-			req.Header.Set("Authorization", "Bearer "+accessToken)
-			resp, err := client.Do(req)
-			Expect(err).NotTo(HaveOccurred())
-			defer resp.Body.Close()
+			resp, _ := testHelper.MakeRequest(http.MethodPost, "/transaction", accessToken, input)
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 		})
 	})
 
 	Describe("ListTransactions", func() {
 		It("should list transactions", func() {
-			req, err := http.NewRequest(http.MethodGet, baseURL+"/transaction", nil)
-			Expect(err).NotTo(HaveOccurred())
-			req.Header.Set("Authorization", "Bearer "+accessToken)
-
-			resp, err := client.Do(req)
-			Expect(err).NotTo(HaveOccurred())
-			defer resp.Body.Close()
+			resp, response := testHelper.MakeRequest(http.MethodGet, "/transaction", accessToken, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
-			response, err := decodeJSON(resp.Body)
-			Expect(err).NotTo(HaveOccurred())
 			Expect(response["message"]).To(Equal("Transactions retrieved successfully"))
 			Expect(response["data"]).To(BeAssignableToTypeOf([]interface{}{}))
-
 			transactions := response["data"].([]interface{})
 			Expect(len(transactions)).To(BeNumerically(">=", 6))
 		})
 
 		It("should return error for non-existent user id", func() {
-			req, err := http.NewRequest(http.MethodGet, baseURL+"/transaction", nil)
-			Expect(err).NotTo(HaveOccurred())
-			req.Header.Set("Authorization", "Bearer "+"invalid token")
-			resp, err := client.Do(req)
-			Expect(err).NotTo(HaveOccurred())
-			defer resp.Body.Close()
+			resp, response := testHelper.MakeRequest(http.MethodGet, "/transaction", "invalid token", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
-			response, err := decodeJSON(resp.Body)
-			Expect(err).NotTo(HaveOccurred())
 			Expect(response["message"]).To(Equal("Invalid authorization format"))
 		})
 
 		It("should list empty list for user without transaction", func() {
-			req, err := http.NewRequest(http.MethodGet, baseURL+"/transaction", nil)
-			Expect(err).NotTo(HaveOccurred())
-			req.Header.Set("Authorization", "Bearer "+accessToken2)
-			resp, err := client.Do(req)
-			Expect(err).NotTo(HaveOccurred())
-			defer resp.Body.Close()
+			resp, response := testHelper.MakeRequest(http.MethodGet, "/transaction", accessToken2, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
-			response, err := decodeJSON(resp.Body)
-			Expect(err).NotTo(HaveOccurred())
 			Expect(response["message"]).To(Equal("Transactions retrieved successfully"))
 			Expect(response["data"]).To(BeEmpty())
 		})
@@ -577,60 +355,32 @@ var _ = Describe("TransactionController", func() {
 
 	Describe("GetTransaction", func() {
 		It("should get transaction by id using seed data", func() {
-			url := baseURL + "/transaction/1"
-			req, err := http.NewRequest(http.MethodGet, url, nil)
-			Expect(err).NotTo(HaveOccurred())
-			req.Header.Set("Authorization", "Bearer "+accessToken)
-			resp, err := client.Do(req)
-			Expect(err).NotTo(HaveOccurred())
-			defer resp.Body.Close()
+			url := "/transaction/1"
+			resp, response := testHelper.MakeRequest(http.MethodGet, url, accessToken, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
-			response, err := decodeJSON(resp.Body)
-			Expect(err).NotTo(HaveOccurred())
 			Expect(response["message"]).To(Equal("Transaction retrieved successfully"))
 			Expect(response["data"]).To(HaveKey("id"))
 			Expect(response["data"].(map[string]interface{})["name"]).To(Equal("Integration Transaction"))
 		})
 
 		It("should return error for invalid transaction id format", func() {
-			url := baseURL + "/transaction/invalid_id"
-			req, err := http.NewRequest(http.MethodGet, url, nil)
-			Expect(err).NotTo(HaveOccurred())
-			req.Header.Set("Authorization", "Bearer "+accessToken)
-			resp, err := client.Do(req)
-			Expect(err).NotTo(HaveOccurred())
-			defer resp.Body.Close()
+			url := "/transaction/invalid_id"
+			resp, response := testHelper.MakeRequest(http.MethodGet, url, accessToken, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
-			response, err := decodeJSON(resp.Body)
-			Expect(err).NotTo(HaveOccurred())
 			Expect(response["message"]).To(Equal("invalid transaction id"))
 		})
 
 		It("should return error for non-existent transaction id", func() {
-			url := baseURL + "/transaction/9999"
-			req, err := http.NewRequest(http.MethodGet, url, nil)
-			Expect(err).NotTo(HaveOccurred())
-			req.Header.Set("Authorization", "Bearer "+accessToken)
-			resp, err := client.Do(req)
-			Expect(err).NotTo(HaveOccurred())
-			defer resp.Body.Close()
+			url := "/transaction/9999"
+			resp, response := testHelper.MakeRequest(http.MethodGet, url, accessToken, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
-			response, err := decodeJSON(resp.Body)
-			Expect(err).NotTo(HaveOccurred())
 			Expect(response["message"]).To(Equal("transaction not found"))
 		})
 
 		It("should return error when trying to access another user's transaction", func() {
-			url := baseURL + "/transaction/5"
-			req, err := http.NewRequest(http.MethodGet, url, nil)
-			Expect(err).NotTo(HaveOccurred())
-			req.Header.Set("Authorization", "Bearer "+accessToken)
-			resp, err := client.Do(req)
-			Expect(err).NotTo(HaveOccurred())
-			defer resp.Body.Close()
+			url := "/transaction/5"
+			resp, response := testHelper.MakeRequest(http.MethodGet, url, accessToken, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
-			response, err := decodeJSON(resp.Body)
-			Expect(err).NotTo(HaveOccurred())
 			Expect(response["message"]).To(Equal("transaction not found"))
 		})
 	})
@@ -639,36 +389,18 @@ var _ = Describe("TransactionController", func() {
 		Context("Input Validation", func() {
 			It("should return validation error for future date in update", func() {
 				update := models.UpdateBaseTransactionInput{Date: futureDate}
-				body, _ := json.Marshal(update)
-				url := baseURL + "/transaction/3"
-				req, err := http.NewRequest(http.MethodPatch, url, bytes.NewBuffer(body))
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Content-Type", "application/json")
-				req.Header.Set("Authorization", "Bearer "+accessToken)
-				resp, err := client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
+				url := "/transaction/3"
+				resp, response := testHelper.MakeRequest(http.MethodPatch, url, accessToken, update)
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
-				response, err := decodeJSON(resp.Body)
-				Expect(err).NotTo(HaveOccurred())
 				Expect(response["message"]).To(Equal("transaction date cannot be in the future"))
 			})
 		})
 
 		It("should update transaction name using seed data", func() {
 			update := models.UpdateBaseTransactionInput{Name: "Updated Transaction Name"}
-			body, _ := json.Marshal(update)
-			url := baseURL + "/transaction/3"
-			req, err := http.NewRequest(http.MethodPatch, url, bytes.NewBuffer(body))
-			Expect(err).NotTo(HaveOccurred())
-			req.Header.Set("Content-Type", "application/json")
-			req.Header.Set("Authorization", "Bearer "+accessToken)
-			resp, err := client.Do(req)
-			Expect(err).NotTo(HaveOccurred())
-			defer resp.Body.Close()
+			url := "/transaction/3"
+			resp, response := testHelper.MakeRequest(http.MethodPatch, url, accessToken, update)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
-			response, err := decodeJSON(resp.Body)
-			Expect(err).NotTo(HaveOccurred())
 			Expect(response["message"]).To(Equal("Transaction updated successfully"))
 			Expect(response["data"].(map[string]interface{})["name"]).To(Equal("Updated Transaction Name"))
 		})
@@ -676,88 +408,44 @@ var _ = Describe("TransactionController", func() {
 		It("should update transaction amount using seed data", func() {
 			amount := 350.99
 			update := models.UpdateBaseTransactionInput{Amount: &amount}
-			body, _ := json.Marshal(update)
-			url := baseURL + "/transaction/3"
-			req, err := http.NewRequest(http.MethodPatch, url, bytes.NewBuffer(body))
-			Expect(err).NotTo(HaveOccurred())
-			req.Header.Set("Content-Type", "application/json")
-			req.Header.Set("Authorization", "Bearer "+accessToken)
-			resp, err := client.Do(req)
-			Expect(err).NotTo(HaveOccurred())
-			defer resp.Body.Close()
+			url := "/transaction/3"
+			resp, response := testHelper.MakeRequest(http.MethodPatch, url, accessToken, update)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
-			response, err := decodeJSON(resp.Body)
-			Expect(err).NotTo(HaveOccurred())
 			Expect(response["message"]).To(Equal("Transaction updated successfully"))
 			Expect(response["data"].(map[string]interface{})["amount"]).To(Equal(amount))
 		})
 
 		It("should return error when trying to update transaction of different user", func() {
 			update := models.UpdateBaseTransactionInput{Name: "Unauthorized Update"}
-			body, _ := json.Marshal(update)
-			url := baseURL + "/transaction/5"
-			req, err := http.NewRequest(http.MethodPatch, url, bytes.NewBuffer(body))
-			Expect(err).NotTo(HaveOccurred())
-			req.Header.Set("Content-Type", "application/json")
-			req.Header.Set("Authorization", "Bearer "+accessToken)
-			resp, err := client.Do(req)
-			Expect(err).NotTo(HaveOccurred())
-			defer resp.Body.Close()
+			url := "/transaction/5"
+			resp, _ := testHelper.MakeRequest(http.MethodPatch, url, accessToken, update)
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 		})
 
 		It("should return error for invalid JSON in update", func() {
-			url := baseURL + "/transaction/3"
-			req, err := http.NewRequest(http.MethodPatch, url, bytes.NewBuffer([]byte("{ name: invalid }")))
-			Expect(err).NotTo(HaveOccurred())
-			req.Header.Set("Content-Type", "application/json")
-			req.Header.Set("Authorization", "Bearer "+accessToken)
-			resp, err := client.Do(req)
-			Expect(err).NotTo(HaveOccurred())
-			defer resp.Body.Close()
+			url := "/transaction/3"
+			resp, _ := testHelper.MakeRequest(http.MethodPatch, url, accessToken, "{ name: invalid }")
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 		})
 
 		It("should return error for empty body in update", func() {
-			url := baseURL + "/transaction/3"
-			req, err := http.NewRequest(http.MethodPatch, url, bytes.NewBuffer([]byte("")))
-			Expect(err).NotTo(HaveOccurred())
-			req.Header.Set("Content-Type", "application/json")
-			req.Header.Set("Authorization", "Bearer "+accessToken)
-			resp, err := client.Do(req)
-			Expect(err).NotTo(HaveOccurred())
-			defer resp.Body.Close()
+			url := "/transaction/3"
+			resp, _ := testHelper.MakeRequest(http.MethodPatch, url, accessToken, "")
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 		})
 
 		It("should return error for non-existent transaction id", func() {
 			update := models.UpdateBaseTransactionInput{Name: "Updated Name"}
-			body, _ := json.Marshal(update)
-			url := baseURL + "/transaction/9999"
-			req, err := http.NewRequest(http.MethodPatch, url, bytes.NewBuffer(body))
-			Expect(err).NotTo(HaveOccurred())
-			req.Header.Set("Content-Type", "application/json")
-			req.Header.Set("Authorization", "Bearer "+accessToken)
-			resp, err := client.Do(req)
-			Expect(err).NotTo(HaveOccurred())
-			defer resp.Body.Close()
+			url := "/transaction/9999"
+			resp, _ := testHelper.MakeRequest(http.MethodPatch, url, accessToken, update)
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 		})
 
 		It("should return error for invalid transaction id format in update", func() {
 			update := models.UpdateBaseTransactionInput{Name: "Updated Name"}
-			body, _ := json.Marshal(update)
-			url := baseURL + "/transaction/invalid_id"
-			req, err := http.NewRequest(http.MethodPatch, url, bytes.NewBuffer(body))
-			Expect(err).NotTo(HaveOccurred())
-			req.Header.Set("Content-Type", "application/json")
-			req.Header.Set("Authorization", "Bearer "+accessToken)
-			resp, err := client.Do(req)
-			Expect(err).NotTo(HaveOccurred())
-			defer resp.Body.Close()
+			url := "/transaction/invalid_id"
+			resp, response := testHelper.MakeRequest(http.MethodPatch, url, accessToken, update)
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
-			response, err := decodeJSON(resp.Body)
-			Expect(err).NotTo(HaveOccurred())
 			Expect(response["message"]).To(Equal("invalid transaction id"))
 		})
 	})
@@ -767,18 +455,9 @@ var _ = Describe("TransactionController", func() {
 			update := map[string]interface{}{
 				"category_ids": []int64{2, 3},
 			}
-			body, _ := json.Marshal(update)
-			url := baseURL + "/transaction/10"
-			req, err := http.NewRequest(http.MethodPatch, url, bytes.NewBuffer(body))
-			Expect(err).NotTo(HaveOccurred())
-			req.Header.Set("Content-Type", "application/json")
-			req.Header.Set("Authorization", "Bearer "+accessToken)
-			resp, err := client.Do(req)
-			Expect(err).NotTo(HaveOccurred())
-			defer resp.Body.Close()
+			url := "/transaction/10"
+			resp, response := testHelper.MakeRequest(http.MethodPatch, url, accessToken, update)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
-			response, err := decodeJSON(resp.Body)
-			Expect(err).NotTo(HaveOccurred())
 			data := response["data"].(map[string]interface{})
 			Expect(data["category_ids"]).To(ContainElements(float64(2), float64(3)))
 		})
@@ -787,18 +466,9 @@ var _ = Describe("TransactionController", func() {
 			update := map[string]interface{}{
 				"account_id": 2,
 			}
-			body, _ := json.Marshal(update)
-			url := baseURL + "/transaction/10"
-			req, err := http.NewRequest(http.MethodPatch, url, bytes.NewBuffer(body))
-			Expect(err).NotTo(HaveOccurred())
-			req.Header.Set("Content-Type", "application/json")
-			req.Header.Set("Authorization", "Bearer "+accessToken)
-			resp, err := client.Do(req)
-			Expect(err).NotTo(HaveOccurred())
-			defer resp.Body.Close()
+			url := "/transaction/10"
+			resp, response := testHelper.MakeRequest(http.MethodPatch, url, accessToken, update)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
-			response, err := decodeJSON(resp.Body)
-			Expect(err).NotTo(HaveOccurred())
 			data := response["data"].(map[string]interface{})
 			Expect(data["account_id"]).To(Equal(float64(2)))
 		})
@@ -807,18 +477,9 @@ var _ = Describe("TransactionController", func() {
 			update := map[string]interface{}{
 				"category_ids": []int64{},
 			}
-			body, _ := json.Marshal(update)
-			url := baseURL + "/transaction/10"
-			req, err := http.NewRequest(http.MethodPatch, url, bytes.NewBuffer(body))
-			Expect(err).NotTo(HaveOccurred())
-			req.Header.Set("Content-Type", "application/json")
-			req.Header.Set("Authorization", "Bearer "+accessToken)
-			resp, err := client.Do(req)
-			Expect(err).NotTo(HaveOccurred())
-			defer resp.Body.Close()
+			url := "/transaction/10"
+			resp, response := testHelper.MakeRequest(http.MethodPatch, url, accessToken, update)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
-			response, err := decodeJSON(resp.Body)
-			Expect(err).NotTo(HaveOccurred())
 			data := response["data"].(map[string]interface{})
 			Expect(data["category_ids"]).To(BeEmpty())
 		})
@@ -827,15 +488,8 @@ var _ = Describe("TransactionController", func() {
 			update := map[string]interface{}{
 				"category_ids": []int64{99999},
 			}
-			body, _ := json.Marshal(update)
-			url := baseURL + "/transaction/10"
-			req, err := http.NewRequest(http.MethodPatch, url, bytes.NewBuffer(body))
-			Expect(err).NotTo(HaveOccurred())
-			req.Header.Set("Content-Type", "application/json")
-			req.Header.Set("Authorization", "Bearer "+accessToken)
-			resp, err := client.Do(req)
-			Expect(err).NotTo(HaveOccurred())
-			defer resp.Body.Close()
+			url := "/transaction/10"
+			resp, _ := testHelper.MakeRequest(http.MethodPatch, url, accessToken, update)
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 		})
 
@@ -843,15 +497,8 @@ var _ = Describe("TransactionController", func() {
 			update := map[string]interface{}{
 				"account_id": 99999,
 			}
-			body, _ := json.Marshal(update)
-			url := baseURL + "/transaction/10"
-			req, err := http.NewRequest(http.MethodPatch, url, bytes.NewBuffer(body))
-			Expect(err).NotTo(HaveOccurred())
-			req.Header.Set("Content-Type", "application/json")
-			req.Header.Set("Authorization", "Bearer "+accessToken)
-			resp, err := client.Do(req)
-			Expect(err).NotTo(HaveOccurred())
-			defer resp.Body.Close()
+			url := "/transaction/10"
+			resp, _ := testHelper.MakeRequest(http.MethodPatch, url, accessToken, update)
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 		})
 
@@ -861,88 +508,44 @@ var _ = Describe("TransactionController", func() {
 				"name": "Other User Category",
 				"icon": "other-icon",
 			}
-			catBody, _ := json.Marshal(catInput)
-			catReq, err := http.NewRequest(http.MethodPost, baseURL+"/category", bytes.NewBuffer(catBody))
-			Expect(err).NotTo(HaveOccurred())
-			catReq.Header.Set("Content-Type", "application/json")
-			catReq.Header.Set("Authorization", "Bearer "+accessToken1)
-			catResp, err := client.Do(catReq)
-			Expect(err).NotTo(HaveOccurred())
-			defer catResp.Body.Close()
+			catResp, catResponse := testHelper.MakeRequest(http.MethodPost, "/category", accessToken1, catInput)
 			Expect(catResp.StatusCode).To(Equal(http.StatusCreated))
-			catResponse, err := decodeJSON(catResp.Body)
-			Expect(err).NotTo(HaveOccurred())
 			otherCategoryId := int64(catResponse["data"].(map[string]interface{})["id"].(float64))
 			update := map[string]interface{}{
 				"category_ids": []int64{otherCategoryId},
 			}
-			body, _ := json.Marshal(update)
-			url := baseURL + "/transaction/10"
-			req, err := http.NewRequest(http.MethodPatch, url, bytes.NewBuffer(body))
-			Expect(err).NotTo(HaveOccurred())
-			req.Header.Set("Content-Type", "application/json")
-			req.Header.Set("Authorization", "Bearer "+accessToken)
-			resp, err := client.Do(req)
-			Expect(err).NotTo(HaveOccurred())
-			defer resp.Body.Close()
+			url := "/transaction/10"
+			resp, _ := testHelper.MakeRequest(http.MethodPatch, url, accessToken, update)
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 		})
 	})
 
 	Describe("DeleteTransaction", func() {
 		It("should delete transaction by id using seed data", func() {
-			url := baseURL + "/transaction/4"
-			req, err := http.NewRequest(http.MethodDelete, url, nil)
-			Expect(err).NotTo(HaveOccurred())
-			req.Header.Set("Content-Type", "application/json")
-			req.Header.Set("Authorization", "Bearer "+accessToken)
-			resp, err := client.Do(req)
-			Expect(err).NotTo(HaveOccurred())
-			defer resp.Body.Close()
+			url := "/transaction/4"
+			resp, _ := testHelper.MakeRequest(http.MethodDelete, url, accessToken, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
 
-			req, err = http.NewRequest(http.MethodGet, url, nil)
-			Expect(err).NotTo(HaveOccurred())
-			req.Header.Set("Authorization", "Bearer "+accessToken)
-			resp, err = client.Do(req)
-			Expect(err).NotTo(HaveOccurred())
-			defer resp.Body.Close()
+			resp, _ = testHelper.MakeRequest(http.MethodGet, url, accessToken, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 		})
 
 		It("should return error when trying to delete transaction of different user", func() {
-			url := baseURL + "/transaction/6"
-			req, err := http.NewRequest(http.MethodDelete, url, nil)
-			Expect(err).NotTo(HaveOccurred())
-			req.Header.Set("Authorization", "Bearer "+accessToken)
-			resp, err := client.Do(req)
-			Expect(err).NotTo(HaveOccurred())
-			defer resp.Body.Close()
+			url := "/transaction/6"
+			resp, _ := testHelper.MakeRequest(http.MethodDelete, url, accessToken, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 		})
 
 		It("should return error for non-existent transaction id", func() {
-			url := baseURL + "/transaction/9999"
-			req, err := http.NewRequest(http.MethodDelete, url, nil)
-			Expect(err).NotTo(HaveOccurred())
-			req.Header.Set("Authorization", "Bearer "+accessToken)
-			resp, err := client.Do(req)
-			Expect(err).NotTo(HaveOccurred())
-			defer resp.Body.Close()
+			url := "/transaction/9999"
+			resp, _ := testHelper.MakeRequest(http.MethodDelete, url, accessToken, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 		})
 
 		It("should return error for invalid transaction id format in delete", func() {
-			url := baseURL + "/transaction/invalid_id"
-			req, err := http.NewRequest(http.MethodDelete, url, nil)
-			Expect(err).NotTo(HaveOccurred())
-			req.Header.Set("Authorization", "Bearer "+accessToken)
-			resp, err := client.Do(req)
-			Expect(err).NotTo(HaveOccurred())
-			defer resp.Body.Close()
+			url := "/transaction/invalid_id"
+			resp, response := testHelper.MakeRequest(http.MethodDelete, url, accessToken, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
-			response, err := decodeJSON(resp.Body)
-			Expect(err).NotTo(HaveOccurred())
 			Expect(response["message"]).To(Equal("invalid transaction id"))
 		})
 	})
@@ -956,53 +559,22 @@ var _ = Describe("TransactionController", func() {
 				Date:        testDate,
 				AccountId:   1,
 			}
-			body, _ := json.Marshal(input)
-			req, err := http.NewRequest(http.MethodPost, baseURL+"/transaction", bytes.NewBuffer(body))
-			Expect(err).NotTo(HaveOccurred())
-			req.Header.Set("Content-Type", "application/json")
-			req.Header.Set("Authorization", "Bearer "+accessToken)
-
-			resp, err := client.Do(req)
-			Expect(err).NotTo(HaveOccurred())
-			defer resp.Body.Close()
+			resp, response := testHelper.MakeRequest(http.MethodPost, "/transaction", accessToken, input)
 			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
-			response, err := decodeJSON(resp.Body)
-			Expect(err).NotTo(HaveOccurred())
-
 			createdId := int64(response["data"].(map[string]interface{})["id"].(float64))
 
 			update := models.UpdateBaseTransactionInput{Name: "Updated Dynamic Transaction"}
-			body, _ = json.Marshal(update)
-			url := baseURL + "/transaction/" + strconv.FormatInt(createdId, 10)
-			req, err = http.NewRequest(http.MethodPatch, url, bytes.NewBuffer(body))
-			Expect(err).NotTo(HaveOccurred())
-			req.Header.Set("Content-Type", "application/json")
-			req.Header.Set("Authorization", "Bearer "+accessToken)
-			resp, err = client.Do(req)
-			Expect(err).NotTo(HaveOccurred())
-			defer resp.Body.Close()
+			url := "/transaction/" + strconv.FormatInt(createdId, 10)
+			resp, _ = testHelper.MakeRequest(http.MethodPatch, url, accessToken, update)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
-			req, err = http.NewRequest(http.MethodDelete, url, nil)
-			Expect(err).NotTo(HaveOccurred())
-			req.Header.Set("Authorization", "Bearer "+accessToken)
-			resp, err = client.Do(req)
-			Expect(err).NotTo(HaveOccurred())
-			defer resp.Body.Close()
+			resp, _ = testHelper.MakeRequest(http.MethodDelete, url, accessToken, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
 		})
 
 		It("should handle cross-user isolation properly with seed data", func() {
-			req, err := http.NewRequest(http.MethodGet, baseURL+"/transaction", nil)
-			Expect(err).NotTo(HaveOccurred())
-			req.Header.Set("Authorization", "Bearer "+accessToken)
-
-			resp, err := client.Do(req)
-			Expect(err).NotTo(HaveOccurred())
-			defer resp.Body.Close()
+			resp, response := testHelper.MakeRequest(http.MethodGet, "/transaction", accessToken, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
-			response, err := decodeJSON(resp.Body)
-			Expect(err).NotTo(HaveOccurred())
 
 			transactions := response["data"].([]interface{})
 			for _, tx := range transactions {
