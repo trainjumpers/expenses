@@ -1,6 +1,7 @@
 package service
 
 import (
+	mockDatabase "expenses/internal/mock/database"
 	repository "expenses/internal/mock/repository"
 	"expenses/internal/models"
 	"time"
@@ -16,6 +17,7 @@ var _ = Describe("TransactionService", func() {
 		mockRepo           *repository.MockTransactionRepository
 		categoryMockRepo   *repository.MockCategoryRepository
 		accountMockRepo    *repository.MockAccountRepository
+		mockDB             *mockDatabase.MockDatabaseManager
 		ctx                *gin.Context
 		testDate           time.Time
 	)
@@ -25,7 +27,8 @@ var _ = Describe("TransactionService", func() {
 		mockRepo = repository.NewMockTransactionRepository()
 		categoryMockRepo = repository.NewMockCategoryRepository()
 		accountMockRepo = repository.NewMockAccountRepository()
-		transactionService = NewTransactionService(mockRepo, categoryMockRepo, accountMockRepo)
+		mockDB = mockDatabase.NewMockDatabaseManager()
+		transactionService = NewTransactionService(mockRepo, categoryMockRepo, accountMockRepo, mockDB)
 		testDate, _ = time.Parse("2006-01-02", "2023-01-01")
 	})
 
@@ -536,6 +539,75 @@ var _ = Describe("TransactionService", func() {
 		It("should return error when listing transactions for user with no transactions", func() {
 			_, err := transactionService.ListTransactions(ctx, 999)
 			Expect(err).To(HaveOccurred())
+		})
+	})
+
+	Describe("TransactionService validation helpers", func() {
+		var (
+			transactionService *TransactionService
+			categoryMockRepo   *repository.MockCategoryRepository
+			accountMockRepo    *repository.MockAccountRepository
+			ctx                *gin.Context
+		)
+
+		BeforeEach(func() {
+			ctx = &gin.Context{}
+			categoryMockRepo = repository.NewMockCategoryRepository()
+			accountMockRepo = repository.NewMockAccountRepository()
+			transactionService = &TransactionService{
+				repo:         nil, // not needed for these tests
+				categoryRepo: categoryMockRepo,
+				accountRepo:  accountMockRepo,
+				db:           nil,
+			}
+		})
+
+		Describe("validateDateNotInFuture", func() {
+			It("should return error if date is in the future", func() {
+				future := time.Now().Add(48 * time.Hour)
+				err := transactionService.validateDateNotInFuture(future)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("transaction date cannot be in the future"))
+			})
+			It("should not return error if date is today or in the past", func() {
+				past := time.Now().Add(-24 * time.Hour)
+				err := transactionService.validateDateNotInFuture(past)
+				Expect(err).NotTo(HaveOccurred())
+				today := time.Now()
+				err = transactionService.validateDateNotInFuture(today)
+				Expect(err).NotTo(HaveOccurred())
+			})
+		})
+
+		Describe("validateAccountExists", func() {
+			It("should return error if account does not exist", func() {
+				err := transactionService.validateAccountExists(ctx, 9999, 1)
+				Expect(err).To(HaveOccurred())
+			})
+			It("should not return error if account exists", func() {
+				acc, _ := accountMockRepo.CreateAccount(ctx, models.CreateAccountInput{Name: "Test", BankType: "hdfc", Currency: "inr", CreatedBy: 1})
+				err := transactionService.validateAccountExists(ctx, acc.Id, 1)
+				Expect(err).NotTo(HaveOccurred())
+			})
+		})
+
+		Describe("validateCategoryExists", func() {
+			It("should return nil if categoryIds is empty", func() {
+				err := transactionService.validateCategoryExists(ctx, []int64{}, 1)
+				Expect(err).NotTo(HaveOccurred())
+			})
+			It("should return error if any category does not exist", func() {
+				cat, _ := categoryMockRepo.CreateCategory(ctx, models.CreateCategoryInput{Name: "Test", CreatedBy: 1})
+				err := transactionService.validateCategoryExists(ctx, []int64{cat.Id, 9999}, 1)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("category not found"))
+			})
+			It("should not return error if all categories exist", func() {
+				cat1, _ := categoryMockRepo.CreateCategory(ctx, models.CreateCategoryInput{Name: "Test1", CreatedBy: 1})
+				cat2, _ := categoryMockRepo.CreateCategory(ctx, models.CreateCategoryInput{Name: "Test2", CreatedBy: 1})
+				err := transactionService.validateCategoryExists(ctx, []int64{cat1.Id, cat2.Id}, 1)
+				Expect(err).NotTo(HaveOccurred())
+			})
 		})
 	})
 })

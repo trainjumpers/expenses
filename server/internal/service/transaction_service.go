@@ -1,6 +1,7 @@
 package service
 
 import (
+	database "expenses/internal/database/manager"
 	customErrors "expenses/internal/errors"
 	"expenses/internal/models"
 	"expenses/internal/repository"
@@ -10,6 +11,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5"
 )
 
 type TransactionServiceInterface interface {
@@ -24,14 +26,21 @@ type TransactionService struct {
 	repo         repository.TransactionRepositoryInterface
 	categoryRepo repository.CategoryRepositoryInterface
 	accountRepo  repository.AccountRepositoryInterface
+	db           database.DatabaseManager
 }
 
 func NewTransactionService(
 	repo repository.TransactionRepositoryInterface,
 	categoryRepo repository.CategoryRepositoryInterface,
 	accountRepo repository.AccountRepositoryInterface,
+	db database.DatabaseManager,
 ) TransactionServiceInterface {
-	return &TransactionService{repo: repo, categoryRepo: categoryRepo, accountRepo: accountRepo}
+	return &TransactionService{
+		repo:         repo,
+		categoryRepo: categoryRepo,
+		accountRepo:  accountRepo,
+		db:           db,
+	}
 }
 
 func (s *TransactionService) CreateTransaction(c *gin.Context, input models.CreateTransactionInput) (models.TransactionResponse, error) {
@@ -58,23 +67,38 @@ func (s *TransactionService) UpdateTransaction(c *gin.Context, transactionId int
 		return models.TransactionResponse{}, err
 	}
 
-	var baseInput models.UpdateBaseTransactionInput
-	utils.ConvertStruct(&input, &baseInput)
-	err := s.repo.UpdateTransaction(c, transactionId, userId, baseInput)
-	if err != nil && (err.Error() != customErrors.NoFieldsToUpdateError().Error() ||
-		(input.CategoryIds == nil && input.AccountId == nil)) {
-		return models.TransactionResponse{}, err
-	}
-	if input.CategoryIds != nil {
-		err = s.repo.UpdateCategoryMapping(c, transactionId, userId, *input.CategoryIds)
-		if err != nil {
-			return models.TransactionResponse{}, err
+	var transaction models.TransactionResponse
+	err := s.db.WithTxn(c, func(tx pgx.Tx) error {
+		// Update base transaction if there are fields to update
+		var baseInput models.UpdateBaseTransactionInput
+		utils.ConvertStruct(&input, &baseInput)
+		err := s.repo.UpdateTransaction(c, transactionId, userId, baseInput)
+		if err != nil && (err.Error() != customErrors.NoFieldsToUpdateError().Error() ||
+			(input.CategoryIds == nil && input.AccountId == nil)) {
+			return err
 		}
-	}
-	transaction, err := s.repo.GetTransactionById(c, transactionId, userId)
+
+		// Update category mapping if provided
+		if input.CategoryIds != nil {
+			err = s.repo.UpdateCategoryMapping(c, transactionId, userId, *input.CategoryIds)
+			if err != nil {
+				return err
+			}
+		}
+
+		// Get the updated transaction
+		updatedTransaction, err := s.repo.GetTransactionById(c, transactionId, userId)
+		if err != nil {
+			return err
+		}
+		transaction = updatedTransaction
+		return nil
+	})
+
 	if err != nil {
 		return models.TransactionResponse{}, err
 	}
+
 	logger.Debugf("Transaction ID %d updated successfully for user %d", transactionId, userId)
 	return transaction, nil
 }

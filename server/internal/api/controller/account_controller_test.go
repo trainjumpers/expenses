@@ -542,7 +542,7 @@ var _ = Describe("AccountController", func() {
 			resp, err = client.Do(req)
 			Expect(err).NotTo(HaveOccurred())
 			defer resp.Body.Close()
-			Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
+			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 
 			// Ensure account is not deleted
 			req, err = http.NewRequest(http.MethodGet, url, nil)
@@ -570,7 +570,7 @@ var _ = Describe("AccountController", func() {
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 		})
 
-		It("should be idempotent when deleting non-existent account id", func() {
+		It("should return 404 when deleting non-existent account id", func() {
 			url := baseURL + "/account/99999"
 			req, err := http.NewRequest(http.MethodDelete, url, nil)
 			Expect(err).NotTo(HaveOccurred())
@@ -578,7 +578,7 @@ var _ = Describe("AccountController", func() {
 			resp, err := client.Do(req)
 			Expect(err).NotTo(HaveOccurred())
 			defer resp.Body.Close()
-			Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
+			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 		})
 	})
 
@@ -661,7 +661,7 @@ var _ = Describe("AccountController", func() {
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 		})
 
-		It("should be idempotent when deleting already deleted account", func() {
+		It("should return 404 when deleting already deleted account", func() {
 			url := baseURL + "/account/" + strconv.FormatInt(accountId, 10)
 			req, err := http.NewRequest(http.MethodDelete, url, nil)
 			Expect(err).NotTo(HaveOccurred())
@@ -677,7 +677,7 @@ var _ = Describe("AccountController", func() {
 			resp, err = client.Do(req)
 			Expect(err).NotTo(HaveOccurred())
 			defer resp.Body.Close()
-			Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
+			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 		})
 	})
 })

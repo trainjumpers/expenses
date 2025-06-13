@@ -14,7 +14,7 @@ coverage:
 ignore:
   - internal/wire/**
   - internal/database/migration/**
-  - internal/database/postgres/**
+  - internal/database/manager/**
   - internal/mock/**
   - internal/server/**
   - pkg/logger/**

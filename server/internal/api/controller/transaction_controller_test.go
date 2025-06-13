@@ -571,7 +571,7 @@ var _ = Describe("TransactionController", func() {
 			response, err := decodeJSON(resp.Body)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(response["message"]).To(Equal("Transactions retrieved successfully"))
-			Expect(response["data"]).To(BeNil())
+			Expect(response["data"]).To(BeEmpty())
 		})
 	})
 
