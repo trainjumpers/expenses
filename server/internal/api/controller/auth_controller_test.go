@@ -1,8 +1,6 @@
 package controller_test
 
 import (
-	"bytes"
-	"encoding/json"
 	"expenses/internal/models"
 	"net/http"
 
@@ -21,21 +19,10 @@ var _ = Describe("AuthController", func() {
 					Password: "password123",
 				}
 
-				// Create request
-				body, _ := json.Marshal(userInput)
-				req, err := http.NewRequest(http.MethodPost, baseURL+"/signup", bytes.NewBuffer(body))
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Content-Type", "application/json")
-
-				// Perform request
-				resp, err := client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
+				resp, response := testHelper.MakeRequest(http.MethodPost, "/signup", "", userInput)
 
 				// Assertions
 				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
-				response, err := decodeJSON(resp.Body)
-				Expect(err).NotTo(HaveOccurred())
 				Expect(response["message"]).To(Equal("User signed up successfully"))
 				Expect(response["data"]).To(HaveKey("user"))
 				Expect(response["data"]).To(HaveKey("access_token"))
@@ -51,15 +38,7 @@ var _ = Describe("AuthController", func() {
 					Password: "password123",
 				}
 
-				body, _ := json.Marshal(userInput)
-				req, err := http.NewRequest(http.MethodPost, baseURL+"/signup", bytes.NewBuffer(body))
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Content-Type", "application/json")
-
-				resp, err := client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
-
+				resp, _ := testHelper.MakeRequest(http.MethodPost, "/signup", "", userInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 
@@ -70,15 +49,7 @@ var _ = Describe("AuthController", func() {
 					Password: "123", // Too short
 				}
 
-				body, _ := json.Marshal(userInput)
-				req, err := http.NewRequest(http.MethodPost, baseURL+"/signup", bytes.NewBuffer(body))
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Content-Type", "application/json")
-
-				resp, err := client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
-
+				resp, _ := testHelper.MakeRequest(http.MethodPost, "/signup", "", userInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 
@@ -87,16 +58,7 @@ var _ = Describe("AuthController", func() {
 					Email:    "test@example.com",
 					Password: "1234567890",
 				}
-
-				body, _ := json.Marshal(userInput)
-				req, err := http.NewRequest(http.MethodPost, baseURL+"/signup", bytes.NewBuffer(body))
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Content-Type", "application/json")
-
-				resp, err := client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
-
+				resp, _ := testHelper.MakeRequest(http.MethodPost, "/signup", "", userInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 
@@ -105,16 +67,7 @@ var _ = Describe("AuthController", func() {
 					Name:     "Test User",
 					Password: "1234567890",
 				}
-
-				body, _ := json.Marshal(userInput)
-				req, err := http.NewRequest(http.MethodPost, baseURL+"/signup", bytes.NewBuffer(body))
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Content-Type", "application/json")
-
-				resp, err := client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
-
+				resp, _ := testHelper.MakeRequest(http.MethodPost, "/signup", "", userInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 
@@ -123,16 +76,7 @@ var _ = Describe("AuthController", func() {
 					Email: "test@example.com",
 					Name:  "Test User",
 				}
-
-				body, _ := json.Marshal(userInput)
-				req, err := http.NewRequest(http.MethodPost, baseURL+"/signup", bytes.NewBuffer(body))
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Content-Type", "application/json")
-
-				resp, err := client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
-
+				resp, _ := testHelper.MakeRequest(http.MethodPost, "/signup", "", userInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 
@@ -142,19 +86,8 @@ var _ = Describe("AuthController", func() {
 					Name:     "Test User",
 					Password: "password123",
 				}
-
-				body, _ := json.Marshal(userInput)
-				req, err := http.NewRequest(http.MethodPost, baseURL+"/signup", bytes.NewBuffer(body))
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Content-Type", "application/json")
-
-				resp, err := client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
-
+				resp, response := testHelper.MakeRequest(http.MethodPost, "/signup", "", userInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusConflict))
-				response, err := decodeJSON(resp.Body)
-				Expect(err).NotTo(HaveOccurred())
 				Expect(response["message"]).To(Equal("user already exists"))
 			})
 
@@ -164,19 +97,8 @@ var _ = Describe("AuthController", func() {
 					Name:     "Test User",
 					Password: "password123",
 				}
-
-				body, _ := json.Marshal(userInput)
-				req, err := http.NewRequest(http.MethodPost, baseURL+"/signup", bytes.NewBuffer(body))
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Content-Type", "application/json")
-
-				resp, err := client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
-
+				resp, response := testHelper.MakeRequest(http.MethodPost, "/signup", "", userInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
-				response, err := decodeJSON(resp.Body)
-				Expect(err).NotTo(HaveOccurred())
 				Expect(response["message"]).To(ContainSubstring("Error:Field validation for 'Email'"))
 			})
 
@@ -186,16 +108,7 @@ var _ = Describe("AuthController", func() {
 					Name:     "Test User'; DROP TABLE users; --",
 					Password: "password123",
 				}
-
-				body, _ := json.Marshal(userInput)
-				req, err := http.NewRequest(http.MethodPost, baseURL+"/signup", bytes.NewBuffer(body))
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Content-Type", "application/json")
-
-				resp, err := client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
-
+				resp, _ := testHelper.MakeRequest(http.MethodPost, "/signup", "", userInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
 			})
 
@@ -205,43 +118,18 @@ var _ = Describe("AuthController", func() {
 					Name:     "Test User'; INSERT INTO users (email, name, password) VALUES ('hack@example.com', 'Hacker', 'password'); --",
 					Password: "password123' OR 1=1; --",
 				}
-
-				body, _ := json.Marshal(userInput)
-				req, err := http.NewRequest(http.MethodPost, baseURL+"/signup", bytes.NewBuffer(body))
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Content-Type", "application/json")
-
-				resp, err := client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
-
+				resp, response := testHelper.MakeRequest(http.MethodPost, "/signup", "", userInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
-				response, err := decodeJSON(resp.Body)
-				Expect(err).NotTo(HaveOccurred())
 				Expect(response["message"]).To(ContainSubstring("Error:Field validation for 'Email'"))
 			})
 
 			It("should return bad request for invalid JSON", func() {
-				req, err := http.NewRequest(http.MethodPost, baseURL+"/signup", bytes.NewBuffer([]byte("{ invalid json }")))
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Content-Type", "application/json")
-
-				resp, err := client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
-
+				resp, _ := testHelper.MakeRequest(http.MethodPost, "/signup", "", "{ invalid json }")
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 
 			It("should return bad request for empty body", func() {
-				req, err := http.NewRequest(http.MethodPost, baseURL+"/signup", bytes.NewBuffer([]byte("")))
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Content-Type", "application/json")
-
-				resp, err := client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
-
+				resp, _ := testHelper.MakeRequest(http.MethodPost, "/signup", "", "")
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 		})
@@ -255,18 +143,9 @@ var _ = Describe("AuthController", func() {
 					Password: "password",
 				}
 
-				body, _ := json.Marshal(loginInput)
-				req, err := http.NewRequest(http.MethodPost, baseURL+"/login", bytes.NewBuffer(body))
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Content-Type", "application/json")
-
-				resp, err := client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
+				resp, response := testHelper.MakeRequest(http.MethodPost, "/login", "", loginInput)
 
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
-				response, err := decodeJSON(resp.Body)
-				Expect(err).NotTo(HaveOccurred())
 				Expect(response["message"]).To(Equal("User logged in successfully"))
 				Expect(response["data"]).To(HaveKey("access_token"))
 				Expect(response["data"]).To(HaveKey("refresh_token"))
@@ -279,16 +158,7 @@ var _ = Describe("AuthController", func() {
 					Email:    "test1@example.com",
 					Password: "wrongpassword",
 				}
-
-				body, _ := json.Marshal(loginInput)
-				req, err := http.NewRequest(http.MethodPost, baseURL+"/login", bytes.NewBuffer(body))
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Content-Type", "application/json")
-
-				resp, err := client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
-
+				resp, _ := testHelper.MakeRequest(http.MethodPost, "/login", "", loginInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
 			})
 
@@ -297,40 +167,17 @@ var _ = Describe("AuthController", func() {
 					Email:    "nonexistent@example.com",
 					Password: "password123",
 				}
-
-				body, _ := json.Marshal(loginInput)
-				req, err := http.NewRequest(http.MethodPost, baseURL+"/login", bytes.NewBuffer(body))
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Content-Type", "application/json")
-
-				resp, err := client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
-
+				resp, _ := testHelper.MakeRequest(http.MethodPost, "/login", "", loginInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
 			})
 
 			It("should return bad request for invalid JSON", func() {
-				req, err := http.NewRequest(http.MethodPost, baseURL+"/login", bytes.NewBuffer([]byte("{ invalid json }")))
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Content-Type", "application/json")
-
-				resp, err := client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
-
+				resp, _ := testHelper.MakeRequest(http.MethodPost, "/login", "", "{ invalid json }")
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 
 			It("should return bad request for empty body", func() {
-				req, err := http.NewRequest(http.MethodPost, baseURL+"/login", bytes.NewBuffer([]byte("")))
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Content-Type", "application/json")
-
-				resp, err := client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
-
+				resp, _ := testHelper.MakeRequest(http.MethodPost, "/login", "", "")
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 
@@ -338,16 +185,7 @@ var _ = Describe("AuthController", func() {
 				loginInput := models.LoginInput{
 					Password: "password123",
 				}
-
-				body, _ := json.Marshal(loginInput)
-				req, err := http.NewRequest(http.MethodPost, baseURL+"/login", bytes.NewBuffer(body))
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Content-Type", "application/json")
-
-				resp, err := client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
-
+				resp, _ := testHelper.MakeRequest(http.MethodPost, "/login", "", loginInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 
@@ -355,16 +193,7 @@ var _ = Describe("AuthController", func() {
 				loginInput := models.LoginInput{
 					Email: "test@example.com",
 				}
-
-				body, _ := json.Marshal(loginInput)
-				req, err := http.NewRequest(http.MethodPost, baseURL+"/login", bytes.NewBuffer(body))
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Content-Type", "application/json")
-
-				resp, err := client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
-
+				resp, _ := testHelper.MakeRequest(http.MethodPost, "/login", "", loginInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 		})
@@ -379,18 +208,9 @@ var _ = Describe("AuthController", func() {
 					RefreshToken: refreshToken,
 				}
 
-				body, _ := json.Marshal(refreshInput)
-				req, err := http.NewRequest(http.MethodPost, baseURL+"/refresh", bytes.NewBuffer(body))
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Content-Type", "application/json")
-
-				resp, err := client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
+				resp, response := testHelper.MakeRequest(http.MethodPost, "/refresh", "", refreshInput)
 
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
-				response, err := decodeJSON(resp.Body)
-				Expect(err).NotTo(HaveOccurred())
 				Expect(response["message"]).To(Equal("Token refreshed successfully"))
 				Expect(response["data"]).To(HaveKey("access_token"))
 				Expect(response["data"]).To(HaveKey("refresh_token"))
@@ -413,40 +233,17 @@ var _ = Describe("AuthController", func() {
 				}{
 					RefreshToken: "invalid-refresh-token",
 				}
-
-				body, _ := json.Marshal(refreshInput)
-				req, err := http.NewRequest(http.MethodPost, baseURL+"/refresh", bytes.NewBuffer(body))
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Content-Type", "application/json")
-
-				resp, err := client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
-
+				resp, _ := testHelper.MakeRequest(http.MethodPost, "/refresh", "", refreshInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
 			})
 
 			It("should return bad request for invalid JSON", func() {
-				req, err := http.NewRequest(http.MethodPost, baseURL+"/refresh", bytes.NewBuffer([]byte("{ invalid json }")))
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Content-Type", "application/json")
-
-				resp, err := client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
-
+				resp, _ := testHelper.MakeRequest(http.MethodPost, "/refresh", "", "{ invalid json }")
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 
 			It("should return bad request for empty body", func() {
-				req, err := http.NewRequest(http.MethodPost, baseURL+"/refresh", bytes.NewBuffer([]byte("")))
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Content-Type", "application/json")
-
-				resp, err := client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
-
+				resp, _ := testHelper.MakeRequest(http.MethodPost, "/refresh", "", "")
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 
@@ -457,15 +254,7 @@ var _ = Describe("AuthController", func() {
 					RefreshToken: "",
 				}
 
-				body, _ := json.Marshal(refreshInput)
-				req, err := http.NewRequest(http.MethodPost, baseURL+"/refresh", bytes.NewBuffer(body))
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Content-Type", "application/json")
-
-				resp, err := client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
-
+				resp, _ := testHelper.MakeRequest(http.MethodPost, "/refresh", "", refreshInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
 			})
 		})

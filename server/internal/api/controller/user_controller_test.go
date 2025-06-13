@@ -1,8 +1,6 @@
 package controller_test
 
 import (
-	"bytes"
-	"encoding/json"
 	"expenses/internal/models"
 	"net/http"
 
@@ -14,17 +12,8 @@ var _ = Describe("UserController", func() {
 	Describe("GetUserById", func() {
 		Context("with valid token", func() {
 			It("should get user details successfully", func() {
-				req, err := http.NewRequest(http.MethodGet, baseURL+"/user", nil)
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Authorization", "Bearer "+accessToken)
-
-				resp, err := client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
-
+				resp, response := testHelper.MakeRequest(http.MethodGet, "/user", accessToken, nil)
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
-				response, err := decodeJSON(resp.Body)
-				Expect(err).NotTo(HaveOccurred())
 				Expect(response["message"]).To(Equal("User retrieved successfully"))
 				Expect(response["data"]).To(HaveKey("id"))
 				Expect(response["data"]).To(HaveKey("email"))
@@ -37,25 +26,12 @@ var _ = Describe("UserController", func() {
 
 		Context("with invalid token", func() {
 			It("should return unauthorized", func() {
-				req, err := http.NewRequest(http.MethodGet, baseURL+"/user", nil)
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Authorization", "Bearer invalid-token")
-
-				resp, err := client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
-
+				resp, _ := testHelper.MakeRequest(http.MethodGet, "/user", "invalid-token", nil)
 				Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
 			})
 
 			It("should return unauthorized for missing authorization header", func() {
-				req, err := http.NewRequest(http.MethodGet, baseURL+"/user", nil)
-				Expect(err).NotTo(HaveOccurred())
-
-				resp, err := client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
-
+				resp, _ := testHelper.MakeRequest(http.MethodGet, "/user", "", nil)
 				Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
 			})
 		})
@@ -67,20 +43,8 @@ var _ = Describe("UserController", func() {
 				updateInput := models.UpdateUserInput{
 					Name: "Updated Name",
 				}
-
-				body, _ := json.Marshal(updateInput)
-				req, err := http.NewRequest(http.MethodPatch, baseURL+"/user", bytes.NewBuffer(body))
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Content-Type", "application/json")
-				req.Header.Set("Authorization", "Bearer "+accessToken)
-
-				resp, err := client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
-
+				resp, response := testHelper.MakeRequest(http.MethodPatch, "/user", accessToken, updateInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
-				response, err := decodeJSON(resp.Body)
-				Expect(err).NotTo(HaveOccurred())
 				Expect(response["message"]).To(Equal("User updated successfully"))
 				data := response["data"].(map[string]interface{})
 				Expect(data["name"]).To(Equal("Updated Name"))
@@ -90,20 +54,8 @@ var _ = Describe("UserController", func() {
 				updateInput := models.UpdateUserInput{
 					Name: "  Trimmed Name  ", // Name with leading and trailing whitespace
 				}
-
-				body, _ := json.Marshal(updateInput)
-				req, err := http.NewRequest(http.MethodPatch, baseURL+"/user", bytes.NewBuffer(body))
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Content-Type", "application/json")
-				req.Header.Set("Authorization", "Bearer "+accessToken)
-
-				resp, err := client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
-
+				resp, response := testHelper.MakeRequest(http.MethodPatch, "/user", accessToken, updateInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
-				response, err := decodeJSON(resp.Body)
-				Expect(err).NotTo(HaveOccurred())
 				Expect(response["message"]).To(Equal("User updated successfully"))
 				data := response["data"].(map[string]interface{})
 				Expect(data["name"]).To(Equal("Trimmed Name")) // Should be trimmed
@@ -113,20 +65,8 @@ var _ = Describe("UserController", func() {
 				updateInput := models.UpdateUserInput{
 					Name: "\t  Complex Whitespace Name  \n", // Name with tabs and newlines
 				}
-
-				body, _ := json.Marshal(updateInput)
-				req, err := http.NewRequest(http.MethodPatch, baseURL+"/user", bytes.NewBuffer(body))
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Content-Type", "application/json")
-				req.Header.Set("Authorization", "Bearer "+accessToken)
-
-				resp, err := client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
-
+				resp, response := testHelper.MakeRequest(http.MethodPatch, "/user", accessToken, updateInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
-				response, err := decodeJSON(resp.Body)
-				Expect(err).NotTo(HaveOccurred())
 				Expect(response["message"]).To(Equal("User updated successfully"))
 				data := response["data"].(map[string]interface{})
 				Expect(data["name"]).To(Equal("Complex Whitespace Name")) // Should be trimmed
@@ -135,28 +75,12 @@ var _ = Describe("UserController", func() {
 
 		Context("with invalid input", func() {
 			It("should return bad request for invalid JSON", func() {
-				req, err := http.NewRequest(http.MethodPatch, baseURL+"/user", bytes.NewBuffer([]byte("invalid json")))
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Content-Type", "application/json")
-				req.Header.Set("Authorization", "Bearer "+accessToken)
-
-				resp, err := client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
-
+				resp, _ := testHelper.MakeRequest(http.MethodPatch, "/user", accessToken, "invalid json")
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 
 			It("should return bad request for empty body", func() {
-				req, err := http.NewRequest(http.MethodPatch, baseURL+"/user", bytes.NewBuffer([]byte("")))
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Content-Type", "application/json")
-				req.Header.Set("Authorization", "Bearer "+accessToken)
-
-				resp, err := client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
-
+				resp, _ := testHelper.MakeRequest(http.MethodPatch, "/user", accessToken, "")
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 
@@ -164,20 +88,8 @@ var _ = Describe("UserController", func() {
 				updateInput := models.UpdateUserInput{
 					Name: "   ",
 				}
-
-				body, _ := json.Marshal(updateInput)
-				req, err := http.NewRequest(http.MethodPatch, baseURL+"/user", bytes.NewBuffer(body))
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Content-Type", "application/json")
-				req.Header.Set("Authorization", "Bearer "+accessToken)
-
-				resp, err := client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
-
+				resp, response := testHelper.MakeRequest(http.MethodPatch, "/user", accessToken, updateInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
-				response, err := decodeJSON(resp.Body)
-				Expect(err).NotTo(HaveOccurred())
 				Expect(response["message"]).To(Equal("no fields to update"))
 			})
 
@@ -185,20 +97,8 @@ var _ = Describe("UserController", func() {
 				updateInput := models.UpdateUserInput{
 					Name: "\t\n  \r  ", // Only various whitespace characters
 				}
-
-				body, _ := json.Marshal(updateInput)
-				req, err := http.NewRequest(http.MethodPatch, baseURL+"/user", bytes.NewBuffer(body))
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Content-Type", "application/json")
-				req.Header.Set("Authorization", "Bearer "+accessToken)
-
-				resp, err := client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
-
+				resp, response := testHelper.MakeRequest(http.MethodPatch, "/user", accessToken, updateInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
-				response, err := decodeJSON(resp.Body)
-				Expect(err).NotTo(HaveOccurred())
 				Expect(response["message"]).To(ContainSubstring("no fields to update"))
 			})
 
@@ -206,17 +106,7 @@ var _ = Describe("UserController", func() {
 				updateInput := map[string]interface{}{
 					"somerandomparam": 123,
 				}
-
-				body, _ := json.Marshal(updateInput)
-				req, err := http.NewRequest(http.MethodPatch, baseURL+"/user", bytes.NewBuffer(body))
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Content-Type", "application/json")
-				req.Header.Set("Authorization", "Bearer "+accessToken)
-
-				resp, err := client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
-
+				resp, _ := testHelper.MakeRequest(http.MethodPatch, "/user", accessToken, updateInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 
@@ -227,75 +117,31 @@ var _ = Describe("UserController", func() {
 					Name:     "Test user for update not exists",
 					Password: "password123",
 				}
-
-				body, _ := json.Marshal(userInput)
-				req, err := http.NewRequest(http.MethodPost, baseURL+"/signup", bytes.NewBuffer(body))
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Content-Type", "application/json")
-
-				resp, err := client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
-
+				resp, response := testHelper.MakeRequest(http.MethodPost, "/signup", "", userInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
-				response, err := decodeJSON(resp.Body)
-				Expect(err).NotTo(HaveOccurred())
 				Expect(response["data"]).To(HaveKey("access_token"))
-
 				tokenForDeletedUser := response["data"].(map[string]interface{})["access_token"].(string)
 
 				// Delete the user
-				req, err = http.NewRequest(http.MethodDelete, baseURL+"/user", nil)
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Authorization", "Bearer "+tokenForDeletedUser)
-
-				resp, err = client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
-
+				resp, _ = testHelper.MakeRequest(http.MethodDelete, "/user", tokenForDeletedUser, nil)
 				Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
 
 				// Now try to update the deleted user - should get 404
 				updateInput := models.UpdateUserInput{
 					Name: "Updated Name",
 				}
-
-				body, _ = json.Marshal(updateInput)
-				req, err = http.NewRequest(http.MethodPatch, baseURL+"/user", bytes.NewBuffer(body))
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Content-Type", "application/json")
-				req.Header.Set("Authorization", "Bearer "+tokenForDeletedUser)
-
-				resp, err = client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
-
+				resp, response = testHelper.MakeRequest(http.MethodPatch, "/user", tokenForDeletedUser, updateInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
-				response, err = decodeJSON(resp.Body)
-				Expect(err).NotTo(HaveOccurred())
 				Expect(response["message"]).To(Equal("user not found"))
 			})
 
 			It("should be unauthorized for invalid token", func() {
-				req, err := http.NewRequest(http.MethodPatch, baseURL+"/user", bytes.NewBuffer([]byte("{}")))
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Content-Type", "application/json")
-				req.Header.Set("Authorization", "Bearer invalid-token")
-
-				resp, err := client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-
+				resp, _ := testHelper.MakeRequest(http.MethodPatch, "/user", "invalid-token", "{}")
 				Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
 			})
 
 			It("should be unauthorized for missing authorization header", func() {
-				req, err := http.NewRequest(http.MethodPatch, baseURL+"/user", bytes.NewBuffer([]byte("{}")))
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Content-Type", "application/json")
-
-				resp, err := client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-
+				resp, _ := testHelper.MakeRequest(http.MethodPatch, "/user", "", "{}")
 				Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
 			})
 		})
@@ -310,41 +156,17 @@ var _ = Describe("UserController", func() {
 					Name:     "Test password update",
 					Password: "password123",
 				}
-
-				body, _ := json.Marshal(userInput)
-				req, err := http.NewRequest(http.MethodPost, baseURL+"/signup", bytes.NewBuffer(body))
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Content-Type", "application/json")
-
-				resp, err := client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
-
+				resp, response := testHelper.MakeRequest(http.MethodPost, "/signup", "", userInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
-				response, err := decodeJSON(resp.Body)
-				Expect(err).NotTo(HaveOccurred())
 				Expect(response["data"]).To(HaveKey("access_token"))
-
 				newAccessToken := response["data"].(map[string]interface{})["access_token"].(string)
 
 				updateInput := models.UpdateUserPasswordInput{
 					OldPassword: "password123",
 					NewPassword: "newpassword123",
 				}
-
-				body, _ = json.Marshal(updateInput)
-				req, err = http.NewRequest(http.MethodPost, baseURL+"/user/password", bytes.NewBuffer(body))
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Content-Type", "application/json")
-				req.Header.Set("Authorization", "Bearer "+newAccessToken)
-
-				resp, err = client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
-
+				resp, response = testHelper.MakeRequest(http.MethodPost, "/user/password", newAccessToken, updateInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
-				response, err = decodeJSON(resp.Body)
-				Expect(err).NotTo(HaveOccurred())
 				Expect(response["message"]).To(Equal("User password updated successfully"))
 				Expect(response).NotTo(HaveKey("password"))
 
@@ -353,16 +175,7 @@ var _ = Describe("UserController", func() {
 					Email:    "passwordUpdate@example.com",
 					Password: "newpassword123",
 				}
-
-				body, _ = json.Marshal(loginInput)
-				req, err = http.NewRequest(http.MethodPost, baseURL+"/login", bytes.NewBuffer(body))
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Content-Type", "application/json")
-
-				resp, err = client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
-
+				resp, _ = testHelper.MakeRequest(http.MethodPost, "/login", "", loginInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			})
 
@@ -373,41 +186,17 @@ var _ = Describe("UserController", func() {
 					Name:     "Test password whitespace update",
 					Password: "password123",
 				}
-
-				body, _ := json.Marshal(userInput)
-				req, err := http.NewRequest(http.MethodPost, baseURL+"/signup", bytes.NewBuffer(body))
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Content-Type", "application/json")
-
-				resp, err := client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
-
+				resp, response := testHelper.MakeRequest(http.MethodPost, "/signup", "", userInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
-				response, err := decodeJSON(resp.Body)
-				Expect(err).NotTo(HaveOccurred())
 				Expect(response["data"]).To(HaveKey("access_token"))
-
 				newAccessToken := response["data"].(map[string]interface{})["access_token"].(string)
 
 				updateInput := models.UpdateUserPasswordInput{
 					OldPassword: "  password123  ",    // Old password with whitespace
 					NewPassword: "  newpassword123  ", // New password with whitespace
 				}
-
-				body, _ = json.Marshal(updateInput)
-				req, err = http.NewRequest(http.MethodPost, baseURL+"/user/password", bytes.NewBuffer(body))
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Content-Type", "application/json")
-				req.Header.Set("Authorization", "Bearer "+newAccessToken)
-
-				resp, err = client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
-
+				resp, response = testHelper.MakeRequest(http.MethodPost, "/user/password", newAccessToken, updateInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
-				response, err = decodeJSON(resp.Body)
-				Expect(err).NotTo(HaveOccurred())
 				Expect(response["message"]).To(Equal("User password updated successfully"))
 
 				// Verify new password works (trimmed version) by trying to login
@@ -415,16 +204,7 @@ var _ = Describe("UserController", func() {
 					Email:    "passwordWhitespaceUpdate@example.com",
 					Password: "newpassword123", // Trimmed password should work
 				}
-
-				body, _ = json.Marshal(loginInput)
-				req, err = http.NewRequest(http.MethodPost, baseURL+"/login", bytes.NewBuffer(body))
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Content-Type", "application/json")
-
-				resp, err = client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
-
+				resp, _ = testHelper.MakeRequest(http.MethodPost, "/login", "", loginInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			})
 		})
@@ -435,43 +215,17 @@ var _ = Describe("UserController", func() {
 					OldPassword: "wrongpassword",
 					NewPassword: "newpassword123",
 				}
-
-				body, _ := json.Marshal(updateInput)
-				req, err := http.NewRequest(http.MethodPost, baseURL+"/user/password", bytes.NewBuffer(body))
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Content-Type", "application/json")
-				req.Header.Set("Authorization", "Bearer "+accessToken)
-
-				resp, err := client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
-
+				resp, _ := testHelper.MakeRequest(http.MethodPost, "/user/password", accessToken, updateInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
 			})
 
 			It("should return bad request for invalid JSON", func() {
-				req, err := http.NewRequest(http.MethodPost, baseURL+"/user/password", bytes.NewBuffer([]byte("invalid json")))
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Content-Type", "application/json")
-				req.Header.Set("Authorization", "Bearer "+accessToken)
-
-				resp, err := client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
-
+				resp, _ := testHelper.MakeRequest(http.MethodPost, "/user/password", accessToken, "invalid json")
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 
 			It("should return bad request for empty body", func() {
-				req, err := http.NewRequest(http.MethodPost, baseURL+"/user/password", bytes.NewBuffer([]byte("")))
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Content-Type", "application/json")
-				req.Header.Set("Authorization", "Bearer "+accessToken)
-
-				resp, err := client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
-
+				resp, _ := testHelper.MakeRequest(http.MethodPost, "/user/password", accessToken, "")
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 
@@ -480,20 +234,8 @@ var _ = Describe("UserController", func() {
 					OldPassword: "   ", // Only whitespace - will become empty after trimming
 					NewPassword: "newpassword123",
 				}
-
-				body, _ := json.Marshal(updateInput)
-				req, err := http.NewRequest(http.MethodPost, baseURL+"/user/password", bytes.NewBuffer(body))
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Content-Type", "application/json")
-				req.Header.Set("Authorization", "Bearer "+accessToken)
-
-				resp, err := client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
-
+				resp, response := testHelper.MakeRequest(http.MethodPost, "/user/password", accessToken, updateInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
-				response, err := decodeJSON(resp.Body)
-				Expect(err).NotTo(HaveOccurred())
 				Expect(response["message"]).To(ContainSubstring("required"))
 			})
 
@@ -502,43 +244,18 @@ var _ = Describe("UserController", func() {
 					OldPassword: "password123",
 					NewPassword: "   ", // Only whitespace - will become empty after trimming
 				}
-
-				body, _ := json.Marshal(updateInput)
-				req, err := http.NewRequest(http.MethodPost, baseURL+"/user/password", bytes.NewBuffer(body))
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Content-Type", "application/json")
-				req.Header.Set("Authorization", "Bearer "+accessToken)
-
-				resp, err := client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
-
+				resp, response := testHelper.MakeRequest(http.MethodPost, "/user/password", accessToken, updateInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
-				response, err := decodeJSON(resp.Body)
-				Expect(err).NotTo(HaveOccurred())
 				Expect(response["message"]).To(ContainSubstring("validation"))
 			})
 
 			It("should be unauthorized for invalid token", func() {
-				req, err := http.NewRequest(http.MethodPost, baseURL+"/user/password", bytes.NewBuffer([]byte("{}")))
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Content-Type", "application/json")
-				req.Header.Set("Authorization", "Bearer invalid-token")
-
-				resp, err := client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-
+				resp, _ := testHelper.MakeRequest(http.MethodPost, "/user/password", "invalid-token", "{}")
 				Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
 			})
 
 			It("should be unauthorized for missing authorization header", func() {
-				req, err := http.NewRequest(http.MethodPost, baseURL+"/user/password", bytes.NewBuffer([]byte("{}")))
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Content-Type", "application/json")
-
-				resp, err := client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-
+				resp, _ := testHelper.MakeRequest(http.MethodPost, "/user/password", "", "{}")
 				Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
 			})
 
@@ -546,17 +263,7 @@ var _ = Describe("UserController", func() {
 				updateInput := models.UpdateUserPasswordInput{
 					NewPassword: "newpassword123",
 				}
-
-				body, _ := json.Marshal(updateInput)
-				req, err := http.NewRequest(http.MethodPost, baseURL+"/user/password", bytes.NewBuffer(body))
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Content-Type", "application/json")
-				req.Header.Set("Authorization", "Bearer "+accessToken)
-
-				resp, err := client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
-
+				resp, _ := testHelper.MakeRequest(http.MethodPost, "/user/password", accessToken, updateInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 
@@ -564,17 +271,7 @@ var _ = Describe("UserController", func() {
 				updateInput := models.UpdateUserPasswordInput{
 					OldPassword: "password",
 				}
-
-				body, _ := json.Marshal(updateInput)
-				req, err := http.NewRequest(http.MethodPost, baseURL+"/user/password", bytes.NewBuffer(body))
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Content-Type", "application/json")
-				req.Header.Set("Authorization", "Bearer "+accessToken)
-
-				resp, err := client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
-
+				resp, _ := testHelper.MakeRequest(http.MethodPost, "/user/password", accessToken, updateInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 
@@ -585,32 +282,13 @@ var _ = Describe("UserController", func() {
 					Name:     "Test user for password update not exists",
 					Password: "password123",
 				}
-
-				body, _ := json.Marshal(userInput)
-				req, err := http.NewRequest(http.MethodPost, baseURL+"/signup", bytes.NewBuffer(body))
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Content-Type", "application/json")
-
-				resp, err := client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
-
+				resp, response := testHelper.MakeRequest(http.MethodPost, "/signup", "", userInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
-				response, err := decodeJSON(resp.Body)
-				Expect(err).NotTo(HaveOccurred())
 				Expect(response["data"]).To(HaveKey("access_token"))
-
 				tokenForDeletedUser := response["data"].(map[string]interface{})["access_token"].(string)
 
 				// Delete the user
-				req, err = http.NewRequest(http.MethodDelete, baseURL+"/user", nil)
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Authorization", "Bearer "+tokenForDeletedUser)
-
-				resp, err = client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
-
+				resp, _ = testHelper.MakeRequest(http.MethodDelete, "/user", tokenForDeletedUser, nil)
 				Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
 
 				// Now try to update password for the deleted user - should get 404
@@ -618,20 +296,8 @@ var _ = Describe("UserController", func() {
 					OldPassword: "password123",
 					NewPassword: "newpassword123",
 				}
-
-				body, _ = json.Marshal(updateInput)
-				req, err = http.NewRequest(http.MethodPost, baseURL+"/user/password", bytes.NewBuffer(body))
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Content-Type", "application/json")
-				req.Header.Set("Authorization", "Bearer "+tokenForDeletedUser)
-
-				resp, err = client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
-
+				resp, response = testHelper.MakeRequest(http.MethodPost, "/user/password", tokenForDeletedUser, updateInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
-				response, err = decodeJSON(resp.Body)
-				Expect(err).NotTo(HaveOccurred())
 				Expect(response["message"]).To(Equal("user not found"))
 			})
 		})
@@ -646,70 +312,29 @@ var _ = Describe("UserController", func() {
 					Name:     "Test user to delete",
 					Password: "password123",
 				}
-
-				body, _ := json.Marshal(userInput)
-				req, err := http.NewRequest(http.MethodPost, baseURL+"/signup", bytes.NewBuffer(body))
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Content-Type", "application/json")
-
-				resp, err := client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
-
+				resp, response := testHelper.MakeRequest(http.MethodPost, "/signup", "", userInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
-				response, err := decodeJSON(resp.Body)
-				Expect(err).NotTo(HaveOccurred())
 				Expect(response["data"]).To(HaveKey("access_token"))
-				Expect(response["data"]).To(HaveKey("refresh_token"))
-				Expect(response["data"]).To(HaveKey("user"))
-
 				newAccessToken := response["data"].(map[string]interface{})["access_token"].(string)
 
 				// Delete the user
-				req, err = http.NewRequest(http.MethodDelete, baseURL+"/user", nil)
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Authorization", "Bearer "+newAccessToken)
-
-				resp, err = client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
-
+				resp, _ = testHelper.MakeRequest(http.MethodDelete, "/user", newAccessToken, nil)
 				Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
 
 				// Verify user is deleted by trying to get user details
-				req, err = http.NewRequest(http.MethodGet, baseURL+"/user", nil)
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Authorization", "Bearer "+newAccessToken)
-
-				resp, err = client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
-
+				resp, _ = testHelper.MakeRequest(http.MethodGet, "/user", newAccessToken, nil)
 				Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 			})
 		})
 
 		Context("with invalid token", func() {
 			It("should return unauthorized", func() {
-				req, err := http.NewRequest(http.MethodDelete, baseURL+"/user", nil)
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Authorization", "Bearer invalid-token")
-
-				resp, err := client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
-
+				resp, _ := testHelper.MakeRequest(http.MethodDelete, "/user", "invalid-token", nil)
 				Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
 			})
 
 			It("should return unauthorized for missing authorization header", func() {
-				req, err := http.NewRequest(http.MethodDelete, baseURL+"/user", nil)
-				Expect(err).NotTo(HaveOccurred())
-
-				resp, err := client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
-
+				resp, _ := testHelper.MakeRequest(http.MethodDelete, "/user", "", nil)
 				Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
 			})
 		})
@@ -722,43 +347,17 @@ var _ = Describe("UserController", func() {
 					Name:     "Test user for delete not exists",
 					Password: "password123",
 				}
-
-				body, _ := json.Marshal(userInput)
-				req, err := http.NewRequest(http.MethodPost, baseURL+"/signup", bytes.NewBuffer(body))
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Content-Type", "application/json")
-
-				resp, err := client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
-
+				resp, response := testHelper.MakeRequest(http.MethodPost, "/signup", "", userInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
-				response, err := decodeJSON(resp.Body)
-				Expect(err).NotTo(HaveOccurred())
 				Expect(response["data"]).To(HaveKey("access_token"))
-
 				tokenForDeletedUser := response["data"].(map[string]interface{})["access_token"].(string)
 
 				// Delete the user first time
-				req, err = http.NewRequest(http.MethodDelete, baseURL+"/user", nil)
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Authorization", "Bearer "+tokenForDeletedUser)
-
-				resp, err = client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
-
+				resp, _ = testHelper.MakeRequest(http.MethodDelete, "/user", tokenForDeletedUser, nil)
 				Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
 
 				// Now try to delete the already deleted user - should get 404
-				req, err = http.NewRequest(http.MethodDelete, baseURL+"/user", nil)
-				Expect(err).NotTo(HaveOccurred())
-				req.Header.Set("Authorization", "Bearer "+tokenForDeletedUser)
-
-				resp, err = client.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				defer resp.Body.Close()
-
+				resp, _ = testHelper.MakeRequest(http.MethodDelete, "/user", tokenForDeletedUser, nil)
 				Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 			})
 		})
