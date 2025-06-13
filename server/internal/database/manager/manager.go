@@ -34,7 +34,7 @@ type DatabaseManager interface {
 
 	// WithLock executes a function with a table lock within a transaction
 	// Automatically starts transaction, commits on success, rolls back on error
-	WithLock(ctx context.Context, lockQuery string, fn LockFunc) error
+	WithLock(ctx context.Context, lockKey int64, fn LockFunc) error
 
 	// Close closes the database connection
 	Close() error

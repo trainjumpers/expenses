@@ -53,7 +53,7 @@ func (m *MockDatabaseManager) WithTxn(ctx context.Context, fn database.Transacti
 }
 
 // WithLock mocks lock execution
-func (m *MockDatabaseManager) WithLock(ctx context.Context, lockQuery string, fn database.LockFunc) error {
+func (m *MockDatabaseManager) WithLock(ctx context.Context, lockKey int64, fn database.LockFunc) error {
 	// For testing, just execute the function with a mock transaction
 	return fn(&MockTx{})
 }
