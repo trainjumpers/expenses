@@ -207,32 +207,31 @@ var _ = Describe("PostgresDatabaseManager", Ordered, func() {
 		It("serializes concurrent WithLock calls on same key", func() {
 			lockKey := int64(555555)
 			ch := make(chan string, 2)
-			start := make(chan struct{})
+			acquired := make(chan struct{})
 
 			go func() {
-				<-start
 				dbManager.WithLock(ctx, lockKey, func(tx pgx.Tx) error {
 					ch <- "first acquired"
+					close(acquired) // Signal that the lock is held
 					time.Sleep(500 * time.Millisecond)
 					return nil
 				})
 			}()
 
 			go func() {
-				<-start
+				<-acquired // Wait until the first goroutine has acquired the lock
 				dbManager.WithLock(ctx, lockKey, func(tx pgx.Tx) error {
 					ch <- "second acquired"
 					return nil
 				})
 			}()
 
-			close(start)
 			first := <-ch
 			second := <-ch
-			// The first goroutine should acquire the lock before the second
 			Expect(first).To(Equal("first acquired"))
 			Expect(second).To(Equal("second acquired"))
 		})
+
 		It("returns error on lock contention with timeout", func() {
 			lockKey := int64(888888)
 			ctx1, cancel1 := context.WithCancel(ctx)
@@ -240,9 +239,11 @@ var _ = Describe("PostgresDatabaseManager", Ordered, func() {
 			defer cancel1()
 			defer cancel2()
 			ch := make(chan error, 2)
+			acquired := make(chan struct{})
 
 			go func() {
 				err := dbManager.WithLock(ctx1, lockKey, func(tx pgx.Tx) error {
+					close(acquired) // Signal that the lock is held
 					time.Sleep(500 * time.Millisecond)
 					return nil
 				})
@@ -250,6 +251,7 @@ var _ = Describe("PostgresDatabaseManager", Ordered, func() {
 			}()
 
 			go func() {
+				<-acquired // Wait until the first goroutine has acquired the lock
 				err := dbManager.WithLock(ctx2, lockKey, func(tx pgx.Tx) error {
 					return nil
 				})
@@ -265,6 +267,7 @@ var _ = Describe("PostgresDatabaseManager", Ordered, func() {
 				Expect(err1).To(HaveOccurred())
 			}
 		})
+
 		It("does not block on different lock keys", func() {
 			lockKey1 := int64(111111)
 			lockKey2 := int64(222222)

@@ -123,7 +123,7 @@ func (dm *PostgresDatabaseManager) WithTxn(ctx context.Context, fn TransactionFu
 // WithLock executes a function with a table lock within a transaction
 // Automatically starts transaction, commits on success, rolls back on error
 func (dm *PostgresDatabaseManager) WithLock(ctx context.Context, lockKey int64, fn LockFunc) error {
-	logger.Debugf("Starting transaction with lock: %s", lockKey)
+	logger.Debugf("Starting transaction with lock: %d", lockKey)
 
 	return dm.WithTxn(ctx, func(tx pgx.Tx) error {
 		// Acquire the lock
