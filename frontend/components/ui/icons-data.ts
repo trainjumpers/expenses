@@ -13174,7 +13174,7 @@ export const iconsData: Array<{
     categories: ["home", "travel"],
     tags: [
       "wash",
-      "baht",
+      "bath",
       "water",
       "liquid",
       "fluid",
