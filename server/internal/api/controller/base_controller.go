@@ -54,8 +54,12 @@ func (b *BaseController) HandleError(ctx *gin.Context, err error) {
 	ctx.JSON(http.StatusInternalServerError, response)
 }
 
-// SendSuccess sends a successful response with optional data
+// SendSuccess sends a successful response with optional data. Note: when statusCode is 204, the message and data parameters are ignored.
 func (b *BaseController) SendSuccess(ctx *gin.Context, statusCode int, message string, data interface{}) {
+	if statusCode == http.StatusNoContent {
+		ctx.Status(http.StatusNoContent)
+		return
+	}
 	response := gin.H{
 		"message": message,
 	}
