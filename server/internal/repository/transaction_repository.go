@@ -30,7 +30,7 @@ type TransactionRepository struct {
 	transactionCategoryMappingTable string
 }
 
-func NewTransactionRepository(db database.DatabaseManager, cfg *config.Config) *TransactionRepository {
+func NewTransactionRepository(db database.DatabaseManager, cfg *config.Config) TransactionRepositoryInterface {
 	return &TransactionRepository{
 		db:                              db,
 		schema:                          cfg.DBSchema,
@@ -167,14 +167,14 @@ func (r *TransactionRepository) ListTransactions(c *gin.Context, userId int64) (
 	query := baseQuery + ` WHERE t.created_by = $1 AND t.deleted_at IS NULL GROUP BY t.id ORDER BY t.date DESC`
 	rows, err := r.db.FetchAll(c, query, userId)
 	if err != nil {
-		return nil, err
+		return transactions, err
 	}
 	defer rows.Close()
 
 	for rows.Next() {
 		resp, err := scanTransaction(rows)
 		if err != nil {
-			return nil, err
+			return transactions, err
 		}
 		transactions = append(transactions, resp)
 	}

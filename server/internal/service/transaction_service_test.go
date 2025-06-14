@@ -536,9 +536,10 @@ var _ = Describe("TransactionService", func() {
 			Expect(len(transactions)).To(Equal(2))
 		})
 
-		It("should return error when listing transactions for user with no transactions", func() {
-			_, err := transactionService.ListTransactions(ctx, 999)
-			Expect(err).To(HaveOccurred())
+		It("should return empty array when listing transactions for user with no transactions", func() {
+			transactions, err := transactionService.ListTransactions(ctx, 999)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(transactions).To(BeEmpty())
 		})
 	})
 

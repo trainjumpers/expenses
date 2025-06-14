@@ -5,7 +5,6 @@ import (
 	customErrors "expenses/internal/errors"
 	"expenses/internal/models"
 	"expenses/internal/repository"
-	"expenses/pkg/logger"
 	"expenses/pkg/utils"
 	"fmt"
 	"time"
@@ -44,8 +43,6 @@ func NewTransactionService(
 }
 
 func (s *TransactionService) CreateTransaction(c *gin.Context, input models.CreateTransactionInput) (models.TransactionResponse, error) {
-	logger.Debugf("Creating transaction for user %d", input.CreatedBy)
-
 	if err := s.validateCreateTransaction(c, input); err != nil {
 		return models.TransactionResponse{}, err
 	}
@@ -56,13 +53,10 @@ func (s *TransactionService) CreateTransaction(c *gin.Context, input models.Crea
 }
 
 func (s *TransactionService) GetTransactionById(c *gin.Context, transactionId int64, userId int64) (models.TransactionResponse, error) {
-	logger.Debugf("Fetching transaction by ID %d for user %d", transactionId, userId)
 	return s.repo.GetTransactionById(c, transactionId, userId)
 }
 
 func (s *TransactionService) UpdateTransaction(c *gin.Context, transactionId int64, userId int64, input models.UpdateTransactionInput) (models.TransactionResponse, error) {
-	logger.Debugf("Updating transaction ID %d for user %d", transactionId, userId)
-
 	if err := s.validateUpdateTransaction(c, input, userId); err != nil {
 		return models.TransactionResponse{}, err
 	}
@@ -99,17 +93,14 @@ func (s *TransactionService) UpdateTransaction(c *gin.Context, transactionId int
 		return models.TransactionResponse{}, err
 	}
 
-	logger.Debugf("Transaction ID %d updated successfully for user %d", transactionId, userId)
 	return transaction, nil
 }
 
 func (s *TransactionService) DeleteTransaction(c *gin.Context, transactionId int64, userId int64) error {
-	logger.Debugf("Deleting transaction ID %d for user %d", transactionId, userId)
 	return s.repo.DeleteTransaction(c, transactionId, userId)
 }
 
 func (s *TransactionService) ListTransactions(c *gin.Context, userId int64) ([]models.TransactionResponse, error) {
-	logger.Debugf("Listing transactions for user %d", userId)
 	return s.repo.ListTransactions(c, userId)
 }
 
