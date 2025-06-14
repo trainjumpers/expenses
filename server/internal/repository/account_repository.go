@@ -28,7 +28,7 @@ type AccountRepository struct {
 	tableName string
 }
 
-func NewAccountRepository(db database.DatabaseManager, cfg *config.Config) *AccountRepository {
+func NewAccountRepository(db database.DatabaseManager, cfg *config.Config) AccountRepositoryInterface {
 	return &AccountRepository{
 		db:        db,
 		schema:    cfg.DBSchema,

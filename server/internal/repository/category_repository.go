@@ -28,7 +28,7 @@ type CategoryRepository struct {
 	tableName string
 }
 
-func NewCategoryRepository(db database.DatabaseManager, cfg *config.Config) *CategoryRepository {
+func NewCategoryRepository(db database.DatabaseManager, cfg *config.Config) CategoryRepositoryInterface {
 	return &CategoryRepository{
 		db:        db,
 		schema:    cfg.DBSchema,

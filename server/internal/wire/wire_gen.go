@@ -28,15 +28,15 @@ func InitializeApplication() (*Provider, error) {
 	if err != nil {
 		return nil, err
 	}
-	userRepository := repository.NewUserRepository(databaseManager, configConfig)
-	userServiceInterface := service.NewUserService(userRepository)
+	userRepositoryInterface := repository.NewUserRepository(databaseManager, configConfig)
+	userServiceInterface := service.NewUserService(userRepositoryInterface)
 	authServiceInterface := service.NewAuthService(userServiceInterface, configConfig)
-	accountRepository := repository.NewAccountRepository(databaseManager, configConfig)
-	accountServiceInterface := service.NewAccountService(accountRepository)
-	categoryRepository := repository.NewCategoryRepository(databaseManager, configConfig)
-	categoryServiceInterface := service.NewCategoryService(categoryRepository)
-	transactionRepository := repository.NewTransactionRepository(databaseManager, configConfig)
-	transactionServiceInterface := service.NewTransactionService(transactionRepository, categoryRepository, accountRepository, databaseManager)
+	accountRepositoryInterface := repository.NewAccountRepository(databaseManager, configConfig)
+	accountServiceInterface := service.NewAccountService(accountRepositoryInterface)
+	categoryRepositoryInterface := repository.NewCategoryRepository(databaseManager, configConfig)
+	categoryServiceInterface := service.NewCategoryService(categoryRepositoryInterface)
+	transactionRepositoryInterface := repository.NewTransactionRepository(databaseManager, configConfig)
+	transactionServiceInterface := service.NewTransactionService(transactionRepositoryInterface, categoryRepositoryInterface, accountRepositoryInterface, databaseManager)
 	engine := api.Init(configConfig, authServiceInterface, userServiceInterface, accountServiceInterface, categoryServiceInterface, transactionServiceInterface)
 	provider := NewProvider(engine, databaseManager)
 	return provider, nil
@@ -69,6 +69,6 @@ var ProviderSet = wire.NewSet(
 
 var controllerSet = wire.NewSet(controller.NewAuthController)
 
-var repositorySet = wire.NewSet(repository.NewUserRepository, wire.Bind(new(repository.UserRepositoryInterface), new(*repository.UserRepository)), repository.NewAccountRepository, wire.Bind(new(repository.AccountRepositoryInterface), new(*repository.AccountRepository)), repository.NewCategoryRepository, wire.Bind(new(repository.CategoryRepositoryInterface), new(*repository.CategoryRepository)), repository.NewTransactionRepository, wire.Bind(new(repository.TransactionRepositoryInterface), new(*repository.TransactionRepository)))
+var repositorySet = wire.NewSet(repository.NewUserRepository, repository.NewAccountRepository, repository.NewCategoryRepository, repository.NewTransactionRepository)
 
 var serviceSet = wire.NewSet(service.NewUserService, service.NewAuthService, service.NewAccountService, service.NewCategoryService, service.NewTransactionService)

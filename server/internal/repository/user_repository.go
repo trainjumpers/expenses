@@ -30,7 +30,7 @@ type UserRepository struct {
 	tableName string
 }
 
-func NewUserRepository(db database.DatabaseManager, cfg *config.Config) *UserRepository {
+func NewUserRepository(db database.DatabaseManager, cfg *config.Config) UserRepositoryInterface {
 	return &UserRepository{
 		db:        db,
 		schema:    cfg.DBSchema,

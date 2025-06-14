@@ -167,8 +167,5 @@ func (m *MockTransactionRepository) ListTransactions(c *gin.Context, userId int6
 			result = append(result, tx)
 		}
 	}
-	if len(result) == 0 {
-		return nil, customErrors.NewTransactionNotFoundError(nil)
-	}
 	return result, nil
 }
