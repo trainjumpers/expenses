@@ -453,7 +453,7 @@ const IconPicker = React.forwardRef<
                   className="h-8 w-8"
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleValueChange("" as IconName);
+                    handleValueChange(defaultValue || ("" as IconName));
                     setSelectedIcon(undefined);
                   }}
                 >
