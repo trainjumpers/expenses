@@ -1,10 +1,14 @@
 "use client";
 
+import { CommandCenterModal } from "@/components/custom/CommandCenter/CommandCenterModal";
 import Dashboard from "@/components/custom/Dashboard/Dashboard";
 import { useUser } from "@/components/custom/Provider/UserProvider";
+import { Button } from "@/components/ui/button";
+import { useState } from "react";
 
 export default function Page() {
   const { read: user } = useUser();
+  const [isNewModalOpen, setIsNewModalOpen] = useState(false);
   return (
     <Dashboard>
       <main className="container mx-auto px-4 py-8">
@@ -17,8 +21,16 @@ export default function Page() {
               Here&apos;s what&apos;s happening with your finances
             </p>
           </div>
+          <Button onClick={() => setIsNewModalOpen(true)}>
+            <span className="mr-2">+</span> New
+          </Button>
         </div>
       </main>
+
+      <CommandCenterModal
+        isOpen={isNewModalOpen}
+        onOpenChange={setIsNewModalOpen}
+      />
     </Dashboard>
   );
 }

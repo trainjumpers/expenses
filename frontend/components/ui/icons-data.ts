@@ -12951,9 +12951,9 @@ export const iconsData: Array<{
       "destroy",
       "remove",
       "erase",
-      "document,",
+      "document",
       "destruction",
-      "secure ",
+      "secure",
       "security",
       "confidential",
       "data",
@@ -13174,7 +13174,7 @@ export const iconsData: Array<{
     categories: ["home", "travel"],
     tags: [
       "wash",
-      "baht",
+      "bath",
       "water",
       "liquid",
       "fluid",
@@ -14077,7 +14077,7 @@ export const iconsData: Array<{
     name: "squares-exclude",
     categories: ["design"],
     tags: [
-      "sqaure",
+      "square",
       "pathfinder",
       "path",
       "exclude",
@@ -14091,7 +14091,7 @@ export const iconsData: Array<{
     name: "squares-intersect",
     categories: ["design"],
     tags: [
-      "sqaure",
+      "square",
       "pathfinder",
       "path",
       "intersect",
@@ -14104,7 +14104,7 @@ export const iconsData: Array<{
     name: "squares-subtract",
     categories: ["design"],
     tags: [
-      "sqaure",
+      "square",
       "pathfinder",
       "path",
       "minus",
@@ -14119,7 +14119,7 @@ export const iconsData: Array<{
     name: "squares-unite",
     categories: ["design"],
     tags: [
-      "sqaure",
+      "square",
       "pathfinder",
       "path",
       "unite",
