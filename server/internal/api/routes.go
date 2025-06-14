@@ -18,6 +18,7 @@ func Init(
 	accountService service.AccountServiceInterface,
 	categoryService service.CategoryServiceInterface,
 	transactionService service.TransactionServiceInterface,
+	ruleService service.RuleServiceInterface,
 ) *gin.Engine {
 	router := gin.New()
 	if cfg.Environment != "test" {
@@ -51,6 +52,7 @@ func Init(
 	accountController := controller.NewAccountController(cfg, accountService)
 	categoryController := controller.NewCategoryController(cfg, categoryService)
 	transactionController := controller.NewTransactionController(cfg, transactionService)
+	ruleController := controller.NewRuleController(cfg, ruleService)
 	api := router.Group("/api/v1")
 	{
 		base := api.Group("")
@@ -90,6 +92,14 @@ func Init(
 			transaction.GET("/:transactionId", transactionController.GetTransaction)
 			transaction.PATCH("/:transactionId", transactionController.UpdateTransaction)
 			transaction.DELETE("/:transactionId", transactionController.DeleteTransaction)
+
+			// Rule routes
+			rule := base.Group("/rule").Use(gin.HandlerFunc(middleware.Protected(cfg)))
+			rule.GET("", ruleController.GetAllRules)
+			rule.POST("", ruleController.CreateRule)
+			rule.GET("/:ruleId", ruleController.GetRuleByID)
+			rule.PATCH("/:ruleId", ruleController.UpdateRule)
+			rule.DELETE("/:ruleId", ruleController.DeleteRule)
 		}
 	}
 
