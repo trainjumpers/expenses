@@ -1,8 +1,11 @@
-export const createResource = <T>(asyncFunction: () => Promise<T>) => {
+export const createResource = <T>(
+  asyncFunction: (signal?: AbortSignal) => Promise<T>,
+  signal?: AbortSignal
+) => {
   type State = "pending" | "success" | "error";
   let status: State = "pending";
   let result: T;
-  const suspender = asyncFunction().then(
+  const suspender = asyncFunction(signal).then(
     (res) => {
       status = "success";
       result = res;

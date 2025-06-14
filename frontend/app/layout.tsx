@@ -1,4 +1,6 @@
 import DashboardSkeleton from "@/components/custom/Dashboard/DashboardSkeleton";
+import { AccountProvider } from "@/components/custom/Provider/AccountProvider";
+import { CategoryProvider } from "@/components/custom/Provider/CategoryProvider";
 import { ThemeProvider } from "@/components/custom/Provider/ThemeProvider";
 import { UserProvider } from "@/components/custom/Provider/UserProvider";
 import { Toaster } from "@/components/ui/sonner";
@@ -40,7 +42,11 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <UserProvider>
-            <Suspense fallback={<DashboardSkeleton />}>{children}</Suspense>
+            <AccountProvider>
+              <CategoryProvider>
+                <Suspense fallback={<DashboardSkeleton />}>{children}</Suspense>
+              </CategoryProvider>
+            </AccountProvider>
           </UserProvider>
           <Toaster
             position="top-right"
