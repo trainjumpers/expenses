@@ -1,40 +1,32 @@
 -- +goose Up
 -- +goose StatementBegin
--- Test transactions for user 1
-INSERT INTO test.transaction (id, name, description, amount, date, created_by, account_id, created_at, updated_at) 
-VALUES (1, 'Integration Transaction', 'Test Description', 100.50, '2023-01-01', 1, 1, NOW(), NOW());
+-- Transactions for user 1 (test1@example.com)
+INSERT INTO test.transaction (name, description, amount, date, created_by, account_id)
+VALUES 
+    ('Integration Transaction', 'Test Description', 100.00, '2023-01-01', 1, 1),
+    ('Groceries Shopping', 'Monthly groceries', 150.50, '2023-01-02', 1, 1),
+    ('Utility Bill', 'Electricity bill', 75.25, '2023-01-03', 1, 2),
+    ('Restaurant', 'Dinner with friends', 45.75, '2023-01-03', 1, 1),
+    ('Movie Tickets', 'Weekend movie', 30.00, '2023-01-04', 1, 2),
+    ('Fuel', 'Car refuel', 60.00, '2023-01-05', 1, 1),
+    ('Online Shopping', 'Amazon purchase', 200.00, '2023-01-06', 1, 2),
+    ('Medical Expense', 'Doctor visit', 100.00, '2023-01-07', 1, 1),
+    ('Internet Bill', 'Monthly internet', 50.00, '2023-01-08', 1, 2),
+    ('Coffee Shop', 'Morning coffee', 5.50, '2024-01-09', 1, 1);
 
-INSERT INTO test.transaction (id, name, description, amount, date, created_by, account_id, created_at, updated_at) 
-VALUES (2, 'Transaction without description', NULL, 75.25, '2023-01-02', 1, 1, NOW(), NOW());
-
-INSERT INTO test.transaction (id, name, description, amount, date, created_by, account_id, created_at, updated_at) 
-VALUES (3, 'Transaction for Update Test', 'Update Description', 200.00, '2023-01-03', 1, 1, NOW(), NOW());
-
-INSERT INTO test.transaction (id, name, description, amount, date, created_by, account_id, created_at, updated_at) 
-VALUES (4, 'Transaction for Delete Test', 'Delete Description', 250.00, '2023-01-04', 1, 1, NOW(), NOW());
-
--- Test transactions for user 2 (for cross-user access tests)
-INSERT INTO test.transaction (id, name, description, amount, date, created_by, account_id, created_at, updated_at) 
-VALUES (5, 'User 2 Transaction', 'User 2 Description', 300.00, '2023-01-05', 2, 3, NOW(), NOW());
-
-INSERT INTO test.transaction (id, name, description, amount, date, created_by, account_id, created_at, updated_at) 
-VALUES (6, 'User 2 Transaction 2', 'User 2 Description 2', 150.00, '2023-01-06', 2, 3, NOW(), NOW());
-
--- Additional transactions for listing tests
-INSERT INTO test.transaction (id, name, description, amount, date, created_by, account_id, created_at, updated_at) 
-VALUES (7, 'List Transaction A', 'List Description A', 100.00, '2023-01-07', 1, 1, NOW(), NOW());
-
-INSERT INTO test.transaction (id, name, description, amount, date, created_by, account_id, created_at, updated_at) 
-VALUES (8, 'List Transaction B', 'List Description B', 150.00, '2023-01-08', 1, 2, NOW(), NOW());
-
-INSERT INTO test.transaction (id, name, description, amount, date, created_by, account_id, created_at, updated_at) 
-VALUES (9, 'List Transaction C', 'List Description C', 200.00, '2023-01-09', 1, 2, NOW(), NOW());
-
-INSERT INTO test.transaction (id, name, description, amount, date, created_by, account_id, created_at, updated_at) 
-VALUES (10, 'Mapping Update Transaction', 'To update mappings', 300.00, '2023-01-01', 1, 1, NOW(), NOW());
-
--- Mappings for transaction 10
-INSERT INTO test.transaction_category_mapping (transaction_id, category_id) VALUES (10, 1);
+-- Transaction category mappings for user 1
+INSERT INTO test.transaction_category_mapping (transaction_id, category_id)
+VALUES 
+    (1, 1),  -- Integration Transaction -> Food
+    (2, 4),  -- Groceries -> Shopping
+    (3, 2),  -- Utility Bill -> Transportation (closest available)
+    (4, 1),  -- Restaurant -> Food
+    (5, 3),  -- Movie Tickets -> Entertainment
+    (6, 2),  -- Fuel -> Transportation
+    (7, 4),  -- Online Shopping -> Shopping
+    (8, 5),  -- Medical Expense -> Health
+    (9, 2),  -- Internet Bill -> Transportation (closest available)
+    (10, 1); -- Coffee Shop -> Food
 
 -- Set sequence to continue from the last inserted ID
 SELECT setval('test.transaction_id_seq', 10, true);

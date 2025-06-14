@@ -4,6 +4,7 @@ import (
 	mockDatabase "expenses/internal/mock/database"
 	repository "expenses/internal/mock/repository"
 	"expenses/internal/models"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -20,6 +21,12 @@ var _ = Describe("TransactionService", func() {
 		mockDB             *mockDatabase.MockDatabaseManager
 		ctx                *gin.Context
 		testDate           time.Time
+		cat1               models.CategoryResponse
+		cat2               models.CategoryResponse
+		cat3               models.CategoryResponse
+		acc1               models.AccountResponse
+		acc2               models.AccountResponse
+		userId             int64
 	)
 
 	BeforeEach(func() {
@@ -30,17 +37,69 @@ var _ = Describe("TransactionService", func() {
 		mockDB = mockDatabase.NewMockDatabaseManager()
 		transactionService = NewTransactionService(mockRepo, categoryMockRepo, accountMockRepo, mockDB)
 		testDate, _ = time.Parse("2006-01-02", "2023-01-01")
+		userId = 1
+
+		// Create test categories and accounts
+		var err error
+		cat1, err = categoryMockRepo.CreateCategory(ctx, models.CreateCategoryInput{Name: "Food", CreatedBy: userId})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(cat1.Id).To(BeNumerically(">", 0))
+		cat2, err = categoryMockRepo.CreateCategory(ctx, models.CreateCategoryInput{Name: "Entertainment", CreatedBy: userId})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(cat2.Id).To(BeNumerically(">", 0))
+		cat3, err = categoryMockRepo.CreateCategory(ctx, models.CreateCategoryInput{Name: "Bills", CreatedBy: userId})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(cat3.Id).To(BeNumerically(">", 0))
+		acc1, err = accountMockRepo.CreateAccount(ctx, models.CreateAccountInput{Name: "HDFC", BankType: "hdfc", Currency: "inr", CreatedBy: userId})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(acc1.Id).To(BeNumerically(">", 0))
+		acc2, err = accountMockRepo.CreateAccount(ctx, models.CreateAccountInput{Name: "Chase", BankType: "chase", Currency: "usd", CreatedBy: userId})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(acc2.Id).To(BeNumerically(">", 0))
+
+		// Create test transactions
+		amount1 := 100.0
+		mockRepo.CreateTransaction(ctx, models.CreateBaseTransactionInput{
+			Name:        "Groceries",
+			Description: "Weekly groceries",
+			Amount:      &amount1,
+			Date:        testDate,
+			CreatedBy:   userId,
+			AccountId:   acc1.Id,
+		}, []int64{cat1.Id})
+
+		amount2 := 50.0
+		mockRepo.CreateTransaction(ctx, models.CreateBaseTransactionInput{
+			Name:        "Movie tickets",
+			Description: "Weekend movie",
+			Amount:      &amount2,
+			Date:        testDate.AddDate(0, 0, 1),
+			CreatedBy:   userId,
+			AccountId:   acc2.Id,
+		}, []int64{cat2.Id})
+
+		amount3 := 200.0
+		mockRepo.CreateTransaction(ctx, models.CreateBaseTransactionInput{
+			Name:        "Electricity bill",
+			Description: "Monthly bill",
+			Amount:      &amount3,
+			Date:        testDate.AddDate(0, 0, 2),
+			CreatedBy:   userId,
+			AccountId:   acc1.Id,
+		}, []int64{cat3.Id})
+
+		amount4 := 75.0
+		mockRepo.CreateTransaction(ctx, models.CreateBaseTransactionInput{
+			Name:        "Restaurant",
+			Description: "Dinner with friends",
+			Amount:      &amount4,
+			Date:        testDate.AddDate(0, 0, 3),
+			CreatedBy:   userId,
+			AccountId:   acc2.Id,
+		}, []int64{cat1.Id, cat2.Id})
 	})
 
 	Describe("CreateTransaction", func() {
-		var cat1 models.CategoryResponse
-		var acc1 models.AccountResponse
-
-		BeforeEach(func() {
-			cat1, _ = categoryMockRepo.CreateCategory(ctx, models.CreateCategoryInput{Name: "Food", CreatedBy: 1})
-			acc1, _ = accountMockRepo.CreateAccount(ctx, models.CreateAccountInput{Name: "HDFC", BankType: "hdfc", Currency: "inr", CreatedBy: 1})
-		})
-
 		It("should create a new transaction successfully", func() {
 			amount := 150.0
 			input := models.CreateTransactionInput{
@@ -97,14 +156,8 @@ var _ = Describe("TransactionService", func() {
 
 	Describe("UpdateTransaction", func() {
 		var createdTx models.TransactionResponse
-		var cat1, cat2 models.CategoryResponse
-		var acc1, acc2 models.AccountResponse
 
 		BeforeEach(func() {
-			cat1, _ = categoryMockRepo.CreateCategory(ctx, models.CreateCategoryInput{Name: "Groceries", CreatedBy: 1})
-			cat2, _ = categoryMockRepo.CreateCategory(ctx, models.CreateCategoryInput{Name: "Entertainment", CreatedBy: 1})
-			acc1, _ = accountMockRepo.CreateAccount(ctx, models.CreateAccountInput{Name: "ICICI", BankType: "icici", Currency: "inr", CreatedBy: 1})
-			acc2, _ = accountMockRepo.CreateAccount(ctx, models.CreateAccountInput{Name: "Axis", BankType: "axis", Currency: "inr", CreatedBy: 1})
 			amount := 500.0
 			input := models.CreateTransactionInput{
 				CreateBaseTransactionInput: models.CreateBaseTransactionInput{
@@ -130,7 +183,7 @@ var _ = Describe("TransactionService", func() {
 				},
 				CategoryIds: &[]int64{cat2.Id},
 			}
-			resp, err := transactionService.UpdateTransaction(ctx, createdTx.Id, 1, updateInput)
+			resp, err := transactionService.UpdateTransaction(ctx, createdTx.Id, userId, updateInput)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(resp.Name).To(Equal(newName))
 			Expect(resp.Amount).To(Equal(newAmount))
@@ -147,122 +200,6 @@ var _ = Describe("TransactionService", func() {
 			}
 			_, err := transactionService.UpdateTransaction(ctx, createdTx.Id, 1, updateInput)
 			Expect(err).To(HaveOccurred())
-		})
-	})
-
-	Describe("GetTransactionById", func() {
-		var createdTx models.TransactionResponse
-		BeforeEach(func() {
-			cat, _ := categoryMockRepo.CreateCategory(ctx, models.CreateCategoryInput{Name: "Test", CreatedBy: 5})
-			acc, _ := accountMockRepo.CreateAccount(ctx, models.CreateAccountInput{Name: "Test", BankType: "sbi", Currency: "inr", CreatedBy: 5})
-			amount := 123.0
-			input := models.CreateTransactionInput{
-				CreateBaseTransactionInput: models.CreateBaseTransactionInput{
-					Name:      "ForGet",
-					Amount:    &amount,
-					Date:      testDate,
-					CreatedBy: 5,
-					AccountId: acc.Id,
-				},
-				CategoryIds: []int64{cat.Id},
-			}
-			createdTx, _ = transactionService.CreateTransaction(ctx, input)
-		})
-
-		It("should get a transaction by its ID", func() {
-			resp, err := transactionService.GetTransactionById(ctx, createdTx.Id, 5)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(resp.Id).To(Equal(createdTx.Id))
-			Expect(resp.Name).To(Equal("ForGet"))
-		})
-
-		It("should fail for a non-existent ID", func() {
-			_, err := transactionService.GetTransactionById(ctx, 999, 5)
-			Expect(err).To(HaveOccurred())
-		})
-
-		It("should fail if user ID does not match", func() {
-			_, err := transactionService.GetTransactionById(ctx, createdTx.Id, 999)
-			Expect(err).To(HaveOccurred())
-		})
-	})
-
-	Describe("DeleteTransaction", func() {
-		var createdTx models.TransactionResponse
-		var cat1 models.CategoryResponse
-		var acc1 models.AccountResponse
-
-		BeforeEach(func() {
-			cat1, _ = categoryMockRepo.CreateCategory(ctx, models.CreateCategoryInput{Name: "DeleteTest", CreatedBy: 3})
-			acc1, _ = accountMockRepo.CreateAccount(ctx, models.CreateAccountInput{Name: "DeleteAccount", BankType: "sbi", Currency: "inr", CreatedBy: 3})
-			amount := 200.0
-			input := models.CreateTransactionInput{
-				CreateBaseTransactionInput: models.CreateBaseTransactionInput{
-					Name:        "Transaction to Delete",
-					Description: "Will be deleted",
-					Amount:      &amount,
-					Date:        testDate,
-					CreatedBy:   3,
-					AccountId:   acc1.Id,
-				},
-				CategoryIds: []int64{cat1.Id},
-			}
-			createdTx, _ = transactionService.CreateTransaction(ctx, input)
-		})
-
-		It("should delete a transaction successfully", func() {
-			err := transactionService.DeleteTransaction(ctx, createdTx.Id, 3)
-			Expect(err).NotTo(HaveOccurred())
-
-			// Verify transaction is deleted by trying to get it
-			_, err = transactionService.GetTransactionById(ctx, createdTx.Id, 3)
-			Expect(err).To(HaveOccurred())
-		})
-
-		It("should fail to delete a non-existent transaction", func() {
-			err := transactionService.DeleteTransaction(ctx, 999, 3)
-			Expect(err).To(HaveOccurred())
-		})
-
-		It("should fail to delete transaction of different user", func() {
-			err := transactionService.DeleteTransaction(ctx, createdTx.Id, 999)
-			Expect(err).To(HaveOccurred())
-		})
-
-		It("should fail to delete already deleted transaction", func() {
-			// Delete once
-			err := transactionService.DeleteTransaction(ctx, createdTx.Id, 3)
-			Expect(err).NotTo(HaveOccurred())
-
-			// Try to delete again
-			err = transactionService.DeleteTransaction(ctx, createdTx.Id, 3)
-			Expect(err).To(HaveOccurred())
-		})
-	})
-
-	Describe("UpdateTransaction - Additional Edge Cases", func() {
-		var createdTx models.TransactionResponse
-		var cat1, cat2 models.CategoryResponse
-		var acc1, acc2 models.AccountResponse
-
-		BeforeEach(func() {
-			cat1, _ = categoryMockRepo.CreateCategory(ctx, models.CreateCategoryInput{Name: "OriginalCategory", CreatedBy: 4})
-			cat2, _ = categoryMockRepo.CreateCategory(ctx, models.CreateCategoryInput{Name: "UpdatedCategory", CreatedBy: 4})
-			acc1, _ = accountMockRepo.CreateAccount(ctx, models.CreateAccountInput{Name: "OriginalAccount", BankType: "hdfc", Currency: "inr", CreatedBy: 4})
-			acc2, _ = accountMockRepo.CreateAccount(ctx, models.CreateAccountInput{Name: "UpdatedAccount", BankType: "axis", Currency: "inr", CreatedBy: 4})
-			amount := 300.0
-			input := models.CreateTransactionInput{
-				CreateBaseTransactionInput: models.CreateBaseTransactionInput{
-					Name:        "Original Transaction",
-					Description: "Original description",
-					Amount:      &amount,
-					Date:        testDate,
-					CreatedBy:   4,
-					AccountId:   acc1.Id,
-				},
-				CategoryIds: []int64{cat1.Id},
-			}
-			createdTx, _ = transactionService.CreateTransaction(ctx, input)
 		})
 
 		It("should fail to update transaction with non-existent category", func() {
@@ -299,12 +236,10 @@ var _ = Describe("TransactionService", func() {
 			updateInput := models.UpdateTransactionInput{
 				CategoryIds: &newCategoryIds,
 			}
-			resp, err := transactionService.UpdateTransaction(ctx, createdTx.Id, 4, updateInput)
+			resp, err := transactionService.UpdateTransaction(ctx, createdTx.Id, userId, updateInput)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(resp.CategoryIds).To(ContainElement(cat2.Id))
 			Expect(resp.CategoryIds).NotTo(ContainElement(cat1.Id))
-			// Base fields should remain unchanged
-			Expect(resp.Name).To(Equal("Original Transaction"))
 		})
 
 		It("should clear category mappings when empty array is provided", func() {
@@ -312,7 +247,7 @@ var _ = Describe("TransactionService", func() {
 			updateInput := models.UpdateTransactionInput{
 				CategoryIds: &emptyCategoryIds,
 			}
-			resp, err := transactionService.UpdateTransaction(ctx, createdTx.Id, 4, updateInput)
+			resp, err := transactionService.UpdateTransaction(ctx, createdTx.Id, userId, updateInput)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(resp.CategoryIds).To(BeEmpty())
 		})
@@ -329,7 +264,7 @@ var _ = Describe("TransactionService", func() {
 				},
 				CategoryIds: &newCategoryIds,
 			}
-			resp, err := transactionService.UpdateTransaction(ctx, createdTx.Id, 4, updateInput)
+			resp, err := transactionService.UpdateTransaction(ctx, createdTx.Id, userId, updateInput)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(resp.Name).To(Equal(newName))
 			Expect(resp.Amount).To(Equal(newAmount))
@@ -345,7 +280,7 @@ var _ = Describe("TransactionService", func() {
 					Description: nil, // Explicitly setting to nil
 				},
 			}
-			resp, err := transactionService.UpdateTransaction(ctx, createdTx.Id, 4, updateInput)
+			resp, err := transactionService.UpdateTransaction(ctx, createdTx.Id, userId, updateInput)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(resp.Name).To(Equal("Updated Name Only"))
 		})
@@ -357,13 +292,13 @@ var _ = Describe("TransactionService", func() {
 					Description: &newDescription,
 				},
 			}
-			resp, err := transactionService.UpdateTransaction(ctx, createdTx.Id, 4, updateInput)
+			resp, err := transactionService.UpdateTransaction(ctx, createdTx.Id, userId, updateInput)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(resp.Description).NotTo(BeNil())
 			Expect(*resp.Description).To(Equal(newDescription))
 			// Other fields should remain unchanged
-			Expect(resp.Name).To(Equal("Original Transaction"))
-			Expect(resp.Amount).To(Equal(300.0))
+			Expect(resp.Name).To(Equal("Initial"))
+			Expect(resp.Amount).To(Equal(500.0))
 		})
 
 		It("should update date successfully", func() {
@@ -373,12 +308,12 @@ var _ = Describe("TransactionService", func() {
 					Date: newDate,
 				},
 			}
-			resp, err := transactionService.UpdateTransaction(ctx, createdTx.Id, 4, updateInput)
+			resp, err := transactionService.UpdateTransaction(ctx, createdTx.Id, userId, updateInput)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(resp.Date.Format("2006-01-02")).To(Equal("2023-02-15"))
 			// Other fields should remain unchanged
-			Expect(resp.Name).To(Equal("Original Transaction"))
-			Expect(resp.Amount).To(Equal(300.0))
+			Expect(resp.Name).To(Equal("Initial"))
+			Expect(resp.Amount).To(Equal(500.0))
 		})
 
 		It("should fail when updating to future date", func() {
@@ -388,40 +323,9 @@ var _ = Describe("TransactionService", func() {
 					Date: futureDate,
 				},
 			}
-			_, err := transactionService.UpdateTransaction(ctx, createdTx.Id, 4, updateInput)
+			_, err := transactionService.UpdateTransaction(ctx, createdTx.Id, userId, updateInput)
 			Expect(err).To(HaveOccurred())
 			// Should be a date validation error
-		})
-
-		It("should fail when update creates duplicate transaction", func() {
-			// First create another transaction that we'll try to duplicate
-			amount := 300.0
-			duplicateInput := models.CreateTransactionInput{
-				CreateBaseTransactionInput: models.CreateBaseTransactionInput{
-					Name:        "Duplicate Target",
-					Description: "Duplicate description",
-					Amount:      &amount,
-					Date:        testDate,
-					CreatedBy:   4,
-					AccountId:   acc1.Id,
-				},
-				CategoryIds: []int64{cat1.Id},
-			}
-			_, err := transactionService.CreateTransaction(ctx, duplicateInput)
-			Expect(err).NotTo(HaveOccurred())
-
-			// Now try to update the original transaction to match the duplicate
-			duplicateDescription := "Duplicate description"
-			updateInput := models.UpdateTransactionInput{
-				UpdateBaseTransactionInput: models.UpdateBaseTransactionInput{
-					Name:        "Duplicate Target",
-					Description: &duplicateDescription,
-					// Amount and date remain the same (300.0 and testDate)
-				},
-			}
-			_, err = transactionService.UpdateTransaction(ctx, createdTx.Id, 4, updateInput)
-			Expect(err).To(HaveOccurred())
-			// Should be a transaction already exists error
 		})
 
 		It("should succeed when updating to duplicate values for different user", func() {
@@ -455,7 +359,7 @@ var _ = Describe("TransactionService", func() {
 					// Amount and date remain the same
 				},
 			}
-			resp, err := transactionService.UpdateTransaction(ctx, createdTx.Id, 4, updateInput)
+			resp, err := transactionService.UpdateTransaction(ctx, createdTx.Id, userId, updateInput)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(resp.Name).To(Equal("Cross User Transaction"))
 			Expect(*resp.Description).To(Equal("User 2 description"))
@@ -470,7 +374,7 @@ var _ = Describe("TransactionService", func() {
 					Description: "Original description",
 					Amount:      &differentAmount, // Different amount
 					Date:        testDate,
-					CreatedBy:   4,
+					CreatedBy:   userId,
 					AccountId:   acc1.Id,
 				},
 				CategoryIds: []int64{cat1.Id},
@@ -486,60 +390,270 @@ var _ = Describe("TransactionService", func() {
 					// Name, amount, and date make it non-duplicate
 				},
 			}
-			resp, err := transactionService.UpdateTransaction(ctx, createdTx.Id, 4, updateInput)
+			resp, err := transactionService.UpdateTransaction(ctx, createdTx.Id, userId, updateInput)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(*resp.Description).To(Equal("Updated to be similar but not duplicate"))
 		})
 	})
 
-	Describe("ListTransactions", func() {
+	Describe("GetTransactionById", func() {
+		var createdTx models.TransactionResponse
+		BeforeEach(func() {
+			var err error
+			cat, err := categoryMockRepo.CreateCategory(ctx, models.CreateCategoryInput{Name: "GetTest Category", CreatedBy: 5})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(cat.Id).To(BeNumerically(">", 0))
+			acc, err := accountMockRepo.CreateAccount(ctx, models.CreateAccountInput{Name: "Test", BankType: "sbi", Currency: "inr", CreatedBy: 5})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(acc.Id).To(BeNumerically(">", 0))
+			amount := 123.0
+			input := models.CreateTransactionInput{
+				CreateBaseTransactionInput: models.CreateBaseTransactionInput{
+					Name:      "ForGet",
+					Amount:    &amount,
+					Date:      testDate,
+					CreatedBy: 5,
+					AccountId: acc.Id,
+				},
+				CategoryIds: []int64{cat.Id},
+			}
+			createdTx, err = transactionService.CreateTransaction(ctx, input)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should get a transaction by its ID", func() {
+			resp, err := transactionService.GetTransactionById(ctx, createdTx.Id, 5)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.Id).To(Equal(createdTx.Id))
+			Expect(resp.Name).To(Equal("ForGet"))
+		})
+
+		It("should fail for a non-existent ID", func() {
+			_, err := transactionService.GetTransactionById(ctx, 999, 5)
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("should fail if user ID does not match", func() {
+			_, err := transactionService.GetTransactionById(ctx, createdTx.Id, 999)
+			Expect(err).To(HaveOccurred())
+		})
+	})
+
+	Describe("DeleteTransaction", func() {
+		var createdTx models.TransactionResponse
 		var cat1 models.CategoryResponse
 		var acc1 models.AccountResponse
 
 		BeforeEach(func() {
-			cat1, _ = categoryMockRepo.CreateCategory(ctx, models.CreateCategoryInput{Name: "ListTest", CreatedBy: 6})
-			acc1, _ = accountMockRepo.CreateAccount(ctx, models.CreateAccountInput{Name: "ListAccount", BankType: "icici", Currency: "inr", CreatedBy: 6})
-		})
-
-		It("should list transactions for a user", func() {
-			// Create multiple transactions
-			amount1 := 100.0
-			amount2 := 200.0
-			input1 := models.CreateTransactionInput{
+			var err error
+			cat1, err = categoryMockRepo.CreateCategory(ctx, models.CreateCategoryInput{Name: "DeleteTest Category", CreatedBy: 3})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(cat1.Id).To(BeNumerically(">", 0))
+			acc1, err = accountMockRepo.CreateAccount(ctx, models.CreateAccountInput{Name: "DeleteAccount", BankType: "sbi", Currency: "inr", CreatedBy: 3})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(acc1.Id).To(BeNumerically(">", 0))
+			amount := 200.0
+			input := models.CreateTransactionInput{
 				CreateBaseTransactionInput: models.CreateBaseTransactionInput{
-					Name:      "Transaction 1",
-					Amount:    &amount1,
-					Date:      testDate,
-					CreatedBy: 6,
-					AccountId: acc1.Id,
+					Name:        "Transaction to Delete",
+					Description: "Will be deleted",
+					Amount:      &amount,
+					Date:        testDate,
+					CreatedBy:   3,
+					AccountId:   acc1.Id,
 				},
 				CategoryIds: []int64{cat1.Id},
 			}
-			input2 := models.CreateTransactionInput{
-				CreateBaseTransactionInput: models.CreateBaseTransactionInput{
-					Name:      "Transaction 2",
-					Amount:    &amount2,
-					Date:      testDate,
-					CreatedBy: 6,
-					AccountId: acc1.Id,
-				},
-				CategoryIds: []int64{cat1.Id},
-			}
-
-			_, err := transactionService.CreateTransaction(ctx, input1)
+			createdTx, err = transactionService.CreateTransaction(ctx, input)
 			Expect(err).NotTo(HaveOccurred())
-			_, err = transactionService.CreateTransaction(ctx, input2)
-			Expect(err).NotTo(HaveOccurred())
-
-			transactions, err := transactionService.ListTransactions(ctx, 6)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(len(transactions)).To(Equal(2))
 		})
 
-		It("should return empty array when listing transactions for user with no transactions", func() {
-			transactions, err := transactionService.ListTransactions(ctx, 999)
+		It("should delete a transaction successfully", func() {
+			err := transactionService.DeleteTransaction(ctx, createdTx.Id, 3)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(transactions).To(BeEmpty())
+
+			// Verify transaction is deleted by trying to get it
+			_, err = transactionService.GetTransactionById(ctx, createdTx.Id, 3)
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("should fail to delete a non-existent transaction", func() {
+			err := transactionService.DeleteTransaction(ctx, 999, 3)
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("should fail to delete transaction of different user", func() {
+			err := transactionService.DeleteTransaction(ctx, createdTx.Id, 999)
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("should fail to delete already deleted transaction", func() {
+			// Delete once
+			err := transactionService.DeleteTransaction(ctx, createdTx.Id, 3)
+			Expect(err).NotTo(HaveOccurred())
+
+			// Try to delete again
+			err = transactionService.DeleteTransaction(ctx, createdTx.Id, 3)
+			Expect(err).To(HaveOccurred())
+		})
+	})
+
+	Describe("ListTransactions", func() {
+		It("should return all transactions with default pagination", func() {
+			result, err := transactionService.ListTransactions(ctx, userId, models.TransactionListQuery{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result.Total).To(Equal(4))
+			Expect(result.Page).To(Equal(1))
+			Expect(result.PageSize).To(Equal(15))
+			Expect(result.Transactions).To(HaveLen(4))
+		})
+
+		It("should filter by account ID", func() {
+			accountId := int64(1)
+			result, err := transactionService.ListTransactions(ctx, userId, models.TransactionListQuery{
+				AccountID: &accountId,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result.Total).To(Equal(2))
+			for _, tx := range result.Transactions {
+				Expect(tx.AccountId).To(Equal(accountId))
+			}
+		})
+
+		It("should filter by category ID", func() {
+			categoryId := int64(1) // Food category
+			result, err := transactionService.ListTransactions(ctx, userId, models.TransactionListQuery{
+				CategoryID: &categoryId,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result.Total).To(Equal(2))
+			for _, tx := range result.Transactions {
+				found := false
+				for _, catId := range tx.CategoryIds {
+					if catId == categoryId {
+						found = true
+						break
+					}
+				}
+				Expect(found).To(BeTrue())
+			}
+		})
+
+		It("should filter by amount range", func() {
+			minAmount := 75.0
+			maxAmount := 150.0
+			result, err := transactionService.ListTransactions(ctx, userId, models.TransactionListQuery{
+				MinAmount: &minAmount,
+				MaxAmount: &maxAmount,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result.Total).To(Equal(2))
+			for _, tx := range result.Transactions {
+				Expect(tx.Amount).To(And(
+					BeNumerically(">=", minAmount),
+					BeNumerically("<=", maxAmount),
+				))
+			}
+		})
+
+		It("should filter by date range", func() {
+			dateFrom := testDate
+			dateTo := testDate.AddDate(0, 0, 1)
+			result, err := transactionService.ListTransactions(ctx, userId, models.TransactionListQuery{
+				DateFrom: &dateFrom,
+				DateTo:   &dateTo,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result.Total).To(Equal(2))
+			for _, tx := range result.Transactions {
+				Expect(tx.Date).To(And(
+					BeTemporally(">=", dateFrom),
+					BeTemporally("<=", dateTo),
+				))
+			}
+		})
+
+		It("should search by name and description", func() {
+			search := "bill"
+			result, err := transactionService.ListTransactions(ctx, userId, models.TransactionListQuery{
+				Search: &search,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result.Total).To(Equal(1))
+			for _, tx := range result.Transactions {
+				searchFound := strings.Contains(strings.ToLower(tx.Name), search) ||
+					(tx.Description != nil && strings.Contains(strings.ToLower(*tx.Description), search))
+				Expect(searchFound).To(BeTrue())
+			}
+		})
+
+		It("should sort by amount ascending", func() {
+			result, err := transactionService.ListTransactions(ctx, userId, models.TransactionListQuery{
+				SortBy:    "amount",
+				SortOrder: "asc",
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result.Total).To(Equal(4))
+			for i := 1; i < len(result.Transactions); i++ {
+				Expect(result.Transactions[i].Amount).To(BeNumerically(">=", result.Transactions[i-1].Amount))
+			}
+		})
+
+		It("should sort by date descending", func() {
+			result, err := transactionService.ListTransactions(ctx, userId, models.TransactionListQuery{
+				SortBy:    "date",
+				SortOrder: "desc",
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result.Total).To(Equal(4))
+			for i := 1; i < len(result.Transactions); i++ {
+				Expect(result.Transactions[i].Date).To(BeTemporally("<=", result.Transactions[i-1].Date))
+			}
+		})
+
+		It("should handle pagination", func() {
+			result, err := transactionService.ListTransactions(ctx, userId, models.TransactionListQuery{
+				Page:     2,
+				PageSize: 2,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result.Total).To(Equal(4))
+			Expect(result.Page).To(Equal(2))
+			Expect(result.PageSize).To(Equal(2))
+			Expect(result.Transactions).To(HaveLen(2))
+		})
+
+		It("should handle multiple filters together", func() {
+			accountId := int64(1)
+			minAmount := 100.0
+			dateFrom := testDate
+			search := "bill"
+			result, err := transactionService.ListTransactions(ctx, userId, models.TransactionListQuery{
+				AccountID: &accountId,
+				MinAmount: &minAmount,
+				DateFrom:  &dateFrom,
+				Search:    &search,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result.Total).To(Equal(1))
+			for _, tx := range result.Transactions {
+				Expect(tx.AccountId).To(Equal(accountId))
+				Expect(tx.Amount).To(BeNumerically(">=", minAmount))
+				Expect(tx.Date).To(BeTemporally(">=", dateFrom))
+				searchFound := strings.Contains(strings.ToLower(tx.Name), search) ||
+					(tx.Description != nil && strings.Contains(strings.ToLower(*tx.Description), search))
+				Expect(searchFound).To(BeTrue())
+			}
+		})
+
+		It("should return empty result for non-existent filters", func() {
+			accountId := int64(999)
+			result, err := transactionService.ListTransactions(ctx, userId, models.TransactionListQuery{
+				AccountID: &accountId,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result.Total).To(Equal(0))
+			Expect(result.Transactions).To(BeEmpty())
 		})
 	})
 

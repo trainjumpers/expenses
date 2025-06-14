@@ -39,7 +39,12 @@ export async function apiRequest<T>(
     }
     return (data as { data: T }).data;
   } catch (err) {
-    if (!toastShown) toast.error(errorMessage);
+    if (
+      !toastShown &&
+      !(err instanceof DOMException && err.name === "AbortError")
+    ) {
+      toast.error(errorMessage);
+    }
     throw err;
   }
 }

@@ -30,11 +30,13 @@ export type CategoryResource = {
 const CategoryContext = createContext<CategoryResource | null>(null);
 
 export const CategoryProvider = ({ children }: { children: ReactNode }) => {
-  const [resource, setResource] = useState<ReturnType<
-    typeof createResource<Category[]>
-  > | null>(null);
   const [abortController, setAbortController] =
     useState<AbortController | null>(null);
+  const [resource, setResource] = useState(() => {
+    const controller = new AbortController();
+    setAbortController(controller);
+    return createResource<Category[]>(listCategory, controller.signal);
+  });
 
   const refresh = () => {
     if (abortController) {

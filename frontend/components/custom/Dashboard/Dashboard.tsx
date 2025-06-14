@@ -4,7 +4,7 @@ export default function Dashboard({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen">
       <Navbar />
-      {children}
+      <main className="container mx-auto px-4 py-4">{children}</main>
     </div>
   );
 }
