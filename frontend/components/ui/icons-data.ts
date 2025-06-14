@@ -12953,7 +12953,7 @@ export const iconsData: Array<{
       "erase",
       "document",
       "destruction",
-      "secure ",
+      "secure",
       "security",
       "confidential",
       "data",
