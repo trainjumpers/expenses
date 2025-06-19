@@ -79,8 +79,5 @@ db-downgrade-reset reset=default_downgrade:
 @server:
   air
 
-@test:
-  cd server && bash e2e_test.sh
-
-@test-coverage:
-  cd server && COVERAGE=true bash e2e_test.sh
+@test test_file="":
+  cd server && bash e2e_test.sh {{test_file}}

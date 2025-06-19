@@ -51,3 +51,27 @@ type TransactionResponse struct {
 	TransactionBaseResponse
 	CategoryIds []int64 `json:"category_ids"`
 }
+
+// PaginatedTransactionsResponse is the paginated response for transaction listing
+// Contains the data, total count, current page, and page size
+type PaginatedTransactionsResponse struct {
+	Transactions []TransactionResponse `json:"transactions"`
+	Total        int                   `json:"total"`
+	Page         int                   `json:"page"`
+	PageSize     int                   `json:"page_size"`
+}
+
+// TransactionListQuery holds query params for filtering, sorting, and pagination
+type TransactionListQuery struct {
+	Page       int        // page number (1-based)
+	PageSize   int        // items per page
+	SortBy     string     // column to sort by (e.g., "date", "amount", "name")
+	SortOrder  string     // "asc" or "desc"
+	AccountID  *int64     // filter by account
+	CategoryID *int64     // filter by category
+	MinAmount  *float64   // filter by min amount
+	MaxAmount  *float64   // filter by max amount
+	DateFrom   *time.Time // filter by start date
+	DateTo     *time.Time // filter by end date
+	Search     *string    // search in name/description
+}

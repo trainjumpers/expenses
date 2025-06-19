@@ -30,11 +30,13 @@ export type AccountResource = {
 const AccountContext = createContext<AccountResource | null>(null);
 
 export const AccountProvider = ({ children }: { children: ReactNode }) => {
-  const [resource, setResource] = useState<ReturnType<
-    typeof createResource<Account[]>
-  > | null>(null);
   const [abortController, setAbortController] =
     useState<AbortController | null>(null);
+  const [resource, setResource] = useState(() => {
+    const controller = new AbortController();
+    setAbortController(controller);
+    return createResource<Account[]>(listAccounts, controller.signal);
+  });
 
   const refresh = () => {
     if (abortController) {

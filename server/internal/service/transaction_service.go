@@ -18,7 +18,7 @@ type TransactionServiceInterface interface {
 	GetTransactionById(c *gin.Context, transactionId int64, userId int64) (models.TransactionResponse, error)
 	UpdateTransaction(c *gin.Context, transactionId int64, userId int64, input models.UpdateTransactionInput) (models.TransactionResponse, error)
 	DeleteTransaction(c *gin.Context, transactionId int64, userId int64) error
-	ListTransactions(c *gin.Context, userId int64) ([]models.TransactionResponse, error)
+	ListTransactions(c *gin.Context, userId int64, query models.TransactionListQuery) (models.PaginatedTransactionsResponse, error)
 }
 
 type TransactionService struct {
@@ -100,8 +100,9 @@ func (s *TransactionService) DeleteTransaction(c *gin.Context, transactionId int
 	return s.repo.DeleteTransaction(c, transactionId, userId)
 }
 
-func (s *TransactionService) ListTransactions(c *gin.Context, userId int64) ([]models.TransactionResponse, error) {
-	return s.repo.ListTransactions(c, userId)
+// ListTransactions returns paginated, sorted, and filtered transactions for a user
+func (s *TransactionService) ListTransactions(c *gin.Context, userId int64, query models.TransactionListQuery) (models.PaginatedTransactionsResponse, error) {
+	return s.repo.ListTransactions(c, userId, query)
 }
 
 // validateCreateTransaction performs business rule validation for create operations

@@ -3,6 +3,8 @@ package mock_repository
 import (
 	customErrors "expenses/internal/errors"
 	"expenses/internal/models"
+	"sort"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -160,12 +162,128 @@ func (m *MockTransactionRepository) DeleteTransaction(c *gin.Context, transactio
 	return nil
 }
 
-func (m *MockTransactionRepository) ListTransactions(c *gin.Context, userId int64) ([]models.TransactionResponse, error) {
+func (m *MockTransactionRepository) ListTransactions(c *gin.Context, userId int64, query models.TransactionListQuery) (models.PaginatedTransactionsResponse, error) {
 	var result []models.TransactionResponse
+
+	// Filter transactions by user ID and apply other filters
 	for _, tx := range m.transactions {
-		if tx.CreatedBy == userId {
-			result = append(result, tx)
+		if tx.CreatedBy != userId {
+			continue
 		}
+
+		// Apply filters
+		if query.AccountID != nil && tx.AccountId != *query.AccountID {
+			continue
+		}
+
+		if query.CategoryID != nil {
+			found := false
+			for _, catId := range tx.CategoryIds {
+				if catId == *query.CategoryID {
+					found = true
+					break
+				}
+			}
+			if !found {
+				continue
+			}
+		}
+
+		if query.MinAmount != nil && tx.Amount < *query.MinAmount {
+			continue
+		}
+
+		if query.MaxAmount != nil && tx.Amount > *query.MaxAmount {
+			continue
+		}
+
+		if query.DateFrom != nil && tx.Date.Before(*query.DateFrom) {
+			continue
+		}
+
+		if query.DateTo != nil && tx.Date.After(*query.DateTo) {
+			continue
+		}
+
+		if query.Search != nil && *query.Search != "" {
+			searchTerm := strings.ToLower(*query.Search)
+			name := strings.ToLower(tx.Name)
+			description := ""
+			if tx.Description != nil {
+				description = strings.ToLower(*tx.Description)
+			}
+			if !strings.Contains(name, searchTerm) && !strings.Contains(description, searchTerm) {
+				continue
+			}
+		}
+
+		result = append(result, tx)
 	}
-	return result, nil
+
+	// Sort transactions
+	sortBy := query.SortBy
+	if sortBy == "" {
+		sortBy = "date"
+	}
+	sortOrder := strings.ToLower(query.SortOrder)
+	if sortOrder == "" {
+		sortOrder = "desc"
+	}
+
+	// Sort the result slice
+	switch sortBy {
+	case "date":
+		sort.Slice(result, func(i, j int) bool {
+			if sortOrder == "asc" {
+				return result[i].Date.Before(result[j].Date)
+			}
+			return result[i].Date.After(result[j].Date)
+		})
+	case "amount":
+		sort.Slice(result, func(i, j int) bool {
+			if sortOrder == "asc" {
+				return result[i].Amount < result[j].Amount
+			}
+			return result[i].Amount > result[j].Amount
+		})
+	case "name":
+		sort.Slice(result, func(i, j int) bool {
+			if sortOrder == "asc" {
+				return result[i].Name < result[j].Name
+			}
+			return result[i].Name > result[j].Name
+		})
+	}
+
+	// Apply pagination
+	page := query.Page
+	if page < 1 {
+		page = 1
+	}
+	pageSize := query.PageSize
+	if pageSize < 1 || pageSize > 100 {
+		pageSize = 15
+	}
+
+	total := len(result)
+	start := (page - 1) * pageSize
+	end := start + pageSize
+	if start >= total {
+		return models.PaginatedTransactionsResponse{
+			Transactions: []models.TransactionResponse{},
+			Total:        total,
+			Page:         page,
+			PageSize:     pageSize,
+		}, nil
+	}
+	if end > total {
+		end = total
+	}
+
+	return models.PaginatedTransactionsResponse{
+		Transactions: result[start:end],
+		Total:        total,
+		Page:         page,
+		PageSize:     pageSize,
+	}, nil
 }

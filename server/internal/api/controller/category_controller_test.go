@@ -352,11 +352,21 @@ var _ = Describe("CategoryController", func() {
 	})
 
 	Describe("DeleteCategory", func() {
-		var categoryId int64 = 5
+		var categoryId int64 = 2 // Adding categoryId variable here
 
 		It("should delete category successfully", func() {
+			// Create a new category first
+			input := models.CreateCategoryInput{
+				Name: "Category to Delete",
+				Icon: "delete-icon",
+			}
+			resp, response := testHelper.MakeRequest(http.MethodPost, "/category", accessToken, input)
+			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+			categoryId := int64(response["data"].(map[string]interface{})["id"].(float64))
+
+			// Delete the category
 			url := "/category/" + strconv.FormatInt(categoryId, 10)
-			resp, _ := testHelper.MakeRequest(http.MethodDelete, url, accessToken, nil)
+			resp, _ = testHelper.MakeRequest(http.MethodDelete, url, accessToken, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
 
 			// Verify category is deleted by trying to get it

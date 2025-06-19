@@ -7,6 +7,7 @@ import (
 	"expenses/pkg/logger"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -113,11 +114,73 @@ func (t *TransactionController) DeleteTransaction(ctx *gin.Context) {
 	t.SendSuccess(ctx, http.StatusNoContent, "", nil)
 }
 
+func parseInt64QueryParam(ctx *gin.Context, key string) *int64 {
+	valStr := ctx.Query(key)
+	if valStr == "" {
+		return nil
+	}
+	if v, err := strconv.ParseInt(valStr, 10, 64); err == nil {
+		return &v
+	}
+	return nil
+}
+
+func parseFloat64QueryParam(ctx *gin.Context, key string) *float64 {
+	valStr := ctx.Query(key)
+	if valStr == "" {
+		return nil
+	}
+	if v, err := strconv.ParseFloat(valStr, 64); err == nil {
+		return &v
+	}
+	return nil
+}
+
+func parseTimeQueryParam(ctx *gin.Context, key, layout string) *time.Time {
+	valStr := ctx.Query(key)
+	if valStr == "" {
+		return nil
+	}
+	if v, err := time.Parse(layout, valStr); err == nil {
+		return &v
+	}
+	return nil
+}
+
+func parseStringQueryParam(ctx *gin.Context, key string) *string {
+	valStr := ctx.Query(key)
+	if valStr == "" {
+		return nil
+	}
+	return &valStr
+}
+
+func (t *TransactionController) bindTransactionListQuery(ctx *gin.Context) models.TransactionListQuery {
+	page, _ := strconv.Atoi(ctx.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(ctx.DefaultQuery("page_size", "15"))
+
+	return models.TransactionListQuery{
+		Page:       page,
+		PageSize:   pageSize,
+		SortBy:     ctx.DefaultQuery("sort_by", "date"),
+		SortOrder:  ctx.DefaultQuery("sort_order", "desc"),
+		AccountID:  parseInt64QueryParam(ctx, "account_id"),
+		CategoryID: parseInt64QueryParam(ctx, "category_id"),
+		MinAmount:  parseFloat64QueryParam(ctx, "min_amount"),
+		MaxAmount:  parseFloat64QueryParam(ctx, "max_amount"),
+		DateFrom:   parseTimeQueryParam(ctx, "date_from", "2006-01-02"),
+		DateTo:     parseTimeQueryParam(ctx, "date_to", "2006-01-02"),
+		Search:     parseStringQueryParam(ctx, "search"),
+	}
+}
+
 func (t *TransactionController) ListTransactions(ctx *gin.Context) {
 	userId := t.GetAuthenticatedUserId(ctx)
 	logger.Infof("Fetching transactions for user %d", userId)
 
-	transactions, err := t.transactionService.ListTransactions(ctx, userId)
+	query := t.bindTransactionListQuery(ctx)
+
+	transactions, err := t.transactionService.ListTransactions(ctx, userId, query)
 	if err != nil {
 		logger.Errorf("Error listing transactions: %v", err)
 		t.HandleError(ctx, err)

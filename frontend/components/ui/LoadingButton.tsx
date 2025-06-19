@@ -23,7 +23,7 @@ export const LoadingButton: React.FC<LoadingButtonProps> = ({
     >
       {loading ? (
         <span className="flex items-center justify-center w-full">
-          <Spinner className="mr-2 w-4 h-4" />
+          <Spinner className="mr-2 w-3 h-3" />
           <span>Loading...</span>
         </span>
       ) : (
