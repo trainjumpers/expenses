@@ -1,3 +1,6 @@
+import { AddAccountModal } from "@/components/custom/Modal/Accounts/AddAccountModal";
+import { AddCategoryModal } from "@/components/custom/Modal/Category/AddCategoryModal";
+import { AddTransactionModal } from "@/components/custom/Modal/Transaction/AddTransactionModal";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -8,10 +11,6 @@ import {
 import { LucideIcon, Receipt, Tag, Wallet } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-
-import { AddAccountModal } from "@/components/custom/Modal/Category/AddAccountModal";
-import { AddCategoryModal } from "@/components/custom/Modal/Category/AddCategoryModal";
-import { AddTransactionModal } from "@/components/custom/Modal/Transaction/AddTransactionModal";
 
 interface CommandCenterModalProps {
   isOpen: boolean;
@@ -33,7 +32,8 @@ export function CommandCenterModal({
   const router = useRouter();
   const [isAddAccountModalOpen, setIsAddAccountModalOpen] = useState(false);
   const [isAddCategoryModalOpen, setIsAddCategoryModalOpen] = useState(false);
-  const [isAddTransactionModalOpen, setIsAddTransactionModalOpen] = useState(false);
+  const [isAddTransactionModalOpen, setIsAddTransactionModalOpen] =
+    useState(false);
 
   const options: CommandOption[] = [
     {

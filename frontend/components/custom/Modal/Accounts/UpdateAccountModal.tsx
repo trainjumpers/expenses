@@ -9,6 +9,7 @@ import { Account, BankType, Currency } from "@/lib/models/account";
 import { Wallet } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+
 import { AccountForm } from "./AccountForm";
 
 interface UpdateAccountModalProps {
@@ -78,4 +79,4 @@ export function UpdateAccountModal({
       </DialogContent>
     </Dialog>
   );
-} 
+}

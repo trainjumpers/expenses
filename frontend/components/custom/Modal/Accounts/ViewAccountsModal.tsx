@@ -1,3 +1,6 @@
+import { UpdateAccountModal } from "@/components/custom/Modal/Accounts/UpdateAccountModal";
+import { AddAccountModal } from "@/components/custom/Modal/Accounts/AddAccountModal";
+import { useAccounts } from "@/components/custom/Provider/AccountProvider";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -5,12 +8,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Account } from "@/lib/models/account";
 import { Wallet } from "lucide-react";
 import { useState } from "react";
-import { useAccounts } from "@/components/custom/Provider/AccountProvider";
-import { AddAccountModal } from "@/components/custom/Modal/Category/AddAccountModal";
-import { Account } from "@/lib/models/account";
-import { UpdateAccountModal } from "@/components/custom/Modal/Accounts/UpdateAccountModal";
 
 interface ViewAccountsModalProps {
   isOpen: boolean;
@@ -95,4 +95,4 @@ export function ViewAccountsModal({
       )}
     </>
   );
-} 
+}

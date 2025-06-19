@@ -1,3 +1,6 @@
+import { AddCategoryModal } from "@/components/custom/Modal/Category/AddCategoryModal";
+import { UpdateCategoryModal } from "@/components/custom/Modal/Category/UpdateCategoryModal";
+import { useCategories } from "@/components/custom/Provider/CategoryProvider";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -5,13 +8,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Icon, IconName } from "@/components/ui/icon-picker";
+import { Category } from "@/lib/models/category";
 import { Tag } from "lucide-react";
 import { useState } from "react";
-import { useCategories } from "@/components/custom/Provider/CategoryProvider";
-import { AddCategoryModal } from "@/components/custom/Modal/Category/AddCategoryModal";
-import { Category } from "@/lib/models/category";
-import { Icon, IconName } from "@/components/ui/icon-picker";
-import { UpdateCategoryModal } from "@/components/custom/Modal/Category/UpdateCategoryModal";
 
 interface ViewCategoriesModalProps {
   isOpen: boolean;
@@ -24,7 +24,9 @@ export function ViewCategoriesModal({
 }: ViewCategoriesModalProps) {
   const { read: readCategories } = useCategories();
   const [isAddCategoryModalOpen, setIsAddCategoryModalOpen] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(
+    null
+  );
   const categories = readCategories();
 
   const handleCategoryUpdated = () => {
@@ -100,4 +102,4 @@ export function ViewCategoriesModal({
       )}
     </>
   );
-} 
+}

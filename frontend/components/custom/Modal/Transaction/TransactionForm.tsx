@@ -1,4 +1,4 @@
-import { AddAccountModal } from "@/components/custom/Modal/Category/AddAccountModal";
+import { AddAccountModal } from "@/components/custom/Modal/Accounts/AddAccountModal";
 import { AddCategoryModal } from "@/components/custom/Modal/Category/AddCategoryModal";
 import { LoadingButton } from "@/components/ui/LoadingButton";
 import { Button } from "@/components/ui/button";

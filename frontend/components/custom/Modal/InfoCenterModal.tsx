@@ -1,3 +1,5 @@
+import { ViewAccountsModal } from "@/components/custom/Modal/Accounts/ViewAccountsModal";
+import { ViewCategoriesModal } from "@/components/custom/Modal/Category/ViewCategoriesModal";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -5,11 +7,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { LucideIcon, Tag, Wallet, Eye, Banknote } from "lucide-react";
-import { useState } from "react";
-import { ViewAccountsModal } from "@/components/custom/Modal/Accounts/ViewAccountsModal";
-import { ViewCategoriesModal } from "@/components/custom/Modal/Category/ViewCategoriesModal";
+import { Banknote, Eye, LucideIcon, Tag, Wallet } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 interface InfoCenterModalProps {
   isOpen: boolean;
@@ -29,7 +29,8 @@ export function InfoCenterModal({
 }: InfoCenterModalProps) {
   const router = useRouter();
   const [isViewAccountsModalOpen, setIsViewAccountsModalOpen] = useState(false);
-  const [isViewCategoriesModalOpen, setIsViewCategoriesModalOpen] = useState(false);
+  const [isViewCategoriesModalOpen, setIsViewCategoriesModalOpen] =
+    useState(false);
 
   const options: ViewOption[] = [
     {
@@ -51,14 +52,14 @@ export function InfoCenterModal({
       },
     },
     {
-        title: "Transactions",
-        description: "View and manage your transactions",
-        icon: Banknote,
-        onClick: () => {
-            onOpenChange(false);
-            router.push("/transaction");
-        },
-    }
+      title: "Transactions",
+      description: "View and manage your transactions",
+      icon: Banknote,
+      onClick: () => {
+        onOpenChange(false);
+        router.push("/transaction");
+      },
+    },
   ];
 
   return (
@@ -102,4 +103,4 @@ export function InfoCenterModal({
       />
     </>
   );
-} 
+}

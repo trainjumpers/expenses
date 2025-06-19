@@ -1,8 +1,8 @@
 "use client";
 
+import Dashboard from "@/components/custom/Dashboard/Dashboard";
 import { CommandCenterModal } from "@/components/custom/Modal/CommandCenterModal";
 import { InfoCenterModal } from "@/components/custom/Modal/InfoCenterModal";
-import Dashboard from "@/components/custom/Dashboard/Dashboard";
 import { useUser } from "@/components/custom/Provider/UserProvider";
 import { Button } from "@/components/ui/button";
 import { Eye, Plus } from "lucide-react";

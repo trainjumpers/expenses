@@ -10,6 +10,7 @@ import { Category } from "@/lib/models/category";
 import { Tag } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+
 import { CategoryForm } from "./CategoryForm";
 
 interface AddCategoryModalProps {
@@ -25,10 +26,7 @@ export function AddCategoryModal({
 }: AddCategoryModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = async (formData: {
-    name: string;
-    icon: IconName;
-  }) => {
+  const handleSubmit = async (formData: { name: string; icon: IconName }) => {
     setIsSubmitting(true);
     try {
       const categoryData = {

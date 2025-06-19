@@ -34,48 +34,46 @@ export function CategoryForm({
 
   return (
     <form onSubmit={handleFormSubmit}>
-    <div className="grid gap-4 py-4">
-      <div className="flex items-center gap-4">
-        <Input
-          id="name"
-          value={formData.name}
-          onChange={(e) =>
-            setFormData({ ...formData, name: e.target.value })
-          }
-          placeholder="Enter category name"
-          className="flex-1"
-        />
-        <div className="flex items-center gap-2">
-          <div>
-            <IconPicker
-              value={formData.icon || undefined}
-              onValueChange={(value) =>
-                setFormData({ ...formData, icon: value })
-              }
-              defaultValue="circle-dashed"
-              modal={true}
-            />
+      <div className="grid gap-4 py-4">
+        <div className="flex items-center gap-4">
+          <Input
+            id="name"
+            value={formData.name}
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            placeholder="Enter category name"
+            className="flex-1"
+          />
+          <div className="flex items-center gap-2">
+            <div>
+              <IconPicker
+                value={formData.icon || undefined}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, icon: value })
+                }
+                defaultValue="circle-dashed"
+                modal={true}
+              />
+            </div>
           </div>
         </div>
       </div>
-    </div>
-    <DialogFooter>
-      <Button
-        type="button"
-        variant="outline"
-        onClick={() => onOpenChange(false)}
-      >
-        Cancel
-      </Button>
-      <LoadingButton
-        type="submit"
-        loading={loading || isRefreshing}
-        fixedWidth="140px"
-        disabled={loading || isRefreshing}
-      >
-        {submitText}
-      </LoadingButton>
-    </DialogFooter>
-  </form>
+      <DialogFooter>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => onOpenChange(false)}
+        >
+          Cancel
+        </Button>
+        <LoadingButton
+          type="submit"
+          loading={loading || isRefreshing}
+          fixedWidth="140px"
+          disabled={loading || isRefreshing}
+        >
+          {submitText}
+        </LoadingButton>
+      </DialogFooter>
+    </form>
   );
 }

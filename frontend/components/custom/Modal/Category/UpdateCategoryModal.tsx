@@ -10,6 +10,7 @@ import { Category } from "@/lib/models/category";
 import { Tag } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+
 import { CategoryForm } from "./CategoryForm";
 
 interface UpdateCategoryModalProps {
@@ -27,10 +28,7 @@ export function UpdateCategoryModal({
 }: UpdateCategoryModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = async (formData: {
-    name: string;
-    icon: IconName;
-  }) => {
+  const handleSubmit = async (formData: { name: string; icon: IconName }) => {
     setIsSubmitting(true);
     try {
       const categoryData = {
@@ -73,4 +71,4 @@ export function UpdateCategoryModal({
       </DialogContent>
     </Dialog>
   );
-} 
+}
