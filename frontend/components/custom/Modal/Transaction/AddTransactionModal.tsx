@@ -11,7 +11,7 @@ import { CreateTransaction } from "@/lib/models/transaction";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { TransactionForm } from "./TransactionModal";
+import { TransactionForm } from "./TransactionForm";
 
 interface AddTransactionModalProps {
   isOpen: boolean;

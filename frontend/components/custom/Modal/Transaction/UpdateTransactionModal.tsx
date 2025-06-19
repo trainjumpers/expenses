@@ -10,7 +10,7 @@ import { updateTransaction } from "@/lib/api/transaction";
 import { Transaction } from "@/lib/models/transaction";
 import { toast } from "sonner";
 
-import { TransactionForm } from "./TransactionModal";
+import { TransactionForm } from "./TransactionForm";
 
 interface UpdateTransactionModalProps {
   isOpen: boolean;
@@ -46,7 +46,7 @@ export function UpdateTransactionModal({
         name: formData.name,
         description: formData.description || undefined,
         amount: parseFloat(formData.amount),
-        date: formData.date.toISOString().split("T")[0],
+        date: formData.date.toISOString(),
         category_ids: formData.category_ids,
         account_id: formData.account_id,
       };
@@ -58,7 +58,6 @@ export function UpdateTransactionModal({
       onOpenChange(false);
     } catch (error) {
       console.error("Failed to update transaction:", error);
-      toast.error("Failed to update transaction");
     }
   };
 

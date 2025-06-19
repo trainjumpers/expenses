@@ -1,10 +1,10 @@
 "use client";
 
 import Dashboard from "@/components/custom/Dashboard/Dashboard";
-import { AddTransactionModal } from "@/components/custom/Transaction/AddTransactionModal";
+import { AddTransactionModal } from "@/components/custom/Modal/Transaction/AddTransactionModal";
+import UpdateTransactionModal from "@/components/custom/Modal/Transaction/UpdateTransactionModal";
 import TransactionFilters from "@/components/custom/Transaction/TransactionFilters";
 import { TransactionsTable } from "@/components/custom/Transaction/TransactionsTable";
-import { UpdateTransactionModal } from "@/components/custom/Transaction/UpdateTransactionModal";
 import { Button } from "@/components/ui/button";
 import { listAccounts } from "@/lib/api/account";
 import { listCategory } from "@/lib/api/category";

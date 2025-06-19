@@ -1,5 +1,5 @@
-import { AddAccountModal } from "@/components/custom/CommandCenter/AddAccountModal";
-import { AddCategoryModal } from "@/components/custom/CommandCenter/AddCategoryModal";
+import { AddAccountModal } from "@/components/custom/Modal/Category/AddAccountModal";
+import { AddCategoryModal } from "@/components/custom/Modal/Category/AddCategoryModal";
 import { LoadingButton } from "@/components/ui/LoadingButton";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
