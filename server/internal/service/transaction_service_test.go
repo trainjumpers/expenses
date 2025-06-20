@@ -421,19 +421,19 @@ var _ = Describe("TransactionService", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("should get a transaction by its ID", func() {
+		It("should get a transaction by its Id", func() {
 			resp, err := transactionService.GetTransactionById(ctx, createdTx.Id, 5)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(resp.Id).To(Equal(createdTx.Id))
 			Expect(resp.Name).To(Equal("ForGet"))
 		})
 
-		It("should fail for a non-existent ID", func() {
+		It("should fail for a non-existent Id", func() {
 			_, err := transactionService.GetTransactionById(ctx, 999, 5)
 			Expect(err).To(HaveOccurred())
 		})
 
-		It("should fail if user ID does not match", func() {
+		It("should fail if user Id does not match", func() {
 			_, err := transactionService.GetTransactionById(ctx, createdTx.Id, 999)
 			Expect(err).To(HaveOccurred())
 		})
@@ -508,10 +508,10 @@ var _ = Describe("TransactionService", func() {
 			Expect(result.Transactions).To(HaveLen(4))
 		})
 
-		It("should filter by account ID", func() {
+		It("should filter by account Id", func() {
 			accountId := int64(1)
 			result, err := transactionService.ListTransactions(ctx, userId, models.TransactionListQuery{
-				AccountID: &accountId,
+				AccountId: &accountId,
 			})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result.Total).To(Equal(2))
@@ -520,10 +520,10 @@ var _ = Describe("TransactionService", func() {
 			}
 		})
 
-		It("should filter by category ID", func() {
+		It("should filter by category Id", func() {
 			categoryId := int64(1) // Food category
 			result, err := transactionService.ListTransactions(ctx, userId, models.TransactionListQuery{
-				CategoryID: &categoryId,
+				CategoryId: &categoryId,
 			})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result.Total).To(Equal(2))
@@ -629,7 +629,7 @@ var _ = Describe("TransactionService", func() {
 			dateFrom := testDate
 			search := "bill"
 			result, err := transactionService.ListTransactions(ctx, userId, models.TransactionListQuery{
-				AccountID: &accountId,
+				AccountId: &accountId,
 				MinAmount: &minAmount,
 				DateFrom:  &dateFrom,
 				Search:    &search,
@@ -649,7 +649,7 @@ var _ = Describe("TransactionService", func() {
 		It("should return empty result for non-existent filters", func() {
 			accountId := int64(999)
 			result, err := transactionService.ListTransactions(ctx, userId, models.TransactionListQuery{
-				AccountID: &accountId,
+				AccountId: &accountId,
 			})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result.Total).To(Equal(0))

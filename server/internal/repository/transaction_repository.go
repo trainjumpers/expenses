@@ -211,9 +211,9 @@ func (r *TransactionRepository) buildTransactionWhereClause(userId int64, q mode
 	where := []string{"t.created_by = $1", "t.deleted_at IS NULL"}
 	argIdx := len(args) + 1 // +1 because it is 1 based index
 
-	if q.AccountID != nil {
+	if q.AccountId != nil {
 		where = append(where, fmt.Sprintf("t.account_id = $%d", argIdx))
-		args = append(args, *q.AccountID)
+		args = append(args, *q.AccountId)
 		argIdx++
 	}
 	if q.MinAmount != nil {
@@ -241,9 +241,9 @@ func (r *TransactionRepository) buildTransactionWhereClause(userId int64, q mode
 		args = append(args, "%"+*q.Search+"%", "%"+*q.Search+"%")
 		argIdx += 2
 	}
-	if q.CategoryID != nil {
+	if q.CategoryId != nil {
 		where = append(where, fmt.Sprintf("t.id IN (SELECT transaction_id FROM %s.%s WHERE category_id = $%d)", r.schema, r.transactionCategoryMappingTable, argIdx))
-		args = append(args, *q.CategoryID)
+		args = append(args, *q.CategoryId)
 		argIdx++
 	}
 

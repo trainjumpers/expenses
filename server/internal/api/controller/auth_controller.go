@@ -36,7 +36,7 @@ func (a *AuthController) Signup(ctx *gin.Context) {
 		a.HandleError(ctx, err)
 		return
 	}
-	logger.Infof("User created successfully with ID %d", authResponse.User.Id)
+	logger.Infof("User created successfully with Id %d", authResponse.User.Id)
 	a.SendSuccess(ctx, http.StatusCreated, "User signed up successfully", authResponse)
 }
 
@@ -56,7 +56,7 @@ func (a *AuthController) Login(ctx *gin.Context) {
 		return
 	}
 
-	logger.Infof("User logged in successfully with ID %d", authResponse.User.Id)
+	logger.Infof("User logged in successfully with Id %d", authResponse.User.Id)
 	a.SendSuccess(ctx, http.StatusOK, "User logged in successfully", gin.H{
 		"user":          authResponse.User,
 		"access_token":  authResponse.AccessToken,
@@ -82,7 +82,7 @@ func (a *AuthController) RefreshToken(ctx *gin.Context) {
 		return
 	}
 
-	logger.Infof("Token refreshed successfully for user ID %d", authResponse.User.Id)
+	logger.Infof("Token refreshed successfully for user Id %d", authResponse.User.Id)
 	a.SendSuccess(ctx, http.StatusOK, "Token refreshed successfully", gin.H{
 		"user":          authResponse.User,
 		"access_token":  authResponse.AccessToken,

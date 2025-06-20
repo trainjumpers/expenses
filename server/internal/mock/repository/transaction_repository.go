@@ -165,21 +165,21 @@ func (m *MockTransactionRepository) DeleteTransaction(c *gin.Context, transactio
 func (m *MockTransactionRepository) ListTransactions(c *gin.Context, userId int64, query models.TransactionListQuery) (models.PaginatedTransactionsResponse, error) {
 	var result []models.TransactionResponse
 
-	// Filter transactions by user ID and apply other filters
+	// Filter transactions by user Id and apply other filters
 	for _, tx := range m.transactions {
 		if tx.CreatedBy != userId {
 			continue
 		}
 
 		// Apply filters
-		if query.AccountID != nil && tx.AccountId != *query.AccountID {
+		if query.AccountId != nil && tx.AccountId != *query.AccountId {
 			continue
 		}
 
-		if query.CategoryID != nil {
+		if query.CategoryId != nil {
 			found := false
 			for _, catId := range tx.CategoryIds {
-				if catId == *query.CategoryID {
+				if catId == *query.CategoryId {
 					found = true
 					break
 				}

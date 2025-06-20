@@ -58,19 +58,19 @@ func Protected(cfg *config.Config) gin.HandlerFunc {
 
 		userId, ok := claims["user_id"].(float64)
 		if !ok {
-			logger.Errorf("Malformed user ID in token claims")
+			logger.Errorf("Malformed user Id in token claims")
 			response := gin.H{
 				"message": "Something went wrong",
 			}
 			if cfg.IsDev() {
-				response["error"] = "Malformed user ID in token claims"
+				response["error"] = "Malformed user Id in token claims"
 			}
 			ctx.JSON(http.StatusInternalServerError, response)
 			ctx.Abort()
 			return
 		}
 		ctx.Set("authUserId", int64(userId))
-		logger.Infof("Request authenticated for user ID %d", int64(userId))
+		logger.Infof("Request authenticated for user Id %d", int64(userId))
 		ctx.Next()
 	}
 }
