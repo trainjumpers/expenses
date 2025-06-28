@@ -56,6 +56,7 @@ var repositorySet = wire.NewSet(
 	repository.NewAccountRepository,
 	repository.NewCategoryRepository,
 	repository.NewTransactionRepository,
+	repository.NewRuleRepository,
 )
 
 var serviceSet = wire.NewSet(
@@ -64,4 +65,5 @@ var serviceSet = wire.NewSet(
 	service.NewAccountService,
 	service.NewCategoryService,
 	service.NewTransactionService,
+	service.NewRuleService,
 )

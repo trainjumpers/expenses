@@ -1,0 +1,12 @@
+{
+    "go.goroot": "/Users/pranavnedungadi/.local/share/mise/installs/go/1.24.3",
+    "debug.javascript.defaultRuntimeExecutable": {
+        "pwa-node": "/Users/pranavnedungadi/.local/share/mise/shims/node"
+    },
+    "python.defaultInterpreterPath": "/Users/pranavnedungadi/.local/share/mise/installs/python/3.12.9/bin/python",
+    "go.alternateTools": {
+        "go": "/Users/pranavnedungadi/.local/share/mise/shims/go",
+        "dlv": "/Users/pranavnedungadi/.local/share/mise/shims/dlv",
+        "gopls": "/Users/pranavnedungadi/.local/share/mise/shims/gopls"
+    }
+}

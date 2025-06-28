@@ -102,6 +102,13 @@ func (s *TransactionService) DeleteTransaction(c *gin.Context, transactionId int
 
 // ListTransactions returns paginated, sorted, and filtered transactions for a user
 func (s *TransactionService) ListTransactions(c *gin.Context, userId int64, query models.TransactionListQuery) (models.PaginatedTransactionsResponse, error) {
+	if query.Page < 1 {
+		query.Page = 1
+	}
+	if query.PageSize < 1 || query.PageSize > 100 {
+		query.PageSize = 15
+	}
+
 	return s.repo.ListTransactions(c, userId, query)
 }
 
