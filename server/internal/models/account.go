@@ -20,7 +20,7 @@ type CreateAccountInput struct {
 	BankType  BankType `json:"bank_type" binding:"required,oneof=investment axis sbi hdfc icici"`
 	Currency  string   `json:"currency" binding:"required,oneof=inr usd"`
 	Balance   *float64 `json:"balance"`
-	CreatedBy int64    `json:"created_by"`
+	CreatedBy int64    `json:"created_by" binding:"required"`
 }
 
 type UpdateAccountInput struct {

@@ -25,15 +25,12 @@ func NewTransactionController(cfg *config.Config, transactionService service.Tra
 }
 
 func (t *TransactionController) CreateTransaction(ctx *gin.Context) {
-	userId := t.GetAuthenticatedUserId(ctx)
-	logger.Infof("Creating new transaction for user %d", userId)
-
 	var input models.CreateTransactionInput
 	if err := t.BindJSON(ctx, &input); err != nil {
 		logger.Errorf("Failed to bind JSON: %v", err)
 		return
 	}
-	input.CreatedBy = userId
+	logger.Infof("Creating new transaction for user %d", input.CreatedBy)
 	transaction, err := t.transactionService.CreateTransaction(ctx, input)
 	if err != nil {
 		logger.Errorf("Error creating transaction: %v", err)
@@ -41,7 +38,7 @@ func (t *TransactionController) CreateTransaction(ctx *gin.Context) {
 		return
 	}
 
-	logger.Infof("Transaction created successfully with ID %d for user %d", transaction.Id, userId)
+	logger.Infof("Transaction created successfully with ID %d for user %d", transaction.Id, transaction.CreatedBy)
 	t.SendSuccess(ctx, http.StatusCreated, "Transaction created successfully", transaction)
 }
 

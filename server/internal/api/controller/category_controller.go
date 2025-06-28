@@ -24,13 +24,12 @@ func NewCategoryController(cfg *config.Config, categoryService service.CategoryS
 }
 
 func (c *CategoryController) CreateCategory(ctx *gin.Context) {
-	logger.Infof("Creating new category for user %d", c.GetAuthenticatedUserId(ctx))
 	var input models.CreateCategoryInput
 	if err := c.BindJSON(ctx, &input); err != nil {
 		logger.Errorf("Failed to bind JSON: %v", err)
 		return
 	}
-	input.CreatedBy = c.GetAuthenticatedUserId(ctx)
+	logger.Infof("Creating new category for user %d", input.CreatedBy)
 	category, err := c.categoryService.CreateCategory(ctx, input)
 	if err != nil {
 		logger.Errorf("Error creating category: %v", err)
