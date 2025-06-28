@@ -2,12 +2,10 @@ package service
 
 import (
 	database "expenses/internal/database/manager"
-	"expenses/internal/errors"
 	"expenses/internal/models"
 	"expenses/internal/repository"
+	"expenses/internal/validator"
 	"expenses/pkg/logger"
-	"strconv"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
@@ -28,6 +26,7 @@ type ruleService struct {
 	ruleRepo        repository.RuleRepositoryInterface
 	transactionRepo repository.TransactionRepositoryInterface
 	db              database.DatabaseManager
+	validator       *validator.RuleValidator
 }
 
 func NewRuleService(ruleRepo repository.RuleRepositoryInterface, transactionRepo repository.TransactionRepositoryInterface, db database.DatabaseManager) RuleServiceInterface {
@@ -35,13 +34,14 @@ func NewRuleService(ruleRepo repository.RuleRepositoryInterface, transactionRepo
 		ruleRepo:        ruleRepo,
 		transactionRepo: transactionRepo,
 		db:              db,
+		validator:       &validator.RuleValidator{},
 	}
 }
 
 func (s *ruleService) CreateRule(c *gin.Context, ruleReq models.CreateRuleRequest) (models.DescribeRuleResponse, error) {
 	logger.Infof("Creating rule for user %d", ruleReq.Rule.CreatedBy)
 	var ruleResponse models.DescribeRuleResponse
-	if err := s.validateCreateRule(ruleReq); err != nil {
+	if err := s.validator.Validate(ruleReq); err != nil {
 		return ruleResponse, err
 	}
 
@@ -112,6 +112,9 @@ func (s *ruleService) ListRules(c *gin.Context, userId int64) ([]models.RuleResp
 
 func (s *ruleService) UpdateRule(c *gin.Context, id int64, ruleReq models.UpdateRuleRequest, userId int64) (models.RuleResponse, error) {
 	logger.Infof("Updating rule %d for user %d", id, userId)
+	if err := s.validator.ValidateUpdate(ruleReq); err != nil {
+		return models.RuleResponse{}, err
+	}
 	rule, err := s.ruleRepo.UpdateRule(c, id, userId, ruleReq)
 	if err != nil {
 		return models.RuleResponse{}, err
@@ -121,6 +124,9 @@ func (s *ruleService) UpdateRule(c *gin.Context, id int64, ruleReq models.Update
 
 func (s *ruleService) UpdateRuleAction(c *gin.Context, id int64, ruleId int64, ruleReq models.UpdateRuleActionRequest, userId int64) (models.RuleActionResponse, error) {
 	logger.Infof("Updating rule action %d for user %d", id, userId)
+	if err := s.validator.ValidateUpdateAction(ruleReq); err != nil {
+		return models.RuleActionResponse{}, err
+	}
 	rule, err := s.ruleRepo.GetRule(c, ruleId, userId)
 	if err != nil {
 		return models.RuleActionResponse{}, err
@@ -134,6 +140,9 @@ func (s *ruleService) UpdateRuleAction(c *gin.Context, id int64, ruleId int64, r
 
 func (s *ruleService) UpdateRuleCondition(c *gin.Context, id int64, ruleId int64, ruleReq models.UpdateRuleConditionRequest, userId int64) (models.RuleConditionResponse, error) {
 	logger.Infof("Updating rule condition %d for user %d", id, userId)
+	if err := s.validator.ValidateUpdateCondition(ruleReq); err != nil {
+		return models.RuleConditionResponse{}, err
+	}
 	rule, err := s.ruleRepo.GetRule(c, ruleId, userId)
 	if err != nil {
 		return models.RuleConditionResponse{}, err
@@ -167,117 +176,4 @@ func (s *ruleService) DeleteRule(c *gin.Context, id int64, userId int64) error {
 	}
 	logger.Infof("Rule %d deleted successfully", id)
 	return nil
-}
-
-// --- Validation methods ---
-func (s *ruleService) validateCreateRule(req models.CreateRuleRequest) error {
-	if err := s.validateRuleActions(req.Actions); err != nil {
-		return err
-	}
-	if err := s.validateRuleConditions(req.Conditions); err != nil {
-		return err
-	}
-	if err := s.validateRuleEffectiveDate(req.Rule.EffectiveFrom); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (s *ruleService) validateRuleEffectiveDate(effectiveFrom time.Time) error {
-	if effectiveFrom.IsZero() {
-		return errors.NewRuleInvalidEffectiveDateError(nil)
-	}
-	if effectiveFrom.After(time.Now()) {
-		return errors.NewRuleInvalidEffectiveDateError(nil)
-	}
-	return nil
-}
-
-func (s *ruleService) validateRuleActions(actions []models.CreateRuleActionRequest) error {
-	if len(actions) == 0 {
-		return errors.NewRuleNoActionsError(nil)
-	}
-	for _, action := range actions {
-		if err := s.validateAction(action); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (s *ruleService) validateRuleConditions(conditions []models.CreateRuleConditionRequest) error {
-	if len(conditions) == 0 {
-		return errors.NewRuleNoConditionsError(nil)
-	}
-	for _, cond := range conditions {
-		if err := s.validateCondition(cond); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (s *ruleService) validateAction(action models.CreateRuleActionRequest) error {
-	if !s.isValidActionType(action.ActionType) {
-		return errors.NewRuleInvalidActionTypeError(nil)
-	}
-	// Add more specific validation for action.ActionValue if needed
-	return nil
-}
-
-func (s *ruleService) validateCondition(condition models.CreateRuleConditionRequest) error {
-	if !s.isValidConditionType(condition.ConditionType) {
-		return errors.NewRuleInvalidConditionTypeError(nil)
-	}
-	// Add more specific validation for condition values and operators
-	if condition.ConditionType == models.RuleFieldAmount {
-		if _, err := strconv.ParseFloat(condition.ConditionValue, 64); err != nil {
-			return errors.NewRuleInvalidConditionValueError(err)
-		}
-	}
-	if !s.isValidOperator(condition.ConditionOperator, condition.ConditionType) {
-		return errors.NewRuleInvalidOperatorError(nil)
-	}
-	return nil
-}
-
-func (s *ruleService) isValidActionType(actionType models.RuleFieldType) bool {
-	switch actionType {
-	case models.RuleFieldName, models.RuleFieldDescription, models.RuleFieldAmount, models.RuleFieldCategory:
-		return true
-	default:
-		return false
-	}
-}
-
-func (s *ruleService) isValidConditionType(conditionType models.RuleFieldType) bool {
-	switch conditionType {
-	case models.RuleFieldName, models.RuleFieldDescription, models.RuleFieldAmount, models.RuleFieldCategory:
-		return true
-	default:
-		return false
-	}
-}
-
-func (s *ruleService) isValidOperator(op models.RuleOperator, fieldType models.RuleFieldType) bool {
-	numericOperators := map[models.RuleOperator]bool{
-		models.OperatorEquals: true, models.OperatorGreater: true, models.OperatorLower: true,
-	}
-	stringOperators := map[models.RuleOperator]bool{
-		models.OperatorEquals: true, models.OperatorContains: true,
-	}
-	idOperators := map[models.RuleOperator]bool{
-		models.OperatorEquals: true,
-	}
-
-	switch fieldType {
-	case models.RuleFieldAmount:
-		return numericOperators[op]
-	case models.RuleFieldName, models.RuleFieldDescription:
-		return stringOperators[op]
-	case models.RuleFieldCategory:
-		return idOperators[op]
-	default:
-		return false
-	}
 }
