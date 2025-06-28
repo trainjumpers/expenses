@@ -60,37 +60,37 @@ func Init(
 		base.POST("/refresh", authController.RefreshToken)
 
 		// User related routes
-		user := base.Group("/user").Use(gin.HandlerFunc(middleware.Protected(cfg))).Use(gin.HandlerFunc(middleware.InjectCreatedBy()))
+		user := base.Group("/user", middleware.ProtectedWithCreatedBy(cfg)...)
 		{
 			user.GET("", userController.GetUserById)
 			user.DELETE("", userController.DeleteUser)
 			user.PATCH("", userController.UpdateUser)
 			user.POST("/password", userController.UpdateUserPassword)
-
-			// Account routes
-			account := base.Group("/account").Use(gin.HandlerFunc(middleware.Protected(cfg))).Use(gin.HandlerFunc(middleware.InjectCreatedBy()))
-			account.GET("", accountController.ListAccounts)
-			account.POST("", accountController.CreateAccount)
-			account.GET("/:accountId", accountController.GetAccount)
-			account.PATCH("/:accountId", accountController.UpdateAccount)
-			account.DELETE("/:accountId", accountController.DeleteAccount)
-
-			// Category routes
-			category := base.Group("/category").Use(gin.HandlerFunc(middleware.Protected(cfg))).Use(gin.HandlerFunc(middleware.InjectCreatedBy()))
-			category.GET("", categoryController.ListCategories)
-			category.POST("", categoryController.CreateCategory)
-			category.GET("/:categoryId", categoryController.GetCategory)
-			category.PATCH("/:categoryId", categoryController.UpdateCategory)
-			category.DELETE("/:categoryId", categoryController.DeleteCategory)
-
-			// Transaction routes
-			transaction := base.Group("/transaction").Use(gin.HandlerFunc(middleware.Protected(cfg))).Use(gin.HandlerFunc(middleware.InjectCreatedBy()))
-			transaction.GET("", transactionController.ListTransactions)
-			transaction.POST("", transactionController.CreateTransaction)
-			transaction.GET("/:transactionId", transactionController.GetTransaction)
-			transaction.PATCH("/:transactionId", transactionController.UpdateTransaction)
-			transaction.DELETE("/:transactionId", transactionController.DeleteTransaction)
 		}
+
+		// Account routes
+		account := base.Group("/account", middleware.ProtectedWithCreatedBy(cfg)...)
+		account.GET("", accountController.ListAccounts)
+		account.POST("", accountController.CreateAccount)
+		account.GET("/:accountId", accountController.GetAccount)
+		account.PATCH("/:accountId", accountController.UpdateAccount)
+		account.DELETE("/:accountId", accountController.DeleteAccount)
+
+		// Category routes
+		category := base.Group("/category", middleware.ProtectedWithCreatedBy(cfg)...)
+		category.GET("", categoryController.ListCategories)
+		category.POST("", categoryController.CreateCategory)
+		category.GET("/:categoryId", categoryController.GetCategory)
+		category.PATCH("/:categoryId", categoryController.UpdateCategory)
+		category.DELETE("/:categoryId", categoryController.DeleteCategory)
+
+		// Transaction routes
+		transaction := base.Group("/transaction", middleware.ProtectedWithCreatedBy(cfg)...)
+		transaction.GET("", transactionController.ListTransactions)
+		transaction.POST("", transactionController.CreateTransaction)
+		transaction.GET("/:transactionId", transactionController.GetTransaction)
+		transaction.PATCH("/:transactionId", transactionController.UpdateTransaction)
+		transaction.DELETE("/:transactionId", transactionController.DeleteTransaction)
 	}
 
 	return router
