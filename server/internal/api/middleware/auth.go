@@ -1,9 +1,12 @@
 package middleware
 
 import (
+	"bytes"
+	"encoding/json"
 	"expenses/internal/config"
 	"expenses/pkg/logger"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 
@@ -89,4 +92,78 @@ func verifyAuthToken(tokenString string, cfg *config.Config) (jwt.MapClaims, err
 	}
 
 	return claims, nil
+}
+
+// InjectCreatedBy is a middleware that injects the 'created_by' field into the request body
+// for POST/PUT/PATCH requests. This middleware should be used after Protected middleware.
+func InjectCreatedBy() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		method := ctx.Request.Method
+
+		// Only process POST, PUT, and PATCH requests
+		if method != "POST" && method != "PUT" && method != "PATCH" {
+			ctx.Next()
+			return
+		}
+
+		// Get the authenticated user ID from context
+		authUserId, exists := ctx.Get("authUserId")
+		if !exists {
+			logger.Warnf("InjectCreatedBy middleware used without authentication")
+			ctx.Next()
+			return
+		}
+
+		userId, ok := authUserId.(int64)
+		if !ok {
+			logger.Errorf("Invalid authUserId type in context")
+			ctx.Next()
+			return
+		}
+
+		// Read the original request body
+		bodyBytes, err := io.ReadAll(ctx.Request.Body)
+		if err != nil {
+			logger.Errorf("Failed to read request body: %v", err)
+			ctx.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to process request"})
+			ctx.Abort()
+			return
+		}
+
+		// Close the original body
+		ctx.Request.Body.Close()
+
+		// Parse the JSON body
+		var bodyMap map[string]interface{}
+		if len(bodyBytes) > 0 {
+			if err := json.Unmarshal(bodyBytes, &bodyMap); err != nil {
+				logger.Errorf("Failed to parse JSON body: %v", err)
+				// If JSON parsing fails, restore original body and continue
+				ctx.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+				ctx.Next()
+				return
+			}
+		} else {
+			bodyMap = make(map[string]interface{})
+		}
+
+		// Inject created_by field
+		bodyMap["created_by"] = userId
+
+		// Marshal back to JSON
+		modifiedBodyBytes, err := json.Marshal(bodyMap)
+		if err != nil {
+			logger.Errorf("Failed to marshal modified body: %v", err)
+			ctx.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to process request"})
+			ctx.Abort()
+			return
+		}
+
+		// Replace the request body with the modified one
+		ctx.Request.Body = io.NopCloser(bytes.NewBuffer(modifiedBodyBytes))
+		ctx.Request.ContentLength = int64(len(modifiedBodyBytes))
+
+		logger.Infof("Injected created_by field with user ID %d for %s request", userId, method)
+		ctx.Next()
+	}
 }

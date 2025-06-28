@@ -4,7 +4,7 @@ package models
 type CreateCategoryInput struct {
 	Name      string `json:"name" binding:"required" maxlength:"100"`
 	Icon      string `json:"icon"`
-	CreatedBy int64  `json:"created_by"`
+	CreatedBy int64  `json:"created_by" binding:"required"`
 }
 
 // UpdateCategoryInput is used for updating an existing category

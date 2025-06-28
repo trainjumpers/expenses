@@ -24,13 +24,12 @@ func NewAccountController(cfg *config.Config, accountService service.AccountServ
 }
 
 func (a *AccountController) CreateAccount(ctx *gin.Context) {
-	logger.Infof("Creating new account for user %d", a.GetAuthenticatedUserId(ctx))
 	var input models.CreateAccountInput
 	if err := a.BindJSON(ctx, &input); err != nil {
 		logger.Errorf("Failed to bind JSON: %v", err)
 		return
 	}
-	input.CreatedBy = a.GetAuthenticatedUserId(ctx)
+	logger.Infof("Creating new account for user %d", input.CreatedBy)
 	account, err := a.accountService.CreateAccount(ctx, input)
 	if err != nil {
 		logger.Errorf("Error creating account: %v", err)

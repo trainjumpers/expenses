@@ -60,7 +60,7 @@ func Init(
 		base.POST("/refresh", authController.RefreshToken)
 
 		// User related routes
-		user := base.Group("/user").Use(gin.HandlerFunc(middleware.Protected(cfg)))
+		user := base.Group("/user").Use(gin.HandlerFunc(middleware.Protected(cfg))).Use(gin.HandlerFunc(middleware.InjectCreatedBy()))
 		{
 			user.GET("", userController.GetUserById)
 			user.DELETE("", userController.DeleteUser)
@@ -68,7 +68,7 @@ func Init(
 			user.POST("/password", userController.UpdateUserPassword)
 
 			// Account routes
-			account := base.Group("/account").Use(gin.HandlerFunc(middleware.Protected(cfg)))
+			account := base.Group("/account").Use(gin.HandlerFunc(middleware.Protected(cfg))).Use(gin.HandlerFunc(middleware.InjectCreatedBy()))
 			account.GET("", accountController.ListAccounts)
 			account.POST("", accountController.CreateAccount)
 			account.GET("/:accountId", accountController.GetAccount)
@@ -76,7 +76,7 @@ func Init(
 			account.DELETE("/:accountId", accountController.DeleteAccount)
 
 			// Category routes
-			category := base.Group("/category").Use(gin.HandlerFunc(middleware.Protected(cfg)))
+			category := base.Group("/category").Use(gin.HandlerFunc(middleware.Protected(cfg))).Use(gin.HandlerFunc(middleware.InjectCreatedBy()))
 			category.GET("", categoryController.ListCategories)
 			category.POST("", categoryController.CreateCategory)
 			category.GET("/:categoryId", categoryController.GetCategory)
@@ -84,7 +84,7 @@ func Init(
 			category.DELETE("/:categoryId", categoryController.DeleteCategory)
 
 			// Transaction routes
-			transaction := base.Group("/transaction").Use(gin.HandlerFunc(middleware.Protected(cfg)))
+			transaction := base.Group("/transaction").Use(gin.HandlerFunc(middleware.Protected(cfg))).Use(gin.HandlerFunc(middleware.InjectCreatedBy()))
 			transaction.GET("", transactionController.ListTransactions)
 			transaction.POST("", transactionController.CreateTransaction)
 			transaction.GET("/:transactionId", transactionController.GetTransaction)
