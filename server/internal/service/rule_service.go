@@ -19,7 +19,6 @@ type RuleServiceInterface interface {
 	UpdateRuleAction(c *gin.Context, id int64, ruleId int64, ruleReq models.UpdateRuleActionRequest, userId int64) (models.RuleActionResponse, error)
 	UpdateRuleCondition(c *gin.Context, id int64, ruleId int64, ruleReq models.UpdateRuleConditionRequest, userId int64) (models.RuleConditionResponse, error)
 	DeleteRule(c *gin.Context, id int64, userId int64) error
-	// ExecuteRules(c *gin.Context, userId int64) (models.ExecuteRulesResponse, error)
 }
 
 type ruleService struct {
@@ -49,6 +48,13 @@ func (s *ruleService) CreateRule(c *gin.Context, ruleReq models.CreateRuleReques
 		rule, err := s.ruleRepo.CreateRule(c, ruleReq.Rule)
 		if err != nil {
 			return err
+		}
+
+		for i := range ruleReq.Actions {
+			ruleReq.Actions[i].RuleId = rule.Id
+		}
+		for i := range ruleReq.Conditions {
+			ruleReq.Conditions[i].RuleId = rule.Id
 		}
 
 		actions, err := s.ruleRepo.CreateRuleActions(c, ruleReq.Actions)
@@ -131,7 +137,7 @@ func (s *ruleService) UpdateRuleAction(c *gin.Context, id int64, ruleId int64, r
 	if err != nil {
 		return models.RuleActionResponse{}, err
 	}
-	ruleAction, err := s.ruleRepo.UpdateRuleAction(c, id, ruleId, rule.Id, ruleReq)
+	ruleAction, err := s.ruleRepo.UpdateRuleAction(c, id, rule.Id, ruleReq)
 	if err != nil {
 		return models.RuleActionResponse{}, err
 	}
@@ -147,7 +153,7 @@ func (s *ruleService) UpdateRuleCondition(c *gin.Context, id int64, ruleId int64
 	if err != nil {
 		return models.RuleConditionResponse{}, err
 	}
-	ruleCondition, err := s.ruleRepo.UpdateRuleCondition(c, id, ruleId, rule.Id, ruleReq)
+	ruleCondition, err := s.ruleRepo.UpdateRuleCondition(c, id, rule.Id, ruleReq)
 	if err != nil {
 		return models.RuleConditionResponse{}, err
 	}
@@ -157,15 +163,15 @@ func (s *ruleService) UpdateRuleCondition(c *gin.Context, id int64, ruleId int64
 func (s *ruleService) DeleteRule(c *gin.Context, id int64, userId int64) error {
 	logger.Infof("Deleting rule %d for user %d", id, userId)
 	err := s.db.WithTxn(c, func(tx pgx.Tx) error {
-		err := s.ruleRepo.DeleteRule(c, id, userId)
-		if err != nil {
-			return err
-		}
-		err = s.ruleRepo.DeleteRuleActionsByRuleId(c, id)
+		err := s.ruleRepo.DeleteRuleActionsByRuleId(c, id)
 		if err != nil {
 			return err
 		}
 		err = s.ruleRepo.DeleteRuleConditionsByRuleId(c, id)
+		if err != nil {
+			return err
+		}
+		err = s.ruleRepo.DeleteRule(c, id, userId)
 		if err != nil {
 			return err
 		}

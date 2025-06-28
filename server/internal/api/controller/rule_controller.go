@@ -27,8 +27,10 @@ func (rc *RuleController) CreateRule(c *gin.Context) {
 
 	var ruleReq models.CreateRuleRequest
 	if err := rc.BindJSON(c, &ruleReq); err != nil {
+		logger.Errorf("Failed to bind JSON: %v", err)
 		return
 	}
+	ruleReq.Rule.CreatedBy = rc.GetAuthenticatedUserId(c)
 	logger.Infof("Creating new rule for user %d", ruleReq.Rule.CreatedBy)
 
 	rule, err := rc.ruleService.CreateRule(c, ruleReq)
@@ -87,6 +89,7 @@ func (rc *RuleController) UpdateRule(c *gin.Context) {
 
 	var ruleReq models.UpdateRuleRequest
 	if err := rc.BindJSON(c, &ruleReq); err != nil {
+		logger.Errorf("Failed to bind JSON: %v", err)
 		return
 	}
 
@@ -178,22 +181,6 @@ func (rc *RuleController) DeleteRule(c *gin.Context) {
 
 	logger.Infof("Rule %d deleted successfully for user %d", ruleId, userId)
 	rc.SendSuccess(c, http.StatusNoContent, "Rule deleted successfully", nil)
-}
-
-func (rc *RuleController) ExecuteRules(c *gin.Context) {
-	userId := rc.GetAuthenticatedUserId(c)
-	logger.Infof("Executing rules for user %d", userId)
-
-	// resp, err := rc.ruleService.ExecuteRules(c, userId)
-	// if err != nil {
-	// 	logger.Errorf("Error executing rules: %v", err)
-	// 	rc.HandleError(c, err)
-	// 	return
-	// }
-
-	// logger.Infof("Rules executed successfully for user %d. Modified: %d, Skipped: %d",
-	// 	userId, len(resp.Modified), len(resp.Skipped))
-	rc.SendSuccess(c, http.StatusOK, "Rules executed successfully", nil)
 }
 
 // parseIdFromParam retrieves an Id from a URL parameter.

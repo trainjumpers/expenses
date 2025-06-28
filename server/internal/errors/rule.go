@@ -5,10 +5,6 @@ import (
 	"net/http"
 )
 
-func NewRuleAlreadyExistsError(err error) *AuthError {
-	return formatError(http.StatusConflict, "A rule with this name already exists.", err, "RuleAlreadyExists")
-}
-
 func NewRuleNotFoundError(err error) *AuthError {
 	return formatError(http.StatusNotFound, "The requested rule was not found.", err, "RuleNotFound")
 }

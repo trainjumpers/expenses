@@ -25,7 +25,7 @@ type CreateBaseRuleRequest struct {
 	Name          string    `json:"name" binding:"required,min=1,max=100"`
 	Description   *string   `json:"description,omitempty" binding:"max=255"`
 	EffectiveFrom time.Time `json:"effective_from" binding:"required"`
-	CreatedBy     int64     `json:"created_by" binding:"required"`
+	CreatedBy     int64     `json:"created_by"`
 }
 
 type CreateRuleRequest struct {
@@ -35,8 +35,8 @@ type CreateRuleRequest struct {
 }
 
 type UpdateRuleRequest struct {
-	Name          *string    `json:"name,omitempty" binding:"max=100"`
-	Description   *string    `json:"description,omitempty" binding:"max=255"`
+	Name          *string    `json:"name,omitempty" binding:"omitempty,max=100"`
+	Description   *string    `json:"description,omitempty" binding:"omitempty,max=255"`
 	EffectiveFrom *time.Time `json:"effective_from,omitempty"`
 }
 
@@ -57,7 +57,7 @@ type DescribeRuleResponse struct {
 type CreateRuleActionRequest struct {
 	ActionType  RuleFieldType `json:"action_type" binding:"required"`
 	ActionValue string        `json:"action_value" binding:"required,min=1,max=100"`
-	RuleId      int64         `json:"rule_id" binding:"required"`
+	RuleId      int64         `json:"rule_id"`
 }
 
 type UpdateRuleActionRequest struct {
@@ -76,7 +76,7 @@ type CreateRuleConditionRequest struct {
 	ConditionType     RuleFieldType `json:"condition_type" binding:"required"`
 	ConditionValue    string        `json:"condition_value" binding:"required,min=1,max=100"`
 	ConditionOperator RuleOperator  `json:"condition_operator" binding:"required"`
-	RuleId            int64         `json:"rule_id" binding:"required"`
+	RuleId            int64         `json:"rule_id"`
 }
 
 type UpdateRuleConditionRequest struct {

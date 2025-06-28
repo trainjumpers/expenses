@@ -23,8 +23,8 @@ type RuleRepositoryInterface interface {
 	ListRuleActionsByRuleId(c *gin.Context, ruleId int64) ([]models.RuleActionResponse, error)
 	ListRuleConditionsByRuleId(c *gin.Context, ruleId int64) ([]models.RuleConditionResponse, error)
 	UpdateRule(c *gin.Context, id int64, userId int64, rule models.UpdateRuleRequest) (models.RuleResponse, error)
-	UpdateRuleAction(c *gin.Context, id int64, ruleId int64, userId int64, action models.UpdateRuleActionRequest) (models.RuleActionResponse, error)
-	UpdateRuleCondition(c *gin.Context, id int64, ruleId int64, userId int64, condition models.UpdateRuleConditionRequest) (models.RuleConditionResponse, error)
+	UpdateRuleAction(c *gin.Context, id int64, ruleId int64, action models.UpdateRuleActionRequest) (models.RuleActionResponse, error)
+	UpdateRuleCondition(c *gin.Context, id int64, ruleId int64, condition models.UpdateRuleConditionRequest) (models.RuleConditionResponse, error)
 	DeleteRuleActionsByRuleId(c *gin.Context, ruleId int64) error
 	DeleteRuleConditionsByRuleId(c *gin.Context, ruleId int64) error
 	DeleteRule(c *gin.Context, id int64, userId int64) error
@@ -89,7 +89,7 @@ func (r *RuleRepository) CreateRuleActions(c *gin.Context, actions []models.Crea
 
 func (r *RuleRepository) createRuleCondition(c *gin.Context, req *models.CreateRuleConditionRequest) (models.RuleConditionResponse, error) {
 	var ruleCondition models.RuleConditionResponse
-	query, values, ptrs, err := helper.CreateInsertQuery(&req, &ruleCondition, r.ruleConditionTable, r.schema)
+	query, values, ptrs, err := helper.CreateInsertQuery(req, &ruleCondition, r.ruleConditionTable, r.schema)
 	if err != nil {
 		return ruleCondition, err
 	}
@@ -131,7 +131,7 @@ func (r *RuleRepository) GetRule(c *gin.Context, id int64, userId int64) (models
 }
 
 func (r *RuleRepository) ListRules(c *gin.Context, userId int64) ([]models.RuleResponse, error) {
-	var rules []models.RuleResponse
+	rules := make([]models.RuleResponse, 0)
 	var rule models.RuleResponse
 	ptrs, dbFields, err := helper.GetDbFieldsFromObject(&rule)
 	if err != nil {
@@ -221,7 +221,7 @@ func (r *RuleRepository) UpdateRule(c *gin.Context, id int64, userId int64, rule
 	return ruleResponse, nil
 }
 
-func (r *RuleRepository) UpdateRuleAction(c *gin.Context, id int64, ruleId int64, userId int64, action models.UpdateRuleActionRequest) (models.RuleActionResponse, error) {
+func (r *RuleRepository) UpdateRuleAction(c *gin.Context, id int64, ruleId int64, action models.UpdateRuleActionRequest) (models.RuleActionResponse, error) {
 	var ruleAction models.RuleActionResponse
 	fieldsClause, argValues, argIndex, err := helper.CreateUpdateParams(&action)
 	if err != nil {
@@ -231,14 +231,10 @@ func (r *RuleRepository) UpdateRuleAction(c *gin.Context, id int64, ruleId int64
 	if err != nil {
 		return ruleAction, err
 	}
-	argValues = append(argValues, id, ruleId, userId)
+	argValues = append(argValues, id, ruleId)
 	query := fmt.Sprintf(`
-        UPDATE %s.%s ra
-        SET %s
-        FROM %s.%s r
-        WHERE ra.id = $%d AND ra.rule_id = $%d AND r.id = ra.rule_id AND r.created_by = $%d
-        RETURNING %s;
-    `, r.schema, r.ruleActionTable, fieldsClause, r.schema, r.ruleTable, argIndex, argIndex+1, argIndex+2, strings.Join(dbFields, ", "))
+		UPDATE %s.%s SET %s WHERE id = $%d AND rule_id = $%d RETURNING %s;
+    `, r.schema, r.ruleActionTable, fieldsClause, argIndex, argIndex+1, strings.Join(dbFields, ", "))
 
 	err = r.db.FetchOne(c, query, argValues...).Scan(ptrs...)
 	if err != nil {
@@ -250,7 +246,7 @@ func (r *RuleRepository) UpdateRuleAction(c *gin.Context, id int64, ruleId int64
 	return ruleAction, nil
 }
 
-func (r *RuleRepository) UpdateRuleCondition(c *gin.Context, id int64, ruleId int64, userId int64, condition models.UpdateRuleConditionRequest) (models.RuleConditionResponse, error) {
+func (r *RuleRepository) UpdateRuleCondition(c *gin.Context, id int64, ruleId int64, condition models.UpdateRuleConditionRequest) (models.RuleConditionResponse, error) {
 	var ruleCondition models.RuleConditionResponse
 	fieldsClause, argValues, argIndex, err := helper.CreateUpdateParams(&condition)
 	if err != nil {
@@ -260,14 +256,10 @@ func (r *RuleRepository) UpdateRuleCondition(c *gin.Context, id int64, ruleId in
 	if err != nil {
 		return ruleCondition, err
 	}
-	argValues = append(argValues, id, ruleId, userId)
+	argValues = append(argValues, id, ruleId)
 	query := fmt.Sprintf(`
-        UPDATE %s.%s rc
-        SET %s
-        FROM %s.%s r
-        WHERE rc.id = $%d AND rc.rule_id = $%d AND r.id = rc.rule_id AND r.created_by = $%d
-        RETURNING %s;
-    `, r.schema, r.ruleConditionTable, fieldsClause, r.schema, r.ruleTable, argIndex, argIndex+1, argIndex+2, strings.Join(dbFields, ", "))
+		UPDATE %s.%s SET %s WHERE id = $%d AND rule_id = $%d RETURNING %s;
+    `, r.schema, r.ruleConditionTable, fieldsClause, argIndex, argIndex+1, strings.Join(dbFields, ", "))
 
 	err = r.db.FetchOne(c, query, argValues...).Scan(ptrs...)
 	if err != nil {
