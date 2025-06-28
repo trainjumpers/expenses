@@ -10,7 +10,7 @@ type CreateBaseTransactionInput struct {
 	Description string    `json:"description" binding:"max=1000"`
 	Amount      *float64  `json:"amount" binding:"required"`
 	Date        time.Time `json:"date" binding:"required"`
-	CreatedBy   int64     `json:"created_by"`
+	CreatedBy   int64     `json:"created_by" binding:"required"`
 	AccountId   int64     `json:"account_id" binding:"required"`
 }
 
