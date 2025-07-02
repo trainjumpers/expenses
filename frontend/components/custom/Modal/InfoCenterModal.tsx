@@ -1,5 +1,6 @@
 import { ViewAccountsModal } from "@/components/custom/Modal/Accounts/ViewAccountsModal";
 import { ViewCategoriesModal } from "@/components/custom/Modal/Category/ViewCategoriesModal";
+import { ViewRulesModal } from "@/components/custom/Modal/Rule/ViewRulesModal";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -7,7 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Banknote, Eye, LucideIcon, Tag, Wallet } from "lucide-react";
+import { Banknote, BookOpen, Eye, LucideIcon, Tag, Wallet } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -31,6 +32,7 @@ export function InfoCenterModal({
   const [isViewAccountsModalOpen, setIsViewAccountsModalOpen] = useState(false);
   const [isViewCategoriesModalOpen, setIsViewCategoriesModalOpen] =
     useState(false);
+  const [isViewRulesModalOpen, setIsViewRulesModalOpen] = useState(false);
 
   const options: ViewOption[] = [
     {
@@ -58,6 +60,15 @@ export function InfoCenterModal({
       onClick: () => {
         onOpenChange(false);
         router.push("/transaction");
+      },
+    },
+    {
+      title: "Rules",
+      description: "View and manage your rules",
+      icon: BookOpen,
+      onClick: () => {
+        onOpenChange(false);
+        setIsViewRulesModalOpen(true);
       },
     },
   ];
@@ -100,6 +111,10 @@ export function InfoCenterModal({
       <ViewCategoriesModal
         isOpen={isViewCategoriesModalOpen}
         onOpenChange={setIsViewCategoriesModalOpen}
+      />
+      <ViewRulesModal
+        isOpen={isViewRulesModalOpen}
+        onOpenChange={setIsViewRulesModalOpen}
       />
     </>
   );

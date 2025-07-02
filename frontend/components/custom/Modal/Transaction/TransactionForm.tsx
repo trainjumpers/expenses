@@ -157,7 +157,6 @@ export function TransactionForm({
                   if (date) setFormData((prev) => ({ ...prev, date }));
                   setOpenCalendar(false);
                 }}
-                initialFocus
               />
             </PopoverContent>
           </Popover>
