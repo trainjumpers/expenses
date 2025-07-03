@@ -130,7 +130,10 @@ export const ViewRulesModal = ({
         <EditRuleModal
           isOpen={true}
           onOpenChange={(open) => {
-            if (!open) setEditRuleId(null);
+            if (!open) {
+              setEditRuleId(null);
+              refreshRules();
+            }
           }}
           ruleId={editRuleId}
         />

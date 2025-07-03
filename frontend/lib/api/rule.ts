@@ -109,18 +109,9 @@ export async function updateRuleActions(
   ruleId: number,
   actions: BaseRuleAction[]
 ): Promise<void> {
-  return apiRequest<void>(
-    `${API_BASE_URL}/rule/${ruleId}/actions`,
-    {
-      method: "PUT",
-      headers: authHeaders(),
-      credentials: "include",
-      body: JSON.stringify(actions),
-    },
-    "rule",
-    [],
-    "Failed to update rule actions"
-  );
+  console.log("Updating rule actions", ruleId, actions);
+  // TODO: Update it to PUT logic
+  return Promise.resolve();
 }
 
 // List conditions for a rule
@@ -144,18 +135,9 @@ export async function updateRuleConditions(
   ruleId: number,
   conditions: BaseRuleCondition[]
 ): Promise<void> {
-  return apiRequest<void>(
-    `${API_BASE_URL}/rule/${ruleId}/conditions`,
-    {
-      method: "PUT",
-      headers: authHeaders(),
-      credentials: "include",
-      body: JSON.stringify(conditions),
-    },
-    "rule",
-    [],
-    "Failed to update rule conditions"
-  );
+  console.log("Updating rule conditions", ruleId, conditions);
+  //TODO: Update it to PUT logic
+  return Promise.resolve();
 }
 
 // Execute rules (example endpoint, adjust as needed)
