@@ -14,6 +14,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { BaseRule, BaseRuleAction, BaseRuleCondition } from "@/lib/models/rule";
+import { getEffectiveScopeAndDate } from "@/lib/utils/rule";
 import { useEffect, useState } from "react";
 
 type RuleModalMode = "add" | "edit";
@@ -83,23 +84,6 @@ export function RuleModal({
     undefined
   );
   const [localError, setLocalError] = useState<string | null>(null);
-
-  // Helper to determine effectiveScope and effectiveFromDate from effective_from string
-  function getEffectiveScopeAndDate(effective_from?: string): {
-    effectiveScope: "all" | "from";
-    effectiveFromDate: Date | undefined;
-  } {
-    if (effective_from) {
-      const effDate = new Date(effective_from);
-      const isToday = effDate.toDateString() === new Date().toDateString();
-      if (isToday) {
-        return { effectiveScope: "all", effectiveFromDate: undefined };
-      } else {
-        return { effectiveScope: "from", effectiveFromDate: effDate };
-      }
-    }
-    return { effectiveScope: "all", effectiveFromDate: undefined };
-  }
 
   // Update form state with initialData when modal is opened or initialData changes (for edit mode)
   useEffect(() => {
