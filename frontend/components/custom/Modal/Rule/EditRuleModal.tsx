@@ -2,7 +2,12 @@ import {
   RuleModal,
   RuleModalInitialData,
 } from "@/components/custom/Modal/Rule/RuleModal";
-import { getRule, updateRule } from "@/lib/api/rule";
+import {
+  getRule,
+  updateRule,
+  updateRuleActions,
+  updateRuleConditions,
+} from "@/lib/api/rule";
 import {
   BaseRuleAction,
   BaseRuleCondition,
@@ -42,29 +47,18 @@ export function EditRuleModal({
     getRule(ruleId)
       .then((data: DescribeRuleResponse) => {
         // Prepare initial data for RuleModal
-        let effectiveScope: "all" | "from" = "all";
-        let effectiveFromDate: Date | undefined = undefined;
-        if (data.rule.effective_from) {
-          const effDate = new Date(data.rule.effective_from);
-          const isToday = effDate.toDateString() === new Date().toDateString();
-          if (isToday) {
-            effectiveScope = "all";
-            effectiveFromDate = undefined;
-          } else {
-            effectiveScope = "from";
-            effectiveFromDate = effDate;
-          }
-        }
         setInitialData({
-          ruleName: data.rule.name || "",
-          ruleDescription: data.rule.description || "",
+          rule: {
+            name: data.rule.name || "",
+            description: data.rule.description || "",
+            effective_from:
+              data.rule.effective_from || new Date().toISOString().slice(0, 10),
+          },
           conditions: normalizeRuleConditions(
             data.conditions as BaseRuleCondition[],
             []
           ),
           actions: normalizeRuleActions(data.actions as BaseRuleAction[], []),
-          effectiveScope,
-          effectiveFromDate,
         });
       })
       .catch((e) => {
@@ -75,34 +69,24 @@ export function EditRuleModal({
 
   // Handler for RuleModal submit
   const handleSubmit = async ({
-    ruleName,
-    ruleDescription,
-    effectiveScope,
-    effectiveFromDate,
+    rule,
+    actions,
+    conditions,
   }: {
-    ruleName: string;
-    ruleDescription: string;
-    conditions: BaseRuleCondition[];
+    rule: UpdateRuleInput;
     actions: BaseRuleAction[];
-    effectiveScope: "all" | "from";
-    effectiveFromDate?: Date;
+    conditions: BaseRuleCondition[];
   }) => {
     setLoading(true);
     setError(null);
 
     try {
-      // Only send changed fields for the rule itself
       const ruleUpdate: UpdateRuleInput = {
-        name: ruleName,
-        description: ruleDescription || undefined,
-        effective_from:
-          effectiveScope === "from" && effectiveFromDate
-            ? effectiveFromDate.toISOString()
-            : new Date().toISOString(),
+        ...rule,
       };
-
       await updateRule(ruleId, ruleUpdate);
-      // Note: You may want to update actions/conditions as well if your API supports it
+      await updateRuleActions(ruleId, actions);
+      await updateRuleConditions(ruleId, conditions);
 
       toast.success("Rule updated successfully!");
       onOpenChange(false);

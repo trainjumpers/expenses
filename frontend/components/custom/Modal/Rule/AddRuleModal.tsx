@@ -2,6 +2,7 @@ import { RuleModal } from "@/components/custom/Modal/Rule/RuleModal";
 import { useCategories } from "@/components/custom/Provider/CategoryProvider";
 import { createRule } from "@/lib/api/rule";
 import {
+  BaseRule,
   BaseRuleAction,
   BaseRuleCondition,
   CreateRuleInput,
@@ -26,33 +27,20 @@ export function AddRuleModal({ isOpen, onOpenChange }: AddRuleModalProps) {
 
   // Handler for RuleModal submit
   const handleSubmit = async ({
-    ruleName,
-    ruleDescription,
+    rule,
     conditions,
     actions,
-    effectiveScope,
-    effectiveFromDate,
   }: {
-    ruleName: string;
-    ruleDescription: string;
+    rule: BaseRule;
     conditions: BaseRuleCondition[];
     actions: BaseRuleAction[];
-    effectiveScope: "all" | "from";
-    effectiveFromDate?: Date;
   }) => {
     setLoading(true);
     setError(null);
 
     try {
       const payload: CreateRuleInput = {
-        rule: {
-          name: ruleName,
-          description: ruleDescription || undefined,
-          effective_from:
-            effectiveScope === "from" && effectiveFromDate
-              ? effectiveFromDate.toISOString()
-              : new Date().toISOString(),
-        },
+        rule,
         actions: normalizeRuleActions(actions, categories),
         conditions: normalizeRuleConditions(conditions, categories),
       };

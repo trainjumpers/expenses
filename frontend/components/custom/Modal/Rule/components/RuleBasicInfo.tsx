@@ -1,16 +1,14 @@
+import { BaseRule } from "@/lib/models/rule";
+
 interface RuleBasicInfoProps {
-  ruleName: string;
-  ruleDescription: string;
-  onRuleNameChange: (name: string) => void;
-  onRuleDescriptionChange: (description: string) => void;
+  rule: BaseRule;
+  onRuleChange: (rule: BaseRule) => void;
   disabled?: boolean;
 }
 
 export function RuleBasicInfo({
-  ruleName,
-  ruleDescription,
-  onRuleNameChange,
-  onRuleDescriptionChange,
+  rule,
+  onRuleChange,
   disabled = false,
 }: RuleBasicInfoProps) {
   return (
@@ -23,8 +21,8 @@ export function RuleBasicInfo({
           type="text"
           className="flex-1 px-4 py-2 bg-background border border-border rounded-lg text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
           placeholder="Enter a name for this rule"
-          value={ruleName}
-          onChange={(e) => onRuleNameChange(e.target.value)}
+          value={rule.name}
+          onChange={(e) => onRuleChange({ ...rule, name: e.target.value })}
           disabled={disabled}
           required
         />
@@ -37,8 +35,10 @@ export function RuleBasicInfo({
           type="text"
           className="flex-1 px-4 py-2 bg-background border border-border rounded-lg text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
           placeholder="Enter a description for this rule"
-          value={ruleDescription}
-          onChange={(e) => onRuleDescriptionChange(e.target.value)}
+          value={rule.description || ""}
+          onChange={(e) =>
+            onRuleChange({ ...rule, description: e.target.value })
+          }
           disabled={disabled}
         />
       </div>

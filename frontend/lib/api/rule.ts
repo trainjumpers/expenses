@@ -1,6 +1,8 @@
 import { apiRequest, authHeaders } from "@/lib/api/request";
 import { API_BASE_URL } from "@/lib/constants/api";
 import {
+  BaseRuleAction,
+  BaseRuleCondition,
   CreateRuleInput,
   DescribeRuleResponse,
   ExecuteRulesResponse,
@@ -102,6 +104,25 @@ export async function listRuleActions(ruleId: number): Promise<RuleAction[]> {
   );
 }
 
+// Update actions for a rule
+export async function updateRuleActions(
+  ruleId: number,
+  actions: BaseRuleAction[]
+): Promise<void> {
+  return apiRequest<void>(
+    `${API_BASE_URL}/rule/${ruleId}/actions`,
+    {
+      method: "PUT",
+      headers: authHeaders(),
+      credentials: "include",
+      body: JSON.stringify(actions),
+    },
+    "rule",
+    [],
+    "Failed to update rule actions"
+  );
+}
+
 // List conditions for a rule
 export async function listRuleConditions(
   ruleId: number
@@ -115,6 +136,25 @@ export async function listRuleConditions(
     "rule",
     [],
     "Failed to fetch rule conditions"
+  );
+}
+
+// Update conditions for a rule
+export async function updateRuleConditions(
+  ruleId: number,
+  conditions: BaseRuleCondition[]
+): Promise<void> {
+  return apiRequest<void>(
+    `${API_BASE_URL}/rule/${ruleId}/conditions`,
+    {
+      method: "PUT",
+      headers: authHeaders(),
+      credentials: "include",
+      body: JSON.stringify(conditions),
+    },
+    "rule",
+    [],
+    "Failed to update rule conditions"
   );
 }
 

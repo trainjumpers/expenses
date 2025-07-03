@@ -13,18 +13,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { BaseRuleAction, BaseRuleCondition } from "@/lib/models/rule";
+import { BaseRule, BaseRuleAction, BaseRuleCondition } from "@/lib/models/rule";
 import { useEffect, useState } from "react";
 
 type RuleModalMode = "add" | "edit";
 
 export interface RuleModalInitialData {
-  ruleName?: string;
-  ruleDescription?: string;
+  rule?: BaseRule;
   conditions?: BaseRuleCondition[];
   actions?: BaseRuleAction[];
-  effectiveScope?: "all" | "from";
-  effectiveFromDate?: Date;
 }
 
 interface RuleModalProps {
@@ -33,12 +30,9 @@ interface RuleModalProps {
   mode: RuleModalMode;
   initialData?: RuleModalInitialData;
   onSubmit: (data: {
-    ruleName: string;
-    ruleDescription: string;
+    rule: BaseRule;
     conditions: BaseRuleCondition[];
     actions: BaseRuleAction[];
-    effectiveScope: "all" | "from";
-    effectiveFromDate?: Date;
   }) => Promise<void>;
   loading?: boolean;
   fetching?: boolean;
@@ -60,9 +54,12 @@ export function RuleModal({
   submitButtonText,
 }: RuleModalProps) {
   // Form state
-  const [ruleName, setRuleName] = useState(initialData?.ruleName || "");
-  const [ruleDescription, setRuleDescription] = useState(
-    initialData?.ruleDescription || ""
+  const [rule, setRule] = useState<BaseRule>(
+    initialData?.rule || {
+      name: "",
+      description: "",
+      effective_from: new Date().toISOString(),
+    }
   );
   const [conditions, setConditions] = useState<BaseRuleCondition[]>(
     initialData?.conditions && initialData.conditions.length > 0
@@ -80,19 +77,23 @@ export function RuleModal({
       ? initialData.actions
       : [{ action_type: "category", action_value: "" }]
   );
-  const [effectiveScope, setEffectiveScope] = useState<"all" | "from">(
-    initialData?.effectiveScope || "all"
-  );
+  // New state for effectiveScope and effectiveFromDate
+  const [effectiveScope, setEffectiveScope] = useState<"all" | "from">("all");
   const [effectiveFromDate, setEffectiveFromDate] = useState<Date | undefined>(
-    initialData?.effectiveFromDate
+    undefined
   );
   const [localError, setLocalError] = useState<string | null>(null);
 
   // Update form state with initialData when modal is opened or initialData changes (for edit mode)
   useEffect(() => {
     if (isOpen && initialData) {
-      setRuleName(initialData.ruleName || "");
-      setRuleDescription(initialData.ruleDescription || "");
+      setRule(
+        initialData.rule || {
+          name: "",
+          description: "",
+          effective_from: new Date().toISOString(),
+        }
+      );
       setConditions(
         initialData.conditions && initialData.conditions.length > 0
           ? initialData.conditions
@@ -109,8 +110,21 @@ export function RuleModal({
           ? initialData.actions
           : [{ action_type: "category", action_value: "" }]
       );
-      setEffectiveScope(initialData.effectiveScope || "all");
-      setEffectiveFromDate(initialData.effectiveFromDate);
+      // Set effectiveScope and effectiveFromDate based on rule.effective_from
+      if (initialData.rule && initialData.rule.effective_from) {
+        const effDate = new Date(initialData.rule.effective_from);
+        const isToday = effDate.toDateString() === new Date().toDateString();
+        if (isToday) {
+          setEffectiveScope("all");
+          setEffectiveFromDate(undefined);
+        } else {
+          setEffectiveScope("from");
+          setEffectiveFromDate(effDate);
+        }
+      } else {
+        setEffectiveScope("all");
+        setEffectiveFromDate(undefined);
+      }
       setLocalError(null);
     }
   }, [isOpen, initialData]);
@@ -120,7 +134,7 @@ export function RuleModal({
     setLocalError(null);
 
     // Validation
-    if (!ruleName.trim()) {
+    if (!rule.name.trim()) {
       setLocalError("Rule name is required.");
       return;
     }
@@ -137,21 +151,34 @@ export function RuleModal({
       return;
     }
 
+    // Convert effectiveScope/effectiveFromDate to rule.effective_from
+    let effective_from: string;
+    if (effectiveScope === "from" && effectiveFromDate) {
+      effective_from = effectiveFromDate.toISOString();
+    } else {
+      effective_from = new Date().toISOString();
+    }
+
     // Pass form data to parent handler
     await onSubmit({
-      ruleName,
-      ruleDescription,
+      rule: {
+        ...rule,
+        effective_from,
+      },
       conditions,
       actions,
-      effectiveScope,
-      effectiveFromDate,
     });
   };
 
   // Reset form state
   const resetForm = () => {
-    setRuleName(initialData?.ruleName || "");
-    setRuleDescription(initialData?.ruleDescription || "");
+    setRule(
+      initialData?.rule || {
+        name: "",
+        description: "",
+        effective_from: new Date().toISOString().slice(0, 10),
+      }
+    );
     setConditions(
       initialData?.conditions && initialData.conditions.length > 0
         ? initialData.conditions
@@ -168,8 +195,21 @@ export function RuleModal({
         ? initialData.actions
         : [{ action_type: "category", action_value: "" }]
     );
-    setEffectiveScope(initialData?.effectiveScope || "all");
-    setEffectiveFromDate(initialData?.effectiveFromDate);
+    // Reset effectiveScope and effectiveFromDate
+    if (initialData?.rule && initialData.rule.effective_from) {
+      const effDate = new Date(initialData.rule.effective_from);
+      const isToday = effDate.toDateString() === new Date().toDateString();
+      if (isToday) {
+        setEffectiveScope("all");
+        setEffectiveFromDate(undefined);
+      } else {
+        setEffectiveScope("from");
+        setEffectiveFromDate(effDate);
+      }
+    } else {
+      setEffectiveScope("all");
+      setEffectiveFromDate(undefined);
+    }
     setLocalError(null);
   };
 
@@ -196,23 +236,30 @@ export function RuleModal({
         ) : (
           <>
             <RuleBasicInfo
-              ruleName={ruleName}
-              ruleDescription={ruleDescription}
-              onRuleNameChange={setRuleName}
-              onRuleDescriptionChange={setRuleDescription}
+              rule={rule}
+              onRuleChange={setRule}
               disabled={loading}
             />
 
+            {/* Note: Deleting actions or conditions is not supported in edit mode */}
+            {mode === "edit" && (
+              <div className="text-xs text-muted-foreground mb-2">
+                <em>
+                  Deleting an action or condition is not supported. If you want
+                  to, then delete the rule and recreate it.
+                </em>
+              </div>
+            )}
             <RuleConditions
               conditions={conditions}
               onConditionsChange={setConditions}
-              disabled={loading}
+              disabled={loading || mode === "edit"}
             />
 
             <RuleActions
               actions={actions}
               onActionsChange={setActions}
-              disabled={loading}
+              disabled={loading || mode === "edit"}
             />
 
             <RuleEffectiveScope
