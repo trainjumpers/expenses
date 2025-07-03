@@ -78,7 +78,7 @@ func (b *BaseController) SendError(ctx *gin.Context, statusCode int, message str
 
 // BindJSON binds JSON request body to the provided struct and handles errors
 // It also automatically trims whitespace from all string fields and re-validates using Gin's validator
-func (b *BaseController) BindJSON(ctx *gin.Context, obj interface{}) error {
+func (b *BaseController) BindJSON(ctx *gin.Context, obj any) error {
 	if err := ctx.ShouldBindJSON(obj); err != nil {
 		b.SendError(ctx, http.StatusBadRequest, err.Error())
 		return err
@@ -167,7 +167,7 @@ func (b *BaseController) BindForm(ctx *gin.Context, obj interface{}) error {
 	return nil
 }
 
-// GetAuthenticatedUserId extracts the authenticated user ID from the gin context
+// GetAuthenticatedUserId extracts the authenticated user Id from the gin context
 func (b *BaseController) GetAuthenticatedUserId(ctx *gin.Context) int64 {
 	return ctx.GetInt64("authUserId")
 }

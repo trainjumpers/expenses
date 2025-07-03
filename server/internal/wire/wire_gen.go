@@ -37,7 +37,9 @@ func InitializeApplication() (*Provider, error) {
 	categoryServiceInterface := service.NewCategoryService(categoryRepositoryInterface)
 	transactionRepositoryInterface := repository.NewTransactionRepository(databaseManager, configConfig)
 	transactionServiceInterface := service.NewTransactionService(transactionRepositoryInterface, categoryRepositoryInterface, accountRepositoryInterface, databaseManager)
-	engine := api.Init(configConfig, authServiceInterface, userServiceInterface, accountServiceInterface, categoryServiceInterface, transactionServiceInterface)
+	ruleRepositoryInterface := repository.NewRuleRepository(databaseManager, configConfig)
+	ruleServiceInterface := service.NewRuleService(ruleRepositoryInterface, transactionRepositoryInterface, databaseManager)
+	engine := api.Init(configConfig, authServiceInterface, userServiceInterface, accountServiceInterface, categoryServiceInterface, transactionServiceInterface, ruleServiceInterface)
 	provider := NewProvider(engine, databaseManager)
 	return provider, nil
 }
@@ -69,6 +71,6 @@ var ProviderSet = wire.NewSet(
 
 var controllerSet = wire.NewSet(controller.NewAuthController)
 
-var repositorySet = wire.NewSet(repository.NewUserRepository, repository.NewAccountRepository, repository.NewCategoryRepository, repository.NewTransactionRepository)
+var repositorySet = wire.NewSet(repository.NewUserRepository, repository.NewAccountRepository, repository.NewCategoryRepository, repository.NewTransactionRepository, repository.NewRuleRepository)
 
-var serviceSet = wire.NewSet(service.NewUserService, service.NewAuthService, service.NewAccountService, service.NewCategoryService, service.NewTransactionService)
+var serviceSet = wire.NewSet(service.NewUserService, service.NewAuthService, service.NewAccountService, service.NewCategoryService, service.NewTransactionService, service.NewRuleService)

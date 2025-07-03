@@ -27,23 +27,23 @@ func NewUserController(cfg *config.Config, userService service.UserServiceInterf
 // GetUserById returns a user by Id
 func (u *UserController) GetUserById(ctx *gin.Context) {
 	userId := u.GetAuthenticatedUserId(ctx)
-	logger.Infof("Fetching user details for ID %d", userId)
+	logger.Infof("Fetching user details for Id %d", userId)
 
 	user, err := u.userService.GetUserById(ctx, userId)
 	if err != nil {
-		logger.Errorf("Error getting user by ID: %v", err)
+		logger.Errorf("Error getting user by Id: %v", err)
 		u.HandleError(ctx, err)
 		return
 	}
 
-	logger.Infof("User retrieved successfully for ID %d", userId)
+	logger.Infof("User retrieved successfully for Id %d", userId)
 	u.SendSuccess(ctx, http.StatusOK, "User retrieved successfully", user)
 }
 
 // DeleteUser deletes a user by Id
 func (u *UserController) DeleteUser(ctx *gin.Context) {
 	userId := u.GetAuthenticatedUserId(ctx)
-	logger.Infof("Starting user deletion for ID %d", userId)
+	logger.Infof("Starting user deletion for Id %d", userId)
 
 	err := u.userService.DeleteUser(ctx, userId)
 	if err != nil {
@@ -52,7 +52,7 @@ func (u *UserController) DeleteUser(ctx *gin.Context) {
 		return
 	}
 
-	logger.Infof("User deleted successfully with ID %d", userId)
+	logger.Infof("User deleted successfully with Id %d", userId)
 	u.SendSuccess(ctx, http.StatusNoContent, "User deleted successfully", nil)
 }
 
@@ -64,14 +64,14 @@ func (u *UserController) UpdateUser(ctx *gin.Context) {
 		logger.Errorf("Failed to bind JSON for updating user: %v", err)
 		return
 	}
-	logger.Infof("Starting user update for ID %d", userId)
+	logger.Infof("Starting user update for Id %d", userId)
 	user, err := u.userService.UpdateUser(ctx, userId, updatedUser)
 	if err != nil {
 		logger.Errorf("Error updating user: %v", err)
 		u.HandleError(ctx, err)
 		return
 	}
-	logger.Infof("User updated successfully for ID %d", userId)
+	logger.Infof("User updated successfully for Id %d", userId)
 	u.SendSuccess(ctx, http.StatusOK, "User updated successfully", user)
 }
 
@@ -83,7 +83,7 @@ func (u *UserController) UpdateUserPassword(ctx *gin.Context) {
 		logger.Errorf("Failed to bind JSON for updating user password: %v", err)
 		return
 	}
-	logger.Infof("Starting password update for user ID %d", userId)
+	logger.Infof("Starting password update for user Id %d", userId)
 	user, err := u.authService.UpdateUserPassword(ctx, userId, updatedUser)
 	if err != nil {
 		logger.Errorf("Error updating user password: %v", err)
@@ -91,6 +91,6 @@ func (u *UserController) UpdateUserPassword(ctx *gin.Context) {
 		return
 	}
 
-	logger.Infof("User password updated successfully for ID %d", userId)
+	logger.Infof("User password updated successfully for Id %d", userId)
 	u.SendSuccess(ctx, http.StatusOK, "User password updated successfully", user)
 }

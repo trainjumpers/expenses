@@ -18,6 +18,7 @@ func Init(
 	accountService service.AccountServiceInterface,
 	categoryService service.CategoryServiceInterface,
 	transactionService service.TransactionServiceInterface,
+	ruleService service.RuleServiceInterface,
 ) *gin.Engine {
 	router := gin.New()
 	if cfg.Environment != "test" {
@@ -51,6 +52,7 @@ func Init(
 	accountController := controller.NewAccountController(cfg, accountService)
 	categoryController := controller.NewCategoryController(cfg, categoryService)
 	transactionController := controller.NewTransactionController(cfg, transactionService)
+	ruleController := controller.NewRuleController(cfg, ruleService)
 	api := router.Group("/api/v1")
 	{
 		base := api.Group("")
@@ -70,27 +72,45 @@ func Init(
 
 		// Account routes
 		account := base.Group("/account", middleware.ProtectedWithCreatedBy(cfg)...)
-		account.GET("", accountController.ListAccounts)
-		account.POST("", accountController.CreateAccount)
-		account.GET("/:accountId", accountController.GetAccount)
-		account.PATCH("/:accountId", accountController.UpdateAccount)
-		account.DELETE("/:accountId", accountController.DeleteAccount)
+		{
+			account.GET("", accountController.ListAccounts)
+			account.POST("", accountController.CreateAccount)
+			account.GET("/:accountId", accountController.GetAccount)
+			account.PATCH("/:accountId", accountController.UpdateAccount)
+			account.DELETE("/:accountId", accountController.DeleteAccount)
+		}
 
 		// Category routes
 		category := base.Group("/category", middleware.ProtectedWithCreatedBy(cfg)...)
-		category.GET("", categoryController.ListCategories)
-		category.POST("", categoryController.CreateCategory)
-		category.GET("/:categoryId", categoryController.GetCategory)
-		category.PATCH("/:categoryId", categoryController.UpdateCategory)
-		category.DELETE("/:categoryId", categoryController.DeleteCategory)
+		{
+			category.GET("", categoryController.ListCategories)
+			category.POST("", categoryController.CreateCategory)
+			category.GET("/:categoryId", categoryController.GetCategory)
+			category.PATCH("/:categoryId", categoryController.UpdateCategory)
+			category.DELETE("/:categoryId", categoryController.DeleteCategory)
+		}
 
 		// Transaction routes
 		transaction := base.Group("/transaction", middleware.ProtectedWithCreatedBy(cfg)...)
-		transaction.GET("", transactionController.ListTransactions)
-		transaction.POST("", transactionController.CreateTransaction)
-		transaction.GET("/:transactionId", transactionController.GetTransaction)
-		transaction.PATCH("/:transactionId", transactionController.UpdateTransaction)
-		transaction.DELETE("/:transactionId", transactionController.DeleteTransaction)
+		{
+			transaction.GET("", transactionController.ListTransactions)
+			transaction.POST("", transactionController.CreateTransaction)
+			transaction.GET("/:transactionId", transactionController.GetTransaction)
+			transaction.PATCH("/:transactionId", transactionController.UpdateTransaction)
+			transaction.DELETE("/:transactionId", transactionController.DeleteTransaction)
+		}
+
+		// Rule routes
+		rule := base.Group("/rule").Use(gin.HandlerFunc(middleware.Protected(cfg)))
+		{
+			rule.GET("", ruleController.ListRules)
+			rule.POST("", ruleController.CreateRule)
+			rule.GET("/:ruleId", ruleController.GetRuleById)
+			rule.PATCH("/:ruleId", ruleController.UpdateRule)
+			rule.DELETE("/:ruleId", ruleController.DeleteRule)
+			rule.PATCH("/:ruleId/action/:id", ruleController.UpdateRuleAction)
+			rule.PATCH("/:ruleId/condition/:id", ruleController.UpdateRuleCondition)
+		}
 	}
 
 	return router

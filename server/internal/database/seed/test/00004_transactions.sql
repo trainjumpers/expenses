@@ -2,7 +2,7 @@
 -- +goose StatementBegin
 -- Transactions for user 1 (test1@example.com)
 INSERT INTO test.transaction (name, description, amount, date, created_by, account_id)
-VALUES 
+VALUES
     ('Integration Transaction', 'Test Description', 100.00, '2023-01-01', 1, 1),
     ('Groceries Shopping', 'Monthly groceries', 150.50, '2023-01-02', 1, 1),
     ('Utility Bill', 'Electricity bill', 75.25, '2023-01-03', 1, 2),
@@ -16,7 +16,7 @@ VALUES
 
 -- Transaction category mappings for user 1
 INSERT INTO test.transaction_category_mapping (transaction_id, category_id)
-VALUES 
+VALUES
     (1, 1),  -- Integration Transaction -> Food
     (2, 4),  -- Groceries -> Shopping
     (3, 2),  -- Utility Bill -> Transportation (closest available)
@@ -28,7 +28,7 @@ VALUES
     (9, 2),  -- Internet Bill -> Transportation (closest available)
     (10, 1); -- Coffee Shop -> Food
 
--- Set sequence to continue from the last inserted ID
+-- Set sequence to continue from the last inserted Id
 SELECT setval('test.transaction_id_seq', 10, true);
 -- +goose StatementEnd
 
@@ -36,4 +36,4 @@ SELECT setval('test.transaction_id_seq', 10, true);
 -- +goose StatementBegin
 DELETE FROM test.transaction_category_mapping;
 DELETE FROM test.transaction;
--- +goose StatementEnd 
+-- +goose StatementEnd

@@ -176,19 +176,19 @@ var _ = Describe("BaseController", func() {
 	Describe("BindURI", func() {
 		It("should bind URI parameters successfully", func() {
 			type TestStruct struct {
-				ID string `uri:"id"`
+				Id string `uri:"id"`
 			}
 			ctx.Params = []gin.Param{{Key: "id", Value: "123"}}
 
 			var testStruct TestStruct
 			err := baseController.BindURI(ctx, &testStruct)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(testStruct.ID).To(Equal("123"))
+			Expect(testStruct.Id).To(Equal("123"))
 		})
 
 		It("should return error for missing URI parameters", func() {
 			type TestStruct struct {
-				ID string `uri:"id" binding:"required"`
+				Id string `uri:"id" binding:"required"`
 			}
 			ctx.Params = []gin.Param{}
 

@@ -211,9 +211,9 @@ func (r *TransactionRepository) buildTransactionWhereClause(userId int64, q mode
 	where := []string{"t.created_by = $1", "t.deleted_at IS NULL"}
 	argIdx := len(args) + 1 // +1 because it is 1 based index
 
-	if q.AccountID != nil {
+	if q.AccountId != nil {
 		where = append(where, fmt.Sprintf("t.account_id = $%d", argIdx))
-		args = append(args, *q.AccountID)
+		args = append(args, *q.AccountId)
 		argIdx++
 	}
 	if q.MinAmount != nil {
@@ -241,9 +241,9 @@ func (r *TransactionRepository) buildTransactionWhereClause(userId int64, q mode
 		args = append(args, "%"+*q.Search+"%", "%"+*q.Search+"%")
 		argIdx += 2
 	}
-	if q.CategoryID != nil {
+	if q.CategoryId != nil {
 		where = append(where, fmt.Sprintf("t.id IN (SELECT transaction_id FROM %s.%s WHERE category_id = $%d)", r.schema, r.transactionCategoryMappingTable, argIdx))
-		args = append(args, *q.CategoryID)
+		args = append(args, *q.CategoryId)
 		argIdx++
 	}
 
@@ -285,16 +285,6 @@ func (r *TransactionRepository) ListTransactions(c *gin.Context, userId int64, q
 	var resp models.PaginatedTransactionsResponse
 	transactions := make([]models.TransactionResponse, 0)
 
-	// Pagination defaults
-	page := q.Page
-	if page < 1 {
-		page = 1
-	}
-	pageSize := q.PageSize
-	if pageSize < 1 || pageSize > 100 {
-		pageSize = 15
-	}
-
 	// Build WHERE clause and args
 	whereClause, args := r.buildTransactionWhereClause(userId, q)
 	logger.Info("whereClause", whereClause, args)
@@ -308,7 +298,7 @@ func (r *TransactionRepository) ListTransactions(c *gin.Context, userId int64, q
 	}
 
 	// Data query
-	dataQuery := r.buildTransactionDataQuery(q, whereClause, page, pageSize)
+	dataQuery := r.buildTransactionDataQuery(q, whereClause, q.Page, q.PageSize)
 	rows, err := r.db.FetchAll(c, dataQuery, args...)
 	if err != nil {
 		return resp, err
@@ -326,8 +316,8 @@ func (r *TransactionRepository) ListTransactions(c *gin.Context, userId int64, q
 	resp = models.PaginatedTransactionsResponse{
 		Transactions: transactions,
 		Total:        total,
-		Page:         page,
-		PageSize:     pageSize,
+		Page:         q.Page,
+		PageSize:     q.PageSize,
 	}
 	return resp, nil
 }

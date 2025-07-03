@@ -67,8 +67,8 @@ type TransactionListQuery struct {
 	PageSize   int        // items per page
 	SortBy     string     // column to sort by (e.g., "date", "amount", "name")
 	SortOrder  string     // "asc" or "desc"
-	AccountID  *int64     // filter by account
-	CategoryID *int64     // filter by category
+	AccountId  *int64     // filter by account
+	CategoryId *int64     // filter by category
 	MinAmount  *float64   // filter by min amount
 	MaxAmount  *float64   // filter by max amount
 	DateFrom   *time.Time // filter by start date

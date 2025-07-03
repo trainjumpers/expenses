@@ -36,7 +36,7 @@ func (c *CategoryController) CreateCategory(ctx *gin.Context) {
 		c.HandleError(ctx, err)
 		return
 	}
-	logger.Infof("Category created successfully with ID %d for user %d", category.Id, input.CreatedBy)
+	logger.Infof("Category created successfully with Id %d for user %d", category.Id, input.CreatedBy)
 	c.SendSuccess(ctx, http.StatusCreated, "Category created successfully", category)
 }
 
@@ -54,7 +54,7 @@ func (c *CategoryController) GetCategory(ctx *gin.Context) {
 		c.HandleError(ctx, err)
 		return
 	}
-	logger.Infof("Category retrieved successfully with ID %d for user %d", category.Id, userId)
+	logger.Infof("Category retrieved successfully with Id %d for user %d", category.Id, userId)
 	c.SendSuccess(ctx, http.StatusOK, "Category retrieved successfully", category)
 }
 
@@ -90,7 +90,7 @@ func (c *CategoryController) UpdateCategory(ctx *gin.Context) {
 		c.HandleError(ctx, err)
 		return
 	}
-	logger.Infof("Category updated successfully with ID %d for user %d", category.Id, userId)
+	logger.Infof("Category updated successfully with Id %d for user %d", category.Id, userId)
 	c.SendSuccess(ctx, http.StatusOK, "Category updated successfully", category)
 }
 
@@ -108,6 +108,6 @@ func (c *CategoryController) DeleteCategory(ctx *gin.Context) {
 		c.HandleError(ctx, err)
 		return
 	}
-	logger.Infof("Category deleted successfully with ID %d for user %d", categoryId, userId)
+	logger.Infof("Category deleted successfully with Id %d for user %d", categoryId, userId)
 	c.SendSuccess(ctx, http.StatusNoContent, "", nil)
 }

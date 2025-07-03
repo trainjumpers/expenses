@@ -1,5 +1,6 @@
 import { AddAccountModal } from "@/components/custom/Modal/Accounts/AddAccountModal";
 import { AddCategoryModal } from "@/components/custom/Modal/Category/AddCategoryModal";
+import { AddRuleModal } from "@/components/custom/Modal/Rule/AddRuleModal";
 import { AddTransactionModal } from "@/components/custom/Modal/Transaction/AddTransactionModal";
 import { Button } from "@/components/ui/button";
 import {
@@ -8,7 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { LucideIcon, Receipt, Tag, Wallet } from "lucide-react";
+import { LucideIcon, PlusCircle, Receipt, Tag, Wallet } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -34,6 +35,7 @@ export function CommandCenterModal({
   const [isAddCategoryModalOpen, setIsAddCategoryModalOpen] = useState(false);
   const [isAddTransactionModalOpen, setIsAddTransactionModalOpen] =
     useState(false);
+  const [isAddRuleModalOpen, setIsAddRuleModalOpen] = useState(false);
 
   const options: CommandOption[] = [
     {
@@ -53,6 +55,12 @@ export function CommandCenterModal({
       description: "Record a new income or expense",
       icon: Receipt,
       onClick: () => setIsAddTransactionModalOpen(true),
+    },
+    {
+      title: "Add Rule",
+      description: "Create a new automation or validation rule",
+      icon: PlusCircle,
+      onClick: () => setIsAddRuleModalOpen(true),
     },
   ];
 
@@ -104,6 +112,10 @@ export function CommandCenterModal({
       <AddTransactionModal
         isOpen={isAddTransactionModalOpen}
         onOpenChange={setIsAddTransactionModalOpen}
+      />
+      <AddRuleModal
+        isOpen={isAddRuleModalOpen}
+        onOpenChange={setIsAddRuleModalOpen}
       />
     </>
   );

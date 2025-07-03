@@ -348,24 +348,24 @@ var _ = Describe("CategoryService", func() {
 	})
 
 	Describe("Authorization/Ownership edge cases", func() {
-		It("should return error when updating with user ID 0", func() {
+		It("should return error when updating with user Id 0", func() {
 			update := models.UpdateCategoryInput{Name: "ShouldFail"}
 			_, err := categoryService.UpdateCategory(ctx, 1, 0, update)
 			Expect(err).To(HaveOccurred())
 		})
 
-		It("should return error when deleting with user ID 0", func() {
+		It("should return error when deleting with user Id 0", func() {
 			err := categoryService.DeleteCategory(ctx, 1, 0)
 			Expect(err).To(HaveOccurred())
 		})
 
-		It("should return error when updating with negative user ID", func() {
+		It("should return error when updating with negative user Id", func() {
 			update := models.UpdateCategoryInput{Name: "ShouldFail"}
 			_, err := categoryService.UpdateCategory(ctx, 1, -1, update)
 			Expect(err).To(HaveOccurred())
 		})
 
-		It("should return error when deleting with negative user ID", func() {
+		It("should return error when deleting with negative user Id", func() {
 			err := categoryService.DeleteCategory(ctx, 1, -1)
 			Expect(err).To(HaveOccurred())
 		})

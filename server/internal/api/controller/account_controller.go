@@ -36,7 +36,7 @@ func (a *AccountController) CreateAccount(ctx *gin.Context) {
 		a.HandleError(ctx, err)
 		return
 	}
-	logger.Infof("Account created successfully with ID %d for user %d", account.Id, input.CreatedBy)
+	logger.Infof("Account created successfully with Id %d for user %d", account.Id, input.CreatedBy)
 	a.SendSuccess(ctx, http.StatusCreated, "Account created successfully", account)
 }
 
@@ -46,7 +46,7 @@ func (a *AccountController) GetAccount(ctx *gin.Context) {
 		a.SendError(ctx, http.StatusBadRequest, "invalid account id")
 		return
 	}
-	logger.Infof("Fetching account details for user %d and account ID %d", a.GetAuthenticatedUserId(ctx), accountId)
+	logger.Infof("Fetching account details for user %d and account Id %d", a.GetAuthenticatedUserId(ctx), accountId)
 	userId := a.GetAuthenticatedUserId(ctx)
 	account, err := a.accountService.GetAccountById(ctx, accountId, userId)
 	if err != nil {
@@ -54,7 +54,7 @@ func (a *AccountController) GetAccount(ctx *gin.Context) {
 		a.HandleError(ctx, err)
 		return
 	}
-	logger.Infof("Account retrieved successfully with ID %d for user %d", account.Id, userId)
+	logger.Infof("Account retrieved successfully with Id %d for user %d", account.Id, userId)
 	a.SendSuccess(ctx, http.StatusOK, "Account retrieved successfully", account)
 }
 
@@ -77,7 +77,7 @@ func (a *AccountController) UpdateAccount(ctx *gin.Context) {
 		a.HandleError(ctx, err)
 		return
 	}
-	logger.Infof("Account updated successfully with ID %d for user %d", account.Id, userId)
+	logger.Infof("Account updated successfully with Id %d for user %d", account.Id, userId)
 	a.SendSuccess(ctx, http.StatusOK, "Account updated successfully", account)
 }
 
@@ -95,7 +95,7 @@ func (a *AccountController) DeleteAccount(ctx *gin.Context) {
 		a.HandleError(ctx, err)
 		return
 	}
-	logger.Infof("Successfully deleted account with ID %d for user %d", accountId, userId)
+	logger.Infof("Successfully deleted account with Id %d for user %d", accountId, userId)
 	a.SendSuccess(ctx, http.StatusNoContent, "", nil)
 }
 

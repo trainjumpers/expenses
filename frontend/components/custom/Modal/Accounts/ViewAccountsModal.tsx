@@ -1,5 +1,6 @@
 import { AddAccountModal } from "@/components/custom/Modal/Accounts/AddAccountModal";
 import { UpdateAccountModal } from "@/components/custom/Modal/Accounts/UpdateAccountModal";
+import { ConfirmDialog } from "@/components/custom/Modal/ConfirmDialog";
 import { useAccounts } from "@/components/custom/Provider/AccountProvider";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,7 +10,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Account } from "@/lib/models/account";
-import { Wallet } from "lucide-react";
+import { Trash2, Wallet } from "lucide-react";
 import { useState } from "react";
 
 interface ViewAccountsModalProps {
@@ -21,13 +22,33 @@ export function ViewAccountsModal({
   isOpen,
   onOpenChange,
 }: ViewAccountsModalProps) {
-  const { read: readAccounts } = useAccounts();
+  const { read: readAccounts, delete: deleteAccount, refresh } = useAccounts();
   const [isAddAccountModalOpen, setIsAddAccountModalOpen] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
+  const [loadingId, setLoadingId] = useState<number | null>(null);
+  const [confirmDeleteAccount, setConfirmDeleteAccount] =
+    useState<Account | null>(null);
+  const [confirmLoading, setConfirmLoading] = useState(false);
   const accounts = readAccounts();
 
   const handleAccountUpdated = () => {
     setSelectedAccount(null);
+  };
+
+  const openDeleteDialog = (account: Account) => {
+    setConfirmDeleteAccount(account);
+    setConfirmLoading(false);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!confirmDeleteAccount) return;
+    setConfirmLoading(true);
+    setLoadingId(confirmDeleteAccount.id);
+    await deleteAccount(confirmDeleteAccount.id);
+    refresh();
+    setConfirmDeleteAccount(null);
+    setConfirmLoading(false);
+    setLoadingId(null);
   };
 
   return (
@@ -59,13 +80,24 @@ export function ViewAccountsModal({
                         {account.currency.toUpperCase()}
                       </p>
                     </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setSelectedAccount(account)}
-                    >
-                      Edit
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSelectedAccount(account)}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        disabled={loadingId === account.id}
+                        onClick={() => openDeleteDialog(account)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        <span className="sr-only">Delete</span>
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -93,6 +125,23 @@ export function ViewAccountsModal({
           onAccountUpdated={handleAccountUpdated}
         />
       )}
+      <ConfirmDialog
+        isOpen={!!confirmDeleteAccount}
+        onOpenChange={(open) => {
+          if (!open) setConfirmDeleteAccount(null);
+        }}
+        title="Delete Account"
+        description={
+          confirmDeleteAccount
+            ? `Are you sure you want to delete the account "${confirmDeleteAccount.name}"? This action cannot be undone.`
+            : ""
+        }
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        destructive
+        loading={confirmLoading}
+        onConfirm={handleConfirmDelete}
+      />
     </>
   );
 }

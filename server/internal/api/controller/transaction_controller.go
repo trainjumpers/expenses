@@ -59,7 +59,7 @@ func (t *TransactionController) GetTransaction(ctx *gin.Context) {
 		return
 	}
 
-	logger.Infof("Transaction retrieved successfully with ID %d for user %d", transaction.Id, userId)
+	logger.Infof("Transaction retrieved successfully with Id %d for user %d", transaction.Id, userId)
 	t.SendSuccess(ctx, http.StatusOK, "Transaction retrieved successfully", transaction)
 }
 
@@ -86,7 +86,7 @@ func (t *TransactionController) UpdateTransaction(ctx *gin.Context) {
 		return
 	}
 
-	logger.Infof("Transaction updated successfully with ID %d for user %d", transaction.Id, userId)
+	logger.Infof("Transaction updated successfully with Id %d for user %d", transaction.Id, userId)
 	t.SendSuccess(ctx, http.StatusOK, "Transaction updated successfully", transaction)
 }
 
@@ -107,7 +107,7 @@ func (t *TransactionController) DeleteTransaction(ctx *gin.Context) {
 		return
 	}
 
-	logger.Infof("Transaction deleted successfully with ID %d for user %d", transactionId, userId)
+	logger.Infof("Transaction deleted successfully with Id %d for user %d", transactionId, userId)
 	t.SendSuccess(ctx, http.StatusNoContent, "", nil)
 }
 
@@ -161,8 +161,8 @@ func (t *TransactionController) bindTransactionListQuery(ctx *gin.Context) model
 		PageSize:   pageSize,
 		SortBy:     ctx.DefaultQuery("sort_by", "date"),
 		SortOrder:  ctx.DefaultQuery("sort_order", "desc"),
-		AccountID:  parseInt64QueryParam(ctx, "account_id"),
-		CategoryID: parseInt64QueryParam(ctx, "category_id"),
+		AccountId:  parseInt64QueryParam(ctx, "account_id"),
+		CategoryId: parseInt64QueryParam(ctx, "category_id"),
 		MinAmount:  parseFloat64QueryParam(ctx, "min_amount"),
 		MaxAmount:  parseFloat64QueryParam(ctx, "max_amount"),
 		DateFrom:   parseTimeQueryParam(ctx, "date_from", "2006-01-02"),

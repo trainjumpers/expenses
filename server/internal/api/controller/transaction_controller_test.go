@@ -276,7 +276,7 @@ var _ = Describe("TransactionController", func() {
 				"description":  "Test with invalid category id",
 				"amount":       amount,
 				"date":         testDate.Format(time.RFC3339),
-				"category_ids": []int64{99999}, // Invalid category ID
+				"category_ids": []int64{99999}, // Invalid category Id
 				"account_id":   2,
 			}
 			resp, _ := testHelper.MakeRequest(http.MethodPost, "/transaction", accessToken1, input)
@@ -291,7 +291,7 @@ var _ = Describe("TransactionController", func() {
 				"amount":       amount,
 				"date":         testDate.Format(time.RFC3339),
 				"category_ids": []int64{1},
-				"account_id":   99999, // Invalid account ID
+				"account_id":   99999, // Invalid account Id
 			}
 			resp, _ := testHelper.MakeRequest(http.MethodPost, "/transaction", accessToken1, input)
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
@@ -380,7 +380,7 @@ var _ = Describe("TransactionController", func() {
 			Expect(len(transactions)).To(Equal(1))
 		})
 
-		It("should filter by account ID", func() {
+		It("should filter by account Id", func() {
 			resp, response := testHelper.MakeRequest(http.MethodGet, "/transaction?account_id=1", accessToken, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			data := response["data"].(map[string]interface{})
@@ -392,7 +392,7 @@ var _ = Describe("TransactionController", func() {
 			}
 		})
 
-		It("should filter by category ID", func() {
+		It("should filter by category Id", func() {
 			resp, response := testHelper.MakeRequest(http.MethodGet, "/transaction?category_id=1", accessToken, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			data := response["data"].(map[string]interface{})
