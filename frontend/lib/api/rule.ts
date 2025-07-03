@@ -1,13 +1,13 @@
 import { apiRequest, authHeaders } from "@/lib/api/request";
 import { API_BASE_URL } from "@/lib/constants/api";
 import {
-  Rule,
   CreateRuleInput,
   DescribeRuleResponse,
-  UpdateRuleInput,
+  ExecuteRulesResponse,
+  Rule,
   RuleAction,
   RuleCondition,
-  ExecuteRulesResponse,
+  UpdateRuleInput,
 } from "@/lib/models/rule";
 
 // List all rules
@@ -103,7 +103,9 @@ export async function listRuleActions(ruleId: number): Promise<RuleAction[]> {
 }
 
 // List conditions for a rule
-export async function listRuleConditions(ruleId: number): Promise<RuleCondition[]> {
+export async function listRuleConditions(
+  ruleId: number
+): Promise<RuleCondition[]> {
   return apiRequest<RuleCondition[]>(
     `${API_BASE_URL}/rule/${ruleId}/conditions`,
     {

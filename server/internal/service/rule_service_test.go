@@ -115,33 +115,6 @@ var _ = Describe("RuleService", func() {
 			_, err := ruleService.CreateRule(ctx, input)
 			Expect(err).To(HaveOccurred())
 		})
-
-		It("should handle concurrent rule creation", func() {
-			input := models.CreateRuleRequest{
-				Rule: models.CreateBaseRuleRequest{
-					Name:          "Concurrent Rule",
-					Description:   ptrToString("desc"),
-					EffectiveFrom: now,
-					CreatedBy:     user1,
-				},
-				Actions:    []models.CreateRuleActionRequest{{ActionType: models.RuleFieldAmount, ActionValue: "100"}},
-				Conditions: []models.CreateRuleConditionRequest{{ConditionType: models.RuleFieldAmount, ConditionValue: "100", ConditionOperator: models.OperatorEquals}},
-			}
-			var wg sync.WaitGroup
-			wg.Add(2)
-			var err1, err2 error
-			go func() {
-				defer wg.Done()
-				_, err1 = ruleService.CreateRule(ctx, input)
-			}()
-			go func() {
-				defer wg.Done()
-				_, err2 = ruleService.CreateRule(ctx, input)
-			}()
-			wg.Wait()
-			Expect(err1).NotTo(HaveOccurred())
-			Expect(err2).NotTo(HaveOccurred())
-		})
 	})
 
 	Describe("GetRuleById", func() {

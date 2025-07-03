@@ -50,10 +50,7 @@ export function RuleEffectiveScope({
                 <ChevronDownIcon className="ml-2 h-4 w-4 opacity-50" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align="start"
-              className="w-full min-w-[260px]"
-            >
+            <DropdownMenuContent align="start" className="w-full min-w-[260px]">
               <DropdownMenuItem
                 onSelect={() => onEffectiveScopeChange("all")}
                 className={cn(

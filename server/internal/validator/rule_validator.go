@@ -58,7 +58,7 @@ func (v *RuleValidator) ValidateUpdate(rule models.UpdateRuleRequest) error {
 
 func (v *RuleValidator) Validate(rule models.CreateRuleRequest) error {
 	if len(rule.Actions) == 0 {
-		return errors.NewRuleNoActionsError(fmt.Errorf("At least one action is required"))
+		return errors.NewRuleNoActionsError(fmt.Errorf("at least one action is required"))
 	}
 	for _, action := range rule.Actions {
 		if err := v.validateAction(action); err != nil {
@@ -66,7 +66,7 @@ func (v *RuleValidator) Validate(rule models.CreateRuleRequest) error {
 		}
 	}
 	if len(rule.Conditions) == 0 {
-		return errors.NewRuleNoConditionsError(fmt.Errorf("At least one condition is required"))
+		return errors.NewRuleNoConditionsError(fmt.Errorf("at least one condition is required"))
 	}
 	for _, condition := range rule.Conditions {
 		if err := v.validateCondition(condition); err != nil {
@@ -85,7 +85,7 @@ func (v *RuleValidator) validateActionType(actionType models.RuleFieldType) erro
 	case models.RuleFieldName, models.RuleFieldDescription, models.RuleFieldAmount, models.RuleFieldCategory:
 		return nil
 	default:
-		return errors.NewRuleInvalidActionTypeError(fmt.Errorf("Action type %s is not valid", actionType))
+		return errors.NewRuleInvalidActionTypeError(fmt.Errorf("action type %s is not valid", actionType))
 	}
 }
 
@@ -103,10 +103,10 @@ func (v *RuleValidator) validateRuleType(actionType models.RuleFieldType, value 
 	case models.RuleFieldName, models.RuleFieldDescription:
 		// Already a string, but you could add length or charset checks here if needed.
 		if value == "" {
-			return errors.NewRuleInvalidConditionValueError(fmt.Errorf("Value for %s cannot be empty", actionType))
+			return errors.NewRuleInvalidConditionValueError(fmt.Errorf("value for %s cannot be empty", actionType))
 		}
 	default:
-		return errors.NewRuleInvalidActionTypeError(fmt.Errorf("Action type %s is not valid", actionType))
+		return errors.NewRuleInvalidActionTypeError(fmt.Errorf("action type %s is not valid", actionType))
 	}
 	return nil
 }
@@ -128,7 +128,7 @@ func (v *RuleValidator) validateConditionType(conditionType models.RuleFieldType
 	case models.RuleFieldName, models.RuleFieldDescription, models.RuleFieldAmount, models.RuleFieldCategory:
 		return nil
 	default:
-		return errors.NewRuleInvalidConditionTypeError(fmt.Errorf("Condition type %s is not valid", conditionType))
+		return errors.NewRuleInvalidConditionTypeError(fmt.Errorf("condition type %s is not valid", conditionType))
 	}
 }
 
@@ -148,7 +148,7 @@ func (v *RuleValidator) validateOperator(op models.RuleOperator, fieldType model
 			return nil
 		}
 	}
-	return errors.NewRuleInvalidOperatorError(fmt.Errorf("Operator %s is not valid for field type %s", op, fieldType))
+	return errors.NewRuleInvalidOperatorError(fmt.Errorf("operator %s is not valid for field type %s", op, fieldType))
 }
 
 // ValidateCondition validates a single rule condition.
@@ -168,7 +168,7 @@ func (v *RuleValidator) validateCondition(cond models.CreateRuleConditionRequest
 // ValidateEffectiveDate checks if the effective date is valid (not zero and not in the future).
 func (v *RuleValidator) validateEffectiveDate(effectiveFrom time.Time) error {
 	if effectiveFrom.IsZero() || effectiveFrom.After(time.Now()) {
-		return errors.NewRuleInvalidEffectiveDateError(fmt.Errorf("Effective date must be set and cannot be in the future"))
+		return errors.NewRuleInvalidEffectiveDateError(fmt.Errorf("effective date must be set and cannot be in the future"))
 	}
 	return nil
 }
