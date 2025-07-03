@@ -21,7 +21,6 @@ export interface CreateBaseRuleInput {
   name: string;
   description?: string;
   effective_from: string; // ISO date string
-  created_by: number;
 }
 
 export interface CreateRuleActionInput {
@@ -70,19 +69,25 @@ export interface Rule {
   created_by: number;
 }
 
-export interface RuleAction {
-  id: number;
-  rule_id: number;
+export interface BaseRuleAction {
   action_type: RuleFieldType;
   action_value: string;
 }
 
-export interface RuleCondition {
+export interface RuleAction extends BaseRuleAction {
   id: number;
   rule_id: number;
+}
+
+export interface BaseRuleCondition {
   condition_type: RuleFieldType;
   condition_value: string;
   condition_operator: RuleOperator;
+}
+
+export interface RuleCondition extends BaseRuleCondition {
+  id: number;
+  rule_id: number;
 }
 
 export interface DescribeRuleResponse {

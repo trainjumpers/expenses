@@ -1,23 +1,10 @@
-import {
-  RuleActions,
-  RuleBasicInfo,
-  RuleConditions,
-  RuleEffectiveScope,
-} from "@/components/custom/Modal/Rule/components";
+import { RuleModal } from "@/components/custom/Modal/Rule/RuleModal";
 import { useCategories } from "@/components/custom/Provider/CategoryProvider";
-import { LoadingButton } from "@/components/ui/LoadingButton";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { createRule } from "@/lib/api/rule";
 import {
+  BaseRuleAction,
+  BaseRuleCondition,
   CreateRuleInput,
-  RuleFieldType,
-  RuleOperator,
 } from "@/lib/models/rule";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -27,80 +14,30 @@ interface AddRuleModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
-interface RuleCondition {
-  condition_type: RuleFieldType;
-  condition_operator: RuleOperator;
-  condition_value: string;
-}
-
-interface RuleAction {
-  action_type: RuleFieldType;
-  action_value: string;
-}
-
 export function AddRuleModal({ isOpen, onOpenChange }: AddRuleModalProps) {
-  const [ruleName, setRuleName] = useState("");
-  const [ruleDescription, setRuleDescription] = useState("");
-  const [conditions, setConditions] = useState<RuleCondition[]>([
-    {
-      condition_type: "name",
-      condition_operator: "contains",
-      condition_value: "",
-    },
-  ]);
-  const [actions, setActions] = useState<RuleAction[]>([
-    { action_type: "category", action_value: "" },
-  ]);
   const { read: readCategories } = useCategories();
   const categories = readCategories();
-  const [effectiveScope, setEffectiveScope] = useState<"all" | "from">("all");
-  const [effectiveFromDate, setEffectiveFromDate] = useState<Date | undefined>(
-    undefined
-  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const resetForm = () => {
-    setRuleName("");
-    setRuleDescription("");
-    setConditions([
-      {
-        condition_type: "name",
-        condition_operator: "contains",
-        condition_value: "",
-      },
-    ]);
-    setActions([{ action_type: "category", action_value: "" }]);
-    setEffectiveScope("all");
-    setEffectiveFromDate(undefined);
-    setError(null);
-  };
-
-  const handleSubmit = async () => {
+  // Handler for RuleModal submit
+  const handleSubmit = async ({
+    ruleName,
+    ruleDescription,
+    conditions,
+    actions,
+    effectiveScope,
+    effectiveFromDate,
+  }: {
+    ruleName: string;
+    ruleDescription: string;
+    conditions: BaseRuleCondition[];
+    actions: BaseRuleAction[];
+    effectiveScope: "all" | "from";
+    effectiveFromDate?: Date;
+  }) => {
     setLoading(true);
     setError(null);
-
-    // Validation
-    if (!ruleName.trim()) {
-      setError("Rule name is required.");
-      setLoading(false);
-      return;
-    }
-    if (conditions.some((c) => !c.condition_value.trim())) {
-      setError("All condition values must be filled.");
-      setLoading(false);
-      return;
-    }
-    if (actions.some((a) => !a.action_value.trim())) {
-      setError("All action values must be filled.");
-      setLoading(false);
-      return;
-    }
-    if (effectiveScope === "from" && !effectiveFromDate) {
-      setError("Please select an effective date.");
-      setLoading(false);
-      return;
-    }
 
     try {
       const payload: CreateRuleInput = {
@@ -111,7 +48,6 @@ export function AddRuleModal({ isOpen, onOpenChange }: AddRuleModalProps) {
             effectiveScope === "from" && effectiveFromDate
               ? effectiveFromDate.toISOString()
               : new Date().toISOString(),
-          created_by: 1, // TODO: Replace with actual user ID
         },
         actions: actions.map((a) => ({
           action_type: a.action_type,
@@ -145,7 +81,6 @@ export function AddRuleModal({ isOpen, onOpenChange }: AddRuleModalProps) {
       };
 
       await createRule(payload);
-      resetForm();
       toast.success("Rule created successfully!");
       onOpenChange(false);
     } catch (e) {
@@ -157,77 +92,15 @@ export function AddRuleModal({ isOpen, onOpenChange }: AddRuleModalProps) {
   };
 
   return (
-    <Dialog
-      open={isOpen}
-      onOpenChange={(open) => {
-        if (!open) resetForm();
-        onOpenChange(open);
-      }}
-    >
-      <DialogContent className="sm:max-w-[640px] max-h-[90vh] overflow-y-auto">
-        <DialogHeader className="flex flex-row items-center justify-between space-y-0 pb-6">
-          <DialogTitle className="text-xl font-semibold">
-            New transaction rule
-          </DialogTitle>
-        </DialogHeader>
-
-        {/* Rule Name and Description */}
-        <RuleBasicInfo
-          ruleName={ruleName}
-          ruleDescription={ruleDescription}
-          onRuleNameChange={setRuleName}
-          onRuleDescriptionChange={setRuleDescription}
-          disabled={loading}
-        />
-
-        {/* IF Section */}
-        <RuleConditions
-          conditions={conditions}
-          onConditionsChange={setConditions}
-          disabled={loading}
-        />
-
-        {/* THEN Section */}
-        <RuleActions
-          actions={actions}
-          onActionsChange={setActions}
-          disabled={loading}
-        />
-
-        {/* FOR Section */}
-        <RuleEffectiveScope
-          effectiveScope={effectiveScope}
-          effectiveFromDate={effectiveFromDate}
-          onEffectiveScopeChange={setEffectiveScope}
-          onEffectiveFromDateChange={setEffectiveFromDate}
-          disabled={loading}
-        />
-
-        {/* Error Display */}
-        {error && (
-          <div className="text-destructive text-sm bg-destructive/10 border border-destructive/20 rounded-lg p-3">
-            {error}
-          </div>
-        )}
-
-        {/* Footer */}
-        <div className="pt-6 mt-8 border-t flex gap-3 justify-end">
-          <Button
-            variant="outline"
-            onClick={() => {
-              resetForm();
-              onOpenChange(false);
-            }}
-            disabled={loading}
-            type="button"
-          >
-            Cancel
-          </Button>
-          <LoadingButton onClick={handleSubmit} loading={loading} type="button">
-            Create Rule
-          </LoadingButton>
-        </div>
-      </DialogContent>
-    </Dialog>
+    <RuleModal
+      isOpen={isOpen}
+      onOpenChange={onOpenChange}
+      mode="add"
+      onSubmit={handleSubmit}
+      loading={loading}
+      error={error}
+      dialogTitle="New transaction rule"
+      submitButtonText="Create Rule"
+    />
   );
 }

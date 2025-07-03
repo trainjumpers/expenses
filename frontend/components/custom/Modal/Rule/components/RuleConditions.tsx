@@ -1,6 +1,7 @@
 import { RuleInput } from "@/components/custom/Modal/Rule/components/RuleInput";
 import { Button } from "@/components/ui/button";
 import {
+  BaseRuleCondition,
   RULE_FIELD_TYPES,
   RULE_OPERATORS,
   RuleFieldType,
@@ -8,15 +9,9 @@ import {
 } from "@/lib/models/rule";
 import { Plus, Trash2 } from "lucide-react";
 
-interface RuleCondition {
-  condition_type: RuleFieldType;
-  condition_operator: RuleOperator;
-  condition_value: string;
-}
-
 interface RuleConditionsProps {
-  conditions: RuleCondition[];
-  onConditionsChange: (conditions: RuleCondition[]) => void;
+  conditions: BaseRuleCondition[];
+  onConditionsChange: (conditions: BaseRuleCondition[]) => void;
   disabled?: boolean;
 }
 
