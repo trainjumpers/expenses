@@ -129,15 +129,6 @@ export function RuleConditions({
           <Plus className="h-4 w-4 mr-2" />
           Add condition
         </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          disabled={disabled}
-          className="text-muted-foreground hover:text-foreground"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Add condition group
-        </Button>
       </div>
     </div>
   );

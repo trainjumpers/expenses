@@ -59,14 +59,6 @@ export const ViewRulesModal = ({
     refreshRules();
   };
 
-  useEffect(() => {
-    if (!isOpen) return;
-    setLoading(true);
-    listRules()
-      .then((data) => setRules(data))
-      .finally(() => setLoading(false));
-  }, [isOpen]);
-
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onOpenChange}>

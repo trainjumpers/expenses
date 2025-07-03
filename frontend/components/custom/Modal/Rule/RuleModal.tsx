@@ -176,7 +176,7 @@ export function RuleModal({
       initialData?.rule || {
         name: "",
         description: "",
-        effective_from: new Date().toISOString().slice(0, 10),
+        effective_from: new Date().toISOString(),
       }
     );
     setConditions(
