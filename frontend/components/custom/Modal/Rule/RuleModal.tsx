@@ -84,6 +84,23 @@ export function RuleModal({
   );
   const [localError, setLocalError] = useState<string | null>(null);
 
+  // Helper to determine effectiveScope and effectiveFromDate from effective_from string
+  function getEffectiveScopeAndDate(effective_from?: string): {
+    effectiveScope: "all" | "from";
+    effectiveFromDate: Date | undefined;
+  } {
+    if (effective_from) {
+      const effDate = new Date(effective_from);
+      const isToday = effDate.toDateString() === new Date().toDateString();
+      if (isToday) {
+        return { effectiveScope: "all", effectiveFromDate: undefined };
+      } else {
+        return { effectiveScope: "from", effectiveFromDate: effDate };
+      }
+    }
+    return { effectiveScope: "all", effectiveFromDate: undefined };
+  }
+
   // Update form state with initialData when modal is opened or initialData changes (for edit mode)
   useEffect(() => {
     if (isOpen && initialData) {
@@ -110,21 +127,12 @@ export function RuleModal({
           ? initialData.actions
           : [{ action_type: "category", action_value: "" }]
       );
-      // Set effectiveScope and effectiveFromDate based on rule.effective_from
-      if (initialData.rule && initialData.rule.effective_from) {
-        const effDate = new Date(initialData.rule.effective_from);
-        const isToday = effDate.toDateString() === new Date().toDateString();
-        if (isToday) {
-          setEffectiveScope("all");
-          setEffectiveFromDate(undefined);
-        } else {
-          setEffectiveScope("from");
-          setEffectiveFromDate(effDate);
-        }
-      } else {
-        setEffectiveScope("all");
-        setEffectiveFromDate(undefined);
-      }
+      // Use helper for effectiveScope and effectiveFromDate
+      const { effectiveScope, effectiveFromDate } = getEffectiveScopeAndDate(
+        initialData.rule?.effective_from
+      );
+      setEffectiveScope(effectiveScope);
+      setEffectiveFromDate(effectiveFromDate);
       setLocalError(null);
     }
   }, [isOpen, initialData]);
@@ -181,7 +189,7 @@ export function RuleModal({
     );
     setConditions(
       initialData?.conditions && initialData.conditions.length > 0
-        ? initialData.conditions
+        ? initialData?.conditions
         : [
             {
               condition_type: "name",
@@ -195,21 +203,12 @@ export function RuleModal({
         ? initialData.actions
         : [{ action_type: "category", action_value: "" }]
     );
-    // Reset effectiveScope and effectiveFromDate
-    if (initialData?.rule && initialData.rule.effective_from) {
-      const effDate = new Date(initialData.rule.effective_from);
-      const isToday = effDate.toDateString() === new Date().toDateString();
-      if (isToday) {
-        setEffectiveScope("all");
-        setEffectiveFromDate(undefined);
-      } else {
-        setEffectiveScope("from");
-        setEffectiveFromDate(effDate);
-      }
-    } else {
-      setEffectiveScope("all");
-      setEffectiveFromDate(undefined);
-    }
+    // Use helper for effectiveScope and effectiveFromDate
+    const { effectiveScope, effectiveFromDate } = getEffectiveScopeAndDate(
+      initialData?.rule?.effective_from
+    );
+    setEffectiveScope(effectiveScope);
+    setEffectiveFromDate(effectiveFromDate);
     setLocalError(null);
   };
 
