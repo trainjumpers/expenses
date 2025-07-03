@@ -531,7 +531,7 @@ var _ = Describe("RuleController", func() {
 			url := "/rule/" + strconv.FormatInt(ruleId, 10)
 			resp, response := testHelper.MakeRequest(http.MethodPatch, url, accessToken, update)
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
-			Expect(response["message"]).To(ContainSubstring("The effective date for the rule is invalid or in the past"))
+			Expect(response["message"]).To(ContainSubstring("the effective date for the rule is invalid or in the past"))
 		})
 
 		It("should return error for invalid rule id format", func() {
@@ -587,7 +587,7 @@ var _ = Describe("RuleController", func() {
 				url := "/rule/" + strconv.FormatInt(ruleId, 10) + "/action/" + strconv.FormatInt(otherActionId, 10)
 				resp, response := testHelper.MakeRequest(http.MethodPatch, url, accessToken, update)
 				Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
-				Expect(response["message"]).To(ContainSubstring("The requested rule action was not found"))
+				Expect(response["message"]).To(ContainSubstring("the requested rule action was not found"))
 			})
 
 			It("should return unauthorized for invalid token", func() {
@@ -687,7 +687,7 @@ var _ = Describe("RuleController", func() {
 				url := "/rule/" + strconv.FormatInt(ruleId, 10) + "/condition/" + strconv.FormatInt(otherConditionId, 10)
 				resp, response := testHelper.MakeRequest(http.MethodPatch, url, accessToken, update)
 				Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
-				Expect(response["message"]).To(ContainSubstring("The requested rule condition was not found"))
+				Expect(response["message"]).To(ContainSubstring("the requested rule condition was not found"))
 			})
 
 			It("should return error for condition belonging to different user", func() {
@@ -812,7 +812,7 @@ var _ = Describe("RuleController", func() {
 				url := "/rule/" + strconv.FormatInt(ruleId, 10) + "/condition/" + strconv.FormatInt(conditionId, 10)
 				resp, response := testHelper.MakeRequest(http.MethodPatch, url, accessToken, update)
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
-				Expect(response["message"]).To(ContainSubstring("The operator is not valid for the given condition type"))
+				Expect(response["message"]).To(ContainSubstring("the operator is not valid for the given condition type"))
 			})
 		})
 	})
