@@ -15,58 +15,10 @@ export const RULE_OPERATORS: { label: string; value: RuleOperator }[] = [
   { label: "Lower", value: "lower" },
 ];
 
-// --- Rule Creation ---
-
-export interface CreateBaseRuleInput {
-  name: string;
-  description?: string;
-  effective_from: string; // ISO date string
-}
-
-export interface CreateRuleActionInput {
-  action_type: RuleFieldType;
-  action_value: string;
-}
-
-export interface CreateRuleConditionInput {
-  condition_type: RuleFieldType;
-  condition_value: string;
-  condition_operator: RuleOperator;
-}
-
-export interface CreateRuleInput {
-  rule: CreateBaseRuleInput;
-  actions: CreateRuleActionInput[];
-  conditions: CreateRuleConditionInput[];
-}
-
-// --- Rule Update ---
-
-export interface UpdateRuleInput {
-  name?: string;
-  description?: string;
-  effective_from?: string;
-}
-
-export interface UpdateRuleActionInput {
-  action_type?: RuleFieldType;
-  action_value?: string;
-}
-
-export interface UpdateRuleConditionInput {
-  condition_type?: RuleFieldType;
-  condition_value?: string;
-  condition_operator?: RuleOperator;
-}
-
-// --- Rule Response Types ---
-
-export interface Rule {
-  id: number;
+export interface BaseRule {
   name: string;
   description?: string;
   effective_from: string;
-  created_by: number;
 }
 
 export interface BaseRuleAction {
@@ -74,15 +26,34 @@ export interface BaseRuleAction {
   action_value: string;
 }
 
-export interface RuleAction extends BaseRuleAction {
-  id: number;
-  rule_id: number;
-}
-
 export interface BaseRuleCondition {
   condition_type: RuleFieldType;
   condition_value: string;
   condition_operator: RuleOperator;
+}
+
+export type CreateBaseRuleInput = BaseRule;
+export type CreateRuleActionInput = BaseRuleAction;
+export type CreateRuleConditionInput = BaseRuleCondition;
+
+export interface CreateRuleInput {
+  rule: CreateBaseRuleInput;
+  actions: CreateRuleActionInput[];
+  conditions: CreateRuleConditionInput[];
+}
+
+export type UpdateRuleInput = Partial<CreateBaseRuleInput>;
+export type UpdateRuleActionInput = Partial<CreateRuleActionInput>;
+export type UpdateRuleConditionInput = Partial<CreateRuleConditionInput>;
+
+export interface Rule extends BaseRule {
+  id: number;
+  created_by: number;
+}
+
+export interface RuleAction extends BaseRuleAction {
+  id: number;
+  rule_id: number;
 }
 
 export interface RuleCondition extends BaseRuleCondition {
@@ -95,8 +66,6 @@ export interface DescribeRuleResponse {
   actions: RuleAction[];
   conditions: RuleCondition[];
 }
-
-// --- Execute Rules Response ---
 
 export interface ExecuteRulesResponse {
   modified: ModifiedResult[];

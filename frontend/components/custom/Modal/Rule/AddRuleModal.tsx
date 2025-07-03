@@ -6,6 +6,10 @@ import {
   BaseRuleCondition,
   CreateRuleInput,
 } from "@/lib/models/rule";
+import {
+  normalizeRuleActions,
+  normalizeRuleConditions,
+} from "@/lib/utils/rule";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -49,35 +53,8 @@ export function AddRuleModal({ isOpen, onOpenChange }: AddRuleModalProps) {
               ? effectiveFromDate.toISOString()
               : new Date().toISOString(),
         },
-        actions: actions.map((a) => ({
-          action_type: a.action_type,
-          action_value:
-            a.action_type === "category"
-              ? (() => {
-                  const cat = categories.find(
-                    (cat) =>
-                      String(cat.id) === a.action_value ||
-                      cat.name === a.action_value
-                  );
-                  return cat ? String(cat.id) : a.action_value;
-                })()
-              : a.action_value,
-        })),
-        conditions: conditions.map((c) => ({
-          condition_type: c.condition_type,
-          condition_operator: c.condition_operator,
-          condition_value:
-            c.condition_type === "category"
-              ? (() => {
-                  const cat = categories.find(
-                    (cat) =>
-                      String(cat.id) === c.condition_value ||
-                      cat.name === c.condition_value
-                  );
-                  return cat ? String(cat.id) : c.condition_value;
-                })()
-              : c.condition_value,
-        })),
+        actions: normalizeRuleActions(actions, categories),
+        conditions: normalizeRuleConditions(conditions, categories),
       };
 
       await createRule(payload);

@@ -9,6 +9,10 @@ import {
   DescribeRuleResponse,
   UpdateRuleInput,
 } from "@/lib/models/rule";
+import {
+  normalizeRuleActions,
+  normalizeRuleConditions,
+} from "@/lib/utils/rule";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -54,21 +58,11 @@ export function EditRuleModal({
         setInitialData({
           ruleName: data.rule.name || "",
           ruleDescription: data.rule.description || "",
-          conditions: data.conditions.map((c) => ({
-            condition_type: c.condition_type,
-            condition_operator: c.condition_operator,
-            condition_value:
-              c.condition_type === "category"
-                ? String(c.condition_value)
-                : c.condition_value,
-          })),
-          actions: data.actions.map((a) => ({
-            action_type: a.action_type,
-            action_value:
-              a.action_type === "category"
-                ? String(a.action_value)
-                : a.action_value,
-          })),
+          conditions: normalizeRuleConditions(
+            data.conditions as BaseRuleCondition[],
+            []
+          ),
+          actions: normalizeRuleActions(data.actions as BaseRuleAction[], []),
           effectiveScope,
           effectiveFromDate,
         });

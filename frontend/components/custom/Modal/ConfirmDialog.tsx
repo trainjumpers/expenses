@@ -1,3 +1,4 @@
+import { LoadingButton } from "@/components/ui/LoadingButton";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -52,14 +53,13 @@ export function ConfirmDialog({
           >
             {cancelLabel}
           </Button>
-          <Button
+          <LoadingButton
             variant={destructive ? "destructive" : "default"}
             onClick={onConfirm}
-            disabled={loading}
+            loading={loading}
           >
-            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {confirmLabel}
-          </Button>
+          </LoadingButton>
         </DialogFooter>
       </DialogContent>
     </Dialog>
