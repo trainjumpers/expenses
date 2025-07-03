@@ -23,7 +23,7 @@ const (
 
 type CreateBaseRuleRequest struct {
 	Name          string    `json:"name" binding:"required,min=1,max=100"`
-	Description   *string   `json:"description,omitempty" binding:"max=255"`
+	Description   *string   `json:"description,omitempty" binding:"omitempty,max=255"`
 	EffectiveFrom time.Time `json:"effective_from" binding:"required"`
 	CreatedBy     int64     `json:"created_by"`
 }

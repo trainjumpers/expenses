@@ -1,5 +1,6 @@
 import { AddCategoryModal } from "@/components/custom/Modal/Category/AddCategoryModal";
 import { UpdateCategoryModal } from "@/components/custom/Modal/Category/UpdateCategoryModal";
+import { ConfirmDialog } from "@/components/custom/Modal/ConfirmDialog";
 import { useCategories } from "@/components/custom/Provider/CategoryProvider";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Icon, IconName } from "@/components/ui/icon-picker";
 import { Category } from "@/lib/models/category";
-import { Tag } from "lucide-react";
+import { Tag, Trash2 } from "lucide-react";
 import { useState } from "react";
 
 interface ViewCategoriesModalProps {
@@ -22,15 +23,39 @@ export function ViewCategoriesModal({
   isOpen,
   onOpenChange,
 }: ViewCategoriesModalProps) {
-  const { read: readCategories } = useCategories();
+  const {
+    read: readCategories,
+    delete: deleteCategory,
+    refresh,
+  } = useCategories();
   const [isAddCategoryModalOpen, setIsAddCategoryModalOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(
     null
   );
+  const [loadingId, setLoadingId] = useState<number | null>(null);
+  const [confirmDeleteCategory, setConfirmDeleteCategory] =
+    useState<Category | null>(null);
+  const [confirmLoading, setConfirmLoading] = useState(false);
   const categories = readCategories();
 
   const handleCategoryUpdated = () => {
     setSelectedCategory(null);
+  };
+
+  const openDeleteDialog = (category: Category) => {
+    setConfirmDeleteCategory(category);
+    setConfirmLoading(false);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!confirmDeleteCategory) return;
+    setConfirmLoading(true);
+    setLoadingId(confirmDeleteCategory.id);
+    await deleteCategory(confirmDeleteCategory.id);
+    refresh();
+    setConfirmDeleteCategory(null);
+    setConfirmLoading(false);
+    setLoadingId(null);
   };
 
   return (
@@ -66,13 +91,24 @@ export function ViewCategoriesModal({
                       />
                       <h3 className="font-medium">{category.name}</h3>
                     </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setSelectedCategory(category)}
-                    >
-                      Edit
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSelectedCategory(category)}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        disabled={loadingId === category.id}
+                        onClick={() => openDeleteDialog(category)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        <span className="sr-only">Delete</span>
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -100,6 +136,23 @@ export function ViewCategoriesModal({
           onCategoryUpdated={handleCategoryUpdated}
         />
       )}
+      <ConfirmDialog
+        isOpen={!!confirmDeleteCategory}
+        onOpenChange={(open) => {
+          if (!open) setConfirmDeleteCategory(null);
+        }}
+        title="Delete Category"
+        description={
+          confirmDeleteCategory
+            ? `Are you sure you want to delete the category "${confirmDeleteCategory.name}"? This action cannot be undone.`
+            : ""
+        }
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        destructive
+        loading={confirmLoading}
+        onConfirm={handleConfirmDelete}
+      />
     </>
   );
 }
