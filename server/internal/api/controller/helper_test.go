@@ -57,6 +57,37 @@ func (h *TestHelper) MakeRequest(method, url, token string, body interface{}) (*
 	return resp, responseBody
 }
 
+// MakeRequestWithoutAuth performs an HTTP request without any authorization header
+func (h *TestHelper) MakeRequestWithoutAuth(method, url string, body interface{}) (*http.Response, map[string]interface{}) {
+	var reqBody io.Reader
+	if body != nil {
+		if str, ok := body.(string); ok {
+			reqBody = bytes.NewBuffer([]byte(str))
+		} else {
+			jsonBody, err := json.Marshal(body)
+			Expect(err).NotTo(HaveOccurred())
+			reqBody = bytes.NewBuffer(jsonBody)
+		}
+	}
+
+	req, err := http.NewRequest(method, h.BaseURL+url, reqBody)
+	Expect(err).NotTo(HaveOccurred())
+
+	req.Header.Set("Content-Type", "application/json")
+	// Explicitly not setting Authorization header
+
+	resp, err := h.Client.Do(req)
+	Expect(err).NotTo(HaveOccurred())
+
+	responseBody, err := decodeJSON(resp.Body)
+	if err != nil && err != io.EOF { // EOF is fine if body is empty
+		Expect(err).NotTo(HaveOccurred())
+	}
+	resp.Body.Close()
+
+	return resp, responseBody
+}
+
 // Login performs a login request and returns the access and refresh tokens
 func (h *TestHelper) Login(email, password string) (string, string) {
 	loginInput := models.LoginInput{
