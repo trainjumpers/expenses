@@ -18,7 +18,9 @@ export async function login(
     [
       (response) => {
         if (response.status === 401) {
-          toast.error("The email or password is incorrect");
+          toast.error("The email or password is incorrect", {
+            id: "login-error",
+          });
           return true;
         }
         return false;
