@@ -1,4 +1,3 @@
-import { getCookie } from "@/lib/utils/cookies";
 import { handleApiError } from "@/lib/utils/toast";
 import { toast } from "sonner";
 
@@ -13,7 +12,10 @@ export async function apiRequest<T>(
 ): Promise<T> {
   let toastShown = false;
   try {
-    const response = await fetch(url, options);
+    const response = await fetch(url, {
+      ...options,
+      credentials: "include", // Always send cookies
+    });
     let data: unknown;
     try {
       data = await response.json();
@@ -47,13 +49,4 @@ export async function apiRequest<T>(
     }
     throw err;
   }
-}
-
-export function authHeaders(): Record<string, string> {
-  const token = getCookie("access_token");
-  if (!token) return {};
-  return {
-    Authorization: `Bearer ${token}`,
-    "Content-Type": "application/json",
-  };
 }

@@ -60,6 +60,7 @@ func Init(
 		base.POST("/signup", authController.Signup)
 		base.POST("/login", authController.Login)
 		base.POST("/refresh", authController.RefreshToken)
+		base.POST("/logout", authController.Logout)
 
 		// User related routes
 		user := base.Group("/user", middleware.ProtectedWithCreatedBy(cfg)...)

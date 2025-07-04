@@ -1,4 +1,4 @@
-import { apiRequest, authHeaders } from "@/lib/api/request";
+import { apiRequest } from "@/lib/api/request";
 import { API_BASE_URL } from "@/lib/constants/api";
 import {
   BaseRuleAction,
@@ -17,7 +17,6 @@ export async function listRules(): Promise<Rule[]> {
   return apiRequest<Rule[]>(
     `${API_BASE_URL}/rule`,
     {
-      headers: authHeaders(),
       credentials: "include",
     },
     "rule",
@@ -31,7 +30,6 @@ export async function getRule(id: number): Promise<DescribeRuleResponse> {
   return apiRequest<DescribeRuleResponse>(
     `${API_BASE_URL}/rule/${id}`,
     {
-      headers: authHeaders(),
       credentials: "include",
     },
     "rule",
@@ -46,7 +44,6 @@ export async function createRule(input: CreateRuleInput): Promise<Rule> {
     `${API_BASE_URL}/rule`,
     {
       method: "POST",
-      headers: authHeaders(),
       credentials: "include",
       body: JSON.stringify(input),
     },
@@ -65,7 +62,6 @@ export async function updateRule(
     `${API_BASE_URL}/rule/${id}`,
     {
       method: "PATCH",
-      headers: authHeaders(),
       credentials: "include",
       body: JSON.stringify(input),
     },
@@ -81,7 +77,6 @@ export async function deleteRule(id: number): Promise<void> {
     `${API_BASE_URL}/rule/${id}`,
     {
       method: "DELETE",
-      headers: authHeaders(),
       credentials: "include",
     },
     "rule",
@@ -95,7 +90,6 @@ export async function listRuleActions(ruleId: number): Promise<RuleAction[]> {
   return apiRequest<RuleAction[]>(
     `${API_BASE_URL}/rule/${ruleId}/actions`,
     {
-      headers: authHeaders(),
       credentials: "include",
     },
     "rule",
@@ -121,7 +115,6 @@ export async function listRuleConditions(
   return apiRequest<RuleCondition[]>(
     `${API_BASE_URL}/rule/${ruleId}/conditions`,
     {
-      headers: authHeaders(),
       credentials: "include",
     },
     "rule",
@@ -146,7 +139,6 @@ export async function executeRules(): Promise<ExecuteRulesResponse> {
     `${API_BASE_URL}/rule/execute`,
     {
       method: "POST",
-      headers: authHeaders(),
       credentials: "include",
     },
     "rule",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useUser } from "@/components/custom/Provider/UserProvider";
+import { useSession } from "@/components/custom/Provider/SessionProvider";
 import {
   createCategory,
   deleteCategory,
@@ -31,13 +31,13 @@ export type CategoryResource = {
 const CategoryContext = createContext<CategoryResource | null>(null);
 
 export const CategoryProvider = ({ children }: { children: ReactNode }) => {
-  const { token } = useUser();
+  const { isTokenAvailable } = useSession();
   const [abortController, setAbortController] =
     useState<AbortController | null>(null);
 
   const handleNewResource = () => {
-    if (!token) {
-      return;
+    if (!isTokenAvailable) {
+      return createResource<Category[]>(() => Promise.resolve([]));
     }
     if (abortController) {
       abortController.abort();
@@ -82,10 +82,9 @@ export const CategoryProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+  }, [isTokenAvailable]);
 
   const read = () => {
-    if (!token) return [];
     if (!resource) throw new Error("Resource not found");
     const result = resource.read();
     if (!result) return [];

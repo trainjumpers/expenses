@@ -1,4 +1,4 @@
-import { apiRequest, authHeaders } from "@/lib/api/request";
+import { apiRequest } from "@/lib/api/request";
 import { API_BASE_URL } from "@/lib/constants/api";
 import { User } from "@/lib/models/user";
 import { toast } from "sonner";
@@ -8,10 +8,18 @@ export async function getUser(): Promise<User> {
     `${API_BASE_URL}/user`,
     {
       method: "GET",
-      headers: authHeaders(),
+      credentials: "include",
     },
     "user"
   );
+}
+
+export async function checkUser(): Promise<Response | null> {
+  const response = await fetch(`${API_BASE_URL}/user`, {
+    method: "GET",
+    credentials: "include",
+  });
+  return response;
 }
 
 export async function updateUser(user: Partial<User>): Promise<User> {
@@ -19,7 +27,7 @@ export async function updateUser(user: Partial<User>): Promise<User> {
     `${API_BASE_URL}/user`,
     {
       method: "PATCH",
-      headers: authHeaders(),
+      credentials: "include",
       body: JSON.stringify(user),
     },
     "user"
@@ -34,7 +42,7 @@ export async function updatePassword(
     `${API_BASE_URL}/user/password`,
     {
       method: "POST",
-      headers: authHeaders(),
+      credentials: "include",
       body: JSON.stringify({
         old_password: currentPassword,
         new_password: newPassword,

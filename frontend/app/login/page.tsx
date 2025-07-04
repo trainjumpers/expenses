@@ -1,5 +1,6 @@
 "use client";
 
+import { useSession } from "@/components/custom/Provider/SessionProvider";
 import { useUser } from "@/components/custom/Provider/UserProvider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +12,7 @@ import { useState } from "react";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login } = useUser();
+  const { login } = useSession();
   const { theme } = useTheme();
 
   const [formData, setFormData] = useState({ email: "", password: "" });
