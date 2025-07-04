@@ -44,7 +44,9 @@ export async function updatePassword(
     [
       (response) => {
         if (response.status === 401) {
-          toast.error("Current password is incorrect");
+          toast.error("Current password is incorrect", {
+            id: "password-error",
+          });
           return true;
         }
         return false;

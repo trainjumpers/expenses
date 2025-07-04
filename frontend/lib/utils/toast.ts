@@ -3,10 +3,13 @@ import { toast } from "sonner";
 export const handleApiError = (status: number, resource: string) => {
   switch (status) {
     case 400:
-      toast.error("Please check your input and try again");
+      toast.error("Please check your input and try again", {
+        id: "bad-user-input",
+      });
       break;
     case 401:
       toast.error("Please login again", {
+        id: "unauthorized",
         action: {
           label: "Login",
           onClick: () => {
@@ -27,7 +30,8 @@ export const handleApiError = (status: number, resource: string) => {
       break;
     default:
       toast.error(
-        "Something went wrong. Contact support if the problem persists"
+        "Something went wrong. Contact support if the problem persists",
+        { id: "generic-error" }
       );
       break;
   }

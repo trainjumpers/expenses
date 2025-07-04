@@ -154,7 +154,7 @@ export function TransactionsTable({
       await updateTransaction(updatedTransaction.id, diff);
     } catch {
       onTransactionUpdate(originalTransaction);
-      toast.error("Failed to update. Reverted.");
+      toast.error("Failed to update transaction.");
     }
   };
 
