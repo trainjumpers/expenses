@@ -1,5 +1,6 @@
 "use client";
 
+import { useUser } from "@/components/custom/Provider/UserProvider";
 import {
   createAccount,
   deleteAccount,
@@ -30,25 +31,29 @@ export type AccountResource = {
 const AccountContext = createContext<AccountResource | null>(null);
 
 export const AccountProvider = ({ children }: { children: ReactNode }) => {
+  const { token } = useUser();
   const [abortController, setAbortController] =
     useState<AbortController | null>(null);
-  const [resource, setResource] = useState(() => {
-    const controller = new AbortController();
-    setAbortController(controller);
-    return createResource<Account[]>(listAccounts, controller.signal);
-  });
 
-  const refresh = () => {
+  const handleNewResource = () => {
+    if (!token) {
+      return;
+    }
     if (abortController) {
       abortController.abort();
     }
     const controller = new AbortController();
     setAbortController(controller);
-    const newResource = createResource<Account[]>(
-      listAccounts,
-      controller.signal
-    );
-    setResource(newResource);
+    // Pass token to listAccounts if needed, otherwise ensure listAccounts reads from context/cookie
+    return createResource<Account[]>(() => listAccounts(), controller.signal);
+  };
+
+  const [resource, setResource] = useState(() => {
+    return handleNewResource();
+  });
+
+  const refresh = () => {
+    setResource(handleNewResource);
   };
 
   const create = async (account: CreateAccountInput) => {
@@ -78,9 +83,10 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [token]);
 
   const read = () => {
+    if (!token) return [];
     if (!resource) throw new Error("Resource not found");
     const result = resource.read();
     if (!result) return [];

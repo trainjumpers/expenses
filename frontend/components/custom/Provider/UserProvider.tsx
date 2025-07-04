@@ -33,6 +33,7 @@ type UserResource = {
     newPassword: string
   ) => Promise<User>;
   signup: (name: string, email: string, password: string) => Promise<User>;
+  token: string | undefined;
 };
 
 const UserContext = createContext<UserResource | null>(null);
@@ -91,6 +92,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         ? {
             ...prev,
             read: func,
+            token,
           }
         : {
             read: func,
@@ -99,6 +101,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
             update,
             updatePassword,
             signup,
+            token,
           }
     );
   };
@@ -115,6 +118,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     update,
     updatePassword,
     signup,
+    token,
   }));
 
   useEffect(() => {

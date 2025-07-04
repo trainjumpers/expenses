@@ -3,14 +3,12 @@
 import Dashboard from "@/components/custom/Dashboard/Dashboard";
 import { AddTransactionModal } from "@/components/custom/Modal/Transaction/AddTransactionModal";
 import UpdateTransactionModal from "@/components/custom/Modal/Transaction/UpdateTransactionModal";
+import { useAccounts } from "@/components/custom/Provider/AccountProvider";
+import { useCategories } from "@/components/custom/Provider/CategoryProvider";
 import TransactionFilters from "@/components/custom/Transaction/TransactionFilters";
 import { TransactionsTable } from "@/components/custom/Transaction/TransactionsTable";
 import { Button } from "@/components/ui/button";
-import { listAccounts } from "@/lib/api/account";
-import { listCategory } from "@/lib/api/category";
 import { getAllTransactions } from "@/lib/api/transaction";
-import { Account } from "@/lib/models/account";
-import { Category } from "@/lib/models/category";
 import {
   PaginatedTransactionsResponse,
   Transaction,
@@ -44,14 +42,12 @@ export default function TransactionPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
+  const { read: categories } = useCategories();
+  const { read: accounts } = useAccounts();
 
   // Filter state
   const [filters, setFilters] =
     useState<TransactionFiltersState>(initialFilters);
-
-  // For filter dropdowns
-  const [accounts, setAccounts] = useState<Account[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
 
   // Pagination and sorting state
   const [currentPage, setCurrentPage] = useState(1);
@@ -71,12 +67,6 @@ export default function TransactionPage() {
     useState(false);
   const [transactionToUpdate, setTransactionToUpdate] =
     useState<Transaction | null>(null);
-
-  // Load accounts and categories for filters
-  useEffect(() => {
-    listAccounts().then(setAccounts);
-    listCategory().then(setCategories);
-  }, []);
 
   // Parse initial state from URL
   useEffect(() => {
@@ -208,8 +198,8 @@ export default function TransactionPage() {
         <div className="flex justify-center items-center w-full">
           <div className="w-full">
             <TransactionFilters
-              accounts={accounts}
-              categories={categories}
+              accounts={accounts()}
+              categories={categories()}
               filters={filters}
               onFilterChange={handleFilterChange}
               onClear={handleClearFilters}

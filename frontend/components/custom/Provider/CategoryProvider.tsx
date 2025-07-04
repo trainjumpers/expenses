@@ -1,5 +1,6 @@
 "use client";
 
+import { useUser } from "@/components/custom/Provider/UserProvider";
 import {
   createCategory,
   deleteCategory,
@@ -30,25 +31,28 @@ export type CategoryResource = {
 const CategoryContext = createContext<CategoryResource | null>(null);
 
 export const CategoryProvider = ({ children }: { children: ReactNode }) => {
+  const { token } = useUser();
   const [abortController, setAbortController] =
     useState<AbortController | null>(null);
-  const [resource, setResource] = useState(() => {
-    const controller = new AbortController();
-    setAbortController(controller);
-    return createResource<Category[]>(listCategory, controller.signal);
-  });
 
-  const refresh = () => {
+  const handleNewResource = () => {
+    if (!token) {
+      return;
+    }
     if (abortController) {
       abortController.abort();
     }
     const controller = new AbortController();
     setAbortController(controller);
-    const newResource = createResource<Category[]>(
-      listCategory,
-      controller.signal
-    );
-    setResource(newResource);
+    return createResource<Category[]>(() => listCategory(), controller.signal);
+  };
+
+  const [resource, setResource] = useState(() => {
+    return handleNewResource();
+  });
+
+  const refresh = () => {
+    setResource(handleNewResource());
   };
 
   const create = async (category: CreateCategoryInput) => {
@@ -78,9 +82,10 @@ export const CategoryProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [token]);
 
   const read = () => {
+    if (!token) return [];
     if (!resource) throw new Error("Resource not found");
     const result = resource.read();
     if (!result) return [];

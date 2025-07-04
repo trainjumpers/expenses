@@ -28,7 +28,7 @@ export default function LoginPage() {
       await login(formData.email, formData.password);
       router.push("/");
     } catch (err) {
-      console.log(err);
+      console.error(err);
     } finally {
       setLoading(false);
     }
