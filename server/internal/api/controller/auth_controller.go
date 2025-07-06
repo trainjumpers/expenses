@@ -38,9 +38,7 @@ func (a *AuthController) Signup(ctx *gin.Context) {
 		return
 	}
 	logger.Infof("User created successfully with Id %d", authResponse.User.Id)
-	// Set HTTP-only cookies for tokens
-	ctx.SetCookie("access_token", authResponse.AccessToken, int(a.cfg.AccessTokenDuration.Seconds()), "/", a.getCookieUrl(), true, true)
-	ctx.SetCookie("refresh_token", authResponse.RefreshToken, int(a.cfg.RefreshTokenDuration.Seconds()), "/", a.getCookieUrl(), true, true)
+	a.setCookies(ctx, authResponse.AccessToken, authResponse.RefreshToken)
 	a.SendSuccess(ctx, http.StatusCreated, "User signed up successfully", gin.H{
 		"user": authResponse.User,
 	})
@@ -63,9 +61,7 @@ func (a *AuthController) Login(ctx *gin.Context) {
 	}
 
 	logger.Infof("User logged in successfully with Id %d", authResponse.User.Id)
-	// Set HTTP-only cookies for tokens
-	ctx.SetCookie("access_token", authResponse.AccessToken, int(a.cfg.AccessTokenDuration.Seconds()), "/", a.getCookieUrl(), true, true)
-	ctx.SetCookie("refresh_token", authResponse.RefreshToken, int(a.cfg.RefreshTokenDuration.Seconds()), "/", a.getCookieUrl(), true, true)
+	a.setCookies(ctx, authResponse.AccessToken, authResponse.RefreshToken)
 	a.SendSuccess(ctx, http.StatusOK, "User logged in successfully", gin.H{
 		"user": authResponse.User,
 	})
@@ -89,9 +85,7 @@ func (a *AuthController) RefreshToken(ctx *gin.Context) {
 	}
 
 	logger.Infof("Token refreshed successfully for user Id %d", authResponse.User.Id)
-	// Set HTTP-only cookies for tokens
-	ctx.SetCookie("access_token", authResponse.AccessToken, int(a.cfg.AccessTokenDuration.Seconds()), "/", a.getCookieUrl(), true, true)
-	ctx.SetCookie("refresh_token", authResponse.RefreshToken, int(a.cfg.RefreshTokenDuration.Seconds()), "/", a.getCookieUrl(), true, true)
+	a.setCookies(ctx, authResponse.AccessToken, authResponse.RefreshToken)
 	a.SendSuccess(ctx, http.StatusOK, "Token refreshed successfully", gin.H{
 		"user": authResponse.User,
 	})
@@ -100,14 +94,12 @@ func (a *AuthController) RefreshToken(ctx *gin.Context) {
 // Logout endpoint clears the auth cookies
 func (a *AuthController) Logout(ctx *gin.Context) {
 	// Set cookies to expire in the past
-	ctx.SetCookie("access_token", "", -1, "/", a.getCookieUrl(), true, true)
-	ctx.SetCookie("refresh_token", "", -1, "/", a.getCookieUrl(), true, true)
+	a.setAuthCookie(ctx, "access_token", "", -1)
+	a.setAuthCookie(ctx, "refresh_token", "", -1)
 	ctx.JSON(http.StatusOK, gin.H{"message": "Logged out"})
 }
 
-func (a *AuthController) getCookieUrl() string {
-	if a.cfg.Environment == "prod" {
-		return "https://neurospend.vercel.app"
-	}
-	return ""
+func (a *AuthController) setCookies(ctx *gin.Context, accessToken string, refreshToken string) {
+	a.setAuthCookie(ctx, "access_token", accessToken, int(a.cfg.AccessTokenDuration.Seconds()))
+	a.setAuthCookie(ctx, "refresh_token", refreshToken, int(a.cfg.RefreshTokenDuration.Seconds()))
 }
