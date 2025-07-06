@@ -1,5 +1,7 @@
 "use client";
 
+import { useSession } from "@/components/custom/Provider/SessionProvider";
+import { useUser } from "@/components/custom/Provider/UserProvider";
 import {
   createAccount,
   deleteAccount,
@@ -30,25 +32,30 @@ export type AccountResource = {
 const AccountContext = createContext<AccountResource | null>(null);
 
 export const AccountProvider = ({ children }: { children: ReactNode }) => {
+  const { isTokenAvailable } = useSession();
+  useUser();
+
   const [abortController, setAbortController] =
     useState<AbortController | null>(null);
-  const [resource, setResource] = useState(() => {
-    const controller = new AbortController();
-    setAbortController(controller);
-    return createResource<Account[]>(listAccounts, controller.signal);
-  });
 
-  const refresh = () => {
+  const handleNewResource = () => {
+    if (!isTokenAvailable) {
+      return createResource<Account[]>(() => Promise.resolve([]));
+    }
     if (abortController) {
       abortController.abort();
     }
     const controller = new AbortController();
     setAbortController(controller);
-    const newResource = createResource<Account[]>(
-      listAccounts,
-      controller.signal
-    );
-    setResource(newResource);
+    return createResource<Account[]>(() => listAccounts(), controller.signal);
+  };
+
+  const [resource, setResource] = useState(() => {
+    return handleNewResource();
+  });
+
+  const refresh = () => {
+    setResource(handleNewResource());
   };
 
   const create = async (account: CreateAccountInput) => {
@@ -78,7 +85,7 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [isTokenAvailable]);
 
   const read = () => {
     if (!resource) throw new Error("Resource not found");

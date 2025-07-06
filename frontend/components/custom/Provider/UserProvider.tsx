@@ -1,19 +1,13 @@
 "use client";
 
-import { login as loginApi, signup as signupApi } from "@/lib/api/auth";
+import { useSession } from "@/components/custom/Provider/SessionProvider";
+import { logout as logoutApi, signup as signupApi } from "@/lib/api/auth";
 import {
   getUser,
   updatePassword as updatePasswordApi,
   updateUser,
 } from "@/lib/api/user";
-import {
-  ACCESS_TOKEN_EXPIRY,
-  ACCESS_TOKEN_NAME,
-  REFRESH_TOKEN_EXPIRY,
-  REFRESH_TOKEN_NAME,
-} from "@/lib/constants/cookie";
 import { User } from "@/lib/models/user";
-import { deleteCookie, getCookie, setCookie } from "@/lib/utils/cookies";
 import { createResource } from "@/lib/utils/suspense";
 import React, {
   ReactNode,
@@ -25,7 +19,6 @@ import React, {
 
 type UserResource = {
   read: () => User;
-  login: (email: string, password: string) => Promise<User>;
   logout: () => void;
   update: (user: Partial<User>) => Promise<User>;
   updatePassword: (
@@ -38,23 +31,10 @@ type UserResource = {
 const UserContext = createContext<UserResource | null>(null);
 
 export const UserProvider = ({ children }: { children: ReactNode }) => {
-  const login = async (email: string, password: string) => {
-    const authResponse = await loginApi(email, password);
-    setCookie(ACCESS_TOKEN_NAME, authResponse.access_token, {
-      maxAge: ACCESS_TOKEN_EXPIRY,
-    });
-    setCookie(REFRESH_TOKEN_NAME, authResponse.refresh_token, {
-      maxAge: REFRESH_TOKEN_EXPIRY,
-    });
-    setToken(authResponse.access_token);
-    setUserResource(() => authResponse.user);
-    return authResponse.user;
-  };
+  const { isTokenAvailable } = useSession();
 
-  const logout = () => {
-    deleteCookie(ACCESS_TOKEN_NAME);
-    deleteCookie(REFRESH_TOKEN_NAME);
-    setToken(undefined);
+  const logout = async () => {
+    await logoutApi();
     window.location.href = "/login";
   };
 
@@ -74,13 +54,6 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 
   const signup = async (name: string, email: string, password: string) => {
     const authResponse = await signupApi(name, email, password);
-    setCookie(ACCESS_TOKEN_NAME, authResponse.access_token, {
-      maxAge: ACCESS_TOKEN_EXPIRY,
-    });
-    setCookie(REFRESH_TOKEN_NAME, authResponse.refresh_token, {
-      maxAge: REFRESH_TOKEN_EXPIRY,
-    });
-    setToken(authResponse.access_token);
     setUserResource(() => authResponse.user);
     return authResponse.user;
   };
@@ -94,7 +67,6 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
           }
         : {
             read: func,
-            login,
             logout,
             update,
             updatePassword,
@@ -103,14 +75,10 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     );
   };
 
-  const [token, setToken] = useState<string | undefined>(() =>
-    getCookie(ACCESS_TOKEN_NAME)
-  );
   const [resource, setResource] = useState<UserResource>(() => ({
     read: () => {
       return { id: 0, name: "", email: "" };
     },
-    login,
     logout,
     update,
     updatePassword,
@@ -118,20 +86,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   }));
 
   useEffect(() => {
-    if (!token) {
-      if (
-        typeof window !== "undefined" &&
-        window.location.pathname !== "/login"
-      ) {
-        window.location.href = "/login";
-        setUserResource(() => ({ id: 0, name: "", email: "" }));
-        return;
-      }
-      setUserResource(() => {
-        throw new Error("No access token. Redirecting to login.");
-      });
-      return;
-    }
+    if (!isTokenAvailable) return;
     const userResource = createResource<User>(getUser);
     setUserResource(() => {
       const user = userResource.read();
@@ -139,17 +94,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       return user;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const currentToken = getCookie(ACCESS_TOKEN_NAME);
-      if (currentToken !== token) {
-        setToken(currentToken);
-      }
-    }, 10000);
-    return () => clearInterval(interval);
-  }, [token]);
+  }, [isTokenAvailable]);
 
   return (
     <UserContext.Provider value={resource}>{children}</UserContext.Provider>
