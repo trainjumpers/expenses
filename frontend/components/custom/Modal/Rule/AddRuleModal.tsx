@@ -1,6 +1,6 @@
 import { RuleModal } from "@/components/custom/Modal/Rule/RuleModal";
-import { useCategories } from "@/components/custom/Provider/CategoryProvider";
-import { createRule } from "@/lib/api/rule";
+import { useCategories } from "@/components/hooks/useCategories";
+import { useCreateRule } from "@/components/hooks/useRules";
 import {
   BaseRule,
   BaseRuleAction,
@@ -20,10 +20,10 @@ interface AddRuleModalProps {
 }
 
 export function AddRuleModal({ isOpen, onOpenChange }: AddRuleModalProps) {
-  const { read: readCategories } = useCategories();
-  const categories = readCategories();
+  const { data: categories = [] } = useCategories();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const createRuleMutation = useCreateRule();
 
   // Handler for RuleModal submit
   const handleSubmit = async ({
@@ -37,23 +37,24 @@ export function AddRuleModal({ isOpen, onOpenChange }: AddRuleModalProps) {
   }) => {
     setLoading(true);
     setError(null);
-
-    try {
-      const payload: CreateRuleInput = {
-        rule,
-        actions: normalizeRuleActions(actions, categories),
-        conditions: normalizeRuleConditions(conditions, categories),
-      };
-
-      await createRule(payload);
-      toast.success("Rule created successfully!");
-      onOpenChange(false);
-    } catch (e) {
-      const err = e as Error;
-      setError(err.message || "Failed to create rule");
-    } finally {
-      setLoading(false);
-    }
+    const payload: CreateRuleInput = {
+      rule,
+      actions: normalizeRuleActions(actions, categories),
+      conditions: normalizeRuleConditions(conditions, categories),
+    };
+    createRuleMutation.mutate(payload, {
+      onSuccess: () => {
+        toast.success("Rule created successfully!");
+        onOpenChange(false);
+      },
+      onError: (e: unknown) => {
+        const err = e as Error;
+        setError(err.message || "Failed to create rule");
+      },
+      onSettled: () => {
+        setLoading(false);
+      },
+    });
   };
 
   return (

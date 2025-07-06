@@ -3,20 +3,20 @@
 import Dashboard from "@/components/custom/Dashboard/Dashboard";
 import { AddTransactionModal } from "@/components/custom/Modal/Transaction/AddTransactionModal";
 import UpdateTransactionModal from "@/components/custom/Modal/Transaction/UpdateTransactionModal";
-import { useAccounts } from "@/components/custom/Provider/AccountProvider";
-import { useCategories } from "@/components/custom/Provider/CategoryProvider";
 import TransactionFilters from "@/components/custom/Transaction/TransactionFilters";
 import { TransactionsTable } from "@/components/custom/Transaction/TransactionsTable";
-import { Button } from "@/components/ui/button";
-import { getAllTransactions } from "@/lib/api/transaction";
+import { useAccounts } from "@/components/hooks/useAccounts";
+import { useCategories } from "@/components/hooks/useCategories";
 import {
-  PaginatedTransactionsResponse,
-  Transaction,
-  TransactionQueryParams,
-} from "@/lib/models/transaction";
+  useDeleteTransaction,
+  useTransactions,
+} from "@/components/hooks/useTransactions";
+import { Button } from "@/components/ui/button";
+import { Transaction, TransactionQueryParams } from "@/lib/models/transaction";
 import { Pencil, Plus, Trash } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 
 export interface TransactionFiltersState {
   accountId: number | undefined;
@@ -42,8 +42,8 @@ export default function TransactionPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
-  const { read: categories } = useCategories();
-  const { read: accounts } = useAccounts();
+  const { data: categories = [] } = useCategories();
+  const { data: accounts = [] } = useAccounts();
 
   // Filter state
   const [filters, setFilters] =
@@ -55,11 +55,7 @@ export default function TransactionPage() {
   const [sortBy, setSortBy] = useState<string>("date");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
-  // Paginated response state
-  const [paginated, setPaginated] =
-    useState<PaginatedTransactionsResponse | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  // Modal state
   const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
   const [isAddTransactionModalOpen, setIsAddTransactionModalOpen] =
     useState(false);
@@ -67,6 +63,33 @@ export default function TransactionPage() {
     useState(false);
   const [transactionToUpdate, setTransactionToUpdate] =
     useState<Transaction | null>(null);
+
+  const deleteTransactionMutation = useDeleteTransaction();
+
+  // Build query params for transactions
+  const transactionParams: TransactionQueryParams = useMemo(
+    () => ({
+      page: currentPage,
+      page_size: pageSize,
+      sort_by: sortBy,
+      sort_order: sortOrder,
+      account_id: filters.accountId,
+      category_id: filters.categoryId,
+      min_amount: filters.minAmount,
+      max_amount: filters.maxAmount,
+      date_from: filters.dateFrom,
+      date_to: filters.dateTo,
+      search: filters.search || undefined,
+    }),
+    [currentPage, pageSize, sortBy, sortOrder, filters]
+  );
+
+  // Get transactions using React Query
+  const {
+    data: paginated,
+    isLoading: transactionsLoading,
+    error: transactionsError,
+  } = useTransactions(transactionParams);
 
   // Parse initial state from URL
   useEffect(() => {
@@ -112,62 +135,6 @@ export default function TransactionPage() {
     updateUrl();
   }, [currentPage, sortBy, sortOrder, filters, updateUrl]);
 
-  // Fetch transactions when URL changes
-  useEffect(() => {
-    fetchTransactions();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams]);
-
-  const fetchTransactions = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const params: TransactionQueryParams = {
-        page: Number(searchParams.get("page")) || 1,
-        page_size: pageSize,
-        sort_by: searchParams.get("sort_by") || "date",
-        sort_order:
-          (searchParams.get("sort_order") as "asc" | "desc") || "desc",
-        account_id: searchParams.get("account_id")
-          ? Number(searchParams.get("account_id"))
-          : undefined,
-        category_id: searchParams.get("category_id")
-          ? Number(searchParams.get("category_id"))
-          : undefined,
-        min_amount: searchParams.get("min_amount")
-          ? Number(searchParams.get("min_amount"))
-          : undefined,
-        max_amount: searchParams.get("max_amount")
-          ? Number(searchParams.get("max_amount"))
-          : undefined,
-        date_from: searchParams.get("date_from") || undefined,
-        date_to: searchParams.get("date_to") || undefined,
-        search: searchParams.get("search") || undefined,
-      };
-      const data = await getAllTransactions(params);
-      setPaginated(data);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to fetch transactions"
-      );
-      setPaginated(null);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const optimisticallyUpdateTransaction = (updatedTx: Transaction) => {
-    setPaginated((prev) => {
-      if (!prev) return null;
-      return {
-        ...prev,
-        transactions: prev.transactions.map((tx) =>
-          tx.id === updatedTx.id ? updatedTx : tx
-        ),
-      };
-    });
-  };
-
   // Handlers for filter changes
   const handleFilterChange = (newFilters: Partial<TransactionFiltersState>) => {
     setFilters((prev) => ({ ...prev, ...newFilters }));
@@ -192,14 +159,42 @@ export default function TransactionPage() {
     setIsAddTransactionModalOpen(true);
   };
 
+  const handleDeleteClick = async () => {
+    if (selectedRows.size === 0) return;
+    const ids = Array.from(selectedRows);
+    let successCount = 0;
+    for (const id of ids) {
+      await new Promise((resolve) => {
+        deleteTransactionMutation.mutate(id, {
+          onSuccess: () => {
+            successCount++;
+            resolve(null);
+          },
+          onError: () => {
+            console.error("Failed to delete transaction");
+            resolve(null);
+          },
+        });
+      });
+    }
+    if (successCount > 0) {
+      toast.success(
+        successCount === 1
+          ? "Transaction deleted"
+          : `${successCount} transactions deleted`
+      );
+      setSelectedRows(new Set());
+    }
+  };
+
   return (
     <Dashboard>
       <div className="flex justify-between items-center bg-card rounded-lg mb-4">
         <div className="flex justify-center items-center w-full">
           <div className="w-full">
             <TransactionFilters
-              accounts={accounts()}
-              categories={categories()}
+              accounts={accounts}
+              categories={categories}
               filters={filters}
               onFilterChange={handleFilterChange}
               onClear={handleClearFilters}
@@ -223,7 +218,12 @@ export default function TransactionPage() {
                   Update
                 </Button>
               )}
-              <Button variant="destructive" className="gap-2">
+              <Button
+                variant="destructive"
+                className="gap-2"
+                onClick={handleDeleteClick}
+                disabled={deleteTransactionMutation.status === "pending"}
+              >
                 <Trash className="w-4 h-4" />
                 Delete
               </Button>
@@ -231,12 +231,13 @@ export default function TransactionPage() {
           )}
         </div>
       </div>
+
       <TransactionsTable
         selectedRows={selectedRows}
         setSelectedRows={setSelectedRows}
         transactions={paginated?.transactions || []}
-        loading={loading}
-        error={error}
+        loading={transactionsLoading}
+        error={transactionsError?.message || null}
         currentPage={currentPage}
         setCurrentPage={setCurrentPage}
         total={paginated?.total || 0}
@@ -245,20 +246,17 @@ export default function TransactionPage() {
         sortOrder={sortOrder}
         setSortBy={setSortBy}
         setSortOrder={setSortOrder}
-        onTransactionUpdate={optimisticallyUpdateTransaction}
       />
+
       <AddTransactionModal
         isOpen={isAddTransactionModalOpen}
         onOpenChange={setIsAddTransactionModalOpen}
-        onTransactionAdded={fetchTransactions}
-        isRefreshing={loading}
       />
+
       <UpdateTransactionModal
         isOpen={isUpdateTransactionModalOpen}
         onOpenChange={setIsUpdateTransactionModalOpen}
         transaction={transactionToUpdate}
-        onTransactionUpdated={fetchTransactions}
-        isRefreshing={loading}
       />
     </Dashboard>
   );

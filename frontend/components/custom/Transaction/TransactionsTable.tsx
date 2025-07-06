@@ -1,7 +1,8 @@
 "use client";
 
-import { useAccounts } from "@/components/custom/Provider/AccountProvider";
-import { useCategories } from "@/components/custom/Provider/CategoryProvider";
+import { useAccounts } from "@/components/hooks/useAccounts";
+import { useCategories } from "@/components/hooks/useCategories";
+import { useUpdateTransaction } from "@/components/hooks/useTransactions";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Icon, IconName } from "@/components/ui/icon-picker";
@@ -13,11 +14,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { updateTransaction } from "@/lib/api/transaction";
 import { Transaction } from "@/lib/models/transaction";
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import { useState } from "react";
-import { toast } from "sonner";
 
 import TablePagination from "./TablePagination";
 import TransactionTableRow from "./TransactionTableRow";
@@ -37,7 +36,6 @@ interface TransactionsTableProps {
   sortOrder: "asc" | "desc";
   setSortBy: (key: string) => void;
   setSortOrder: (order: "asc" | "desc") => void;
-  onTransactionUpdate: (updatedTransaction: Transaction) => void;
 }
 
 export function TransactionsTable({
@@ -54,18 +52,15 @@ export function TransactionsTable({
   sortOrder,
   setSortBy,
   setSortOrder,
-  onTransactionUpdate,
 }: TransactionsTableProps) {
   const [editing, setEditing] = useState<{
     id: number;
     field: "category" | "account" | null;
   }>({ id: -1, field: null });
 
-  const { read: readCategories } = useCategories();
-  const { read: readAccounts } = useAccounts();
-
-  const categories = readCategories();
-  const accounts = readAccounts();
+  const { data: categories = [] } = useCategories();
+  const { data: accounts = [] } = useAccounts();
+  const updateTransactionMutation = useUpdateTransaction();
 
   const totalPages = Math.ceil(total / pageSize);
   const currentData = transactions;
@@ -131,13 +126,12 @@ export function TransactionsTable({
       ));
   };
 
-  // Optimistic update helper (no longer updates list, just calls API)
+  // Update helper using React Query mutation
   const handleUpdate = async (
     originalTransaction: Transaction,
     updatedTransaction: Transaction
   ) => {
-    onTransactionUpdate(updatedTransaction);
-    const diff: Partial<Transaction> = {};
+    const diff: Partial<Pick<Transaction, "account_id" | "category_ids">> = {};
     if (originalTransaction.account_id !== updatedTransaction.account_id) {
       diff.account_id = updatedTransaction.account_id;
     }
@@ -150,12 +144,7 @@ export function TransactionsTable({
 
     if (Object.keys(diff).length === 0) return;
 
-    try {
-      await updateTransaction(updatedTransaction.id, diff);
-    } catch {
-      onTransactionUpdate(originalTransaction);
-      toast.error("Failed to update transaction.");
-    }
+    updateTransactionMutation.mutate({ id: updatedTransaction.id, data: diff });
   };
 
   if (loading) {

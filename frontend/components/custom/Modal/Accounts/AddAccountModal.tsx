@@ -1,6 +1,6 @@
 "use client";
 
-import { useAccounts } from "@/components/custom/Provider/AccountProvider";
+import { useCreateAccount } from "@/components/hooks/useAccounts";
 import { LoadingButton } from "@/components/ui/LoadingButton";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,41 +34,38 @@ export function AddAccountModal({
   onOpenChange,
   onAccountAdded,
 }: AddAccountModalProps) {
-  const { create } = useAccounts();
+  const createAccountMutation = useCreateAccount();
   const [formData, setFormData] = useState({
     name: "",
     bank_type: "",
     currency: "inr",
     balance: "",
   });
-  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    try {
-      if (!formData.name || !formData.bank_type || !formData.currency) {
-        toast.error("Please fill all required fields.");
-        return;
-      }
-      const input = {
-        name: formData.name,
-        bank_type:
-          formData.bank_type.toLowerCase() as import("@/lib/models/account").BankType,
-        currency:
-          formData.currency.toLowerCase() as import("@/lib/models/account").Currency,
-        balance: formData.balance ? Number(formData.balance) : undefined,
-      };
-      const newAccount = await create(input);
-      toast.success("Account created successfully!");
-      setFormData({ name: "", bank_type: "", currency: "inr", balance: "" });
-      onOpenChange(false);
-      if (onAccountAdded) onAccountAdded(newAccount);
-    } catch (error: unknown) {
-      console.error(error);
-    } finally {
-      setIsLoading(false);
+
+    if (!formData.name || !formData.bank_type || !formData.currency) {
+      toast.error("Please fill all required fields.");
+      return;
     }
+
+    const input = {
+      name: formData.name,
+      bank_type:
+        formData.bank_type.toLowerCase() as import("@/lib/models/account").BankType,
+      currency:
+        formData.currency.toLowerCase() as import("@/lib/models/account").Currency,
+      balance: formData.balance ? Number(formData.balance) : undefined,
+    };
+
+    createAccountMutation.mutate(input, {
+      onSuccess: (newAccount) => {
+        setFormData({ name: "", bank_type: "", currency: "inr", balance: "" });
+        onOpenChange(false);
+        if (onAccountAdded) onAccountAdded(newAccount);
+      },
+    });
   };
 
   return (
@@ -163,9 +160,9 @@ export function AddAccountModal({
             </Button>
             <LoadingButton
               type="submit"
-              loading={isLoading}
+              loading={createAccountMutation.isPending}
               fixedWidth="140px"
-              disabled={isLoading}
+              disabled={createAccountMutation.isPending}
             >
               Add Account
             </LoadingButton>

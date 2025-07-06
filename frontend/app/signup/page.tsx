@@ -1,6 +1,6 @@
 "use client";
 
-import { useUser } from "@/components/custom/Provider/UserProvider";
+import { useSignup } from "@/components/hooks/useUser";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
@@ -12,14 +12,13 @@ import { useState } from "react";
 export default function SignupPage() {
   const router = useRouter();
   const { theme } = useTheme();
-  const { signup: signupUser } = useUser();
+  const signupMutation = useSignup();
 
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     password: "",
   });
-  const [loading, setLoading] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -27,15 +26,19 @@ export default function SignupPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    try {
-      await signupUser(formData.name, formData.email, formData.password);
-      router.push("/");
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
+
+    signupMutation.mutate(
+      {
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+      },
+      {
+        onSuccess: () => {
+          router.push("/");
+        },
+      }
+    );
   };
 
   return (
@@ -60,6 +63,7 @@ export default function SignupPage() {
               value={formData.name}
               onChange={handleChange}
               className="bg-white/40 dark:bg-input/40 backdrop-blur-md border border-border focus:border-primary/60 shadow-inner focus:shadow-lg transition-all duration-200"
+              disabled={signupMutation.isPending}
             />
           </div>
           <div>
@@ -72,6 +76,7 @@ export default function SignupPage() {
               value={formData.email}
               onChange={handleChange}
               className="bg-white/40 dark:bg-input/40 backdrop-blur-md border border-border focus:border-primary/60 shadow-inner focus:shadow-lg transition-all duration-200"
+              disabled={signupMutation.isPending}
             />
           </div>
           <div>
@@ -85,14 +90,15 @@ export default function SignupPage() {
               onChange={handleChange}
               minLength={8}
               className="bg-white/40 dark:bg-input/40 backdrop-blur-md border border-border focus:border-primary/60 shadow-inner focus:shadow-lg transition-all duration-200"
+              disabled={signupMutation.isPending}
             />
           </div>
           <Button
             type="submit"
             className="w-full font-semibold shadow-lg shadow-primary/10 hover:shadow-xl transition-all duration-200"
-            disabled={loading}
+            disabled={signupMutation.isPending}
           >
-            {loading && <Spinner />}
+            {signupMutation.isPending && <Spinner />}
             Sign Up
           </Button>
         </form>

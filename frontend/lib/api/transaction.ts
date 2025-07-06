@@ -63,3 +63,16 @@ export async function updateTransaction(
     "Failed to update transaction"
   );
 }
+
+export async function deleteTransaction(id: number): Promise<void> {
+  return apiRequest<void>(
+    `${API_BASE_URL}/transaction/${id}`,
+    {
+      method: "DELETE",
+      credentials: "include",
+    },
+    "transaction",
+    [],
+    "Failed to delete transaction"
+  );
+}

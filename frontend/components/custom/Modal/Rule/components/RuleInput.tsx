@@ -1,4 +1,4 @@
-import { useCategories } from "@/components/custom/Provider/CategoryProvider";
+import { useCategories } from "@/components/hooks/useCategories";
 import { RuleFieldType } from "@/lib/models/rule";
 
 interface RuleInputProps {
@@ -18,8 +18,7 @@ export function RuleInput({
   disabled = false,
   className = "flex-1 px-3 py-2 bg-background border border-border rounded-lg text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring",
 }: RuleInputProps) {
-  const { read: readCategories } = useCategories();
-  const categories = readCategories();
+  const { data: categories = [] } = useCategories();
 
   if (fieldType === "amount") {
     return (

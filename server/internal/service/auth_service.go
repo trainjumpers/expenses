@@ -93,7 +93,7 @@ func (a *AuthService) Login(ctx *gin.Context, loginInput models.LoginInput) (mod
 	}
 
 	if !a.checkPasswordHash(loginInput.Password, user.Password) {
-		return models.AuthResponse{}, errors.NewInvalidCredentialsError(fmt.Errorf("password mismatch for user %s", user.Email))
+		return models.AuthResponse{}, errors.NewInvalidCredentialsError(fmt.Errorf("invalid credentials"))
 	}
 
 	accessToken, err := a.issueAuthToken(user.Id, user.Email)

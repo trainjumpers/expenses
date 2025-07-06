@@ -42,7 +42,6 @@ interface TransactionFormProps {
     account_id: number;
   }) => Promise<void>;
   loading: boolean;
-  isRefreshing?: boolean;
   accounts: Account[];
   categories: Category[];
   submitText: string;
@@ -53,7 +52,6 @@ export function TransactionForm({
   initialValues,
   onSubmit,
   loading,
-  isRefreshing = false,
   accounts,
   categories,
   submitText,
@@ -87,7 +85,7 @@ export function TransactionForm({
 
   return (
     <form onSubmit={handleFormSubmit}>
-      <div className="grid gap-4 py-4" aria-disabled={loading || isRefreshing}>
+      <div className="grid gap-4 py-4" aria-disabled={loading}>
         <div className="grid grid-cols-3 items-center gap-4">
           <Label htmlFor="name" className="text-right">
             Name
@@ -290,15 +288,15 @@ export function TransactionForm({
           type="button"
           variant="outline"
           onClick={() => onOpenChange(false)}
-          disabled={loading || isRefreshing}
+          disabled={loading}
         >
           Cancel
         </Button>
         <LoadingButton
           type="submit"
-          loading={loading || isRefreshing}
+          loading={loading}
           fixedWidth="100px"
-          disabled={loading || isRefreshing}
+          disabled={loading}
         >
           {submitText}
         </LoadingButton>

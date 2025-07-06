@@ -1,3 +1,4 @@
+import { useUpdateCategory } from "@/components/hooks/useCategories";
 import {
   Dialog,
   DialogContent,
@@ -5,11 +6,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { IconName } from "@/components/ui/icon-picker";
-import { updateCategory } from "@/lib/api/category";
 import { Category } from "@/lib/models/category";
 import { Tag } from "lucide-react";
 import { useState } from "react";
-import { toast } from "sonner";
 
 import { CategoryForm } from "./CategoryForm";
 
@@ -27,26 +26,27 @@ export function UpdateCategoryModal({
   onCategoryUpdated,
 }: UpdateCategoryModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const updateCategoryMutation = useUpdateCategory();
 
   const handleSubmit = async (formData: { name: string; icon: IconName }) => {
     setIsSubmitting(true);
-    try {
-      const categoryData = {
-        name: formData.name,
-        icon: formData.icon,
-      };
-      await updateCategory(category.id, categoryData);
-      toast.success("Category updated successfully!");
-      if (onCategoryUpdated) {
-        onCategoryUpdated();
+    const categoryData = {
+      name: formData.name,
+      icon: formData.icon,
+    };
+    updateCategoryMutation.mutate(
+      { id: category.id, data: categoryData },
+      {
+        onSuccess: () => {
+          if (onCategoryUpdated) onCategoryUpdated();
+          onOpenChange(false);
+        },
+        onError: (error) => {
+          console.error("Failed to update category:", error);
+        },
+        onSettled: () => setIsSubmitting(false),
       }
-      onOpenChange(false);
-    } catch (error) {
-      console.error("Failed to update category:", error);
-      toast.error("Failed to update category");
-    } finally {
-      setIsSubmitting(false);
-    }
+    );
   };
 
   return (
