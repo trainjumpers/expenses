@@ -60,3 +60,21 @@ export async function signup(
     ]
   );
 }
+
+export async function logout(): Promise<void> {
+  try {
+    await fetch(`${API_BASE_URL}/logout`, {
+      method: "POST",
+      credentials: "include",
+    });
+  } catch (e) {
+    console.error("Logout API call failed:", e);
+  }
+}
+
+export async function refresh(): Promise<Response> {
+  return fetch("/api/v1/auth/refresh", {
+    method: "POST",
+    credentials: "include",
+  });
+}

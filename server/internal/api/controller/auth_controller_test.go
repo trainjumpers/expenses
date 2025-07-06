@@ -18,15 +18,12 @@ var _ = Describe("AuthController", func() {
 					Name:     "Test User",
 					Password: "password123",
 				}
-
-				resp, response := testHelper.MakeRequest(http.MethodPost, "/signup", "", userInput)
+				resp, response := NewTestHelper(baseURL).MakeRequest(http.MethodPost, "/signup", userInput)
 
 				// Assertions
 				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
 				Expect(response["message"]).To(Equal("User signed up successfully"))
 				Expect(response["data"]).To(HaveKey("user"))
-				Expect(response["data"]).To(HaveKey("access_token"))
-				Expect(response["data"]).To(HaveKey("refresh_token"))
 			})
 		})
 
@@ -38,7 +35,7 @@ var _ = Describe("AuthController", func() {
 					Password: "password123",
 				}
 
-				resp, _ := testHelper.MakeRequest(http.MethodPost, "/signup", "", userInput)
+				resp, _ := NewTestHelper(baseURL).MakeRequest(http.MethodPost, "/signup", userInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 
@@ -49,7 +46,7 @@ var _ = Describe("AuthController", func() {
 					Password: "123", // Too short
 				}
 
-				resp, _ := testHelper.MakeRequest(http.MethodPost, "/signup", "", userInput)
+				resp, _ := NewTestHelper(baseURL).MakeRequest(http.MethodPost, "/signup", userInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 
@@ -58,7 +55,7 @@ var _ = Describe("AuthController", func() {
 					Email:    "test@example.com",
 					Password: "1234567890",
 				}
-				resp, _ := testHelper.MakeRequest(http.MethodPost, "/signup", "", userInput)
+				resp, _ := NewTestHelper(baseURL).MakeRequest(http.MethodPost, "/signup", userInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 
@@ -67,7 +64,7 @@ var _ = Describe("AuthController", func() {
 					Name:     "Test User",
 					Password: "1234567890",
 				}
-				resp, _ := testHelper.MakeRequest(http.MethodPost, "/signup", "", userInput)
+				resp, _ := NewTestHelper(baseURL).MakeRequest(http.MethodPost, "/signup", userInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 
@@ -76,7 +73,7 @@ var _ = Describe("AuthController", func() {
 					Email: "test@example.com",
 					Name:  "Test User",
 				}
-				resp, _ := testHelper.MakeRequest(http.MethodPost, "/signup", "", userInput)
+				resp, _ := NewTestHelper(baseURL).MakeRequest(http.MethodPost, "/signup", userInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 
@@ -86,7 +83,7 @@ var _ = Describe("AuthController", func() {
 					Name:     "Test User",
 					Password: "password123",
 				}
-				resp, response := testHelper.MakeRequest(http.MethodPost, "/signup", "", userInput)
+				resp, response := NewTestHelper(baseURL).MakeRequest(http.MethodPost, "/signup", userInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusConflict))
 				Expect(response["message"]).To(Equal("user already exists"))
 			})
@@ -97,7 +94,7 @@ var _ = Describe("AuthController", func() {
 					Name:     "Test User",
 					Password: "password123",
 				}
-				resp, response := testHelper.MakeRequest(http.MethodPost, "/signup", "", userInput)
+				resp, response := NewTestHelper(baseURL).MakeRequest(http.MethodPost, "/signup", userInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 				Expect(response["message"]).To(ContainSubstring("Error:Field validation for 'Email'"))
 			})
@@ -108,7 +105,7 @@ var _ = Describe("AuthController", func() {
 					Name:     "Test User'; DROP TABLE users; --",
 					Password: "password123",
 				}
-				resp, _ := testHelper.MakeRequest(http.MethodPost, "/signup", "", userInput)
+				resp, _ := NewTestHelper(baseURL).MakeRequest(http.MethodPost, "/signup", userInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
 			})
 
@@ -118,18 +115,18 @@ var _ = Describe("AuthController", func() {
 					Name:     "Test User'; INSERT INTO users (email, name, password) VALUES ('hack@example.com', 'Hacker', 'password'); --",
 					Password: "password123' OR 1=1; --",
 				}
-				resp, response := testHelper.MakeRequest(http.MethodPost, "/signup", "", userInput)
+				resp, response := NewTestHelper(baseURL).MakeRequest(http.MethodPost, "/signup", userInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 				Expect(response["message"]).To(ContainSubstring("Error:Field validation for 'Email'"))
 			})
 
 			It("should return bad request for invalid JSON", func() {
-				resp, _ := testHelper.MakeRequest(http.MethodPost, "/signup", "", "{ invalid json }")
+				resp, _ := NewTestHelper(baseURL).MakeRequest(http.MethodPost, "/signup", "{ invalid json }")
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 
 			It("should return bad request for empty body", func() {
-				resp, _ := testHelper.MakeRequest(http.MethodPost, "/signup", "", "")
+				resp, _ := NewTestHelper(baseURL).MakeRequest(http.MethodPost, "/signup", "")
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 		})
@@ -143,12 +140,10 @@ var _ = Describe("AuthController", func() {
 					Password: "password",
 				}
 
-				resp, response := testHelper.MakeRequest(http.MethodPost, "/login", "", loginInput)
+				resp, response := testHelperUser1.MakeRequest(http.MethodPost, "/login", loginInput)
 
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 				Expect(response["message"]).To(Equal("User logged in successfully"))
-				Expect(response["data"]).To(HaveKey("access_token"))
-				Expect(response["data"]).To(HaveKey("refresh_token"))
 			})
 		})
 
@@ -158,7 +153,7 @@ var _ = Describe("AuthController", func() {
 					Email:    "test1@example.com",
 					Password: "wrongpassword",
 				}
-				resp, _ := testHelper.MakeRequest(http.MethodPost, "/login", "", loginInput)
+				resp, _ := NewTestHelper(baseURL).MakeRequest(http.MethodPost, "/login", loginInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
 			})
 
@@ -167,17 +162,17 @@ var _ = Describe("AuthController", func() {
 					Email:    "nonexistent@example.com",
 					Password: "password123",
 				}
-				resp, _ := testHelper.MakeRequest(http.MethodPost, "/login", "", loginInput)
+				resp, _ := NewTestHelper(baseURL).MakeRequest(http.MethodPost, "/login", loginInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
 			})
 
 			It("should return bad request for invalid JSON", func() {
-				resp, _ := testHelper.MakeRequest(http.MethodPost, "/login", "", "{ invalid json }")
+				resp, _ := NewTestHelper(baseURL).MakeRequest(http.MethodPost, "/login", "{ invalid json }")
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 
 			It("should return bad request for empty body", func() {
-				resp, _ := testHelper.MakeRequest(http.MethodPost, "/login", "", "")
+				resp, _ := NewTestHelper(baseURL).MakeRequest(http.MethodPost, "/login", "")
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 
@@ -185,7 +180,7 @@ var _ = Describe("AuthController", func() {
 				loginInput := models.LoginInput{
 					Password: "password123",
 				}
-				resp, _ := testHelper.MakeRequest(http.MethodPost, "/login", "", loginInput)
+				resp, _ := NewTestHelper(baseURL).MakeRequest(http.MethodPost, "/login", loginInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 
@@ -193,7 +188,7 @@ var _ = Describe("AuthController", func() {
 				loginInput := models.LoginInput{
 					Email: "test@example.com",
 				}
-				resp, _ := testHelper.MakeRequest(http.MethodPost, "/login", "", loginInput)
+				resp, _ := NewTestHelper(baseURL).MakeRequest(http.MethodPost, "/login", loginInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 		})
@@ -202,27 +197,11 @@ var _ = Describe("AuthController", func() {
 	Describe("RefreshToken", func() {
 		Context("with valid refresh token", func() {
 			It("should refresh token successfully", func() {
-				refreshInput := struct {
-					RefreshToken string `json:"refresh_token"`
-				}{
-					RefreshToken: refreshToken,
-				}
-
-				resp, response := testHelper.MakeRequest(http.MethodPost, "/refresh", "", refreshInput)
+				// No need to provide refreshToken, cookies are managed by http.Client
+				resp, response := testHelperUser1.MakeRequest(http.MethodPost, "/refresh", nil)
 
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 				Expect(response["message"]).To(Equal("Token refreshed successfully"))
-				Expect(response["data"]).To(HaveKey("access_token"))
-				Expect(response["data"]).To(HaveKey("refresh_token"))
-
-				// Verify the new tokens are different
-				data := response["data"].(map[string]interface{})
-				newAccessToken := data["access_token"].(string)
-				newRefreshToken := data["refresh_token"].(string)
-				Expect(newAccessToken).NotTo(BeEmpty())
-				Expect(newRefreshToken).NotTo(BeEmpty())
-				Expect(newAccessToken).NotTo(Equal(accessToken))
-				Expect(newRefreshToken).NotTo(Equal(refreshToken))
 			})
 		})
 
@@ -233,18 +212,8 @@ var _ = Describe("AuthController", func() {
 				}{
 					RefreshToken: "invalid-refresh-token",
 				}
-				resp, _ := testHelper.MakeRequest(http.MethodPost, "/refresh", "", refreshInput)
+				resp, _ := testHelperUser1.MakeRequest(http.MethodPost, "/refresh", refreshInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
-			})
-
-			It("should return bad request for invalid JSON", func() {
-				resp, _ := testHelper.MakeRequest(http.MethodPost, "/refresh", "", "{ invalid json }")
-				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
-			})
-
-			It("should return bad request for empty body", func() {
-				resp, _ := testHelper.MakeRequest(http.MethodPost, "/refresh", "", "")
-				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 
 			It("should return bad request for missing refresh token", func() {
@@ -254,7 +223,7 @@ var _ = Describe("AuthController", func() {
 					RefreshToken: "",
 				}
 
-				resp, _ := testHelper.MakeRequest(http.MethodPost, "/refresh", "", refreshInput)
+				resp, _ := testHelperUser1.MakeRequest(http.MethodPost, "/refresh", refreshInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
 			})
 		})

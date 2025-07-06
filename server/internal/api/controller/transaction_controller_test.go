@@ -33,7 +33,7 @@ var _ = Describe("TransactionController", func() {
 				BankType: models.BankTypeAxis,
 				Currency: models.CurrencyINR,
 			}
-			resp, response := testHelper.MakeRequest(http.MethodPost, "/account", accessToken1, accInput)
+			resp, response := testHelperUser2.MakeRequest(http.MethodPost, "/account", accInput)
 			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
 			accountId := int64(response["data"].(map[string]interface{})["id"].(float64))
 
@@ -44,7 +44,7 @@ var _ = Describe("TransactionController", func() {
 				Date:      testDate,
 				AccountId: accountId,
 			}
-			resp, response = testHelper.MakeRequest(http.MethodPost, "/transaction", accessToken1, txInput)
+			resp, response = testHelperUser2.MakeRequest(http.MethodPost, "/transaction", txInput)
 			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
 			data := response["data"].(map[string]interface{})
 			Expect(data["name"]).To(Equal("User2 Transaction"))
@@ -52,7 +52,7 @@ var _ = Describe("TransactionController", func() {
 
 		It("should not allow user 3 to access user 1's transaction", func() {
 			url := "/transaction/1"
-			resp, _ := testHelper.MakeRequest(http.MethodGet, url, accessToken2, nil)
+			resp, _ := testHelperUser3.MakeRequest(http.MethodGet, url, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 		})
 
@@ -65,7 +65,7 @@ var _ = Describe("TransactionController", func() {
 				"category_ids": []int64{6, 7},
 				"account_id":   3,
 			}
-			resp, response := testHelper.MakeRequest(http.MethodPost, "/transaction", accessToken1, input)
+			resp, response := testHelperUser2.MakeRequest(http.MethodPost, "/transaction", input)
 			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
 			Expect(response["message"]).To(Equal("Transaction created successfully"))
 			data := response["data"].(map[string]interface{})
@@ -81,7 +81,7 @@ var _ = Describe("TransactionController", func() {
 				Date:      testDate,
 				AccountId: 3,
 			}
-			resp, response := testHelper.MakeRequest(http.MethodPost, "/transaction", accessToken1, input)
+			resp, response := testHelperUser2.MakeRequest(http.MethodPost, "/transaction", input)
 			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
 			Expect(response["message"]).To(Equal("Transaction created successfully"))
 			Expect(response["data"]).To(HaveKey("id"))
@@ -96,7 +96,7 @@ var _ = Describe("TransactionController", func() {
 					Date:      testDate,
 					AccountId: 3,
 				}
-				resp, response := testHelper.MakeRequest(http.MethodPost, "/transaction", accessToken1, input)
+				resp, response := testHelperUser2.MakeRequest(http.MethodPost, "/transaction", input)
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 				Expect(response["message"]).To(ContainSubstring("Error:Field validation"))
 			})
@@ -108,7 +108,7 @@ var _ = Describe("TransactionController", func() {
 					Date:      testDate,
 					AccountId: 3,
 				}
-				resp, response := testHelper.MakeRequest(http.MethodPost, "/transaction", accessToken1, input)
+				resp, response := testHelperUser2.MakeRequest(http.MethodPost, "/transaction", input)
 				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
 				Expect(response["message"]).To(Equal("Transaction created successfully"))
 				Expect(response["data"]).To(HaveKey("id"))
@@ -121,7 +121,7 @@ var _ = Describe("TransactionController", func() {
 					Date:      futureDate, // Invalid: future date
 					AccountId: 3,
 				}
-				resp, response := testHelper.MakeRequest(http.MethodPost, "/transaction", accessToken1, input)
+				resp, response := testHelperUser2.MakeRequest(http.MethodPost, "/transaction", input)
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 				Expect(response["message"]).To(Equal("transaction date cannot be in the future"))
 			})
@@ -138,7 +138,7 @@ var _ = Describe("TransactionController", func() {
 					Date:      testDate,
 					AccountId: 3,
 				}
-				resp, response := testHelper.MakeRequest(http.MethodPost, "/transaction", accessToken1, input)
+				resp, response := testHelperUser2.MakeRequest(http.MethodPost, "/transaction", input)
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 				Expect(response["message"]).To(ContainSubstring("Error:Field validation"))
 			})
@@ -156,7 +156,7 @@ var _ = Describe("TransactionController", func() {
 					Date:        testDate,
 					AccountId:   3,
 				}
-				resp, response := testHelper.MakeRequest(http.MethodPost, "/transaction", accessToken1, input)
+				resp, response := testHelperUser2.MakeRequest(http.MethodPost, "/transaction", input)
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 				Expect(response["message"]).To(ContainSubstring("Error:Field validation"))
 			})
@@ -169,7 +169,7 @@ var _ = Describe("TransactionController", func() {
 					Date:        testDate,
 					AccountId:   3,
 				}
-				resp, response := testHelper.MakeRequest(http.MethodPost, "/transaction", accessToken1, input)
+				resp, response := testHelperUser2.MakeRequest(http.MethodPost, "/transaction", input)
 				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
 
 				// Check that the returned data has trimmed values
@@ -187,7 +187,7 @@ var _ = Describe("TransactionController", func() {
 					"category_ids": []int64{9999},
 					"account_id":   3,
 				}
-				resp, response := testHelper.MakeRequest(http.MethodPost, "/transaction", accessToken1, input)
+				resp, response := testHelperUser2.MakeRequest(http.MethodPost, "/transaction", input)
 				Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 				Expect(response["message"]).To(ContainSubstring("category not found"))
 			})
@@ -200,7 +200,7 @@ var _ = Describe("TransactionController", func() {
 					"date":        testDate.Format(time.RFC3339),
 					"account_id":  9999,
 				}
-				resp, response := testHelper.MakeRequest(http.MethodPost, "/transaction", accessToken1, input)
+				resp, response := testHelperUser2.MakeRequest(http.MethodPost, "/transaction", input)
 				Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 				Expect(response["message"]).To(ContainSubstring("account not found"))
 			})
@@ -214,7 +214,7 @@ var _ = Describe("TransactionController", func() {
 					"category_ids": []int64{1, 2},
 					"account_id":   3,
 				}
-				resp, response := testHelper.MakeRequest(http.MethodPost, "/transaction", accessToken1, input)
+				resp, response := testHelperUser2.MakeRequest(http.MethodPost, "/transaction", input)
 				Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 				Expect(response["message"]).To(ContainSubstring("category not found"))
 			})
@@ -227,17 +227,17 @@ var _ = Describe("TransactionController", func() {
 				Date:      testDate,
 				AccountId: 3,
 			}
-			resp, _ := testHelper.MakeRequest(http.MethodPost, "/transaction", "invalid token", input)
-			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+			resp, _ := testHelperUnauthenticated.MakeRequest(http.MethodPost, "/transaction", input)
+			Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
 		})
 
 		It("should return error for invalid JSON", func() {
-			resp, _ := testHelper.MakeRequest(http.MethodPost, "/transaction", accessToken1, "{ name: invalid json }")
+			resp, _ := testHelperUser2.MakeRequest(http.MethodPost, "/transaction", "{ name: invalid json }")
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 		})
 
 		It("should return error for empty body", func() {
-			resp, _ := testHelper.MakeRequest(http.MethodPost, "/transaction", accessToken1, "")
+			resp, _ := testHelperUser2.MakeRequest(http.MethodPost, "/transaction", "")
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 		})
 
@@ -248,7 +248,7 @@ var _ = Describe("TransactionController", func() {
 				"date": "2023-01-01T00:00:00Z",
 				"account_id": 1
 			}`
-			resp, _ := testHelper.MakeRequest(http.MethodPost, "/transaction", accessToken1, requestBody)
+			resp, _ := testHelperUser2.MakeRequest(http.MethodPost, "/transaction", requestBody)
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 		})
 
@@ -260,12 +260,12 @@ var _ = Describe("TransactionController", func() {
 				Date:      testDate,
 				AccountId: 3,
 			}
-			resp, response := testHelper.MakeRequest(http.MethodPost, "/transaction", accessToken1, input)
+			resp, response := testHelperUser2.MakeRequest(http.MethodPost, "/transaction", input)
 			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
 			Expect(response["message"]).To(Equal("Transaction created successfully"))
 			Expect(response["data"]).To(HaveKey("id"))
 
-			resp, _ = testHelper.MakeRequest(http.MethodPost, "/transaction", accessToken1, input)
+			resp, _ = testHelperUser2.MakeRequest(http.MethodPost, "/transaction", input)
 			Expect(resp.StatusCode).To(Equal(http.StatusConflict))
 		})
 
@@ -279,7 +279,7 @@ var _ = Describe("TransactionController", func() {
 				"category_ids": []int64{99999}, // Invalid category Id
 				"account_id":   2,
 			}
-			resp, _ := testHelper.MakeRequest(http.MethodPost, "/transaction", accessToken1, input)
+			resp, _ := testHelperUser2.MakeRequest(http.MethodPost, "/transaction", input)
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 		})
 
@@ -293,7 +293,7 @@ var _ = Describe("TransactionController", func() {
 				"category_ids": []int64{1},
 				"account_id":   99999, // Invalid account Id
 			}
-			resp, _ := testHelper.MakeRequest(http.MethodPost, "/transaction", accessToken1, input)
+			resp, _ := testHelperUser2.MakeRequest(http.MethodPost, "/transaction", input)
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 		})
 
@@ -303,7 +303,7 @@ var _ = Describe("TransactionController", func() {
 				"name": "Other User Category for Create",
 				"icon": "other-icon-create",
 			}
-			catResp, catResponse := testHelper.MakeRequest(http.MethodPost, "/category", accessToken1, catInput)
+			catResp, catResponse := testHelperUser2.MakeRequest(http.MethodPost, "/category", catInput)
 			Expect(catResp.StatusCode).To(Equal(http.StatusCreated))
 			otherCategoryId := int64(catResponse["data"].(map[string]interface{})["id"].(float64))
 
@@ -316,7 +316,7 @@ var _ = Describe("TransactionController", func() {
 				"category_ids": []int64{otherCategoryId},
 				"account_id":   2,
 			}
-			resp, _ := testHelper.MakeRequest(http.MethodPost, "/transaction", accessToken1, input)
+			resp, _ := testHelperUser2.MakeRequest(http.MethodPost, "/transaction", input)
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 		})
 
@@ -328,7 +328,7 @@ var _ = Describe("TransactionController", func() {
 				"currency":  "inr",
 				"balance":   10.0,
 			}
-			accResp, accResponse := testHelper.MakeRequest(http.MethodPost, "/account", accessToken, accInput)
+			accResp, accResponse := testHelperUser1.MakeRequest(http.MethodPost, "/account", accInput)
 			Expect(accResp.StatusCode).To(Equal(http.StatusCreated))
 			otherAccountId := int64(accResponse["data"].(map[string]interface{})["id"].(float64))
 
@@ -340,14 +340,14 @@ var _ = Describe("TransactionController", func() {
 				"date":        testDate.Format(time.RFC3339),
 				"account_id":  otherAccountId,
 			}
-			resp, _ := testHelper.MakeRequest(http.MethodPost, "/transaction", accessToken1, input)
+			resp, _ := testHelperUser2.MakeRequest(http.MethodPost, "/transaction", input)
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 		})
 	})
 
 	Describe("ListTransactions", func() {
 		It("should list transactions with default pagination", func() {
-			resp, response := testHelper.MakeRequest(http.MethodGet, "/transaction", accessToken, nil)
+			resp, response := testHelperUser1.MakeRequest(http.MethodGet, "/transaction", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["message"]).To(Equal("Transactions retrieved successfully"))
 			data := response["data"].(map[string]interface{})
@@ -358,7 +358,7 @@ var _ = Describe("TransactionController", func() {
 
 		It("should handle pagination correctly", func() {
 			// First page
-			resp, response := testHelper.MakeRequest(http.MethodGet, "/transaction?page=1&page_size=3", accessToken, nil)
+			resp, response := testHelperUser1.MakeRequest(http.MethodGet, "/transaction?page=1&page_size=3", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			data := response["data"].(map[string]interface{})
 			Expect(data["total"]).To(Equal(float64(10)))
@@ -366,14 +366,14 @@ var _ = Describe("TransactionController", func() {
 			Expect(len(transactions)).To(Equal(3))
 
 			// Second page
-			resp, response = testHelper.MakeRequest(http.MethodGet, "/transaction?page=2&page_size=3", accessToken, nil)
+			resp, response = testHelperUser1.MakeRequest(http.MethodGet, "/transaction?page=2&page_size=3", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			data = response["data"].(map[string]interface{})
 			transactions = data["transactions"].([]interface{})
 			Expect(len(transactions)).To(Equal(3))
 
 			// Last page
-			resp, response = testHelper.MakeRequest(http.MethodGet, "/transaction?page=4&page_size=3", accessToken, nil)
+			resp, response = testHelperUser1.MakeRequest(http.MethodGet, "/transaction?page=4&page_size=3", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			data = response["data"].(map[string]interface{})
 			transactions = data["transactions"].([]interface{})
@@ -381,7 +381,7 @@ var _ = Describe("TransactionController", func() {
 		})
 
 		It("should filter by account Id", func() {
-			resp, response := testHelper.MakeRequest(http.MethodGet, "/transaction?account_id=1", accessToken, nil)
+			resp, response := testHelperUser1.MakeRequest(http.MethodGet, "/transaction?account_id=1", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			data := response["data"].(map[string]interface{})
 			transactions := data["transactions"].([]interface{})
@@ -393,7 +393,7 @@ var _ = Describe("TransactionController", func() {
 		})
 
 		It("should filter by category Id", func() {
-			resp, response := testHelper.MakeRequest(http.MethodGet, "/transaction?category_id=1", accessToken, nil)
+			resp, response := testHelperUser1.MakeRequest(http.MethodGet, "/transaction?category_id=1", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			data := response["data"].(map[string]interface{})
 			transactions := data["transactions"].([]interface{})
@@ -414,7 +414,7 @@ var _ = Describe("TransactionController", func() {
 
 		It("should filter by amount range", func() {
 			url := "/transaction?min_amount=50&max_amount=150"
-			resp, response := testHelper.MakeRequest(http.MethodGet, url, accessToken, nil)
+			resp, response := testHelperUser1.MakeRequest(http.MethodGet, url, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			data := response["data"].(map[string]interface{})
 			transactions := data["transactions"].([]interface{})
@@ -430,7 +430,7 @@ var _ = Describe("TransactionController", func() {
 
 		It("should filter by date range", func() {
 			url := "/transaction?date_from=2023-01-03&date_to=2023-01-05"
-			resp, response := testHelper.MakeRequest(http.MethodGet, url, accessToken, nil)
+			resp, response := testHelperUser1.MakeRequest(http.MethodGet, url, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			data := response["data"].(map[string]interface{})
 			transactions := data["transactions"].([]interface{})
@@ -447,7 +447,7 @@ var _ = Describe("TransactionController", func() {
 		})
 
 		It("should handle search by name", func() {
-			resp, response := testHelper.MakeRequest(http.MethodGet, "/transaction?search=Shopping", accessToken, nil)
+			resp, response := testHelperUser1.MakeRequest(http.MethodGet, "/transaction?search=Shopping", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			data := response["data"].(map[string]interface{})
 			transactions := data["transactions"].([]interface{})
@@ -460,7 +460,7 @@ var _ = Describe("TransactionController", func() {
 		})
 
 		It("should handle search by description", func() {
-			resp, response := testHelper.MakeRequest(http.MethodGet, "/transaction?search=monthly", accessToken, nil)
+			resp, response := testHelperUser1.MakeRequest(http.MethodGet, "/transaction?search=monthly", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			data := response["data"].(map[string]interface{})
 			transactions := data["transactions"].([]interface{})
@@ -474,7 +474,7 @@ var _ = Describe("TransactionController", func() {
 
 		It("should handle multiple filters together", func() {
 			url := "/transaction?account_id=1&category_id=1&min_amount=50&max_amount=150&date_from=2023-01-01&date_to=2023-01-03"
-			resp, response := testHelper.MakeRequest(http.MethodGet, url, accessToken, nil)
+			resp, response := testHelperUser1.MakeRequest(http.MethodGet, url, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			data := response["data"].(map[string]interface{})
 			transactions := data["transactions"].([]interface{})
@@ -505,7 +505,7 @@ var _ = Describe("TransactionController", func() {
 		})
 
 		It("should sort by date ascending", func() {
-			resp, response := testHelper.MakeRequest(http.MethodGet, "/transaction?sort_by=date&sort_order=asc", accessToken, nil)
+			resp, response := testHelperUser1.MakeRequest(http.MethodGet, "/transaction?sort_by=date&sort_order=asc", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			data := response["data"].(map[string]interface{})
 			transactions := data["transactions"].([]interface{})
@@ -523,7 +523,7 @@ var _ = Describe("TransactionController", func() {
 		})
 
 		It("should sort by amount descending", func() {
-			resp, response := testHelper.MakeRequest(http.MethodGet, "/transaction?sort_by=amount&sort_order=desc", accessToken, nil)
+			resp, response := testHelperUser1.MakeRequest(http.MethodGet, "/transaction?sort_by=amount&sort_order=desc", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			data := response["data"].(map[string]interface{})
 			transactions := data["transactions"].([]interface{})
@@ -537,13 +537,13 @@ var _ = Describe("TransactionController", func() {
 		})
 
 		It("should return error for non-existent user id", func() {
-			resp, response := testHelper.MakeRequest(http.MethodGet, "/transaction", "invalid token", nil)
-			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
-			Expect(response["message"]).To(Equal("Invalid authorization format"))
+			resp, response := testHelperUnauthenticated.MakeRequest(http.MethodGet, "/transaction", nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
+			Expect(response["message"]).To(Equal("please log in to continue"))
 		})
 
 		It("should list empty list for user without transaction", func() {
-			resp, response := testHelper.MakeRequest(http.MethodGet, "/transaction", accessToken2, nil)
+			resp, response := testHelperUser3.MakeRequest(http.MethodGet, "/transaction", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["message"]).To(Equal("Transactions retrieved successfully"))
 			data := response["data"].(map[string]interface{})
@@ -553,37 +553,37 @@ var _ = Describe("TransactionController", func() {
 
 		It("should handle invalid filter values gracefully", func() {
 			// Invalid account_id
-			resp, _ := testHelper.MakeRequest(http.MethodGet, "/transaction?account_id=invalid", accessToken, nil)
+			resp, _ := testHelperUser1.MakeRequest(http.MethodGet, "/transaction?account_id=invalid", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK)) // Should ignore invalid filter
 
 			// Invalid category_id
-			resp, _ = testHelper.MakeRequest(http.MethodGet, "/transaction?category_id=invalid", accessToken, nil)
+			resp, _ = testHelperUser1.MakeRequest(http.MethodGet, "/transaction?category_id=invalid", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK)) // Should ignore invalid filter
 
 			// Invalid amount
-			resp, _ = testHelper.MakeRequest(http.MethodGet, "/transaction?min_amount=invalid", accessToken, nil)
+			resp, _ = testHelperUser1.MakeRequest(http.MethodGet, "/transaction?min_amount=invalid", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK)) // Should ignore invalid filter
 
 			// Invalid date
-			resp, _ = testHelper.MakeRequest(http.MethodGet, "/transaction?date_from=invalid", accessToken, nil)
+			resp, _ = testHelperUser1.MakeRequest(http.MethodGet, "/transaction?date_from=invalid", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK)) // Should ignore invalid filter
 		})
 
 		It("should handle edge cases in pagination", func() {
 			// Page number less than 1
-			resp, response := testHelper.MakeRequest(http.MethodGet, "/transaction?page=0", accessToken, nil)
+			resp, response := testHelperUser1.MakeRequest(http.MethodGet, "/transaction?page=0", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			data := response["data"].(map[string]interface{})
 			Expect(data["page"]).To(Equal(float64(1))) // Should default to page 1
 
 			// Page size less than 1
-			resp, response = testHelper.MakeRequest(http.MethodGet, "/transaction?page_size=0", accessToken, nil)
+			resp, response = testHelperUser1.MakeRequest(http.MethodGet, "/transaction?page_size=0", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			data = response["data"].(map[string]interface{})
 			Expect(data["page_size"]).To(Equal(float64(15))) // Should default to 15
 
 			// Page number beyond total pages
-			resp, response = testHelper.MakeRequest(http.MethodGet, "/transaction?page=100", accessToken, nil)
+			resp, response = testHelperUser1.MakeRequest(http.MethodGet, "/transaction?page=100", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			data = response["data"].(map[string]interface{})
 			Expect(data["transactions"]).To(BeEmpty())
@@ -593,7 +593,7 @@ var _ = Describe("TransactionController", func() {
 	Describe("GetTransaction", func() {
 		It("should get transaction by id using seed data", func() {
 			url := "/transaction/1"
-			resp, response := testHelper.MakeRequest(http.MethodGet, url, accessToken, nil)
+			resp, response := testHelperUser1.MakeRequest(http.MethodGet, url, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["message"]).To(Equal("Transaction retrieved successfully"))
 			Expect(response["data"]).To(HaveKey("id"))
@@ -602,21 +602,21 @@ var _ = Describe("TransactionController", func() {
 
 		It("should return error for invalid transaction id format", func() {
 			url := "/transaction/invalid_id"
-			resp, response := testHelper.MakeRequest(http.MethodGet, url, accessToken, nil)
+			resp, response := testHelperUser1.MakeRequest(http.MethodGet, url, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			Expect(response["message"]).To(Equal("invalid transaction id"))
 		})
 
 		It("should return error for non-existent transaction id", func() {
 			url := "/transaction/9999"
-			resp, response := testHelper.MakeRequest(http.MethodGet, url, accessToken, nil)
+			resp, response := testHelperUser1.MakeRequest(http.MethodGet, url, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 			Expect(response["message"]).To(Equal("transaction not found"))
 		})
 
 		It("should return error when trying to access another user's transaction", func() {
 			url := "/transaction/11" // Transaction belonging to user 2
-			resp, response := testHelper.MakeRequest(http.MethodGet, url, accessToken, nil)
+			resp, response := testHelperUser1.MakeRequest(http.MethodGet, url, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 			Expect(response["message"]).To(Equal("transaction not found"))
 		})
@@ -627,7 +627,7 @@ var _ = Describe("TransactionController", func() {
 			It("should return validation error for future date in update", func() {
 				update := models.UpdateBaseTransactionInput{Date: futureDate}
 				url := "/transaction/3"
-				resp, response := testHelper.MakeRequest(http.MethodPatch, url, accessToken, update)
+				resp, response := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 				Expect(response["message"]).To(Equal("transaction date cannot be in the future"))
 			})
@@ -636,7 +636,7 @@ var _ = Describe("TransactionController", func() {
 		It("should update transaction name using seed data", func() {
 			update := models.UpdateBaseTransactionInput{Name: "Updated Transaction Name"}
 			url := "/transaction/3"
-			resp, response := testHelper.MakeRequest(http.MethodPatch, url, accessToken, update)
+			resp, response := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["message"]).To(Equal("Transaction updated successfully"))
 			Expect(response["data"].(map[string]interface{})["name"]).To(Equal("Updated Transaction Name"))
@@ -646,7 +646,7 @@ var _ = Describe("TransactionController", func() {
 			amount := 350.99
 			update := models.UpdateBaseTransactionInput{Amount: &amount}
 			url := "/transaction/3"
-			resp, response := testHelper.MakeRequest(http.MethodPatch, url, accessToken, update)
+			resp, response := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["message"]).To(Equal("Transaction updated successfully"))
 			Expect(response["data"].(map[string]interface{})["amount"]).To(Equal(amount))
@@ -661,34 +661,34 @@ var _ = Describe("TransactionController", func() {
 				"date":        testDate.Format(time.RFC3339),
 				"account_id":  1,
 			}
-			resp, response := testHelper.MakeRequest(http.MethodPatch, url, accessToken, input)
+			resp, response := testHelperUser1.MakeRequest(http.MethodPatch, url, input)
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 			Expect(response["message"]).To(Equal("transaction not found"))
 		})
 
 		It("should return error for invalid JSON in update", func() {
 			url := "/transaction/3"
-			resp, _ := testHelper.MakeRequest(http.MethodPatch, url, accessToken, "{ name: invalid }")
+			resp, _ := testHelperUser1.MakeRequest(http.MethodPatch, url, "{ name: invalid }")
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 		})
 
 		It("should return error for empty body in update", func() {
 			url := "/transaction/3"
-			resp, _ := testHelper.MakeRequest(http.MethodPatch, url, accessToken, "")
+			resp, _ := testHelperUser1.MakeRequest(http.MethodPatch, url, "")
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 		})
 
 		It("should return error for non-existent transaction id", func() {
 			update := models.UpdateBaseTransactionInput{Name: "Updated Name"}
 			url := "/transaction/9999"
-			resp, _ := testHelper.MakeRequest(http.MethodPatch, url, accessToken, update)
+			resp, _ := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 		})
 
 		It("should return error for invalid transaction id format in update", func() {
 			update := models.UpdateBaseTransactionInput{Name: "Updated Name"}
 			url := "/transaction/invalid_id"
-			resp, response := testHelper.MakeRequest(http.MethodPatch, url, accessToken, update)
+			resp, response := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			Expect(response["message"]).To(Equal("invalid transaction id"))
 		})
@@ -700,7 +700,7 @@ var _ = Describe("TransactionController", func() {
 				"category_ids": []int64{2, 3},
 			}
 			url := "/transaction/10"
-			resp, response := testHelper.MakeRequest(http.MethodPatch, url, accessToken, update)
+			resp, response := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			data := response["data"].(map[string]interface{})
 			Expect(data["category_ids"]).To(ContainElements(float64(2), float64(3)))
@@ -711,7 +711,7 @@ var _ = Describe("TransactionController", func() {
 				"account_id": 2,
 			}
 			url := "/transaction/10"
-			resp, response := testHelper.MakeRequest(http.MethodPatch, url, accessToken, update)
+			resp, response := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			data := response["data"].(map[string]interface{})
 			Expect(data["account_id"]).To(Equal(float64(2)))
@@ -722,7 +722,7 @@ var _ = Describe("TransactionController", func() {
 				"category_ids": []int64{},
 			}
 			url := "/transaction/10"
-			resp, response := testHelper.MakeRequest(http.MethodPatch, url, accessToken, update)
+			resp, response := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			data := response["data"].(map[string]interface{})
 			Expect(data["category_ids"]).To(BeEmpty())
@@ -733,7 +733,7 @@ var _ = Describe("TransactionController", func() {
 				"category_ids": []int64{99999},
 			}
 			url := "/transaction/10"
-			resp, _ := testHelper.MakeRequest(http.MethodPatch, url, accessToken, update)
+			resp, _ := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 		})
 
@@ -742,7 +742,7 @@ var _ = Describe("TransactionController", func() {
 				"account_id": 99999,
 			}
 			url := "/transaction/10"
-			resp, _ := testHelper.MakeRequest(http.MethodPatch, url, accessToken, update)
+			resp, _ := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 		})
 
@@ -752,14 +752,14 @@ var _ = Describe("TransactionController", func() {
 				"name": "Other User Category",
 				"icon": "other-icon",
 			}
-			catResp, catResponse := testHelper.MakeRequest(http.MethodPost, "/category", accessToken1, catInput)
+			catResp, catResponse := testHelperUser2.MakeRequest(http.MethodPost, "/category", catInput)
 			Expect(catResp.StatusCode).To(Equal(http.StatusCreated))
 			otherCategoryId := int64(catResponse["data"].(map[string]interface{})["id"].(float64))
 			update := map[string]interface{}{
 				"category_ids": []int64{otherCategoryId},
 			}
 			url := "/transaction/10"
-			resp, _ := testHelper.MakeRequest(http.MethodPatch, url, accessToken, update)
+			resp, _ := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 		})
 	})
@@ -774,34 +774,34 @@ var _ = Describe("TransactionController", func() {
 				AccountId:   3,
 			}
 
-			resp, response := testHelper.MakeRequest(http.MethodPost, "/transaction", accessToken1, createTransactionInput)
+			resp, response := testHelperUser2.MakeRequest(http.MethodPost, "/transaction", createTransactionInput)
 			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
 			createdId := int64(response["data"].(map[string]interface{})["id"].(float64))
 
 			url := "/transaction/" + strconv.FormatInt(createdId, 10)
-			resp, _ = testHelper.MakeRequest(http.MethodDelete, url, accessToken1, nil)
+			resp, _ = testHelperUser2.MakeRequest(http.MethodDelete, url, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
 
-			resp, _ = testHelper.MakeRequest(http.MethodGet, "/transaction/"+strconv.FormatInt(createdId, 10), accessToken1, nil)
+			resp, _ = testHelperUser2.MakeRequest(http.MethodGet, "/transaction/"+strconv.FormatInt(createdId, 10), nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 		})
 
 		It("should return error when trying to delete transaction of different user", func() {
 			url := "/transaction/11" // Transaction belonging to user 2
-			resp, response := testHelper.MakeRequest(http.MethodDelete, url, accessToken, nil)
+			resp, response := testHelperUser1.MakeRequest(http.MethodDelete, url, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 			Expect(response["message"]).To(Equal("transaction not found"))
 		})
 
 		It("should return error for non-existent transaction id", func() {
 			url := "/transaction/9999"
-			resp, _ := testHelper.MakeRequest(http.MethodDelete, url, accessToken, nil)
+			resp, _ := testHelperUser1.MakeRequest(http.MethodDelete, url, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 		})
 
 		It("should return error for invalid transaction id format in delete", func() {
 			url := "/transaction/invalid_id"
-			resp, response := testHelper.MakeRequest(http.MethodDelete, url, accessToken, nil)
+			resp, response := testHelperUser1.MakeRequest(http.MethodDelete, url, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			Expect(response["message"]).To(Equal("invalid transaction id"))
 		})
@@ -816,29 +816,29 @@ var _ = Describe("TransactionController", func() {
 				Date:        testDate,
 				AccountId:   3,
 			}
-			resp, response := testHelper.MakeRequest(http.MethodPost, "/transaction", accessToken1, input)
+			resp, response := testHelperUser2.MakeRequest(http.MethodPost, "/transaction", input)
 			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
 			createdId := int64(response["data"].(map[string]interface{})["id"].(float64))
 
 			update := models.UpdateBaseTransactionInput{Name: "Updated Dynamic Transaction"}
 			url := "/transaction/" + strconv.FormatInt(createdId, 10)
-			resp, _ = testHelper.MakeRequest(http.MethodPatch, url, accessToken1, update)
+			resp, _ = testHelperUser2.MakeRequest(http.MethodPatch, url, update)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
-			resp, _ = testHelper.MakeRequest(http.MethodDelete, url, accessToken1, nil)
+			resp, _ = testHelperUser2.MakeRequest(http.MethodDelete, url, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
 		})
 
 		It("should handle cross-user isolation properly with seed data", func() {
 			// Get all transactions for user 1
-			resp, response := testHelper.MakeRequest(http.MethodGet, "/transaction", accessToken, nil)
+			resp, response := testHelperUser1.MakeRequest(http.MethodGet, "/transaction", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			data := response["data"].(map[string]interface{})
 			transactions := data["transactions"].([]interface{})
 			user1TransactionCount := len(transactions)
 
 			// Get all transactions for user 2
-			resp, response = testHelper.MakeRequest(http.MethodGet, "/transaction", accessToken1, nil)
+			resp, response = testHelperUser2.MakeRequest(http.MethodGet, "/transaction", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			data = response["data"].(map[string]interface{})
 			transactions = data["transactions"].([]interface{})

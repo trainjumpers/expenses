@@ -40,7 +40,7 @@ var _ = Describe("RuleController", func() {
 				},
 			},
 		}
-		resp, response := testHelper.MakeRequest(http.MethodPost, "/rule", accessToken, input)
+		resp, response := testHelperUser1.MakeRequest(http.MethodPost, "/rule", input)
 		Expect(resp.StatusCode).To(Equal(http.StatusCreated))
 		Expect(response["data"]).To(HaveKey("rule"))
 		rule := response["data"].(map[string]interface{})["rule"].(map[string]interface{})
@@ -72,7 +72,7 @@ var _ = Describe("RuleController", func() {
 						},
 					},
 				}
-				resp, response := testHelper.MakeRequest(http.MethodPost, "/rule", accessToken, input)
+				resp, response := testHelperUser1.MakeRequest(http.MethodPost, "/rule", input)
 				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
 				Expect(response["message"]).To(Equal("Rule created successfully"))
 				Expect(response["data"]).To(HaveKey("rule"))
@@ -96,7 +96,7 @@ var _ = Describe("RuleController", func() {
 						{ConditionType: models.RuleFieldAmount, ConditionValue: "100", ConditionOperator: models.OperatorEquals},
 					},
 				}
-				resp, response := testHelper.MakeRequest(http.MethodPost, "/rule", accessToken, input)
+				resp, response := testHelperUser1.MakeRequest(http.MethodPost, "/rule", input)
 				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
 				actions := response["data"].(map[string]interface{})["actions"].([]interface{})
 				Expect(len(actions)).To(Equal(2))
@@ -117,7 +117,7 @@ var _ = Describe("RuleController", func() {
 						{ConditionType: models.RuleFieldAmount, ConditionValue: "50", ConditionOperator: models.OperatorGreater},
 					},
 				}
-				resp, response := testHelper.MakeRequest(http.MethodPost, "/rule", accessToken, input)
+				resp, response := testHelperUser1.MakeRequest(http.MethodPost, "/rule", input)
 				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
 				conditions := response["data"].(map[string]interface{})["conditions"].([]interface{})
 				Expect(len(conditions)).To(Equal(2))
@@ -141,7 +141,7 @@ var _ = Describe("RuleController", func() {
 						{ConditionType: models.RuleFieldAmount, ConditionValue: "100", ConditionOperator: models.OperatorEquals},
 					},
 				}
-				resp, response := testHelper.MakeRequest(http.MethodPost, "/rule", accessToken, input)
+				resp, response := testHelperUser1.MakeRequest(http.MethodPost, "/rule", input)
 				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
 				rule := response["data"].(map[string]interface{})["rule"].(map[string]interface{})
 				Expect(rule["name"]).To(Equal(longName))
@@ -165,7 +165,7 @@ var _ = Describe("RuleController", func() {
 						{ConditionType: models.RuleFieldAmount, ConditionValue: "100", ConditionOperator: models.OperatorEquals},
 					},
 				}
-				resp, response := testHelper.MakeRequest(http.MethodPost, "/rule", accessToken, input)
+				resp, response := testHelperUser1.MakeRequest(http.MethodPost, "/rule", input)
 				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
 				rule := response["data"].(map[string]interface{})["rule"].(map[string]interface{})
 				Expect(rule["description"]).To(Equal(longDesc))
@@ -185,7 +185,7 @@ var _ = Describe("RuleController", func() {
 						{ConditionType: models.RuleFieldAmount, ConditionValue: "100", ConditionOperator: models.OperatorEquals},
 					},
 				}
-				resp, response := testHelper.MakeRequest(http.MethodPost, "/rule", accessToken, input)
+				resp, response := testHelperUser1.MakeRequest(http.MethodPost, "/rule", input)
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 				Expect(response["message"]).To(ContainSubstring("category"))
 			})
@@ -205,13 +205,14 @@ var _ = Describe("RuleController", func() {
 					},
 				}
 				done := make(chan bool, 2)
+				defer GinkgoRecover()
 				go func() {
-					resp, _ := testHelper.MakeRequest(http.MethodPost, "/rule", accessToken, input)
+					resp, _ := testHelperUser1.MakeRequest(http.MethodPost, "/rule", input)
 					Expect(resp.StatusCode).To(Equal(http.StatusCreated))
 					done <- true
 				}()
 				go func() {
-					resp, _ := testHelper.MakeRequest(http.MethodPost, "/rule", accessToken, input)
+					resp, _ := testHelperUser1.MakeRequest(http.MethodPost, "/rule", input)
 					Expect(resp.StatusCode).To(Equal(http.StatusCreated))
 					done <- true
 				}()
@@ -245,7 +246,7 @@ var _ = Describe("RuleController", func() {
 						},
 					},
 				}
-				resp, _ := testHelper.MakeRequest(http.MethodPost, "/rule", accessToken, input)
+				resp, _ := testHelperUser1.MakeRequest(http.MethodPost, "/rule", input)
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 
@@ -267,7 +268,7 @@ var _ = Describe("RuleController", func() {
 						},
 					},
 				}
-				resp, _ := testHelper.MakeRequest(http.MethodPost, "/rule", accessToken, input)
+				resp, _ := testHelperUser1.MakeRequest(http.MethodPost, "/rule", input)
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 
@@ -288,17 +289,17 @@ var _ = Describe("RuleController", func() {
 					},
 					Conditions: []models.CreateRuleConditionRequest{}, // empty
 				}
-				resp, _ := testHelper.MakeRequest(http.MethodPost, "/rule", accessToken, input)
+				resp, _ := testHelperUser1.MakeRequest(http.MethodPost, "/rule", input)
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 
 			It("should return error for invalid JSON", func() {
-				resp, _ := testHelper.MakeRequest(http.MethodPost, "/rule", accessToken, "{ invalid json }")
+				resp, _ := testHelperUser1.MakeRequest(http.MethodPost, "/rule", "{ invalid json }")
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 
 			It("should return error for empty body", func() {
-				resp, _ := testHelper.MakeRequest(http.MethodPost, "/rule", accessToken, "")
+				resp, _ := testHelperUser1.MakeRequest(http.MethodPost, "/rule", "")
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 		})
@@ -307,7 +308,7 @@ var _ = Describe("RuleController", func() {
 	Describe("ListRules", func() {
 		It("should return an empty list when there are no rules", func() {
 			// Use a fresh user/token with no rules
-			resp, response := testHelper.MakeRequest(http.MethodGet, "/rule", accessToken1, nil)
+			resp, response := testHelperUser2.MakeRequest(http.MethodGet, "/rule", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["message"]).To(Equal("Rules fetched successfully"))
 			Expect(response["data"]).To(BeAssignableToTypeOf([]interface{}{}))
@@ -318,7 +319,7 @@ var _ = Describe("RuleController", func() {
 			// Create two rules for the main user
 			ruleId1, _, _ := createTestRule()
 			ruleId2, _, _ := createTestRule()
-			resp, response := testHelper.MakeRequest(http.MethodGet, "/rule", accessToken, nil)
+			resp, response := testHelperUser1.MakeRequest(http.MethodGet, "/rule", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["message"]).To(Equal("Rules fetched successfully"))
 			data := response["data"].([]interface{})
@@ -346,14 +347,14 @@ var _ = Describe("RuleController", func() {
 			// Create a rule as main user
 			createTestRule()
 			// List as other user
-			resp, response := testHelper.MakeRequest(http.MethodGet, "/rule", accessToken1, nil)
+			resp, response := testHelperUser2.MakeRequest(http.MethodGet, "/rule", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["message"]).To(Equal("Rules fetched successfully"))
 			Expect(len(response["data"].([]interface{}))).To(Equal(0))
 		})
 
 		It("should return unauthorized for invalid token", func() {
-			resp, _ := testHelper.MakeRequest(http.MethodGet, "/rule", "invalidtoken", nil)
+			resp, _ := testHelperUnauthenticated.MakeRequest(http.MethodGet, "/rule", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
 		})
 	})
@@ -362,7 +363,7 @@ var _ = Describe("RuleController", func() {
 		It("should get rule by id and verify all fields", func() {
 			ruleId, actionId, conditionId := createTestRule()
 			url := "/rule/" + strconv.FormatInt(ruleId, 10)
-			resp, response := testHelper.MakeRequest(http.MethodGet, url, accessToken, nil)
+			resp, response := testHelperUser1.MakeRequest(http.MethodGet, url, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["message"]).To(Equal("Rule fetched successfully"))
 			Expect(response["data"]).To(HaveKey("rule"))
@@ -386,13 +387,13 @@ var _ = Describe("RuleController", func() {
 		})
 
 		It("should return error for invalid rule id format", func() {
-			resp, response := testHelper.MakeRequest(http.MethodGet, "/rule/invalid_id", accessToken, nil)
+			resp, response := testHelperUser1.MakeRequest(http.MethodGet, "/rule/invalid_id", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			Expect(response["message"]).To(Equal("invalid ruleId"))
 		})
 
 		It("should return error for non-existent rule id", func() {
-			resp, response := testHelper.MakeRequest(http.MethodGet, "/rule/999999", accessToken, nil)
+			resp, response := testHelperUser1.MakeRequest(http.MethodGet, "/rule/999999", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 			Expect(response["message"]).To(ContainSubstring("not found"))
 		})
@@ -401,7 +402,7 @@ var _ = Describe("RuleController", func() {
 			// Create a rule as main user
 			ruleId, _, _ := createTestRule()
 			url := "/rule/" + strconv.FormatInt(ruleId, 10)
-			resp, response := testHelper.MakeRequest(http.MethodGet, url, accessToken1, nil)
+			resp, response := testHelperUser2.MakeRequest(http.MethodGet, url, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 			Expect(response["message"]).To(ContainSubstring("not found"))
 		})
@@ -409,7 +410,7 @@ var _ = Describe("RuleController", func() {
 		It("should return unauthorized for invalid token", func() {
 			ruleId, _, _ := createTestRule()
 			url := "/rule/" + strconv.FormatInt(ruleId, 10)
-			resp, _ := testHelper.MakeRequest(http.MethodGet, url, "invalidtoken", nil)
+			resp, _ := testHelperUnauthenticated.MakeRequest(http.MethodGet, url, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
 		})
 	})
@@ -423,7 +424,7 @@ var _ = Describe("RuleController", func() {
 			newName := "Updated Rule Name"
 			update := models.UpdateRuleRequest{Name: &newName}
 			url := "/rule/" + strconv.FormatInt(ruleId, 10)
-			resp, response := testHelper.MakeRequest(http.MethodPatch, url, accessToken, update)
+			resp, response := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["message"]).To(Equal("Rule updated successfully"))
 			rule := response["data"].(map[string]interface{})
@@ -434,7 +435,7 @@ var _ = Describe("RuleController", func() {
 			newDesc := "Updated Description Only"
 			update := models.UpdateRuleRequest{Description: &newDesc}
 			url := "/rule/" + strconv.FormatInt(ruleId, 10)
-			resp, response := testHelper.MakeRequest(http.MethodPatch, url, accessToken, update)
+			resp, response := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["message"]).To(Equal("Rule updated successfully"))
 			rule := response["data"].(map[string]interface{})
@@ -445,7 +446,7 @@ var _ = Describe("RuleController", func() {
 			newTime := now.Add(-time.Hour)
 			update := models.UpdateRuleRequest{EffectiveFrom: &newTime}
 			url := "/rule/" + strconv.FormatInt(ruleId, 10)
-			resp, response := testHelper.MakeRequest(http.MethodPatch, url, accessToken, update)
+			resp, response := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["message"]).To(Equal("Rule updated successfully"))
 			rule := response["data"].(map[string]interface{})
@@ -455,7 +456,7 @@ var _ = Describe("RuleController", func() {
 		It("should not update if no fields provided", func() {
 			update := models.UpdateRuleRequest{}
 			url := "/rule/" + strconv.FormatInt(ruleId, 10)
-			resp, response := testHelper.MakeRequest(http.MethodPatch, url, accessToken, update)
+			resp, response := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			Expect(response["message"]).To(ContainSubstring("no fields"))
 		})
@@ -464,7 +465,7 @@ var _ = Describe("RuleController", func() {
 			description := ""
 			update := models.UpdateRuleRequest{Description: &description}
 			url := "/rule/" + strconv.FormatInt(ruleId, 10)
-			resp, response := testHelper.MakeRequest(http.MethodPatch, url, accessToken, update)
+			resp, response := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["message"]).To(Equal("Rule updated successfully"))
 		})
@@ -474,7 +475,7 @@ var _ = Describe("RuleController", func() {
 			future := time.Now().AddDate(5, 0, 0)
 			update := models.UpdateRuleRequest{Name: &name, EffectiveFrom: &future}
 			url := "/rule/" + strconv.FormatInt(ruleId, 10)
-			resp, response := testHelper.MakeRequest(http.MethodPatch, url, accessToken, update)
+			resp, response := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			Expect(response["message"]).To(ContainSubstring("effective date"))
 		})
@@ -486,13 +487,14 @@ var _ = Describe("RuleController", func() {
 			update2 := models.UpdateRuleRequest{Name: &newName2}
 			url := "/rule/" + strconv.FormatInt(ruleId, 10)
 			done := make(chan bool, 2)
+			defer GinkgoRecover()
 			go func() {
-				resp, _ := testHelper.MakeRequest(http.MethodPatch, url, accessToken, update1)
+				resp, _ := testHelperUser1.MakeRequest(http.MethodPatch, url, update1)
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 				done <- true
 			}()
 			go func() {
-				resp, _ := testHelper.MakeRequest(http.MethodPatch, url, accessToken, update2)
+				resp, _ := testHelperUser1.MakeRequest(http.MethodPatch, url, update2)
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 				done <- true
 			}()
@@ -507,7 +509,7 @@ var _ = Describe("RuleController", func() {
 			}
 			update := models.UpdateRuleRequest{Name: &longName}
 			url := "/rule/" + strconv.FormatInt(ruleId, 10)
-			resp, response := testHelper.MakeRequest(http.MethodPatch, url, accessToken, update)
+			resp, response := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			Expect(response["message"]).To(ContainSubstring("validation"))
 		})
@@ -519,7 +521,7 @@ var _ = Describe("RuleController", func() {
 			}
 			update := models.UpdateRuleRequest{Description: &longDesc}
 			url := "/rule/" + strconv.FormatInt(ruleId, 10)
-			resp, response := testHelper.MakeRequest(http.MethodPatch, url, accessToken, update)
+			resp, response := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			Expect(response["message"]).To(ContainSubstring("validation"))
 		})
@@ -529,7 +531,7 @@ var _ = Describe("RuleController", func() {
 			future := time.Now().Add(24 * time.Hour)
 			update := models.UpdateRuleRequest{Name: &name, EffectiveFrom: &future}
 			url := "/rule/" + strconv.FormatInt(ruleId, 10)
-			resp, response := testHelper.MakeRequest(http.MethodPatch, url, accessToken, update)
+			resp, response := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			Expect(response["message"]).To(ContainSubstring("the effective date for the rule is invalid or in the past"))
 		})
@@ -537,7 +539,7 @@ var _ = Describe("RuleController", func() {
 		It("should return error for invalid rule id format", func() {
 			newName := "Should Fail"
 			update := models.UpdateRuleRequest{Name: &newName}
-			resp, response := testHelper.MakeRequest(http.MethodPatch, "/rule/invalid_id", accessToken, update)
+			resp, response := testHelperUser1.MakeRequest(http.MethodPatch, "/rule/invalid_id", update)
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			Expect(response["message"]).To(Equal("invalid ruleId"))
 		})
@@ -545,14 +547,14 @@ var _ = Describe("RuleController", func() {
 		It("should return error for non-existent rule id", func() {
 			newName := "Should Fail"
 			update := models.UpdateRuleRequest{Name: &newName}
-			resp, response := testHelper.MakeRequest(http.MethodPatch, "/rule/999999", accessToken, update)
+			resp, response := testHelperUser1.MakeRequest(http.MethodPatch, "/rule/999999", update)
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 			Expect(response["message"]).To(ContainSubstring("not found"))
 		})
 
 		It("should return error for invalid JSON", func() {
 			url := "/rule/" + strconv.FormatInt(ruleId, 10)
-			resp, _ := testHelper.MakeRequest(http.MethodPatch, url, accessToken, "{ invalid }")
+			resp, _ := testHelperUser1.MakeRequest(http.MethodPatch, url, "{ invalid json }")
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 		})
 
@@ -569,7 +571,7 @@ var _ = Describe("RuleController", func() {
 					ActionType:  &typ,
 					ActionValue: &val,
 				}
-				resp, response := testHelper.MakeRequest(http.MethodPatch, url, accessToken, update)
+				resp, response := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
 				Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 				Expect(response["message"]).To(ContainSubstring("not found"))
 			})
@@ -585,7 +587,7 @@ var _ = Describe("RuleController", func() {
 					ActionValue: &val,
 				}
 				url := "/rule/" + strconv.FormatInt(ruleId, 10) + "/action/" + strconv.FormatInt(otherActionId, 10)
-				resp, response := testHelper.MakeRequest(http.MethodPatch, url, accessToken, update)
+				resp, response := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
 				Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 				Expect(response["message"]).To(ContainSubstring("the requested rule action was not found"))
 			})
@@ -598,7 +600,7 @@ var _ = Describe("RuleController", func() {
 					ActionValue: &val,
 				}
 				url := "/rule/" + strconv.FormatInt(ruleId, 10) + "/action/" + strconv.FormatInt(actionId, 10)
-				resp, _ := testHelper.MakeRequest(http.MethodPatch, url, "invalidtoken", update)
+				resp, _ := testHelperUnauthenticated.MakeRequest(http.MethodPatch, url, update)
 				Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
 			})
 
@@ -610,20 +612,20 @@ var _ = Describe("RuleController", func() {
 					ActionValue: &val,
 				}
 				url := "/rule/" + strconv.FormatInt(ruleId, 10) + "/action/" + strconv.FormatInt(actionId, 10)
-				resp, _ := testHelper.MakeRequest(http.MethodPatch, url, accessToken, update)
+				resp, _ := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
 				// Should succeed for valid string
 				Expect(resp.StatusCode).To(Or(Equal(http.StatusOK), Equal(http.StatusBadRequest)))
 				// Now try an empty string if not allowed
 				emptyVal := ""
 				update.ActionValue = &emptyVal
-				resp2, response2 := testHelper.MakeRequest(http.MethodPatch, url, accessToken, update)
+				resp2, response2 := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
 				Expect(resp2.StatusCode).To(Equal(http.StatusBadRequest))
 				Expect(response2["message"]).To(ContainSubstring("cannot be empty"))
 			})
 
 			It("should return error for empty update request", func() {
 				url := "/rule/" + strconv.FormatInt(ruleId, 10) + "/action/" + strconv.FormatInt(actionId, 10)
-				resp, _ := testHelper.MakeRequest(http.MethodPatch, url, accessToken, "")
+				resp, _ := testHelperUser1.MakeRequest(http.MethodPatch, url, "")
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 
@@ -635,7 +637,7 @@ var _ = Describe("RuleController", func() {
 					ActionValue: &val,
 				}
 				url := "/rule/" + strconv.FormatInt(ruleId, 10) + "/action/" + strconv.FormatInt(actionId, 10)
-				resp, response := testHelper.MakeRequest(http.MethodPatch, url, accessToken, update)
+				resp, response := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 				Expect(response["message"]).To(ContainSubstring("invalid"))
 			})
@@ -648,7 +650,7 @@ var _ = Describe("RuleController", func() {
 					ActionValue: &val,
 				}
 				url := "/rule/" + strconv.FormatInt(ruleId, 10) + "/action/" + strconv.FormatInt(actionId, 10)
-				resp, response := testHelper.MakeRequest(http.MethodPatch, url, accessToken, update)
+				resp, response := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 				Expect(response["message"]).To(ContainSubstring("invalid"))
 			})
@@ -669,7 +671,7 @@ var _ = Describe("RuleController", func() {
 					ConditionValue:    &val,
 					ConditionOperator: &op,
 				}
-				resp, response := testHelper.MakeRequest(http.MethodPatch, url, accessToken, update)
+				resp, response := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
 				Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 				Expect(response["message"]).To(ContainSubstring("not found"))
 			})
@@ -685,13 +687,13 @@ var _ = Describe("RuleController", func() {
 					ConditionOperator: &op,
 				}
 				url := "/rule/" + strconv.FormatInt(ruleId, 10) + "/condition/" + strconv.FormatInt(otherConditionId, 10)
-				resp, response := testHelper.MakeRequest(http.MethodPatch, url, accessToken, update)
+				resp, response := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
 				Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 				Expect(response["message"]).To(ContainSubstring("the requested rule condition was not found"))
 			})
 
 			It("should return error for condition belonging to different user", func() {
-				resp, response := testHelper.MakeRequest(http.MethodPost, "/rule", accessToken1, models.CreateRuleRequest{
+				resp, response := testHelperUser2.MakeRequest(http.MethodPost, "/rule", models.CreateRuleRequest{
 					Rule: models.CreateBaseRuleRequest{
 						Name:          "Other User Rule",
 						Description:   ptrToString("desc"),
@@ -726,7 +728,7 @@ var _ = Describe("RuleController", func() {
 					ConditionOperator: &op,
 				}
 				url := "/rule/" + strconv.FormatInt(otherRuleId, 10) + "/condition/" + strconv.FormatInt(otherConditionId, 10)
-				resp2, response2 := testHelper.MakeRequest(http.MethodPatch, url, accessToken, update)
+				resp2, response2 := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
 				Expect(resp2.StatusCode).To(Equal(http.StatusNotFound))
 				Expect(response2["message"]).To(ContainSubstring("not found"))
 			})
@@ -741,7 +743,7 @@ var _ = Describe("RuleController", func() {
 					ConditionOperator: &op,
 				}
 				url := "/rule/" + strconv.FormatInt(ruleId, 10) + "/condition/" + strconv.FormatInt(conditionId, 10)
-				resp, _ := testHelper.MakeRequest(http.MethodPatch, url, "invalidtoken", update)
+				resp, _ := testHelperUnauthenticated.MakeRequest(http.MethodPatch, url, update)
 				Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
 			})
 
@@ -755,18 +757,18 @@ var _ = Describe("RuleController", func() {
 					ConditionOperator: &op,
 				}
 				url := "/rule/" + strconv.FormatInt(ruleId, 10) + "/condition/" + strconv.FormatInt(conditionId, 10)
-				resp, _ := testHelper.MakeRequest(http.MethodPatch, url, accessToken, update)
+				resp, _ := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
 				Expect(resp.StatusCode).To(Or(Equal(http.StatusOK), Equal(http.StatusBadRequest)))
 				emptyVal := ""
 				update.ConditionValue = &emptyVal
-				resp2, response2 := testHelper.MakeRequest(http.MethodPatch, url, accessToken, update)
+				resp2, response2 := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
 				Expect(resp2.StatusCode).To(Equal(http.StatusBadRequest))
 				Expect(response2["message"]).To(ContainSubstring("cannot be empty"))
 			})
 
 			It("should return error for empty update request", func() {
 				url := "/rule/" + strconv.FormatInt(ruleId, 10) + "/condition/" + strconv.FormatInt(conditionId, 10)
-				resp, _ := testHelper.MakeRequest(http.MethodPatch, url, accessToken, "")
+				resp, _ := testHelperUser1.MakeRequest(http.MethodPatch, url, "")
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 
@@ -780,7 +782,7 @@ var _ = Describe("RuleController", func() {
 					ConditionOperator: &op,
 				}
 				url := "/rule/" + strconv.FormatInt(ruleId, 10) + "/condition/" + strconv.FormatInt(conditionId, 10)
-				resp, response := testHelper.MakeRequest(http.MethodPatch, url, accessToken, update)
+				resp, response := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 				Expect(response["message"]).To(ContainSubstring("invalid"))
 			})
@@ -795,7 +797,7 @@ var _ = Describe("RuleController", func() {
 					ConditionOperator: &op,
 				}
 				url := "/rule/" + strconv.FormatInt(ruleId, 10) + "/condition/" + strconv.FormatInt(conditionId, 10)
-				resp, response := testHelper.MakeRequest(http.MethodPatch, url, accessToken, update)
+				resp, response := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 				Expect(response["message"]).To(ContainSubstring("invalid"))
 			})
@@ -810,7 +812,7 @@ var _ = Describe("RuleController", func() {
 					ConditionOperator: &op,
 				}
 				url := "/rule/" + strconv.FormatInt(ruleId, 10) + "/condition/" + strconv.FormatInt(conditionId, 10)
-				resp, response := testHelper.MakeRequest(http.MethodPatch, url, accessToken, update)
+				resp, response := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 				Expect(response["message"]).To(ContainSubstring("the operator is not valid for the given condition type"))
 			})
@@ -824,17 +826,17 @@ var _ = Describe("RuleController", func() {
 
 		It("should delete rule by id", func() {
 			url := "/rule/" + strconv.FormatInt(ruleId, 10)
-			resp, _ := testHelper.MakeRequest(http.MethodDelete, url, accessToken, nil)
+			resp, _ := testHelperUser1.MakeRequest(http.MethodDelete, url, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
 		})
 
 		It("should return error for invalid rule id format", func() {
-			resp, _ := testHelper.MakeRequest(http.MethodDelete, "/rule/invalid", accessToken, nil)
+			resp, _ := testHelperUser1.MakeRequest(http.MethodDelete, "/rule/invalid", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 		})
 
 		It("should return 404 when deleting non-existent rule id", func() {
-			resp, _ := testHelper.MakeRequest(http.MethodDelete, "/rule/999999", accessToken, nil)
+			resp, _ := testHelperUser1.MakeRequest(http.MethodDelete, "/rule/999999", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 		})
 	})

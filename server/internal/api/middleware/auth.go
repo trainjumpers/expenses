@@ -8,44 +8,29 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 )
 
-// Protected is a middleware that checks if the request has a valid JWT token
+// Protected is a middleware that checks if the request has a valid JWT token from HTTP-only cookie
 func Protected(cfg *config.Config) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		tokenString := ctx.GetHeader("Authorization")
-		if tokenString == "" {
-			logger.Warnf("Request received without authorization token")
+		cookieToken, err := ctx.Cookie("access_token")
+		if err != nil || cookieToken == "" {
+			logger.Warnf("Request received without access_token cookie")
 			response := gin.H{
 				"message": "please log in to continue",
 			}
 			if cfg.IsDev() {
-				response["error"] = "No authorization token provided"
+				response["error"] = "No access_token cookie provided"
 			}
 			ctx.JSON(http.StatusUnauthorized, response)
 			ctx.Abort()
 			return
 		}
 
-		tokenParts := strings.Fields(strings.TrimSpace(tokenString))
-		if len(tokenParts) != 2 || tokenParts[0] != "Bearer" {
-			logger.Warnf("Invalid token format received")
-			response := gin.H{
-				"message": "Invalid authorization format",
-			}
-			if cfg.IsDev() {
-				response["error"] = "Token must be in format: Bearer <token>"
-			}
-			ctx.JSON(http.StatusBadRequest, response)
-			ctx.Abort()
-			return
-		}
-		tokenString = tokenParts[1]
-		claims, err := verifyAuthToken(tokenString, cfg)
+		claims, err := verifyAuthToken(cookieToken, cfg)
 		if err != nil {
 			logger.Warnf("Invalid token received: %v", err)
 			response := gin.H{

@@ -32,7 +32,7 @@ export default function SignupPage() {
       await signupUser(formData.name, formData.email, formData.password);
       router.push("/");
     } catch (err) {
-      console.log(err);
+      console.error(err);
     } finally {
       setLoading(false);
     }
