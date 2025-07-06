@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -euo pipefail
+
 # Always clone lucide into the frontend/lucide directory
 LUCIDE_DIR="$(dirname "$0")/../lucide"
 PACKAGE_JSON="$(dirname "$0")/../package.json"
