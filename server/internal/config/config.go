@@ -56,7 +56,7 @@ func NewConfig() (*Config, error) {
 	config.RefreshTokenDuration = time.Duration(refreshTokenDays) * 24 * time.Hour
 	config.CookieDomain = os.Getenv("COOKIE_DOMAIN")
 	if config.CookieDomain == "" {
-		config.CookieDomain = "https://neurospend.vercel.app"
+		config.CookieDomain = "neurospend.vercel.app"
 	}
 	return config, nil
 }
