@@ -21,6 +21,7 @@ type Config struct {
 	DBSchema             string
 	AccessTokenDuration  time.Duration
 	RefreshTokenDuration time.Duration
+	CookieDomain         string
 }
 
 func GetEnvironment() string {
@@ -53,6 +54,10 @@ func NewConfig() (*Config, error) {
 		return nil, fmt.Errorf("invalid REFRESH_TOKEN_DAYS: %w", err)
 	}
 	config.RefreshTokenDuration = time.Duration(refreshTokenDays) * 24 * time.Hour
+	config.CookieDomain = os.Getenv("COOKIE_DOMAIN")
+	if config.CookieDomain == "" {
+		config.CookieDomain = "https://neurospend.vercel.app"
+	}
 	return config, nil
 }
 

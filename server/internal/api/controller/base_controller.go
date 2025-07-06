@@ -175,8 +175,8 @@ func (b *BaseController) GetAuthenticatedUserId(ctx *gin.Context) int64 {
 // setAuthCookie sets a secure, HTTP-only cookie with SameSite=Lax for auth tokens
 func (b *BaseController) setAuthCookie(ctx *gin.Context, name, value string, maxAge int) {
 	domain := ""
-	if b.cfg.Environment == "prod" {
-		domain = "neurospend.vercel.app"
+	if b.cfg.IsProd() {
+		domain = b.cfg.CookieDomain
 	}
 	cookie := &http.Cookie{
 		Name:     name,
@@ -184,7 +184,7 @@ func (b *BaseController) setAuthCookie(ctx *gin.Context, name, value string, max
 		Path:     "/",
 		Domain:   domain,
 		MaxAge:   maxAge,
-		Secure:   true,
+		Secure:   b.cfg.IsProd(),
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
 	}
