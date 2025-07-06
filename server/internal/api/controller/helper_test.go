@@ -107,3 +107,30 @@ func (h *TestHelper) Login(email, password string) {
 	Expect(resp.StatusCode).To(Equal(http.StatusOK))
 	Expect(body["message"]).To(Equal("User logged in successfully"))
 }
+
+func (h *TestHelper) MakeRequestWithToken(method, reqUrl, token string, body interface{}) (*http.Response, map[string]interface{}) {
+	origAccessToken := h.AccessToken
+	origRefreshToken := h.RefreshToken
+	h.AccessToken = token
+	resp, response := h.MakeRequest(method, reqUrl, body)
+	h.AccessToken = origAccessToken
+	h.RefreshToken = origRefreshToken
+
+	return resp, response
+}
+
+// checkMalformedTokens tests endpoints with malformed and bad tokens for auth edge cases
+func checkMalformedTokens(helper *TestHelper, method, path string, body interface{}) {
+	malformedTokens := []string{
+		"invalid-token",
+		"Bearer",
+		"NotBearer validtoken",
+		"Bearer invalid.token.format",
+		"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.invalid",
+		"Bearer ",
+	}
+	for _, token := range malformedTokens {
+		resp, _ := helper.MakeRequestWithToken(method, path, token, body)
+		Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized), "Should fail for malformed token: "+token)
+	}
+}

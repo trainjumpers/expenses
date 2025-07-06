@@ -146,6 +146,32 @@ var _ = Describe("CategoryController", func() {
 			resp, _ := testHelperUser1.MakeRequest(http.MethodPost, "/category", "invalid json")
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 		})
+
+		Context("with malformed tokens", func() {
+			It("should return unauthorized or bad request for malformed tokens on create", func() {
+				input := models.CreateCategoryInput{
+					Name: "Malformed Token Category",
+					Icon: "icon",
+				}
+				checkMalformedTokens(testHelperUser1, http.MethodPost, "/category", input)
+			})
+			It("should return unauthorized or bad request for malformed tokens on list", func() {
+				checkMalformedTokens(testHelperUser1, http.MethodGet, "/category", nil)
+			})
+			It("should return unauthorized or bad request for malformed tokens on get", func() {
+				url := "/category/1"
+				checkMalformedTokens(testHelperUser1, http.MethodGet, url, nil)
+			})
+			It("should return unauthorized or bad request for malformed tokens on update", func() {
+				update := models.UpdateCategoryInput{Name: "Malformed Update"}
+				url := "/category/1"
+				checkMalformedTokens(testHelperUser1, http.MethodPatch, url, update)
+			})
+			It("should return unauthorized or bad request for malformed tokens on delete", func() {
+				url := "/category/1"
+				checkMalformedTokens(testHelperUser1, http.MethodDelete, url, nil)
+			})
+		})
 	})
 
 	Describe("ListCategories", func() {
