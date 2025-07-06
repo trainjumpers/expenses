@@ -6,26 +6,32 @@ import (
 	"expenses/internal/models"
 	"io"
 	"net/http"
+	"net/http/cookiejar"
+	"strings"
 
 	. "github.com/onsi/gomega"
 )
 
 // TestHelper encapsulates helper functions for controller tests
 type TestHelper struct {
-	Client  *http.Client
-	BaseURL string
+	Client       *http.Client
+	BaseURL      string
+	AccessToken  string
+	RefreshToken string
 }
 
 // NewTestHelper creates a new TestHelper
 func NewTestHelper(baseURL string) *TestHelper {
+	jar, err := cookiejar.New(nil)
+	Expect(err).NotTo(HaveOccurred())
 	return &TestHelper{
-		Client:  &http.Client{},
+		Client:  &http.Client{Jar: jar},
 		BaseURL: baseURL,
 	}
 }
 
 // MakeRequest performs an HTTP request and returns the response and decoded body
-func (h *TestHelper) MakeRequest(method, url, token string, body interface{}) (*http.Response, map[string]interface{}) {
+func (h *TestHelper) MakeRequest(method, reqUrl string, body interface{}) (*http.Response, map[string]interface{}) {
 	var reqBody io.Reader
 	if body != nil {
 		if str, ok := body.(string); ok {
@@ -37,12 +43,24 @@ func (h *TestHelper) MakeRequest(method, url, token string, body interface{}) (*
 		}
 	}
 
-	req, err := http.NewRequest(method, h.BaseURL+url, reqBody)
+	req, err := http.NewRequest(method, h.BaseURL+reqUrl, reqBody)
 	Expect(err).NotTo(HaveOccurred())
 
 	req.Header.Set("Content-Type", "application/json")
-	if token != "" {
-		req.Header.Set("Authorization", "Bearer "+token)
+
+	// Always set access_token and refresh_token in the Cookie header if present
+	var cookieHeader string
+	if h.AccessToken != "" {
+		cookieHeader += "access_token=" + h.AccessToken
+	}
+	if h.RefreshToken != "" {
+		if cookieHeader != "" {
+			cookieHeader += "; "
+		}
+		cookieHeader += "refresh_token=" + h.RefreshToken
+	}
+	if cookieHeader != "" {
+		req.Header.Set("Cookie", cookieHeader)
 	}
 
 	resp, err := h.Client.Do(req)
@@ -57,18 +75,35 @@ func (h *TestHelper) MakeRequest(method, url, token string, body interface{}) (*
 	return resp, responseBody
 }
 
-// Login performs a login request and returns the access and refresh tokens
-func (h *TestHelper) Login(email, password string) (string, string) {
+// Login performs a login request and ensures cookies are set
+func (h *TestHelper) Login(email, password string) {
 	loginInput := models.LoginInput{
 		Email:    email,
 		Password: password,
 	}
-	resp, body := h.MakeRequest(http.MethodPost, "/login", "", loginInput)
+	resp, body := h.MakeRequest(http.MethodPost, "/login", loginInput)
+
+	h.AccessToken = ""
+	h.RefreshToken = ""
+	for _, raw := range resp.Header["Set-Cookie"] {
+		parts := strings.Split(raw, " Secure ")
+		for _, part := range parts {
+			cookieStr := strings.TrimSpace(part)
+			if idx := strings.Index(cookieStr, ";"); idx != -1 {
+				cookieStr = cookieStr[:idx]
+			}
+			if eq := strings.Index(cookieStr, "="); eq != -1 {
+				name := strings.TrimSpace(cookieStr[:eq])
+				value := strings.TrimSpace(cookieStr[eq+1:])
+				if name == "access_token" {
+					h.AccessToken = value
+				}
+				if name == "refresh_token" {
+					h.RefreshToken = value
+				}
+			}
+		}
+	}
 	Expect(resp.StatusCode).To(Equal(http.StatusOK))
 	Expect(body["message"]).To(Equal("User logged in successfully"))
-
-	data := body["data"].(map[string]interface{})
-	accessToken := data["access_token"].(string)
-	refreshToken := data["refresh_token"].(string)
-	return accessToken, refreshToken
 }

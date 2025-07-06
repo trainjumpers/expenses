@@ -171,3 +171,24 @@ func (b *BaseController) BindForm(ctx *gin.Context, obj interface{}) error {
 func (b *BaseController) GetAuthenticatedUserId(ctx *gin.Context) int64 {
 	return ctx.GetInt64("authUserId")
 }
+
+// setAuthCookie sets a secure, HTTP-only cookie with SameSite=Lax for auth tokens
+func (b *BaseController) setAuthCookie(ctx *gin.Context, name, value string, maxAge int) {
+	domain := ""
+	if b.cfg.IsProd() {
+		domain = b.cfg.CookieDomain
+	}
+	cookie := &http.Cookie{
+		Name:     name,
+		Value:    value,
+		Path:     "/",
+		Domain:   domain,
+		MaxAge:   maxAge,
+		Secure:   b.cfg.IsProd(),
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+	}
+	// Gin's SetCookie does not support SameSite, so use Header directly
+	h := cookie.String()
+	ctx.Writer.Header().Add("Set-Cookie", h)
+}

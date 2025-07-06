@@ -1,4 +1,4 @@
-import { apiRequest, authHeaders } from "@/lib/api/request";
+import { apiRequest } from "@/lib/api/request";
 import { API_BASE_URL } from "@/lib/constants/api";
 import {
   CreateTransaction,
@@ -20,7 +20,7 @@ export async function getAllTransactions(
     `${API_BASE_URL}/transaction${query.toString() ? `?${query.toString()}` : ""}`,
     {
       method: "GET",
-      headers: { "Content-Type": "application/json", ...authHeaders() },
+      credentials: "include",
     },
     "transaction",
     [],
@@ -38,7 +38,7 @@ export async function createTransaction(
     `${API_BASE_URL}/transaction`,
     {
       method: "POST",
-      headers: { "Content-Type": "application/json", ...authHeaders() },
+      credentials: "include",
       body: JSON.stringify(transaction),
     },
     "transaction",
@@ -55,7 +55,7 @@ export async function updateTransaction(
     `${API_BASE_URL}/transaction/${id}`,
     {
       method: "PATCH",
-      headers: { "Content-Type": "application/json", ...authHeaders() },
+      credentials: "include",
       body: JSON.stringify(update),
     },
     "transaction",

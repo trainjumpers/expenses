@@ -1,4 +1,4 @@
-import { apiRequest, authHeaders } from "@/lib/api/request";
+import { apiRequest } from "@/lib/api/request";
 import { API_BASE_URL } from "@/lib/constants/api";
 import { Account, CreateAccountInput } from "@/lib/models/account";
 
@@ -6,7 +6,6 @@ export async function listAccounts(signal?: AbortSignal): Promise<Account[]> {
   return apiRequest<Account[]>(
     `${API_BASE_URL}/account`,
     {
-      headers: authHeaders(),
       credentials: "include",
       signal,
     },
@@ -20,7 +19,6 @@ export async function getAccount(id: number): Promise<Account> {
   return apiRequest<Account>(
     `${API_BASE_URL}/account/${id}`,
     {
-      headers: authHeaders(),
       credentials: "include",
     },
     "account",
@@ -36,7 +34,6 @@ export async function createAccount(
     `${API_BASE_URL}/account`,
     {
       method: "POST",
-      headers: authHeaders(),
       credentials: "include",
       body: JSON.stringify(input),
     },
@@ -54,7 +51,6 @@ export async function updateAccount(
     `${API_BASE_URL}/account/${id}`,
     {
       method: "PATCH",
-      headers: authHeaders(),
       credentials: "include",
       body: JSON.stringify(input),
     },
@@ -69,7 +65,6 @@ export async function deleteAccount(id: number): Promise<void> {
     `${API_BASE_URL}/account/${id}`,
     {
       method: "DELETE",
-      headers: authHeaders(),
       credentials: "include",
     },
     "account",

@@ -12,7 +12,7 @@ var _ = Describe("UserController", func() {
 	Describe("GetUserById", func() {
 		Context("with valid token", func() {
 			It("should get user details successfully", func() {
-				resp, response := testHelper.MakeRequest(http.MethodGet, "/user", accessToken, nil)
+				resp, response := testHelperUser1.MakeRequest(http.MethodGet, "/user", nil)
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 				Expect(response["message"]).To(Equal("User retrieved successfully"))
 				Expect(response["data"]).To(HaveKey("id"))
@@ -26,12 +26,12 @@ var _ = Describe("UserController", func() {
 
 		Context("with invalid token", func() {
 			It("should return unauthorized", func() {
-				resp, _ := testHelper.MakeRequest(http.MethodGet, "/user", "invalid-token", nil)
+				resp, _ := testHelperUnauthenticated.MakeRequest(http.MethodGet, "/user", nil)
 				Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
 			})
 
 			It("should return unauthorized for missing authorization header", func() {
-				resp, _ := testHelper.MakeRequest(http.MethodGet, "/user", "", nil)
+				resp, _ := testHelperUnauthenticated.MakeRequest(http.MethodGet, "/user", "")
 				Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
 			})
 		})
@@ -43,7 +43,7 @@ var _ = Describe("UserController", func() {
 				updateInput := models.UpdateUserInput{
 					Name: "Updated Name",
 				}
-				resp, response := testHelper.MakeRequest(http.MethodPatch, "/user", accessToken, updateInput)
+				resp, response := testHelperUser1.MakeRequest(http.MethodPatch, "/user", updateInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 				Expect(response["message"]).To(Equal("User updated successfully"))
 				data := response["data"].(map[string]interface{})
@@ -54,7 +54,7 @@ var _ = Describe("UserController", func() {
 				updateInput := models.UpdateUserInput{
 					Name: "  Trimmed Name  ", // Name with leading and trailing whitespace
 				}
-				resp, response := testHelper.MakeRequest(http.MethodPatch, "/user", accessToken, updateInput)
+				resp, response := testHelperUser1.MakeRequest(http.MethodPatch, "/user", updateInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 				Expect(response["message"]).To(Equal("User updated successfully"))
 				data := response["data"].(map[string]interface{})
@@ -65,7 +65,7 @@ var _ = Describe("UserController", func() {
 				updateInput := models.UpdateUserInput{
 					Name: "\t  Complex Whitespace Name  \n", // Name with tabs and newlines
 				}
-				resp, response := testHelper.MakeRequest(http.MethodPatch, "/user", accessToken, updateInput)
+				resp, response := testHelperUser1.MakeRequest(http.MethodPatch, "/user", updateInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 				Expect(response["message"]).To(Equal("User updated successfully"))
 				data := response["data"].(map[string]interface{})
@@ -75,12 +75,12 @@ var _ = Describe("UserController", func() {
 
 		Context("with invalid input", func() {
 			It("should return bad request for invalid JSON", func() {
-				resp, _ := testHelper.MakeRequest(http.MethodPatch, "/user", accessToken, "invalid json")
+				resp, _ := testHelperUser1.MakeRequest(http.MethodPatch, "/user", "invalid json")
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 
 			It("should return bad request for empty body", func() {
-				resp, _ := testHelper.MakeRequest(http.MethodPatch, "/user", accessToken, "")
+				resp, _ := testHelperUser1.MakeRequest(http.MethodPatch, "/user", "")
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 
@@ -88,7 +88,7 @@ var _ = Describe("UserController", func() {
 				updateInput := models.UpdateUserInput{
 					Name: "   ",
 				}
-				resp, response := testHelper.MakeRequest(http.MethodPatch, "/user", accessToken, updateInput)
+				resp, response := testHelperUser1.MakeRequest(http.MethodPatch, "/user", updateInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 				Expect(response["message"]).To(Equal("no fields to update"))
 			})
@@ -97,7 +97,7 @@ var _ = Describe("UserController", func() {
 				updateInput := models.UpdateUserInput{
 					Name: "\t\n  \r  ", // Only various whitespace characters
 				}
-				resp, response := testHelper.MakeRequest(http.MethodPatch, "/user", accessToken, updateInput)
+				resp, response := testHelperUser1.MakeRequest(http.MethodPatch, "/user", updateInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 				Expect(response["message"]).To(ContainSubstring("no fields to update"))
 			})
@@ -106,7 +106,7 @@ var _ = Describe("UserController", func() {
 				updateInput := map[string]interface{}{
 					"somerandomparam": 123,
 				}
-				resp, _ := testHelper.MakeRequest(http.MethodPatch, "/user", accessToken, updateInput)
+				resp, _ := testHelperUser1.MakeRequest(http.MethodPatch, "/user", updateInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 
@@ -117,31 +117,32 @@ var _ = Describe("UserController", func() {
 					Name:     "Test user for update not exists",
 					Password: "password123",
 				}
-				resp, response := testHelper.MakeRequest(http.MethodPost, "/signup", "", userInput)
+				user := NewTestHelper(baseURL)
+				resp, _ := user.MakeRequest(http.MethodPost, "/signup", userInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
-				Expect(response["data"]).To(HaveKey("access_token"))
-				tokenForDeletedUser := response["data"].(map[string]interface{})["access_token"].(string)
+
+				user.Login("userToUpdateNotExists@example.com", "password123")
 
 				// Delete the user
-				resp, _ = testHelper.MakeRequest(http.MethodDelete, "/user", tokenForDeletedUser, nil)
+				resp, _ = user.MakeRequest(http.MethodDelete, "/user", nil)
 				Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
 
 				// Now try to update the deleted user - should get 404
 				updateInput := models.UpdateUserInput{
 					Name: "Updated Name",
 				}
-				resp, response = testHelper.MakeRequest(http.MethodPatch, "/user", tokenForDeletedUser, updateInput)
+				resp, response := user.MakeRequest(http.MethodPatch, "/user", updateInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 				Expect(response["message"]).To(Equal("user not found"))
 			})
 
 			It("should be unauthorized for invalid token", func() {
-				resp, _ := testHelper.MakeRequest(http.MethodPatch, "/user", "invalid-token", "{}")
+				resp, _ := testHelperUnauthenticated.MakeRequest(http.MethodPatch, "/user", "{}")
 				Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
 			})
 
 			It("should be unauthorized for missing authorization header", func() {
-				resp, _ := testHelper.MakeRequest(http.MethodPatch, "/user", "", "{}")
+				resp, _ := testHelperUnauthenticated.MakeRequest(http.MethodPatch, "/user", "")
 				Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
 			})
 		})
@@ -156,16 +157,17 @@ var _ = Describe("UserController", func() {
 					Name:     "Test password update",
 					Password: "password123",
 				}
-				resp, response := testHelper.MakeRequest(http.MethodPost, "/signup", "", userInput)
+				user := NewTestHelper(baseURL)
+				resp, _ := user.MakeRequest(http.MethodPost, "/signup", userInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
-				Expect(response["data"]).To(HaveKey("access_token"))
-				newAccessToken := response["data"].(map[string]interface{})["access_token"].(string)
+
+				user.Login("passwordUpdate@example.com", "password123")
 
 				updateInput := models.UpdateUserPasswordInput{
 					OldPassword: "password123",
 					NewPassword: "newpassword123",
 				}
-				resp, response = testHelper.MakeRequest(http.MethodPost, "/user/password", newAccessToken, updateInput)
+				resp, response := user.MakeRequest(http.MethodPost, "/user/password", updateInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 				Expect(response["message"]).To(Equal("User password updated successfully"))
 				Expect(response).NotTo(HaveKey("password"))
@@ -175,7 +177,7 @@ var _ = Describe("UserController", func() {
 					Email:    "passwordUpdate@example.com",
 					Password: "newpassword123",
 				}
-				resp, _ = testHelper.MakeRequest(http.MethodPost, "/login", "", loginInput)
+				resp, _ = user.MakeRequest(http.MethodPost, "/login", loginInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			})
 
@@ -186,16 +188,17 @@ var _ = Describe("UserController", func() {
 					Name:     "Test password whitespace update",
 					Password: "password123",
 				}
-				resp, response := testHelper.MakeRequest(http.MethodPost, "/signup", "", userInput)
+				user := NewTestHelper(baseURL)
+				resp, _ := user.MakeRequest(http.MethodPost, "/signup", userInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
-				Expect(response["data"]).To(HaveKey("access_token"))
-				newAccessToken := response["data"].(map[string]interface{})["access_token"].(string)
+
+				user.Login("passwordWhitespaceUpdate@example.com", "password123")
 
 				updateInput := models.UpdateUserPasswordInput{
 					OldPassword: "  password123  ",    // Old password with whitespace
 					NewPassword: "  newpassword123  ", // New password with whitespace
 				}
-				resp, response = testHelper.MakeRequest(http.MethodPost, "/user/password", newAccessToken, updateInput)
+				resp, response := user.MakeRequest(http.MethodPost, "/user/password", updateInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 				Expect(response["message"]).To(Equal("User password updated successfully"))
 
@@ -204,7 +207,7 @@ var _ = Describe("UserController", func() {
 					Email:    "passwordWhitespaceUpdate@example.com",
 					Password: "newpassword123", // Trimmed password should work
 				}
-				resp, _ = testHelper.MakeRequest(http.MethodPost, "/login", "", loginInput)
+				resp, _ = user.MakeRequest(http.MethodPost, "/login", loginInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			})
 		})
@@ -215,17 +218,17 @@ var _ = Describe("UserController", func() {
 					OldPassword: "wrongpassword",
 					NewPassword: "newpassword123",
 				}
-				resp, _ := testHelper.MakeRequest(http.MethodPost, "/user/password", accessToken, updateInput)
+				resp, _ := testHelperUser1.MakeRequest(http.MethodPost, "/user/password", updateInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
 			})
 
 			It("should return bad request for invalid JSON", func() {
-				resp, _ := testHelper.MakeRequest(http.MethodPost, "/user/password", accessToken, "invalid json")
+				resp, _ := testHelperUser1.MakeRequest(http.MethodPost, "/user/password", "invalid json")
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 
 			It("should return bad request for empty body", func() {
-				resp, _ := testHelper.MakeRequest(http.MethodPost, "/user/password", accessToken, "")
+				resp, _ := testHelperUser1.MakeRequest(http.MethodPost, "/user/password", "")
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 
@@ -234,7 +237,7 @@ var _ = Describe("UserController", func() {
 					OldPassword: "   ", // Only whitespace - will become empty after trimming
 					NewPassword: "newpassword123",
 				}
-				resp, response := testHelper.MakeRequest(http.MethodPost, "/user/password", accessToken, updateInput)
+				resp, response := testHelperUser1.MakeRequest(http.MethodPost, "/user/password", updateInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 				Expect(response["message"]).To(ContainSubstring("required"))
 			})
@@ -244,18 +247,18 @@ var _ = Describe("UserController", func() {
 					OldPassword: "password123",
 					NewPassword: "   ", // Only whitespace - will become empty after trimming
 				}
-				resp, response := testHelper.MakeRequest(http.MethodPost, "/user/password", accessToken, updateInput)
+				resp, response := testHelperUser1.MakeRequest(http.MethodPost, "/user/password", updateInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 				Expect(response["message"]).To(ContainSubstring("validation"))
 			})
 
 			It("should be unauthorized for invalid token", func() {
-				resp, _ := testHelper.MakeRequest(http.MethodPost, "/user/password", "invalid-token", "{}")
+				resp, _ := testHelperUnauthenticated.MakeRequest(http.MethodPost, "/user/password", "{}")
 				Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
 			})
 
 			It("should be unauthorized for missing authorization header", func() {
-				resp, _ := testHelper.MakeRequest(http.MethodPost, "/user/password", "", "{}")
+				resp, _ := testHelperUnauthenticated.MakeRequest(http.MethodPost, "/user/password", "")
 				Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
 			})
 
@@ -263,7 +266,7 @@ var _ = Describe("UserController", func() {
 				updateInput := models.UpdateUserPasswordInput{
 					NewPassword: "newpassword123",
 				}
-				resp, _ := testHelper.MakeRequest(http.MethodPost, "/user/password", accessToken, updateInput)
+				resp, _ := testHelperUser1.MakeRequest(http.MethodPost, "/user/password", updateInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 
@@ -271,24 +274,25 @@ var _ = Describe("UserController", func() {
 				updateInput := models.UpdateUserPasswordInput{
 					OldPassword: "password",
 				}
-				resp, _ := testHelper.MakeRequest(http.MethodPost, "/user/password", accessToken, updateInput)
+				resp, _ := testHelperUser1.MakeRequest(http.MethodPost, "/user/password", updateInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 
 			It("should return not found when user doesn't exist", func() {
 				// Create a new user
+				user := NewTestHelper(baseURL)
 				userInput := models.CreateUserInput{
 					Email:    "userToPasswordUpdateNotExists@example.com",
 					Name:     "Test user for password update not exists",
 					Password: "password123",
 				}
-				resp, response := testHelper.MakeRequest(http.MethodPost, "/signup", "", userInput)
+				resp, _ := user.MakeRequest(http.MethodPost, "/signup", userInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
-				Expect(response["data"]).To(HaveKey("access_token"))
-				tokenForDeletedUser := response["data"].(map[string]interface{})["access_token"].(string)
+
+				user.Login("userToPasswordUpdateNotExists@example.com", "password123")
 
 				// Delete the user
-				resp, _ = testHelper.MakeRequest(http.MethodDelete, "/user", tokenForDeletedUser, nil)
+				resp, _ = user.MakeRequest(http.MethodDelete, "/user", nil)
 				Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
 
 				// Now try to update password for the deleted user - should get 404
@@ -296,7 +300,7 @@ var _ = Describe("UserController", func() {
 					OldPassword: "password123",
 					NewPassword: "newpassword123",
 				}
-				resp, response = testHelper.MakeRequest(http.MethodPost, "/user/password", tokenForDeletedUser, updateInput)
+				resp, response := user.MakeRequest(http.MethodPost, "/user/password", updateInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 				Expect(response["message"]).To(Equal("user not found"))
 			})
@@ -306,58 +310,60 @@ var _ = Describe("UserController", func() {
 	Describe("DeleteUser", func() {
 		Context("with valid token", func() {
 			It("should delete user successfully", func() {
+				user := NewTestHelper(baseURL)
 				// Create a new user
 				userInput := models.CreateUserInput{
 					Email:    "deleteUser@example.com",
 					Name:     "Test user to delete",
 					Password: "password123",
 				}
-				resp, response := testHelper.MakeRequest(http.MethodPost, "/signup", "", userInput)
+				resp, _ := user.MakeRequest(http.MethodPost, "/signup", userInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
-				Expect(response["data"]).To(HaveKey("access_token"))
-				newAccessToken := response["data"].(map[string]interface{})["access_token"].(string)
+
+				user.Login("deleteUser@example.com", "password123")
 
 				// Delete the user
-				resp, _ = testHelper.MakeRequest(http.MethodDelete, "/user", newAccessToken, nil)
+				resp, _ = user.MakeRequest(http.MethodDelete, "/user", nil)
 				Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
 
 				// Verify user is deleted by trying to get user details
-				resp, _ = testHelper.MakeRequest(http.MethodGet, "/user", newAccessToken, nil)
+				resp, _ = user.MakeRequest(http.MethodGet, "/user", nil)
 				Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 			})
 		})
 
 		Context("with invalid token", func() {
 			It("should return unauthorized", func() {
-				resp, _ := testHelper.MakeRequest(http.MethodDelete, "/user", "invalid-token", nil)
+				resp, _ := testHelperUnauthenticated.MakeRequest(http.MethodDelete, "/user", nil)
 				Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
 			})
 
 			It("should return unauthorized for missing authorization header", func() {
-				resp, _ := testHelper.MakeRequest(http.MethodDelete, "/user", "", nil)
+				resp, _ := testHelperUnauthenticated.MakeRequest(http.MethodDelete, "/user", "")
 				Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
 			})
 		})
 
 		Context("when user doesn't exist", func() {
 			It("should return error when user doesn't exist", func() {
+				user := NewTestHelper(baseURL)
 				// Create a new user
 				userInput := models.CreateUserInput{
 					Email:    "userToDeleteNotExists@example.com",
 					Name:     "Test user for delete not exists",
 					Password: "password123",
 				}
-				resp, response := testHelper.MakeRequest(http.MethodPost, "/signup", "", userInput)
+				resp, _ := user.MakeRequest(http.MethodPost, "/signup", userInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
-				Expect(response["data"]).To(HaveKey("access_token"))
-				tokenForDeletedUser := response["data"].(map[string]interface{})["access_token"].(string)
+
+				user.Login("userToDeleteNotExists@example.com", "password123")
 
 				// Delete the user first time
-				resp, _ = testHelper.MakeRequest(http.MethodDelete, "/user", tokenForDeletedUser, nil)
+				resp, _ = user.MakeRequest(http.MethodDelete, "/user", nil)
 				Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
 
 				// Now try to delete the already deleted user - should get 404
-				resp, _ = testHelper.MakeRequest(http.MethodDelete, "/user", tokenForDeletedUser, nil)
+				resp, _ = user.MakeRequest(http.MethodDelete, "/user", nil)
 				Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 			})
 		})
