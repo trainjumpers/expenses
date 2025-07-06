@@ -27,7 +27,6 @@ interface AccountFormProps {
     balance: string;
   }) => Promise<void>;
   loading: boolean;
-  isRefreshing?: boolean;
   submitText: string;
   onOpenChange: (open: boolean) => void;
 }
@@ -36,7 +35,6 @@ export function AccountForm({
   initialValues,
   onSubmit,
   loading,
-  isRefreshing = false,
   submitText,
   onOpenChange,
 }: AccountFormProps) {
@@ -130,15 +128,15 @@ export function AccountForm({
           type="button"
           variant="outline"
           onClick={() => onOpenChange(false)}
-          disabled={loading || isRefreshing}
+          disabled={loading}
         >
           Cancel
         </Button>
         <LoadingButton
           type="submit"
-          loading={loading || isRefreshing}
+          loading={loading}
           fixedWidth="100px"
-          disabled={loading || isRefreshing}
+          disabled={loading}
         >
           {submitText}
         </LoadingButton>

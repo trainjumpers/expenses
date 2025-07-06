@@ -12,7 +12,6 @@ interface CategoryFormProps {
   };
   onSubmit: (formData: { name: string; icon: IconName }) => Promise<void>;
   loading: boolean;
-  isRefreshing?: boolean;
   submitText: string;
   onOpenChange: (open: boolean) => void;
 }
@@ -21,7 +20,6 @@ export function CategoryForm({
   initialValues,
   onSubmit,
   loading,
-  isRefreshing = false,
   submitText,
   onOpenChange,
 }: CategoryFormProps) {
@@ -67,9 +65,9 @@ export function CategoryForm({
         </Button>
         <LoadingButton
           type="submit"
-          loading={loading || isRefreshing}
+          loading={loading}
           fixedWidth="140px"
-          disabled={loading || isRefreshing}
+          disabled={loading}
         >
           {submitText}
         </LoadingButton>

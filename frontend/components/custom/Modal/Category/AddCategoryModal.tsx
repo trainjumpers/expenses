@@ -1,3 +1,4 @@
+import { useCreateCategory } from "@/components/hooks/useCategories";
 import {
   Dialog,
   DialogContent,
@@ -5,11 +6,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { IconName } from "@/components/ui/icon-picker";
-import { createCategory } from "@/lib/api/category";
 import { Category } from "@/lib/models/category";
 import { Tag } from "lucide-react";
 import { useState } from "react";
-import { toast } from "sonner";
 
 import { CategoryForm } from "./CategoryForm";
 
@@ -25,26 +24,27 @@ export function AddCategoryModal({
   onCategoryAdded,
 }: AddCategoryModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const createCategoryMutation = useCreateCategory();
 
   const handleSubmit = async (formData: { name: string; icon: IconName }) => {
     setIsSubmitting(true);
-    try {
-      const categoryData = {
-        name: formData.name,
-        icon: formData.icon,
-      };
-      const category = await createCategory(categoryData);
-      toast.success("Category added successfully!");
-      if (onCategoryAdded) {
-        onCategoryAdded(category);
+    createCategoryMutation.mutate(
+      { name: formData.name, icon: formData.icon },
+      {
+        onSuccess: (category) => {
+          if (onCategoryAdded) {
+            onCategoryAdded(category);
+          }
+          onOpenChange(false);
+        },
+        onError: (error) => {
+          console.error("Failed to create category:", error);
+        },
+        onSettled: () => {
+          setIsSubmitting(false);
+        },
       }
-      onOpenChange(false);
-    } catch (error) {
-      console.error("Failed to create category:", error);
-      toast.error("Failed to create category");
-    } finally {
-      setIsSubmitting(false);
-    }
+    );
   };
 
   return (

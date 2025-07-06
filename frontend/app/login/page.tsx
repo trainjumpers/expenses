@@ -1,6 +1,6 @@
 "use client";
 
-import { useSession } from "@/components/custom/Provider/SessionProvider";
+import { useLogin } from "@/components/hooks/useUser";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
@@ -8,14 +8,14 @@ import { useTheme } from "next-themes";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { toast } from "sonner";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login } = useSession();
   const { theme } = useTheme();
+  const loginMutation = useLogin();
 
   const [formData, setFormData] = useState({ email: "", password: "" });
-  const [loading, setLoading] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -23,15 +23,16 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    try {
-      await login(formData.email, formData.password);
-      router.push("/");
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
+
+    loginMutation.mutate(
+      { email: formData.email, password: formData.password },
+      {
+        onSuccess: () => {
+          router.push("/");
+          toast.success("Welcome back!");
+        },
+      }
+    );
   };
 
   return (
@@ -56,6 +57,7 @@ export default function LoginPage() {
               value={formData.email}
               onChange={handleChange}
               className="bg-white/40 dark:bg-input/40 backdrop-blur-md border border-border focus:border-primary/60 shadow-inner focus:shadow-lg transition-all duration-200"
+              disabled={loginMutation.isPending}
             />
           </div>
           <div>
@@ -68,14 +70,15 @@ export default function LoginPage() {
               value={formData.password}
               onChange={handleChange}
               className="bg-white/40 dark:bg-input/40 backdrop-blur-md border border-border focus:border-primary/60 shadow-inner focus:shadow-lg transition-all duration-200"
+              disabled={loginMutation.isPending}
             />
           </div>
           <Button
             type="submit"
             className="w-full font-semibold shadow-lg shadow-primary/10 hover:shadow-xl transition-all duration-200"
-            disabled={loading}
+            disabled={loginMutation.isPending}
           >
-            {loading && <Spinner />}
+            {loginMutation.isPending && <Spinner />}
             Sign In
           </Button>
         </form>

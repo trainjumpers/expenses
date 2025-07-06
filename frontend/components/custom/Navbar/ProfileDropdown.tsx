@@ -1,6 +1,6 @@
 "use client";
 
-import { useUser } from "@/components/custom/Provider/UserProvider";
+import { useLogout, useUser } from "@/components/hooks/useUser";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,7 +15,8 @@ import { PasswordModal } from "../Modal/PasswordModal";
 import { ProfileModal } from "../Modal/ProfileModal";
 
 export function ProfileDropdown() {
-  const { read: user, logout } = useUser();
+  const { data: user } = useUser();
+  const logoutMutation = useLogout();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isPasswordOpen, setIsPasswordOpen] = useState(false);
 
@@ -28,52 +29,71 @@ export function ProfileDropdown() {
       .toUpperCase();
   };
 
+  const handleLogout = () => {
+    logoutMutation.mutate();
+  };
+
+  if (!user) {
+    return (
+      <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+        <Avatar className="h-8 w-8">
+          <AvatarFallback>
+            <UserCircle className="h-4 w-4" />
+          </AvatarFallback>
+        </Avatar>
+      </Button>
+    );
+  }
+
   return (
     <>
       <Popover>
         <PopoverTrigger asChild>
           <Button variant="ghost" className="relative h-8 w-8 rounded-full">
             <Avatar className="h-8 w-8">
-              <AvatarFallback>{getInitials(user().name)}</AvatarFallback>
+              <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
             </Avatar>
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-56" align="end">
+        <PopoverContent className="w-56" align="end" forceMount>
           <div className="flex flex-col space-y-1">
-            <div className="px-2 py-1.5 text-sm font-medium flex items-center gap-2">
-              <User className="h-4 w-4 ml-1 mr-2 text-muted-foreground" />
-              {user().name}
-            </div>
-            <div className="h-px bg-border my-1" />
+            <p className="text-sm font-medium leading-none">{user.name}</p>
+            <p className="text-xs leading-none text-muted-foreground">
+              {user.email}
+            </p>
+          </div>
+          <div className="mt-3 space-y-1">
             <Button
               variant="ghost"
-              className="justify-start"
+              className="w-full justify-start"
               onClick={() => setIsProfileOpen(true)}
             >
-              <UserCircle className="mr-2 h-4 w-4" />
+              <User className="mr-2 h-4 w-4" />
               Profile
             </Button>
             <Button
               variant="ghost"
-              className="justify-start"
+              className="w-full justify-start"
               onClick={() => setIsPasswordOpen(true)}
             >
               <Key className="mr-2 h-4 w-4" />
-              Password
+              Change Password
             </Button>
             <Button
               variant="ghost"
-              className="justify-start text-destructive hover:text-destructive"
-              onClick={logout}
+              className="w-full justify-start"
+              onClick={handleLogout}
+              disabled={logoutMutation.isPending}
             >
               <LogOut className="mr-2 h-4 w-4" />
-              Logout
+              Log out
             </Button>
           </div>
         </PopoverContent>
       </Popover>
 
       <ProfileModal isOpen={isProfileOpen} onOpenChange={setIsProfileOpen} />
+
       <PasswordModal isOpen={isPasswordOpen} onOpenChange={setIsPasswordOpen} />
     </>
   );

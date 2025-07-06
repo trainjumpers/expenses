@@ -2,6 +2,7 @@ import { ConfirmDialog } from "@/components/custom/Modal/ConfirmDialog";
 import { AddRuleModal } from "@/components/custom/Modal/Rule/AddRuleModal";
 import { EditRuleModal } from "@/components/custom/Modal/Rule/EditRuleModal";
 import { RuleListSkeleton } from "@/components/custom/Skeletons/RuleSkeletons";
+import { useDeleteRule, useRules } from "@/components/hooks/useRules";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -9,10 +10,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { deleteRule, listRules } from "@/lib/api/rule";
 import type { Rule } from "@/lib/models/rule";
 import { BookOpen, Trash2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 interface ViewRulesModalProps {
   isOpen: boolean;
@@ -23,25 +23,13 @@ export const ViewRulesModal = ({
   isOpen,
   onOpenChange,
 }: ViewRulesModalProps) => {
-  const [rules, setRules] = useState<Rule[]>([]);
-  const [loading, setLoading] = useState(false);
+  const { data: rules = [], isLoading, refetch } = useRules();
   const [editRuleId, setEditRuleId] = useState<number | null>(null);
   const [isAddRuleModalOpen, setIsAddRuleModalOpen] = useState(false);
   const [loadingId, setLoadingId] = useState<number | null>(null);
   const [confirmDeleteRule, setConfirmDeleteRule] = useState<Rule | null>(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
-
-  const refreshRules = () => {
-    setLoading(true);
-    listRules()
-      .then((data) => setRules(data))
-      .finally(() => setLoading(false));
-  };
-
-  useEffect(() => {
-    if (!isOpen) return;
-    refreshRules();
-  }, [isOpen]);
+  const deleteRuleMutation = useDeleteRule();
 
   const openDeleteDialog = (rule: Rule) => {
     setConfirmDeleteRule(rule);
@@ -52,11 +40,11 @@ export const ViewRulesModal = ({
     if (!confirmDeleteRule) return;
     setConfirmLoading(true);
     setLoadingId(confirmDeleteRule.id);
-    await deleteRule(confirmDeleteRule.id);
+    await deleteRuleMutation.mutateAsync(confirmDeleteRule.id);
     setConfirmDeleteRule(null);
     setConfirmLoading(false);
     setLoadingId(null);
-    refreshRules();
+    refetch();
   };
 
   return (
@@ -70,7 +58,7 @@ export const ViewRulesModal = ({
             </DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            {loading ? (
+            {isLoading ? (
               <RuleListSkeleton count={3} />
             ) : rules.length === 0 ? (
               <div className="text-muted-foreground text-center">
@@ -132,7 +120,7 @@ export const ViewRulesModal = ({
           onOpenChange={(open) => {
             if (!open) {
               setEditRuleId(null);
-              refreshRules();
+              refetch();
             }
           }}
           ruleId={editRuleId}

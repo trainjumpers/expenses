@@ -2,3 +2,5 @@ tmp/
 *.env
 .idea/
 coverage.txt
+
+.vscode/

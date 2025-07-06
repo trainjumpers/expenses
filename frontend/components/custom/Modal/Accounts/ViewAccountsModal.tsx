@@ -1,7 +1,7 @@
 import { AddAccountModal } from "@/components/custom/Modal/Accounts/AddAccountModal";
 import { UpdateAccountModal } from "@/components/custom/Modal/Accounts/UpdateAccountModal";
 import { ConfirmDialog } from "@/components/custom/Modal/ConfirmDialog";
-import { useAccounts } from "@/components/custom/Provider/AccountProvider";
+import { useAccounts, useDeleteAccount } from "@/components/hooks/useAccounts";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -22,14 +22,13 @@ export function ViewAccountsModal({
   isOpen,
   onOpenChange,
 }: ViewAccountsModalProps) {
-  const { read: readAccounts, delete: deleteAccount, refresh } = useAccounts();
+  const { data: accounts = [] } = useAccounts();
+  const deleteAccountMutation = useDeleteAccount();
+
   const [isAddAccountModalOpen, setIsAddAccountModalOpen] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
-  const [loadingId, setLoadingId] = useState<number | null>(null);
   const [confirmDeleteAccount, setConfirmDeleteAccount] =
     useState<Account | null>(null);
-  const [confirmLoading, setConfirmLoading] = useState(false);
-  const accounts = readAccounts();
 
   const handleAccountUpdated = () => {
     setSelectedAccount(null);
@@ -37,18 +36,16 @@ export function ViewAccountsModal({
 
   const openDeleteDialog = (account: Account) => {
     setConfirmDeleteAccount(account);
-    setConfirmLoading(false);
   };
 
   const handleConfirmDelete = async () => {
     if (!confirmDeleteAccount) return;
-    setConfirmLoading(true);
-    setLoadingId(confirmDeleteAccount.id);
-    await deleteAccount(confirmDeleteAccount.id);
-    refresh();
-    setConfirmDeleteAccount(null);
-    setConfirmLoading(false);
-    setLoadingId(null);
+
+    deleteAccountMutation.mutate(confirmDeleteAccount.id, {
+      onSuccess: () => {
+        setConfirmDeleteAccount(null);
+      },
+    });
   };
 
   return (
@@ -91,7 +88,7 @@ export function ViewAccountsModal({
                       <Button
                         variant="destructive"
                         size="sm"
-                        disabled={loadingId === account.id}
+                        disabled={deleteAccountMutation.isPending}
                         onClick={() => openDeleteDialog(account)}
                       >
                         <Trash2 className="h-4 w-4" />
@@ -139,7 +136,7 @@ export function ViewAccountsModal({
         confirmLabel="Delete"
         cancelLabel="Cancel"
         destructive
-        loading={confirmLoading}
+        loading={deleteAccountMutation.isPending}
         onConfirm={handleConfirmDelete}
       />
     </>

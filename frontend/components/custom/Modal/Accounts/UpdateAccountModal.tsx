@@ -1,14 +1,13 @@
+import { useUpdateAccount } from "@/components/hooks/useAccounts";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { updateAccount } from "@/lib/api/account";
 import { Account, BankType, Currency } from "@/lib/models/account";
 import { Wallet } from "lucide-react";
 import { useState } from "react";
-import { toast } from "sonner";
 
 import { AccountForm } from "./AccountForm";
 
@@ -26,6 +25,7 @@ export function UpdateAccountModal({
   onAccountUpdated,
 }: UpdateAccountModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const updateAccountMutation = useUpdateAccount();
 
   const handleSubmit = async (formData: {
     name: string;
@@ -34,25 +34,25 @@ export function UpdateAccountModal({
     balance: string;
   }) => {
     setIsSubmitting(true);
-    try {
-      const accountData = {
-        name: formData.name,
-        bank_type: formData.bank_type,
-        currency: formData.currency,
-        balance: formData.balance ? Number(formData.balance) : undefined,
-      };
-      await updateAccount(account.id, accountData);
-      toast.success("Account updated successfully!");
-      if (onAccountUpdated) {
-        onAccountUpdated();
+    const accountData = {
+      name: formData.name,
+      bank_type: formData.bank_type,
+      currency: formData.currency,
+      balance: formData.balance ? Number(formData.balance) : undefined,
+    };
+    updateAccountMutation.mutate(
+      { id: account.id, data: accountData },
+      {
+        onSuccess: () => {
+          if (onAccountUpdated) onAccountUpdated();
+          onOpenChange(false);
+        },
+        onError: (error) => {
+          console.error("Failed to update account:", error);
+        },
+        onSettled: () => setIsSubmitting(false),
       }
-      onOpenChange(false);
-    } catch (error) {
-      console.error("Failed to update account:", error);
-      toast.error("Failed to update account");
-    } finally {
-      setIsSubmitting(false);
-    }
+    );
   };
 
   return (
