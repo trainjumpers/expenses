@@ -145,6 +145,33 @@ var _ = Describe("AccountController", func() {
 				Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
 			})
 		})
+
+		Context("with malformed tokens", func() {
+			It("should return unauthorized or bad request for malformed tokens on create", func() {
+				input := models.CreateAccountInput{
+					Name:     "Malformed Token Account",
+					BankType: models.BankTypeAxis,
+					Currency: models.CurrencyINR,
+				}
+				checkMalformedTokens(testHelperUser1, http.MethodPost, "/account", input)
+			})
+			It("should return unauthorized or bad request for malformed tokens on list", func() {
+				checkMalformedTokens(testHelperUser1, http.MethodGet, "/account", nil)
+			})
+			It("should return unauthorized or bad request for malformed tokens on get", func() {
+				url := "/account/1"
+				checkMalformedTokens(testHelperUser1, http.MethodGet, url, nil)
+			})
+			It("should return unauthorized or bad request for malformed tokens on update", func() {
+				update := models.UpdateAccountInput{Name: "Malformed Update"}
+				url := "/account/1"
+				checkMalformedTokens(testHelperUser1, http.MethodPatch, url, update)
+			})
+			It("should return unauthorized or bad request for malformed tokens on delete", func() {
+				url := "/account/1"
+				checkMalformedTokens(testHelperUser1, http.MethodDelete, url, nil)
+			})
+		})
 	})
 
 	Describe("ListAccounts", func() {

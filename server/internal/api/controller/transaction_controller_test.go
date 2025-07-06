@@ -343,6 +343,34 @@ var _ = Describe("TransactionController", func() {
 			resp, _ := testHelperUser2.MakeRequest(http.MethodPost, "/transaction", input)
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 		})
+
+		Context("with malformed tokens", func() {
+			It("should return unauthorized or bad request for malformed tokens on create", func() {
+				input := models.CreateBaseTransactionInput{
+					Name:      "Malformed Token Transaction",
+					Amount:    floatPtr(100.00),
+					Date:      testDate,
+					AccountId: 3,
+				}
+				checkMalformedTokens(testHelperUser2, http.MethodPost, "/transaction", input)
+			})
+			It("should return unauthorized or bad request for malformed tokens on list", func() {
+				checkMalformedTokens(testHelperUser2, http.MethodGet, "/transaction", nil)
+			})
+			It("should return unauthorized or bad request for malformed tokens on get", func() {
+				url := "/transaction/1"
+				checkMalformedTokens(testHelperUser2, http.MethodGet, url, nil)
+			})
+			It("should return unauthorized or bad request for malformed tokens on update", func() {
+				update := map[string]interface{}{"name": "Malformed Update"}
+				url := "/transaction/1"
+				checkMalformedTokens(testHelperUser2, http.MethodPatch, url, update)
+			})
+			It("should return unauthorized or bad request for malformed tokens on delete", func() {
+				url := "/transaction/1"
+				checkMalformedTokens(testHelperUser2, http.MethodDelete, url, nil)
+			})
+		})
 	})
 
 	Describe("ListTransactions", func() {
