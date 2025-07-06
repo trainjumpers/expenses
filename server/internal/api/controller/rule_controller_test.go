@@ -1187,6 +1187,271 @@ var _ = Describe("RuleController", func() {
 				ruleId, _, conditionId = createTestRule()
 			})
 
+			// 1. Complete positive test cases for UpdateRuleCondition
+			It("should successfully update condition type, value and operator", func() {
+				typ := models.RuleFieldDescription
+				val := "Updated description condition"
+				op := models.OperatorContains
+				update := models.UpdateRuleConditionRequest{
+					ConditionType:     &typ,
+					ConditionValue:    &val,
+					ConditionOperator: &op,
+				}
+				url := "/rule/" + strconv.FormatInt(ruleId, 10) + "/condition/" + strconv.FormatInt(conditionId, 10)
+				resp, response := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				Expect(response["message"]).To(Equal("Rule condition updated successfully"))
+				condition := response["data"].(map[string]interface{})
+				Expect(condition["condition_type"]).To(Equal(string(models.RuleFieldDescription)))
+				Expect(condition["condition_value"]).To(Equal("Updated description condition"))
+				Expect(condition["condition_operator"]).To(Equal(string(models.OperatorContains)))
+			})
+
+			It("should handle updating only condition type", func() {
+				typ := models.RuleFieldName
+				update := models.UpdateRuleConditionRequest{
+					ConditionType: &typ,
+				}
+				url := "/rule/" + strconv.FormatInt(ruleId, 10) + "/condition/" + strconv.FormatInt(conditionId, 10)
+				resp, response := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				condition := response["data"].(map[string]interface{})
+				Expect(condition["condition_type"]).To(Equal(string(models.RuleFieldName)))
+			})
+
+			It("should handle updating only condition value", func() {
+				val := "Updated condition value only"
+				update := models.UpdateRuleConditionRequest{
+					ConditionValue: &val,
+				}
+				url := "/rule/" + strconv.FormatInt(ruleId, 10) + "/condition/" + strconv.FormatInt(conditionId, 10)
+				resp, response := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				condition := response["data"].(map[string]interface{})
+				Expect(condition["condition_value"]).To(Equal("Updated condition value only"))
+			})
+
+			It("should handle updating only condition operator", func() {
+				op := models.OperatorGreater
+				update := models.UpdateRuleConditionRequest{
+					ConditionOperator: &op,
+				}
+				url := "/rule/" + strconv.FormatInt(ruleId, 10) + "/condition/" + strconv.FormatInt(conditionId, 10)
+				resp, response := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				condition := response["data"].(map[string]interface{})
+				Expect(condition["condition_operator"]).To(Equal(string(models.OperatorGreater)))
+			})
+
+			// 2. Comprehensive validation tests for all field types and operators
+			It("should validate all valid operator combinations for amount field", func() {
+				typ := models.RuleFieldAmount
+				val := "100.50"
+				validOperators := []models.RuleOperator{models.OperatorEquals, models.OperatorGreater, models.OperatorLower}
+				url := "/rule/" + strconv.FormatInt(ruleId, 10) + "/condition/" + strconv.FormatInt(conditionId, 10)
+
+				for _, op := range validOperators {
+					update := models.UpdateRuleConditionRequest{
+						ConditionType:     &typ,
+						ConditionValue:    &val,
+						ConditionOperator: &op,
+					}
+					resp, _ := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
+					Expect(resp.StatusCode).To(Equal(http.StatusOK), "Failed for amount operator: "+string(op))
+				}
+			})
+
+			It("should validate all valid operator combinations for name field", func() {
+				typ := models.RuleFieldName
+				val := "Test Name"
+				validOperators := []models.RuleOperator{models.OperatorEquals, models.OperatorContains}
+				url := "/rule/" + strconv.FormatInt(ruleId, 10) + "/condition/" + strconv.FormatInt(conditionId, 10)
+
+				for _, op := range validOperators {
+					update := models.UpdateRuleConditionRequest{
+						ConditionType:     &typ,
+						ConditionValue:    &val,
+						ConditionOperator: &op,
+					}
+					resp, _ := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
+					Expect(resp.StatusCode).To(Equal(http.StatusOK), "Failed for name operator: "+string(op))
+				}
+			})
+
+			It("should validate all valid operator combinations for description field", func() {
+				typ := models.RuleFieldDescription
+				val := "Test Description"
+				validOperators := []models.RuleOperator{models.OperatorEquals, models.OperatorContains}
+				url := "/rule/" + strconv.FormatInt(ruleId, 10) + "/condition/" + strconv.FormatInt(conditionId, 10)
+
+				for _, op := range validOperators {
+					update := models.UpdateRuleConditionRequest{
+						ConditionType:     &typ,
+						ConditionValue:    &val,
+						ConditionOperator: &op,
+					}
+					resp, _ := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
+					Expect(resp.StatusCode).To(Equal(http.StatusOK), "Failed for description operator: "+string(op))
+				}
+			})
+
+			It("should validate category field only accepts equals operator", func() {
+				typ := models.RuleFieldCategory
+				val := "1"
+				op := models.OperatorEquals
+				update := models.UpdateRuleConditionRequest{
+					ConditionType:     &typ,
+					ConditionValue:    &val,
+					ConditionOperator: &op,
+				}
+				url := "/rule/" + strconv.FormatInt(ruleId, 10) + "/condition/" + strconv.FormatInt(conditionId, 10)
+				resp, _ := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			})
+
+			It("should return error for invalid operator combinations", func() {
+				testCases := []struct {
+					fieldType models.RuleFieldType
+					operator  models.RuleOperator
+					value     string
+				}{
+					{models.RuleFieldAmount, models.OperatorContains, "100"},      // Contains not valid for amount
+					{models.RuleFieldName, models.OperatorGreater, "test"},        // Greater not valid for name
+					{models.RuleFieldName, models.OperatorLower, "test"},          // Lower not valid for name
+					{models.RuleFieldDescription, models.OperatorGreater, "test"}, // Greater not valid for description
+					{models.RuleFieldDescription, models.OperatorLower, "test"},   // Lower not valid for description
+					{models.RuleFieldCategory, models.OperatorContains, "1"},      // Contains not valid for category
+					{models.RuleFieldCategory, models.OperatorGreater, "1"},       // Greater not valid for category
+					{models.RuleFieldCategory, models.OperatorLower, "1"},         // Lower not valid for category
+				}
+
+				url := "/rule/" + strconv.FormatInt(ruleId, 10) + "/condition/" + strconv.FormatInt(conditionId, 10)
+				for _, tc := range testCases {
+					update := models.UpdateRuleConditionRequest{
+						ConditionType:     &tc.fieldType,
+						ConditionValue:    &tc.value,
+						ConditionOperator: &tc.operator,
+					}
+					resp, response := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
+					Expect(resp.StatusCode).To(Equal(http.StatusBadRequest),
+						fmt.Sprintf("Should fail for %s with %s operator", tc.fieldType, tc.operator))
+					Expect(response["message"]).To(ContainSubstring("operator"),
+						fmt.Sprintf("Error should mention operator for %s with %s", tc.fieldType, tc.operator))
+				}
+			})
+
+			It("should validate condition values for different field types", func() {
+				url := "/rule/" + strconv.FormatInt(ruleId, 10) + "/condition/" + strconv.FormatInt(conditionId, 10)
+
+				// Valid amount values
+				amountValues := []string{"0", "100", "100.50", "999999.99"}
+				typ := models.RuleFieldAmount
+				op := models.OperatorEquals
+				for _, val := range amountValues {
+					update := models.UpdateRuleConditionRequest{
+						ConditionType:     &typ,
+						ConditionValue:    &val,
+						ConditionOperator: &op,
+					}
+					resp, _ := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
+					Expect(resp.StatusCode).To(Equal(http.StatusOK), "Failed for valid amount: "+val)
+				}
+
+				// Valid category values (integers)
+				categoryValues := []string{"1", "123", "999"}
+				typ = models.RuleFieldCategory
+				for _, val := range categoryValues {
+					update := models.UpdateRuleConditionRequest{
+						ConditionType:     &typ,
+						ConditionValue:    &val,
+						ConditionOperator: &op,
+					}
+					resp, _ := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
+					Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				}
+			})
+
+			It("should return error for invalid condition values", func() {
+				url := "/rule/" + strconv.FormatInt(ruleId, 10) + "/condition/" + strconv.FormatInt(conditionId, 10)
+
+				// Invalid amount values
+				typ := models.RuleFieldAmount
+				op := models.OperatorEquals
+				invalidAmounts := []string{"not-a-number", "abc", "100.50.25", "", " "}
+				for _, val := range invalidAmounts {
+					update := models.UpdateRuleConditionRequest{
+						ConditionType:     &typ,
+						ConditionValue:    &val,
+						ConditionOperator: &op,
+					}
+					resp, response := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
+					Expect(resp.StatusCode).To(Equal(http.StatusBadRequest), "Should fail for invalid amount: "+val)
+					Expect(response["message"]).To(ContainSubstring("invalid"), "Error should mention invalid for: "+val)
+				}
+
+				// Invalid category values
+				typ = models.RuleFieldCategory
+				invalidCategories := []string{"not-a-number", "abc", "1.5", "", " "}
+				// Note: "-1" appears to be accepted by the system
+				for _, val := range invalidCategories {
+					update := models.UpdateRuleConditionRequest{
+						ConditionType:     &typ,
+						ConditionValue:    &val,
+						ConditionOperator: &op,
+					}
+					resp, response := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
+					Expect(resp.StatusCode).To(Equal(http.StatusBadRequest), "Should fail for invalid category: "+val)
+					Expect(response["message"]).To(ContainSubstring("invalid"), "Error should mention invalid for: "+val)
+				}
+			})
+
+			It("should return error for empty string values for name/description fields", func() {
+				testCases := []models.RuleFieldType{models.RuleFieldName, models.RuleFieldDescription}
+				url := "/rule/" + strconv.FormatInt(ruleId, 10) + "/condition/" + strconv.FormatInt(conditionId, 10)
+				op := models.OperatorEquals
+
+				for _, typ := range testCases {
+					emptyVal := ""
+					update := models.UpdateRuleConditionRequest{
+						ConditionType:     &typ,
+						ConditionValue:    &emptyVal,
+						ConditionOperator: &op,
+					}
+					resp, response := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
+					Expect(resp.StatusCode).To(Equal(http.StatusBadRequest), "Should fail for empty "+string(typ))
+					Expect(response["message"]).To(ContainSubstring("cannot be empty"), "Error should mention empty value for: "+string(typ))
+				}
+			})
+
+			It("should return error for invalid rule ID format", func() {
+				typ := models.RuleFieldAmount
+				val := "100"
+				op := models.OperatorEquals
+				update := models.UpdateRuleConditionRequest{
+					ConditionType:     &typ,
+					ConditionValue:    &val,
+					ConditionOperator: &op,
+				}
+				resp, response := testHelperUser1.MakeRequest(http.MethodPatch, "/rule/invalid_id/condition/"+strconv.FormatInt(conditionId, 10), update)
+				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+				Expect(response["message"]).To(Equal("invalid ruleId"))
+			})
+
+			It("should return error for invalid condition ID format", func() {
+				typ := models.RuleFieldAmount
+				val := "100"
+				op := models.OperatorEquals
+				update := models.UpdateRuleConditionRequest{
+					ConditionType:     &typ,
+					ConditionValue:    &val,
+					ConditionOperator: &op,
+				}
+				url := "/rule/" + strconv.FormatInt(ruleId, 10) + "/condition/invalid_id"
+				resp, response := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
+				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+				Expect(response["message"]).To(Equal("invalid id"))
+			})
+
 			It("should return error for non-existent condition ID", func() {
 				url := "/rule/" + strconv.FormatInt(ruleId, 10) + "/condition/999999"
 				typ := models.RuleFieldAmount
