@@ -5,6 +5,7 @@ export enum IconCategory {
   Navigation = "navigation",
   Social = "social",
 }
+
 export const iconsData: Array<{
   name: string;
   categories: string[];
@@ -1094,11 +1095,6 @@ export const iconsData: Array<{
     ],
   },
   {
-    name: "badge-help",
-    categories: ["accessibility", "social"],
-    tags: ["verified", "unverified", "help"],
-  },
-  {
     name: "badge-indian-rupee",
     categories: ["shopping", "finance"],
     tags: [
@@ -1187,6 +1183,11 @@ export const iconsData: Array<{
       "gbp",
       "£",
     ],
+  },
+  {
+    name: "badge-question-mark",
+    categories: ["accessibility", "social", "shapes"],
+    tags: ["verified", "unverified", "help"],
   },
   {
     name: "badge-russian-ruble",
@@ -1375,6 +1376,30 @@ export const iconsData: Array<{
       "packaging",
       "retail",
       "consumer",
+    ],
+  },
+  {
+    name: "barrel",
+    categories: ["food-beverage", "navigation"],
+    tags: [
+      "keg",
+      "drum",
+      "tank",
+      "wine",
+      "beer",
+      "oak",
+      "wood",
+      "firkin",
+      "hogshead",
+      "kilderkin",
+      "barrique",
+      "solera",
+      "aging",
+      "whiskey",
+      "brewery",
+      "distillery",
+      "winery",
+      "vineyard",
     ],
   },
   {
@@ -1784,7 +1809,7 @@ export const iconsData: Array<{
   },
   {
     name: "blocks",
-    categories: ["development", "shapes"],
+    categories: ["development", "layout", "shapes"],
     tags: [
       "addon",
       "plugin",
@@ -1797,6 +1822,8 @@ export const iconsData: Array<{
       "kids",
       "children",
       "learning",
+      "squares",
+      "corner",
     ],
   },
   {
@@ -2651,6 +2678,32 @@ export const iconsData: Array<{
     name: "bot",
     categories: ["development", "social"],
     tags: ["robot", "ai", "chat", "assistant"],
+  },
+  {
+    name: "bottle-wine",
+    categories: ["food-beverage"],
+    tags: [
+      "alcohol",
+      "drink",
+      "glass",
+      "goblet",
+      "chalice",
+      "vineyard",
+      "winery",
+      "red",
+      "white",
+      "rose",
+      "dry",
+      "sparkling",
+      "bar",
+      "party",
+      "nightclub",
+      "nightlife",
+      "sommelier",
+      "restaurant",
+      "dinner",
+      "meal",
+    ],
   },
   {
     name: "bow-arrow",
@@ -3988,11 +4041,6 @@ export const iconsData: Array<{
     ],
   },
   {
-    name: "circle-help",
-    categories: ["accessibility", "text", "notifications"],
-    tags: ["question mark"],
-  },
-  {
     name: "circle-minus",
     categories: ["math"],
     tags: [
@@ -4127,6 +4175,11 @@ export const iconsData: Array<{
       "keyboard",
       "troubleshoot",
     ],
+  },
+  {
+    name: "circle-question-mark",
+    categories: ["accessibility", "text", "notifications"],
+    tags: ["question mark"],
   },
   {
     name: "circle-slash-2",
@@ -5565,6 +5618,20 @@ export const iconsData: Array<{
     ],
   },
   {
+    name: "drone",
+    categories: ["transportation", "devices"],
+    tags: [
+      "quadcopter",
+      "uav",
+      "aerial",
+      "flight",
+      "flying",
+      "technology",
+      "airborne",
+      "robotics",
+    ],
+  },
+  {
     name: "droplet-off",
     categories: ["weather", "gaming"],
     tags: [
@@ -6185,7 +6252,7 @@ export const iconsData: Array<{
     tags: ["add", "create", "new", "document"],
   },
   {
-    name: "file-question",
+    name: "file-question-mark",
     categories: ["files"],
     tags: ["readme", "help", "question"],
   },
@@ -6425,7 +6492,20 @@ export const iconsData: Array<{
   {
     name: "flag-off",
     categories: ["account", "social"],
-    tags: ["unflag"],
+    tags: [
+      "unflag",
+      "unmark",
+      "report",
+      "marker",
+      "notification",
+      "warning",
+      "milestone",
+      "goal",
+      "notice",
+      "signal",
+      "attention",
+      "banner",
+    ],
   },
   {
     name: "flag-triangle-left",
@@ -6440,7 +6520,18 @@ export const iconsData: Array<{
   {
     name: "flag",
     categories: ["account", "social"],
-    tags: ["report"],
+    tags: [
+      "report",
+      "marker",
+      "notification",
+      "warning",
+      "milestone",
+      "goal",
+      "notice",
+      "signal",
+      "attention",
+      "banner",
+    ],
   },
   {
     name: "flame-kindling",
@@ -6958,6 +7049,11 @@ export const iconsData: Array<{
       "marriage",
       "rubygems",
     ],
+  },
+  {
+    name: "georgian-lari",
+    categories: ["finance"],
+    tags: ["currency", "money", "payment"],
   },
   {
     name: "ghost",
@@ -8288,6 +8384,25 @@ export const iconsData: Array<{
     tags: ["idea", "bright", "lights"],
   },
   {
+    name: "line-squiggle",
+    categories: ["shapes", "math", "design"],
+    tags: [
+      "line",
+      "snakes",
+      "annotate",
+      "curve",
+      "doodle",
+      "stroke",
+      "pen",
+      "tool",
+      "gesture",
+      "draw",
+      "wave",
+      "art",
+      "road",
+    ],
+  },
+  {
     name: "link-2-off",
     categories: ["text"],
     tags: ["unchain", "chain"],
@@ -8571,7 +8686,7 @@ export const iconsData: Array<{
     tags: ["email", "message", "letter", "add", "create", "new", "compose"],
   },
   {
-    name: "mail-question",
+    name: "mail-question-mark",
     categories: ["mail"],
     tags: ["email", "message", "letter", "delivery", "undelivered"],
   },
@@ -8789,8 +8904,11 @@ export const iconsData: Array<{
     categories: ["multimedia", "notifications"],
     tags: [
       "advertisement",
+      "announcement",
       "attention",
       "alert",
+      "loudspeaker",
+      "megaphone",
       "notification",
       "disable",
       "silent",
@@ -8799,7 +8917,15 @@ export const iconsData: Array<{
   {
     name: "megaphone",
     categories: ["multimedia", "notifications"],
-    tags: ["advertisement", "attention", "alert", "notification"],
+    tags: [
+      "advertisement",
+      "announcement",
+      "attention",
+      "alert",
+      "loudspeaker",
+      "megaphone",
+      "notification",
+    ],
   },
   {
     name: "meh",
@@ -8932,7 +9058,7 @@ export const iconsData: Array<{
     ],
   },
   {
-    name: "message-circle-question",
+    name: "message-circle-question-mark",
     categories: ["social"],
     tags: [
       "comment",
@@ -11253,6 +11379,11 @@ export const iconsData: Array<{
     ],
   },
   {
+    name: "rectangle-circle",
+    categories: ["development", "text"],
+    tags: ["compose", "keyboard", "key", "button"],
+  },
+  {
     name: "rectangle-ellipsis",
     categories: ["text", "development"],
     tags: [
@@ -12677,7 +12808,7 @@ export const iconsData: Array<{
     ],
   },
   {
-    name: "shield-question",
+    name: "shield-question-mark",
     categories: ["account", "security", "development", "gaming"],
     tags: [
       "unshielded",
@@ -13306,6 +13437,19 @@ export const iconsData: Array<{
     name: "split",
     categories: ["development", "arrows"],
     tags: ["break", "disband", "divide", "separate", "branch", "disunite"],
+  },
+  {
+    name: "spool",
+    categories: ["communication", "tools", "social"],
+    tags: [
+      "bobbin",
+      "spindle",
+      "yarn",
+      "thread",
+      "string",
+      "sewing",
+      "needlework",
+    ],
   },
   {
     name: "spray-can",
@@ -14130,6 +14274,20 @@ export const iconsData: Array<{
     ],
   },
   {
+    name: "squircle-dashed",
+    categories: ["development", "shapes", "design"],
+    tags: [
+      "shape",
+      "pending",
+      "progress",
+      "issue",
+      "draft",
+      "code",
+      "coding",
+      "version control",
+    ],
+  },
+  {
     name: "squircle",
     categories: ["shapes"],
     tags: ["shape"],
@@ -14258,7 +14416,6 @@ export const iconsData: Array<{
     name: "sun-moon",
     categories: ["accessibility"],
     tags: [
-      "night",
       "dark",
       "light",
       "moon",
@@ -14976,6 +15133,11 @@ export const iconsData: Array<{
     tags: ["toilet", "potty", "bathroom", "washroom"],
   },
   {
+    name: "tool-case",
+    categories: ["tools", "development", "home"],
+    tags: ["tools", "maintenance", "repair"],
+  },
+  {
     name: "tornado",
     categories: ["weather"],
     tags: ["weather", "wind", "storm", "hurricane"],
@@ -15657,6 +15819,23 @@ export const iconsData: Array<{
     ],
   },
   {
+    name: "vector-square",
+    categories: ["shapes", "math", "design", "tools"],
+    tags: [
+      "shape",
+      "geometry",
+      "art",
+      "width",
+      "height",
+      "size",
+      "calculate",
+      "measure",
+      "select",
+      "graphics",
+      "box",
+    ],
+  },
+  {
     name: "vegan",
     categories: ["food-beverage", "sustainability"],
     tags: ["vegetarian", "fruitarian", "herbivorous", "animal rights", "diet"],
@@ -15965,6 +16144,22 @@ export const iconsData: Array<{
     name: "whole-word",
     categories: ["text"],
     tags: ["text", "selection", "letters", "characters", "font", "typography"],
+  },
+  {
+    name: "wifi-cog",
+    categories: ["connectivity", "devices", "files"],
+    tags: [
+      "connection",
+      "signal",
+      "wireless",
+      "directory",
+      "settings",
+      "control",
+      "preferences",
+      "cog",
+      "edit",
+      "gear",
+    ],
   },
   {
     name: "wifi-high",
