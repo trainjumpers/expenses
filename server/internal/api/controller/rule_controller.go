@@ -183,6 +183,28 @@ func (rc *RuleController) DeleteRule(c *gin.Context) {
 	rc.SendSuccess(c, http.StatusNoContent, "Rule deleted successfully", nil)
 }
 
+func (rc *RuleController) ExecuteRules(c *gin.Context) {
+	userId := rc.GetAuthenticatedUserId(c)
+	logger.Infof("Starting rule execution for user %d", userId)
+
+	var request models.ExecuteRulesRequest
+	if err := rc.BindJSON(c, &request); err != nil {
+		logger.Errorf("Failed to bind JSON: %v", err)
+		return
+	}
+
+	result, err := rc.ruleService.ExecuteRules(c, userId, request)
+	if err != nil {
+		logger.Errorf("Error executing rules: %v", err)
+		rc.HandleError(c, err)
+		return
+	}
+
+	logger.Infof("Rule execution completed for user %d: %d modified, %d skipped", 
+		userId, len(result.Modified), len(result.Skipped))
+	rc.SendSuccess(c, http.StatusOK, "Rules executed successfully", result)
+}
+
 // parseIdFromParam retrieves an Id from a URL parameter.
 // It sends an error response and returns false if parsing fails.
 func (rc *RuleController) parseIdFromParam(c *gin.Context, paramName string) (int64, bool) {

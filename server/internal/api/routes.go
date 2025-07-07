@@ -106,6 +106,7 @@ func Init(
 		{
 			rule.GET("", ruleController.ListRules)
 			rule.POST("", ruleController.CreateRule)
+			rule.POST("/execute", ruleController.ExecuteRules)
 			rule.GET("/:ruleId", ruleController.GetRuleById)
 			rule.PATCH("/:ruleId", ruleController.UpdateRule)
 			rule.DELETE("/:ruleId", ruleController.DeleteRule)

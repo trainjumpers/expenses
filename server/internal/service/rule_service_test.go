@@ -15,22 +15,24 @@ import (
 
 var _ = Describe("RuleService", func() {
 	var (
-		ruleService RuleServiceInterface
-		mockRepo    *mock.MockRuleRepository
-		ctx         *gin.Context
-		now         time.Time
-		user1       int64
-		user2       int64
-		mockTxnRepo *mock.MockTransactionRepository
-		mockDB      *mock_database.MockDatabaseManager
+		ruleService     RuleServiceInterface
+		mockRepo        *mock.MockRuleRepository
+		ctx             *gin.Context
+		now             time.Time
+		user1           int64
+		user2           int64
+		mockTxnRepo     *mock.MockTransactionRepository
+		mockCategoryRepo *mock.MockCategoryRepository
+		mockDB          *mock_database.MockDatabaseManager
 	)
 
 	BeforeEach(func() {
 		ctx = &gin.Context{}
 		mockRepo = mock.NewMockRuleRepository()
 		mockTxnRepo = mock.NewMockTransactionRepository()
+		mockCategoryRepo = mock.NewMockCategoryRepository()
 		mockDB = mock_database.NewMockDatabaseManager()
-		ruleService = NewRuleService(mockRepo, mockTxnRepo, mockDB)
+		ruleService = NewRuleService(mockRepo, mockTxnRepo, mockCategoryRepo, mockDB)
 		now = time.Now()
 		user1 = 1
 		user2 = 2

@@ -93,10 +93,17 @@ type RuleConditionResponse struct {
 	ConditionOperator RuleOperator  `json:"condition_operator"`
 }
 
-// Execute
+type ExecuteRulesRequest struct {
+	RuleIds        *[]int64 `json:"rule_ids,omitempty"`
+	TransactionIds *[]int64 `json:"transaction_ids,omitempty"`
+	PageSize       int      `json:"page_size,omitempty"`
+}
+
 type ExecuteRulesResponse struct {
-	Modified []ModifiedResult `json:"modified"`
-	Skipped  []SkippedResult  `json:"skipped"`
+	Modified      []ModifiedResult `json:"modified"`
+	Skipped       []SkippedResult  `json:"skipped"`
+	TotalRules    int              `json:"total_rules"`
+	ProcessedTxns int              `json:"processed_transactions"`
 }
 
 type ModifiedResult struct {

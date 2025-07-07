@@ -38,7 +38,7 @@ func InitializeApplication() (*Provider, error) {
 	transactionRepositoryInterface := repository.NewTransactionRepository(databaseManager, configConfig)
 	transactionServiceInterface := service.NewTransactionService(transactionRepositoryInterface, categoryRepositoryInterface, accountRepositoryInterface, databaseManager)
 	ruleRepositoryInterface := repository.NewRuleRepository(databaseManager, configConfig)
-	ruleServiceInterface := service.NewRuleService(ruleRepositoryInterface, transactionRepositoryInterface, databaseManager)
+	ruleServiceInterface := service.NewRuleService(ruleRepositoryInterface, transactionRepositoryInterface, categoryRepositoryInterface, databaseManager)
 	engine := api.Init(configConfig, authServiceInterface, userServiceInterface, accountServiceInterface, categoryServiceInterface, transactionServiceInterface, ruleServiceInterface)
 	provider := NewProvider(engine, databaseManager)
 	return provider, nil
@@ -73,4 +73,4 @@ var controllerSet = wire.NewSet(controller.NewAuthController)
 
 var repositorySet = wire.NewSet(repository.NewUserRepository, repository.NewAccountRepository, repository.NewCategoryRepository, repository.NewTransactionRepository, repository.NewRuleRepository)
 
-var serviceSet = wire.NewSet(service.NewUserService, service.NewAuthService, service.NewAccountService, service.NewCategoryService, service.NewTransactionService, service.NewRuleService)
+var serviceSet = wire.NewSet(service.NewUserService, service.NewAuthService, service.NewAccountService, service.NewCategoryService, service.NewTransactionService, service.NewRuleService, service.NewRuleEngineService)

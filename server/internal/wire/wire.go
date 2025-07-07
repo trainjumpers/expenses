@@ -66,4 +66,5 @@ var serviceSet = wire.NewSet(
 	service.NewCategoryService,
 	service.NewTransactionService,
 	service.NewRuleService,
+	service.NewRuleEngineService,
 )
