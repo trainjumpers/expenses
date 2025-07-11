@@ -218,7 +218,7 @@ func (a *AuthService) issueAuthToken(userId int64, email string) (string, error)
 }
 
 func (a *AuthService) hashPassword(password string) (string, error) {
-	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
+	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 10)
 	return string(bytes), err
 }
 
