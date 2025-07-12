@@ -9,8 +9,8 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-var Info, Error, Debug, Warn, Fatal func(args ...interface{})
-var Infof, Errorf, Debugf, Warnf, Fatalf func(template string, args ...interface{})
+var Info, Error, Debug, Warn, Fatal func(args ...any)
+var Infof, Errorf, Debugf, Warnf, Fatalf func(template string, args ...any)
 
 func GetLoggingLevel() zap.AtomicLevel {
 	switch strings.ToLower(os.Getenv("LOGGING_LEVEL")) {

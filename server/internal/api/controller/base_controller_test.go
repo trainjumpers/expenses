@@ -17,8 +17,8 @@ import (
 )
 
 // decodeJSON is a helper function to decode JSON from any io.Reader
-func decodeJSON(reader io.Reader) (map[string]interface{}, error) {
-	var response map[string]interface{}
+func decodeJSON(reader io.Reader) (map[string]any, error) {
+	var response map[string]any
 	err := json.NewDecoder(reader).Decode(&response)
 	return response, err
 }
@@ -362,7 +362,7 @@ var _ = Describe("BaseController", func() {
 			})
 
 			It("should successfully bind and trim valid input", func() {
-				requestBody := map[string]interface{}{
+				requestBody := map[string]any{
 					"name":        "  John Doe  ",
 					"email":       "test@example.com",
 					"description": "   Some description   ",
@@ -383,7 +383,7 @@ var _ = Describe("BaseController", func() {
 			})
 
 			It("should fail validation when required field becomes empty after trimming", func() {
-				requestBody := map[string]interface{}{
+				requestBody := map[string]any{
 					"name":        "   ", // This will become empty after trimming
 					"email":       " john@example.com ",
 					"description": "   Some description   ",
@@ -403,7 +403,7 @@ var _ = Describe("BaseController", func() {
 			})
 
 			It("should fail validation when email becomes invalid after trimming", func() {
-				requestBody := map[string]interface{}{
+				requestBody := map[string]any{
 					"name":        "John Doe",
 					"email":       " invalid-email ", // Still invalid after trimming
 					"description": "Some description",
@@ -423,7 +423,7 @@ var _ = Describe("BaseController", func() {
 			})
 
 			It("should fail validation when email field becomes empty after trimming", func() {
-				requestBody := map[string]interface{}{
+				requestBody := map[string]any{
 					"name":        "John Doe",
 					"email":       "   ", // This will become empty after trimming, triggering email validation
 					"description": "Some description",
@@ -443,8 +443,8 @@ var _ = Describe("BaseController", func() {
 			})
 
 			It("should handle nested struct validation with whitespace", func() {
-				requestBody := map[string]interface{}{
-					"user": map[string]interface{}{
+				requestBody := map[string]any{
+					"user": map[string]any{
 						"name":        "   ", // Will become empty after trimming
 						"email":       " user@example.com ",
 						"description": "User description",
@@ -466,8 +466,8 @@ var _ = Describe("BaseController", func() {
 			})
 
 			It("should handle nested struct email validation with whitespace", func() {
-				requestBody := map[string]interface{}{
-					"user": map[string]interface{}{
+				requestBody := map[string]any{
+					"user": map[string]any{
 						"name":        "John Doe",
 						"email":       "   ", // Will become empty after trimming, triggering email validation
 						"description": "User description",
@@ -501,8 +501,8 @@ var _ = Describe("BaseController", func() {
 			})
 
 			It("should trim all string fields in complex nested structure", func() {
-				requestBody := map[string]interface{}{
-					"user": map[string]interface{}{
+				requestBody := map[string]any{
+					"user": map[string]any{
 						"name":        "  Jane Doe  ",
 						"email":       "jane@example.com",
 						"description": "   User description   ",

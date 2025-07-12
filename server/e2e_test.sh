@@ -1,12 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-unset DB_SCHEMA
-unset DB_SEED_DIR
-
-export DB_SCHEMA=${DB_SCHEMA:-test}
+export DB_SCHEMA="test"
 export DB_SEED_DIR=${DB_SEED_DIR:-./internal/database/seed/test}   # ← no trailing space!
-export ENV=${ENV:-test}
+export ENV="test"
 
 if [[ "$DB_SCHEMA" != "test" ]]; then
   echo "Refusing to run e2e tests on non-test schema $DB_SCHEMA"

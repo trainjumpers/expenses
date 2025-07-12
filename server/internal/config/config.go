@@ -22,6 +22,7 @@ type Config struct {
 	AccessTokenDuration  time.Duration
 	RefreshTokenDuration time.Duration
 	CookieDomain         string
+	LoggingLevel         string
 }
 
 func GetEnvironment() string {
@@ -55,9 +56,7 @@ func NewConfig() (*Config, error) {
 	}
 	config.RefreshTokenDuration = time.Duration(refreshTokenDays) * 24 * time.Hour
 	config.CookieDomain = os.Getenv("COOKIE_DOMAIN")
-	if config.CookieDomain == "" {
-		config.CookieDomain = "neurospend.vercel.app"
-	}
+	config.LoggingLevel = os.Getenv("LOGGING_LEVEL")
 	return config, nil
 }
 

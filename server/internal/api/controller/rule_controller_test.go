@@ -45,9 +45,9 @@ var _ = Describe("RuleController", func() {
 		resp, response := testHelperUser1.MakeRequest(http.MethodPost, "/rule", input)
 		Expect(resp.StatusCode).To(Equal(http.StatusCreated))
 		Expect(response["data"]).To(HaveKey("rule"))
-		rule := response["data"].(map[string]interface{})["rule"].(map[string]interface{})
-		action := response["data"].(map[string]interface{})["actions"].([]interface{})[0].(map[string]interface{})
-		condition := response["data"].(map[string]interface{})["conditions"].([]interface{})[0].(map[string]interface{})
+		rule := response["data"].(map[string]any)["rule"].(map[string]any)
+		action := response["data"].(map[string]any)["actions"].([]any)[0].(map[string]any)
+		condition := response["data"].(map[string]any)["conditions"].([]any)[0].(map[string]any)
 		return int64(rule["id"].(float64)), int64(action["id"].(float64)), int64(condition["id"].(float64))
 	}
 
@@ -78,7 +78,7 @@ var _ = Describe("RuleController", func() {
 				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
 				Expect(response["message"]).To(Equal("Rule created successfully"))
 				Expect(response["data"]).To(HaveKey("rule"))
-				rule := response["data"].(map[string]interface{})["rule"].(map[string]interface{})
+				rule := response["data"].(map[string]any)["rule"].(map[string]any)
 				Expect(rule["name"]).To(Equal("Test Rule"))
 				ruleId = int64(rule["id"].(float64))
 			})
@@ -100,7 +100,7 @@ var _ = Describe("RuleController", func() {
 				}
 				resp, response := testHelperUser1.MakeRequest(http.MethodPost, "/rule", input)
 				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
-				actions := response["data"].(map[string]interface{})["actions"].([]interface{})
+				actions := response["data"].(map[string]any)["actions"].([]any)
 				Expect(len(actions)).To(Equal(2))
 			})
 
@@ -121,7 +121,7 @@ var _ = Describe("RuleController", func() {
 				}
 				resp, response := testHelperUser1.MakeRequest(http.MethodPost, "/rule", input)
 				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
-				conditions := response["data"].(map[string]interface{})["conditions"].([]interface{})
+				conditions := response["data"].(map[string]any)["conditions"].([]any)
 				Expect(len(conditions)).To(Equal(2))
 			})
 
@@ -145,7 +145,7 @@ var _ = Describe("RuleController", func() {
 				}
 				resp, response := testHelperUser1.MakeRequest(http.MethodPost, "/rule", input)
 				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
-				rule := response["data"].(map[string]interface{})["rule"].(map[string]interface{})
+				rule := response["data"].(map[string]any)["rule"].(map[string]any)
 				Expect(rule["name"]).To(Equal(longName))
 			})
 
@@ -169,7 +169,7 @@ var _ = Describe("RuleController", func() {
 				}
 				resp, response := testHelperUser1.MakeRequest(http.MethodPost, "/rule", input)
 				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
-				rule := response["data"].(map[string]interface{})["rule"].(map[string]interface{})
+				rule := response["data"].(map[string]any)["rule"].(map[string]any)
 				Expect(rule["description"]).To(Equal(longDesc))
 			})
 
@@ -530,7 +530,7 @@ var _ = Describe("RuleController", func() {
 				endpoints := []struct {
 					method string
 					path   string
-					body   interface{}
+					body   any
 				}{
 					{http.MethodGet, "/rule", nil},
 					{http.MethodPost, "/rule", models.CreateRuleRequest{
@@ -674,7 +674,7 @@ var _ = Describe("RuleController", func() {
 			resp, response := testHelperUser2.MakeRequest(http.MethodGet, "/rule", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["message"]).To(Equal("Rules fetched successfully"))
-			Expect(response["data"]).To(BeAssignableToTypeOf([]interface{}{}))
+			Expect(response["data"]).To(BeAssignableToTypeOf([]any{}))
 			Expect(response["data"]).To(BeEmpty())
 		})
 
@@ -685,10 +685,10 @@ var _ = Describe("RuleController", func() {
 			resp, response := testHelperUser1.MakeRequest(http.MethodGet, "/rule", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["message"]).To(Equal("Rules fetched successfully"))
-			data := response["data"].([]interface{})
+			data := response["data"].([]any)
 			var found1, found2 bool
 			for _, r := range data {
-				rule := r.(map[string]interface{})
+				rule := r.(map[string]any)
 				switch id := int64(rule["id"].(float64)); id {
 				case ruleId1:
 					found1 = true
@@ -713,7 +713,7 @@ var _ = Describe("RuleController", func() {
 			resp, response := testHelperUser2.MakeRequest(http.MethodGet, "/rule", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["message"]).To(Equal("Rules fetched successfully"))
-			Expect(len(response["data"].([]interface{}))).To(Equal(0))
+			Expect(len(response["data"].([]any))).To(Equal(0))
 		})
 
 		It("should return unauthorized for invalid token", func() {
@@ -730,7 +730,7 @@ var _ = Describe("RuleController", func() {
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["message"]).To(Equal("Rule fetched successfully"))
 			Expect(response["data"]).To(HaveKey("rule"))
-			rule := response["data"].(map[string]interface{})["rule"].(map[string]interface{})
+			rule := response["data"].(map[string]any)["rule"].(map[string]any)
 			Expect(int64(rule["id"].(float64))).To(Equal(ruleId))
 			Expect(rule).To(HaveKey("name"))
 			Expect(rule).To(HaveKey("description"))
@@ -738,13 +738,13 @@ var _ = Describe("RuleController", func() {
 			Expect(rule).To(HaveKey("created_by"))
 			Expect(response["data"]).To(HaveKey("actions"))
 			Expect(response["data"]).To(HaveKey("conditions"))
-			actions := response["data"].(map[string]any)["actions"].([]interface{})
-			conditions := response["data"].(map[string]any)["conditions"].([]interface{})
+			actions := response["data"].(map[string]any)["actions"].([]any)
+			conditions := response["data"].(map[string]any)["conditions"].([]any)
 			Expect(len(actions)).To(BeNumerically(">=", 1))
 			Expect(len(conditions)).To(BeNumerically(">=", 1))
 			// Check action and condition IDs match
-			action := actions[0].(map[string]interface{})
-			condition := conditions[0].(map[string]interface{})
+			action := actions[0].(map[string]any)
+			condition := conditions[0].(map[string]any)
 			Expect(int64(action["id"].(float64))).To(Equal(actionId))
 			Expect(int64(condition["id"].(float64))).To(Equal(conditionId))
 		})
@@ -790,7 +790,7 @@ var _ = Describe("RuleController", func() {
 			resp, response := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["message"]).To(Equal("Rule updated successfully"))
-			rule := response["data"].(map[string]interface{})
+			rule := response["data"].(map[string]any)
 			Expect(rule["name"]).To(Equal("Updated Rule Name"))
 		})
 
@@ -801,7 +801,7 @@ var _ = Describe("RuleController", func() {
 			resp, response := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["message"]).To(Equal("Rule updated successfully"))
-			rule := response["data"].(map[string]interface{})
+			rule := response["data"].(map[string]any)
 			Expect(rule["description"]).To(Equal(newDesc))
 		})
 
@@ -812,7 +812,7 @@ var _ = Describe("RuleController", func() {
 			resp, response := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["message"]).To(Equal("Rule updated successfully"))
-			rule := response["data"].(map[string]interface{})
+			rule := response["data"].(map[string]any)
 			Expect(rule["effective_from"]).NotTo(BeNil())
 		})
 
@@ -939,7 +939,7 @@ var _ = Describe("RuleController", func() {
 				resp, response := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 				Expect(response["message"]).To(Equal("Rule action updated successfully"))
-				action := response["data"].(map[string]interface{})
+				action := response["data"].(map[string]any)
 				Expect(action["action_type"]).To(Equal(string(models.RuleFieldDescription)))
 				Expect(action["action_value"]).To(Equal("Updated description action"))
 			})
@@ -952,7 +952,7 @@ var _ = Describe("RuleController", func() {
 				url := "/rule/" + strconv.FormatInt(ruleId, 10) + "/action/" + strconv.FormatInt(actionId, 10)
 				resp, response := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
-				action := response["data"].(map[string]interface{})
+				action := response["data"].(map[string]any)
 				Expect(action["action_type"]).To(Equal(string(models.RuleFieldName)))
 			})
 
@@ -964,7 +964,7 @@ var _ = Describe("RuleController", func() {
 				url := "/rule/" + strconv.FormatInt(ruleId, 10) + "/action/" + strconv.FormatInt(actionId, 10)
 				resp, response := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
-				action := response["data"].(map[string]interface{})
+				action := response["data"].(map[string]any)
 				Expect(action["action_value"]).To(Equal("Updated value only"))
 			})
 
@@ -1201,7 +1201,7 @@ var _ = Describe("RuleController", func() {
 				resp, response := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 				Expect(response["message"]).To(Equal("Rule condition updated successfully"))
-				condition := response["data"].(map[string]interface{})
+				condition := response["data"].(map[string]any)
 				Expect(condition["condition_type"]).To(Equal(string(models.RuleFieldDescription)))
 				Expect(condition["condition_value"]).To(Equal("Updated description condition"))
 				Expect(condition["condition_operator"]).To(Equal(string(models.OperatorContains)))
@@ -1215,7 +1215,7 @@ var _ = Describe("RuleController", func() {
 				url := "/rule/" + strconv.FormatInt(ruleId, 10) + "/condition/" + strconv.FormatInt(conditionId, 10)
 				resp, response := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
-				condition := response["data"].(map[string]interface{})
+				condition := response["data"].(map[string]any)
 				Expect(condition["condition_type"]).To(Equal(string(models.RuleFieldName)))
 			})
 
@@ -1227,7 +1227,7 @@ var _ = Describe("RuleController", func() {
 				url := "/rule/" + strconv.FormatInt(ruleId, 10) + "/condition/" + strconv.FormatInt(conditionId, 10)
 				resp, response := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
-				condition := response["data"].(map[string]interface{})
+				condition := response["data"].(map[string]any)
 				Expect(condition["condition_value"]).To(Equal("Updated condition value only"))
 			})
 
@@ -1239,7 +1239,7 @@ var _ = Describe("RuleController", func() {
 				url := "/rule/" + strconv.FormatInt(ruleId, 10) + "/condition/" + strconv.FormatInt(conditionId, 10)
 				resp, response := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
-				condition := response["data"].(map[string]interface{})
+				condition := response["data"].(map[string]any)
 				Expect(condition["condition_operator"]).To(Equal(string(models.OperatorGreater)))
 			})
 
@@ -1505,8 +1505,8 @@ var _ = Describe("RuleController", func() {
 					},
 				})
 				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
-				otherCondition := response["data"].(map[string]interface{})["conditions"].([]interface{})[0].(map[string]interface{})
-				otherRule := response["data"].(map[string]interface{})["rule"].(map[string]interface{})
+				otherCondition := response["data"].(map[string]any)["conditions"].([]any)[0].(map[string]any)
+				otherRule := response["data"].(map[string]any)["rule"].(map[string]any)
 				otherRuleId := int64(otherRule["id"].(float64))
 				otherConditionId := int64(otherCondition["id"].(float64))
 

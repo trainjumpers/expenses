@@ -20,8 +20,8 @@ var _ = Describe("CategoryController", func() {
 			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
 			Expect(response["message"]).To(Equal("Category created successfully"))
 			Expect(response["data"]).To(HaveKey("id"))
-			Expect(response["data"].(map[string]interface{})["name"]).To(Equal("Food with icon"))
-			Expect(response["data"].(map[string]interface{})["icon"]).To(Equal("burger-icon"))
+			Expect(response["data"].(map[string]any)["name"]).To(Equal("Food with icon"))
+			Expect(response["data"].(map[string]any)["icon"]).To(Equal("burger-icon"))
 		})
 
 		It("should create a category successfully with empty icon", func() {
@@ -33,8 +33,8 @@ var _ = Describe("CategoryController", func() {
 			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
 			Expect(response["message"]).To(Equal("Category created successfully"))
 			Expect(response["data"]).To(HaveKey("id"))
-			Expect(response["data"].(map[string]interface{})["name"]).To(Equal("Entertainment without icon"))
-			Expect(response["data"].(map[string]interface{})["icon"]).To(BeNil())
+			Expect(response["data"].(map[string]any)["name"]).To(Equal("Entertainment without icon"))
+			Expect(response["data"].(map[string]any)["icon"]).To(BeNil())
 		})
 
 		It("should trim whitespace from category name and create successfully", func() {
@@ -46,8 +46,8 @@ var _ = Describe("CategoryController", func() {
 			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
 			Expect(response["message"]).To(Equal("Category created successfully"))
 			Expect(response["data"]).To(HaveKey("id"))
-			Expect(response["data"].(map[string]interface{})["name"]).To(Equal("Whitespace Category")) // Should be trimmed
-			Expect(response["data"].(map[string]interface{})["icon"]).To(Equal("space-icon"))
+			Expect(response["data"].(map[string]any)["name"]).To(Equal("Whitespace Category")) // Should be trimmed
+			Expect(response["data"].(map[string]any)["icon"]).To(Equal("space-icon"))
 		})
 
 		It("should trim complex whitespace characters from category name", func() {
@@ -59,8 +59,8 @@ var _ = Describe("CategoryController", func() {
 			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
 			Expect(response["message"]).To(Equal("Category created successfully"))
 			Expect(response["data"]).To(HaveKey("id"))
-			Expect(response["data"].(map[string]interface{})["name"]).To(Equal("Complex Tab Category")) // Should be trimmed
-			Expect(response["data"].(map[string]interface{})["icon"]).To(Equal("tab-icon"))
+			Expect(response["data"].(map[string]any)["name"]).To(Equal("Complex Tab Category")) // Should be trimmed
+			Expect(response["data"].(map[string]any)["icon"]).To(Equal("tab-icon"))
 		})
 
 		It("should trim whitespace from icon field", func() {
@@ -72,8 +72,8 @@ var _ = Describe("CategoryController", func() {
 			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
 			Expect(response["message"]).To(Equal("Category created successfully"))
 			Expect(response["data"]).To(HaveKey("id"))
-			Expect(response["data"].(map[string]interface{})["name"]).To(Equal("Icon Whitespace Test"))
-			Expect(response["data"].(map[string]interface{})["icon"]).To(Equal("trimmed-icon")) // Should be trimmed
+			Expect(response["data"].(map[string]any)["name"]).To(Equal("Icon Whitespace Test"))
+			Expect(response["data"].(map[string]any)["icon"]).To(Equal("trimmed-icon")) // Should be trimmed
 		})
 
 		It("should return error for whitespace-only category name", func() {
@@ -179,8 +179,8 @@ var _ = Describe("CategoryController", func() {
 			resp, response := testHelperUser1.MakeRequest(http.MethodGet, "/category", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["message"]).To(Equal("Categories retrieved successfully"))
-			Expect(response["data"]).To(BeAssignableToTypeOf([]interface{}{}))
-			categories := response["data"].([]interface{})
+			Expect(response["data"]).To(BeAssignableToTypeOf([]any{}))
+			categories := response["data"].([]any)
 			Expect(len(categories)).To(BeNumerically(">=", 5))
 		})
 
@@ -188,7 +188,7 @@ var _ = Describe("CategoryController", func() {
 			resp, response := testHelperUser3.MakeRequest(http.MethodGet, "/category", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["message"]).To(Equal("Categories retrieved successfully"))
-			Expect(len(response["data"].([]interface{}))).To(Equal(0))
+			Expect(len(response["data"].([]any))).To(Equal(0))
 		})
 
 		It("should return error for invalid authorization", func() {
@@ -205,7 +205,7 @@ var _ = Describe("CategoryController", func() {
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["message"]).To(Equal("Category retrieved successfully"))
 			Expect(response["data"]).To(HaveKey("id"))
-			Expect(response["data"].(map[string]interface{})["name"]).To(Equal("Food"))
+			Expect(response["data"].(map[string]any)["name"]).To(Equal("Food"))
 		})
 
 		It("should return error for non-existent category id", func() {
@@ -245,7 +245,7 @@ var _ = Describe("CategoryController", func() {
 			resp, response := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["message"]).To(Equal("Category updated successfully"))
-			Expect(response["data"].(map[string]interface{})["name"]).To(Equal("Updated Category Name"))
+			Expect(response["data"].(map[string]any)["name"]).To(Equal("Updated Category Name"))
 		})
 
 		It("should trim whitespace from category name during update", func() {
@@ -254,7 +254,7 @@ var _ = Describe("CategoryController", func() {
 			resp, response := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["message"]).To(Equal("Category updated successfully"))
-			Expect(response["data"].(map[string]interface{})["name"]).To(Equal("Trimmed Update Name")) // Should be trimmed
+			Expect(response["data"].(map[string]any)["name"]).To(Equal("Trimmed Update Name")) // Should be trimmed
 		})
 
 		It("should trim complex whitespace from category name during update", func() {
@@ -263,7 +263,7 @@ var _ = Describe("CategoryController", func() {
 			resp, response := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["message"]).To(Equal("Category updated successfully"))
-			Expect(response["data"].(map[string]interface{})["name"]).To(Equal("Complex Update Name")) // Should be trimmed
+			Expect(response["data"].(map[string]any)["name"]).To(Equal("Complex Update Name")) // Should be trimmed
 		})
 
 		It("should return error for whitespace-only category name during update", func() {
@@ -281,7 +281,7 @@ var _ = Describe("CategoryController", func() {
 			resp, response := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["message"]).To(Equal("Category updated successfully"))
-			Expect(response["data"].(map[string]interface{})["icon"]).To(Equal(newIcon))
+			Expect(response["data"].(map[string]any)["icon"]).To(Equal(newIcon))
 		})
 
 		It("should trim whitespace from icon during update", func() {
@@ -291,7 +291,7 @@ var _ = Describe("CategoryController", func() {
 			resp, response := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["message"]).To(Equal("Category updated successfully"))
-			Expect(response["data"].(map[string]interface{})["icon"]).To(Equal("trimmed-update-icon")) // Should be trimmed
+			Expect(response["data"].(map[string]any)["icon"]).To(Equal("trimmed-update-icon")) // Should be trimmed
 		})
 
 		It("should update both name and icon successfully", func() {
@@ -304,8 +304,8 @@ var _ = Describe("CategoryController", func() {
 			resp, response := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["message"]).To(Equal("Category updated successfully"))
-			Expect(response["data"].(map[string]interface{})["name"]).To(Equal("Complete Update"))
-			Expect(response["data"].(map[string]interface{})["icon"]).To(Equal(newIcon))
+			Expect(response["data"].(map[string]any)["name"]).To(Equal("Complete Update"))
+			Expect(response["data"].(map[string]any)["icon"]).To(Equal(newIcon))
 		})
 
 		It("should trim whitespace from both name and icon during update", func() {
@@ -318,8 +318,8 @@ var _ = Describe("CategoryController", func() {
 			resp, response := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["message"]).To(Equal("Category updated successfully"))
-			Expect(response["data"].(map[string]interface{})["name"]).To(Equal("Complete Whitespace Update")) // Should be trimmed
-			Expect(response["data"].(map[string]interface{})["icon"]).To(Equal("complete-trimmed-icon"))      // Should be trimmed
+			Expect(response["data"].(map[string]any)["name"]).To(Equal("Complete Whitespace Update")) // Should be trimmed
+			Expect(response["data"].(map[string]any)["icon"]).To(Equal("complete-trimmed-icon"))      // Should be trimmed
 		})
 
 		It("should return error for non-existent category id", func() {
@@ -388,7 +388,7 @@ var _ = Describe("CategoryController", func() {
 			}
 			resp, response := testHelperUser1.MakeRequest(http.MethodPost, "/category", input)
 			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
-			categoryId := int64(response["data"].(map[string]interface{})["id"].(float64))
+			categoryId := int64(response["data"].(map[string]any)["id"].(float64))
 
 			// Delete the category
 			url := "/category/" + strconv.FormatInt(categoryId, 10)

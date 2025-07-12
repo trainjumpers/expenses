@@ -55,7 +55,7 @@ func (b *BaseController) HandleError(ctx *gin.Context, err error) {
 }
 
 // SendSuccess sends a successful response with optional data. Note: when statusCode is 204, the message and data parameters are ignored.
-func (b *BaseController) SendSuccess(ctx *gin.Context, statusCode int, message string, data interface{}) {
+func (b *BaseController) SendSuccess(ctx *gin.Context, statusCode int, message string, data any) {
 	if statusCode == http.StatusNoContent {
 		ctx.Status(http.StatusNoContent)
 		return
@@ -93,7 +93,7 @@ func (b *BaseController) BindJSON(ctx *gin.Context, obj any) error {
 }
 
 // trimStringFields recursively trims whitespace from all string fields in a struct
-func (b *BaseController) trimStringFields(obj interface{}) {
+func (b *BaseController) trimStringFields(obj any) {
 	if obj == nil {
 		return
 	}
@@ -141,7 +141,7 @@ func (b *BaseController) trimStringFields(obj interface{}) {
 }
 
 // BindQuery binds query parameters to the provided struct and handles errors
-func (b *BaseController) BindQuery(ctx *gin.Context, obj interface{}) error {
+func (b *BaseController) BindQuery(ctx *gin.Context, obj any) error {
 	if err := ctx.ShouldBindQuery(obj); err != nil {
 		b.SendError(ctx, http.StatusBadRequest, err.Error())
 		return err
@@ -150,7 +150,7 @@ func (b *BaseController) BindQuery(ctx *gin.Context, obj interface{}) error {
 }
 
 // BindURI binds URI parameters to the provided struct and handles errors
-func (b *BaseController) BindURI(ctx *gin.Context, obj interface{}) error {
+func (b *BaseController) BindURI(ctx *gin.Context, obj any) error {
 	if err := ctx.ShouldBindUri(obj); err != nil {
 		b.SendError(ctx, http.StatusBadRequest, err.Error())
 		return err
@@ -159,7 +159,7 @@ func (b *BaseController) BindURI(ctx *gin.Context, obj interface{}) error {
 }
 
 // BindForm binds form data to the provided struct and handles errors
-func (b *BaseController) BindForm(ctx *gin.Context, obj interface{}) error {
+func (b *BaseController) BindForm(ctx *gin.Context, obj any) error {
 	if err := ctx.ShouldBind(obj); err != nil {
 		b.SendError(ctx, http.StatusBadRequest, err.Error())
 		return err
@@ -172,7 +172,7 @@ func (b *BaseController) GetAuthenticatedUserId(ctx *gin.Context) int64 {
 	return ctx.GetInt64("authUserId")
 }
 
-// setAuthCookie sets a secure, HTTP-only cookie with SameSite=Lax for auth tokens
+// setAuthCookie sets a secure, HTTP-only cookie with SameSite=None for cross-site auth tokens
 func (b *BaseController) setAuthCookie(ctx *gin.Context, name, value string, maxAge int) {
 	domain := ""
 	if b.cfg.IsProd() {
@@ -184,9 +184,9 @@ func (b *BaseController) setAuthCookie(ctx *gin.Context, name, value string, max
 		Path:     "/",
 		Domain:   domain,
 		MaxAge:   maxAge,
-		Secure:   b.cfg.IsProd(),
+		Secure:   true,
 		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode,
+		SameSite: http.SameSiteNoneMode,
 	}
 	// Gin's SetCookie does not support SameSite, so use Header directly
 	h := cookie.String()

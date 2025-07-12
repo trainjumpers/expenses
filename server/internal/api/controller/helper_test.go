@@ -31,7 +31,7 @@ func NewTestHelper(baseURL string) *TestHelper {
 }
 
 // MakeRequest performs an HTTP request and returns the response and decoded body
-func (h *TestHelper) MakeRequest(method, reqUrl string, body interface{}) (*http.Response, map[string]interface{}) {
+func (h *TestHelper) MakeRequest(method, reqUrl string, body any) (*http.Response, map[string]any) {
 	var reqBody io.Reader
 	if body != nil {
 		if str, ok := body.(string); ok {
@@ -108,7 +108,7 @@ func (h *TestHelper) Login(email, password string) {
 	Expect(body["message"]).To(Equal("User logged in successfully"))
 }
 
-func (h *TestHelper) MakeRequestWithToken(method, reqUrl, token string, body interface{}) (*http.Response, map[string]interface{}) {
+func (h *TestHelper) MakeRequestWithToken(method, reqUrl, token string, body any) (*http.Response, map[string]any) {
 	origAccessToken := h.AccessToken
 	origRefreshToken := h.RefreshToken
 	h.AccessToken = token
@@ -120,7 +120,7 @@ func (h *TestHelper) MakeRequestWithToken(method, reqUrl, token string, body int
 }
 
 // checkMalformedTokens tests endpoints with malformed and bad tokens for auth edge cases
-func checkMalformedTokens(helper *TestHelper, method, path string, body interface{}) {
+func checkMalformedTokens(helper *TestHelper, method, path string, body any) {
 	malformedTokens := []string{
 		"invalid-token",
 		"Bearer",

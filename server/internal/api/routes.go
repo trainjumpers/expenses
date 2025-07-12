@@ -21,8 +21,8 @@ func Init(
 	ruleService service.RuleServiceInterface,
 ) *gin.Engine {
 	router := gin.New()
-	if cfg.Environment != "test" {
-		router.Use(gin.Logger()) // Disable logger when running tests
+	if !cfg.IsTest() || cfg.LoggingLevel != "" {
+		router.Use(gin.Logger()) // Disable logger when running tests and logging level is not set
 	}
 	router.Use(gin.Recovery())
 	router.Use(cors.New(cors.Config{
