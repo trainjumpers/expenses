@@ -73,7 +73,7 @@ export async function logout(): Promise<void> {
 }
 
 export async function refresh(): Promise<Response> {
-  return fetch("/api/v1/auth/refresh", {
+  return fetch(`${API_BASE_URL}/refresh`, {
     method: "POST",
     credentials: "include",
   });

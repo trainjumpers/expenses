@@ -36,21 +36,21 @@ export function InfoCenterModal({
 
   const options: ViewOption[] = [
     {
-      title: "Categories",
-      description: "View and manage your spending categories",
-      icon: Tag,
-      onClick: () => {
-        onOpenChange(false);
-        setIsViewCategoriesModalOpen(true);
-      },
-    },
-    {
       title: "Accounts",
       description: "View and manage your bank accounts",
       icon: Wallet,
       onClick: () => {
         onOpenChange(false);
         setIsViewAccountsModalOpen(true);
+      },
+    },
+    {
+      title: "Categories",
+      description: "View and manage your spending categories",
+      icon: Tag,
+      onClick: () => {
+        onOpenChange(false);
+        setIsViewCategoriesModalOpen(true);
       },
     },
     {
