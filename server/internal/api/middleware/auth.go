@@ -58,7 +58,7 @@ func Protected(cfg *config.Config) gin.HandlerFunc {
 			return
 		}
 		ctx.Set("authUserId", int64(userId))
-		logger.Infof("Request authenticated for user Id %d", int64(userId))
+		logger.Debugf("Request authenticated for user Id %d", int64(userId))
 		ctx.Next()
 	}
 }
@@ -148,7 +148,7 @@ func InjectCreatedBy() gin.HandlerFunc {
 		ctx.Request.Body = io.NopCloser(bytes.NewBuffer(modifiedBodyBytes))
 		ctx.Request.ContentLength = int64(len(modifiedBodyBytes))
 
-		logger.Infof("Injected created_by field with user ID %d for %s request", userId, method)
+		logger.Debugf("Injected created_by field with user ID %d for %s request", userId, method)
 		ctx.Next()
 	}
 }

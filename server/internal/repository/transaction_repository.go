@@ -7,7 +7,6 @@ import (
 	database "expenses/internal/database/manager"
 	customErrors "expenses/internal/errors"
 	"expenses/internal/models"
-	"expenses/pkg/logger"
 	"fmt"
 	"strings"
 
@@ -126,10 +125,10 @@ func (r *TransactionRepository) UpdateTransaction(c *gin.Context, transactionId 
 		return err
 	}
 	query := fmt.Sprintf(`
-	UPDATE %s.%s SET %s 
-	WHERE id = $%d AND 
-	created_by = $%d AND 
-	deleted_at IS NULL 
+	UPDATE %s.%s SET %s
+	WHERE id = $%d AND
+	created_by = $%d AND
+	deleted_at IS NULL
 	RETURNING %s;`,
 		r.schema, r.tableName, fieldsClause, argIndex, argIndex+1, strings.Join(dbFields, ", "))
 
@@ -287,8 +286,6 @@ func (r *TransactionRepository) ListTransactions(c *gin.Context, userId int64, q
 
 	// Build WHERE clause and args
 	whereClause, args := r.buildTransactionWhereClause(userId, q)
-	logger.Info("whereClause", whereClause, args)
-
 	// Count query
 	countQuery := r.buildTransactionCountQuery(q, whereClause)
 	var total int

@@ -38,7 +38,7 @@ func NewRuleService(ruleRepo repository.RuleRepositoryInterface, transactionRepo
 }
 
 func (s *ruleService) CreateRule(c *gin.Context, ruleReq models.CreateRuleRequest) (models.DescribeRuleResponse, error) {
-	logger.Infof("Creating rule for user %d", ruleReq.Rule.CreatedBy)
+	logger.Debugf("Creating rule for user %d", ruleReq.Rule.CreatedBy)
 	var ruleResponse models.DescribeRuleResponse
 	if err := s.validator.Validate(ruleReq); err != nil {
 		return ruleResponse, err
@@ -76,13 +76,12 @@ func (s *ruleService) CreateRule(c *gin.Context, ruleReq models.CreateRuleReques
 		return ruleResponse, err
 	}
 
-	logger.Infof("Rule created successfully with Id %d", ruleResponse.Rule.Id)
+	logger.Debugf("Rule created successfully with Id %d", ruleResponse.Rule.Id)
 	return ruleResponse, nil
 }
 
 func (s *ruleService) GetRuleById(c *gin.Context, id int64, userId int64) (models.DescribeRuleResponse, error) {
-	logger.Infof("Fetching rule %d for user %d", id, userId)
-
+	logger.Debugf("Fetching rule %d for user %d", id, userId)
 	var ruleResponse models.DescribeRuleResponse
 	rule, err := s.ruleRepo.GetRule(c, id, userId)
 	if err != nil {
@@ -102,22 +101,22 @@ func (s *ruleService) GetRuleById(c *gin.Context, id int64, userId int64) (model
 	}
 	ruleResponse.Conditions = conditions
 
-	logger.Infof("Rule %d fetched successfully", id)
+	logger.Debugf("Rule %d fetched successfully", id)
 	return ruleResponse, nil
 }
 
 func (s *ruleService) ListRules(c *gin.Context, userId int64) ([]models.RuleResponse, error) {
-	logger.Infof("Fetching all rules for user %d", userId)
+	logger.Debugf("Fetching all rules for user %d", userId)
 	rules, err := s.ruleRepo.ListRules(c, userId)
 	if err != nil {
 		return nil, err
 	}
-	logger.Infof("Fetched %d rules for user %d", len(rules), userId)
+	logger.Debugf("Fetched %d rules for user %d", len(rules), userId)
 	return rules, nil
 }
 
 func (s *ruleService) UpdateRule(c *gin.Context, id int64, ruleReq models.UpdateRuleRequest, userId int64) (models.RuleResponse, error) {
-	logger.Infof("Updating rule %d for user %d", id, userId)
+	logger.Debugf("Updating rule %d for user %d", id, userId)
 	if err := s.validator.ValidateUpdate(ruleReq); err != nil {
 		return models.RuleResponse{}, err
 	}
@@ -129,7 +128,7 @@ func (s *ruleService) UpdateRule(c *gin.Context, id int64, ruleReq models.Update
 }
 
 func (s *ruleService) UpdateRuleAction(c *gin.Context, id int64, ruleId int64, ruleReq models.UpdateRuleActionRequest, userId int64) (models.RuleActionResponse, error) {
-	logger.Infof("Updating rule action %d for user %d", id, userId)
+	logger.Debugf("Updating rule action %d for user %d", id, userId)
 	if err := s.validator.ValidateUpdateAction(ruleReq); err != nil {
 		return models.RuleActionResponse{}, err
 	}
@@ -145,7 +144,7 @@ func (s *ruleService) UpdateRuleAction(c *gin.Context, id int64, ruleId int64, r
 }
 
 func (s *ruleService) UpdateRuleCondition(c *gin.Context, id int64, ruleId int64, ruleReq models.UpdateRuleConditionRequest, userId int64) (models.RuleConditionResponse, error) {
-	logger.Infof("Updating rule condition %d for user %d", id, userId)
+	logger.Debugf("Updating rule condition %d for user %d", id, userId)
 	if err := s.validator.ValidateUpdateCondition(ruleReq); err != nil {
 		return models.RuleConditionResponse{}, err
 	}
@@ -161,7 +160,7 @@ func (s *ruleService) UpdateRuleCondition(c *gin.Context, id int64, ruleId int64
 }
 
 func (s *ruleService) DeleteRule(c *gin.Context, id int64, userId int64) error {
-	logger.Infof("Deleting rule %d for user %d", id, userId)
+	logger.Debugf("Deleting rule %d for user %d", id, userId)
 	err := s.db.WithTxn(c, func(tx pgx.Tx) error {
 		err := s.ruleRepo.DeleteRuleActionsByRuleId(c, id)
 		if err != nil {
@@ -180,6 +179,6 @@ func (s *ruleService) DeleteRule(c *gin.Context, id int64, userId int64) error {
 	if err != nil {
 		return err
 	}
-	logger.Infof("Rule %d deleted successfully", id)
+	logger.Debugf("Rule %d deleted successfully", id)
 	return nil
 }
