@@ -61,8 +61,8 @@ var _ = BeforeSuite(func() {
 })
 
 // decodeJSON is a helper function to decode JSON from any io.Reader
-func decodeJSON(reader io.Reader) (map[string]interface{}, error) {
-	var response map[string]interface{}
+func decodeJSON(reader io.Reader) (map[string]any, error) {
+	var response map[string]any
 	err := json.NewDecoder(reader).Decode(&response)
 	return response, err
 }

@@ -24,7 +24,7 @@ var _ = Describe("AccountController", func() {
 				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
 				Expect(response["message"]).To(Equal("Account created successfully"))
 				Expect(response["data"]).To(HaveKey("id"))
-				Expect(response["data"].(map[string]interface{})["balance"]).To(Equal(balance))
+				Expect(response["data"].(map[string]any)["balance"]).To(Equal(balance))
 			})
 
 			It("should create account for duplicate account name", func() {
@@ -49,7 +49,7 @@ var _ = Describe("AccountController", func() {
 				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
 				Expect(response["message"]).To(Equal("Account created successfully"))
 				Expect(response["data"]).To(HaveKey("id"))
-				Expect(response["data"].(map[string]interface{})["balance"]).To(Equal(0.0))
+				Expect(response["data"].(map[string]any)["balance"]).To(Equal(0.0))
 			})
 		})
 
@@ -179,7 +179,7 @@ var _ = Describe("AccountController", func() {
 			resp, response := testHelperUser1.MakeRequest(http.MethodGet, "/account", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["message"]).To(Equal("Accounts retrieved successfully"))
-			Expect(response["data"]).To(BeAssignableToTypeOf([]interface{}{}))
+			Expect(response["data"]).To(BeAssignableToTypeOf([]any{}))
 		})
 		It("should return error for non-existent user id", func() {
 			resp, response := testHelperUnauthenticated.MakeRequest(http.MethodGet, "/account", nil)
@@ -190,7 +190,7 @@ var _ = Describe("AccountController", func() {
 			resp, response := testHelperUser3.MakeRequest(http.MethodGet, "/account", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["message"]).To(Equal("Accounts retrieved successfully"))
-			Expect(len(response["data"].([]interface{}))).To(Equal(0))
+			Expect(len(response["data"].([]any))).To(Equal(0))
 		})
 	})
 
@@ -231,7 +231,7 @@ var _ = Describe("AccountController", func() {
 			resp, response := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["message"]).To(Equal("Account updated successfully"))
-			Expect(response["data"].(map[string]interface{})["name"]).To(Equal("Updated Name"))
+			Expect(response["data"].(map[string]any)["name"]).To(Equal("Updated Name"))
 		})
 
 		It("should return error when trying to update account of different user", func() {
@@ -309,7 +309,7 @@ var _ = Describe("AccountController", func() {
 			resp, response := testHelperUser1.MakeRequest(http.MethodPost, "/account", input)
 			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
 			Expect(response["message"]).To(Equal("Account created successfully"))
-			accountId := response["data"].(map[string]interface{})["id"].(float64)
+			accountId := response["data"].(map[string]any)["id"].(float64)
 
 			url := "/account/" + strconv.FormatFloat(accountId, 'f', 0, 64)
 			resp, _ = testHelperUser1.MakeRequest(http.MethodDelete, url, nil)
@@ -325,7 +325,7 @@ var _ = Describe("AccountController", func() {
 			}
 			resp, response := testHelperUser1.MakeRequest(http.MethodPost, "/account", input)
 			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
-			accountId := int64(response["data"].(map[string]interface{})["id"].(float64))
+			accountId := int64(response["data"].(map[string]any)["id"].(float64))
 
 			// Try to delete with different user
 			url := "/account/" + strconv.FormatInt(accountId, 10)
@@ -337,7 +337,7 @@ var _ = Describe("AccountController", func() {
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["message"]).To(Equal("Account retrieved successfully"))
 			Expect(response["data"]).To(HaveKey("id"))
-			Expect(response["data"].(map[string]interface{})["id"]).To(Equal(float64(accountId)))
+			Expect(response["data"].(map[string]any)["id"]).To(Equal(float64(accountId)))
 		})
 
 		It("should return error for invalid account id format in delete", func() {
@@ -364,13 +364,13 @@ var _ = Describe("AccountController", func() {
 			}
 			resp, response := testHelperUser1.MakeRequest(http.MethodPost, "/account", input)
 			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
-			accountId = int64(response["data"].(map[string]interface{})["id"].(float64))
+			accountId = int64(response["data"].(map[string]any)["id"].(float64))
 		})
 
 		It("should not include soft-deleted accounts in list", func() {
 			resp, response := testHelperUser1.MakeRequest(http.MethodGet, "/account", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
-			initialCount := len(response["data"].([]interface{}))
+			initialCount := len(response["data"].([]any))
 			Expect(initialCount).To(BeNumerically(">", 0))
 			// Delete the account
 			url := "/account/" + strconv.FormatInt(accountId, 10)
@@ -380,7 +380,7 @@ var _ = Describe("AccountController", func() {
 			// List accounts again - should have one less account
 			resp, response = testHelperUser1.MakeRequest(http.MethodGet, "/account", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
-			finalCount := len(response["data"].([]interface{}))
+			finalCount := len(response["data"].([]any))
 			Expect(finalCount).To(Equal(initialCount - 1))
 		})
 

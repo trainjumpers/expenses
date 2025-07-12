@@ -205,8 +205,8 @@ func (r *TransactionRepository) UpdateCategoryMapping(c *gin.Context, transactio
 }
 
 // Helper to build WHERE clause and args for transaction queries
-func (r *TransactionRepository) buildTransactionWhereClause(userId int64, q models.TransactionListQuery) (string, []interface{}) {
-	args := []interface{}{userId}
+func (r *TransactionRepository) buildTransactionWhereClause(userId int64, q models.TransactionListQuery) (string, []any) {
+	args := []any{userId}
 	where := []string{"t.created_by = $1", "t.deleted_at IS NULL"}
 	argIdx := len(args) + 1 // +1 because it is 1 based index
 

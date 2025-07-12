@@ -64,7 +64,7 @@ func Protected(cfg *config.Config) gin.HandlerFunc {
 }
 
 func verifyAuthToken(tokenString string, cfg *config.Config) (jwt.MapClaims, error) {
-	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
 		return cfg.JWTSecret, nil
 	})
 	if err != nil {
@@ -119,7 +119,7 @@ func InjectCreatedBy() gin.HandlerFunc {
 		ctx.Request.Body.Close()
 
 		// Parse the JSON body
-		var bodyMap map[string]interface{}
+		var bodyMap map[string]any
 		if len(bodyBytes) > 0 {
 			if err := json.Unmarshal(bodyBytes, &bodyMap); err != nil {
 				logger.Errorf("Failed to parse JSON body: %v", err)
@@ -129,7 +129,7 @@ func InjectCreatedBy() gin.HandlerFunc {
 				return
 			}
 		} else {
-			bodyMap = make(map[string]interface{})
+			bodyMap = make(map[string]any)
 		}
 
 		// Inject created_by field

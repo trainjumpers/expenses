@@ -53,7 +53,7 @@ func NewDatabaseManager(cfg *config.Config) (*DatabaseManager, error) {
 
 // ExecuteQuery executes a query that doesn't return rows (INSERT, UPDATE, DELETE)
 // Returns the number of rows affected and any error
-func (dm *DatabaseManager) ExecuteQuery(ctx context.Context, query string, args ...interface{}) (rowsAffected int64, err error) {
+func (dm *DatabaseManager) ExecuteQuery(ctx context.Context, query string, args ...any) (rowsAffected int64, err error) {
 	logger.Debugf("Executing query: %s", query)
 
 	result, err := dm.pool.Exec(ctx, query, args...)
@@ -67,13 +67,13 @@ func (dm *DatabaseManager) ExecuteQuery(ctx context.Context, query string, args 
 
 // FetchOne executes a query and returns a single row
 // Returns error if no rows found or multiple rows returned
-func (dm *DatabaseManager) FetchOne(ctx context.Context, query string, args ...interface{}) pgx.Row {
+func (dm *DatabaseManager) FetchOne(ctx context.Context, query string, args ...any) pgx.Row {
 	logger.Debugf("Fetching single row: %s", query)
 	return dm.pool.QueryRow(ctx, query, args...)
 }
 
 // FetchAll executes a query and returns multiple rows
-func (dm *DatabaseManager) FetchAll(ctx context.Context, query string, args ...interface{}) (pgx.Rows, error) {
+func (dm *DatabaseManager) FetchAll(ctx context.Context, query string, args ...any) (pgx.Rows, error) {
 	logger.Debugf("Fetching multiple rows: %s", query)
 
 	rows, err := dm.pool.Query(ctx, query, args...)

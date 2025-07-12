@@ -6,7 +6,7 @@ import (
 )
 
 // extractFields extracts pointers, values, and column names for exported struct fields.
-func ExtractFields(obj interface{}, skipNull bool) ([]interface{}, []interface{}, []string, error) {
+func ExtractFields(obj any, skipNull bool) ([]any, []any, []string, error) {
 	if obj == nil {
 		return nil, nil, nil, errors.New("extractFields: obj is nil")
 	}
@@ -19,8 +19,8 @@ func ExtractFields(obj interface{}, skipNull bool) ([]interface{}, []interface{}
 		return nil, nil, nil, errors.New("extractFields: obj must be a pointer to a struct")
 	}
 	t := v.Type()
-	var ptrs []interface{}
-	var values []interface{}
+	var ptrs []any
+	var values []any
 	var fields []string
 	for i := range t.NumField() {
 		field := v.Field(i)
@@ -49,7 +49,7 @@ func IsZeroValue(v reflect.Value) bool {
 	return reflect.DeepEqual(v.Interface(), reflect.Zero(v.Type()).Interface())
 }
 
-func ConvertStruct(src interface{}, dst interface{}) {
+func ConvertStruct(src any, dst any) {
 	if src == nil || dst == nil {
 		return
 	}

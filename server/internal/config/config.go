@@ -57,7 +57,6 @@ func NewConfig() (*Config, error) {
 	config.RefreshTokenDuration = time.Duration(refreshTokenDays) * 24 * time.Hour
 	config.CookieDomain = os.Getenv("COOKIE_DOMAIN")
 	config.LoggingLevel = os.Getenv("LOGGING_LEVEL")
-	fmt.Println("Config initialized with environment:", config.LoggingLevel)
 	return config, nil
 }
 

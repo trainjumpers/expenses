@@ -96,7 +96,7 @@ var _ = Describe("Utils", func() {
 			Expect(IsZeroValue(reflect.ValueOf(42))).To(BeFalse())
 			Expect(IsZeroValue(reflect.ValueOf(zeroTime))).To(BeTrue())
 			Expect(IsZeroValue(reflect.ValueOf(nonZeroTime))).To(BeFalse())
-			var nilInterface interface{}
+			var nilInterface any
 			Expect(IsZeroValue(reflect.ValueOf(nilInterface))).To(BeTrue())
 		})
 	})

@@ -22,7 +22,7 @@ func NewMockDatabaseManager() *MockDatabaseManager {
 }
 
 // ExecuteQuery mocks query execution
-func (m *MockDatabaseManager) ExecuteQuery(ctx context.Context, query string, args ...interface{}) (rowsAffected int64, err error) {
+func (m *MockDatabaseManager) ExecuteQuery(ctx context.Context, query string, args ...any) (rowsAffected int64, err error) {
 	if m.ExecuteQueryError != nil {
 		return 0, m.ExecuteQueryError
 	}
@@ -31,12 +31,12 @@ func (m *MockDatabaseManager) ExecuteQuery(ctx context.Context, query string, ar
 }
 
 // FetchOne mocks single row fetching by returning a MockRow
-func (m *MockDatabaseManager) FetchOne(ctx context.Context, query string, args ...interface{}) pgx.Row {
+func (m *MockDatabaseManager) FetchOne(ctx context.Context, query string, args ...any) pgx.Row {
 	return &MockRow{}
 }
 
 // FetchAll mocks multiple row fetching
-func (m *MockDatabaseManager) FetchAll(ctx context.Context, query string, args ...interface{}) (pgx.Rows, error) {
+func (m *MockDatabaseManager) FetchAll(ctx context.Context, query string, args ...any) (pgx.Rows, error) {
 	if m.FetchAllError != nil {
 		return nil, m.FetchAllError
 	}
@@ -68,7 +68,7 @@ type MockRow struct {
 	ScanError error
 }
 
-func (m *MockRow) Scan(dest ...interface{}) error {
+func (m *MockRow) Scan(dest ...any) error {
 	if m.ScanError != nil {
 		return m.ScanError
 	}
@@ -89,7 +89,7 @@ func (m *MockRows) Next() bool {
 	return false // No rows to iterate for basic mock
 }
 
-func (m *MockRows) Scan(dest ...interface{}) error {
+func (m *MockRows) Scan(dest ...any) error {
 	return nil
 }
 
@@ -105,8 +105,8 @@ func (m *MockRows) FieldDescriptions() []pgconn.FieldDescription {
 	return []pgconn.FieldDescription{}
 }
 
-func (m *MockRows) Values() ([]interface{}, error) {
-	return []interface{}{}, nil
+func (m *MockRows) Values() ([]any, error) {
+	return []any{}, nil
 }
 
 func (m *MockRows) RawValues() [][]byte {
@@ -144,15 +144,15 @@ func (m *MockTx) LargeObjects() pgx.LargeObjects {
 	return pgx.LargeObjects{}
 }
 
-func (m *MockTx) Exec(ctx context.Context, sql string, arguments ...interface{}) (pgconn.CommandTag, error) {
+func (m *MockTx) Exec(ctx context.Context, sql string, arguments ...any) (pgconn.CommandTag, error) {
 	return pgconn.CommandTag{}, nil
 }
 
-func (m *MockTx) Query(ctx context.Context, sql string, args ...interface{}) (pgx.Rows, error) {
+func (m *MockTx) Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error) {
 	return &MockRows{}, nil
 }
 
-func (m *MockTx) QueryRow(ctx context.Context, sql string, args ...interface{}) pgx.Row {
+func (m *MockTx) QueryRow(ctx context.Context, sql string, args ...any) pgx.Row {
 	return &MockRow{}
 }
 

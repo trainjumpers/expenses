@@ -19,8 +19,8 @@ var _ = Describe("UserController", func() {
 				Expect(response["data"]).To(HaveKey("email"))
 				Expect(response["data"]).To(HaveKey("name"))
 				Expect(response["data"]).NotTo(HaveKey("password"))
-				Expect(response["data"].(map[string]interface{})["email"]).To(Equal("test1@example.com"))
-				Expect(response["data"].(map[string]interface{})["name"]).To(Equal("Test user 1"))
+				Expect(response["data"].(map[string]any)["email"]).To(Equal("test1@example.com"))
+				Expect(response["data"].(map[string]any)["name"]).To(Equal("Test user 1"))
 			})
 		})
 
@@ -46,7 +46,7 @@ var _ = Describe("UserController", func() {
 				resp, response := testHelperUser1.MakeRequest(http.MethodPatch, "/user", updateInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 				Expect(response["message"]).To(Equal("User updated successfully"))
-				data := response["data"].(map[string]interface{})
+				data := response["data"].(map[string]any)
 				Expect(data["name"]).To(Equal("Updated Name"))
 			})
 
@@ -57,7 +57,7 @@ var _ = Describe("UserController", func() {
 				resp, response := testHelperUser1.MakeRequest(http.MethodPatch, "/user", updateInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 				Expect(response["message"]).To(Equal("User updated successfully"))
-				data := response["data"].(map[string]interface{})
+				data := response["data"].(map[string]any)
 				Expect(data["name"]).To(Equal("Trimmed Name")) // Should be trimmed
 			})
 
@@ -68,7 +68,7 @@ var _ = Describe("UserController", func() {
 				resp, response := testHelperUser1.MakeRequest(http.MethodPatch, "/user", updateInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 				Expect(response["message"]).To(Equal("User updated successfully"))
-				data := response["data"].(map[string]interface{})
+				data := response["data"].(map[string]any)
 				Expect(data["name"]).To(Equal("Complex Whitespace Name")) // Should be trimmed
 			})
 		})
@@ -103,7 +103,7 @@ var _ = Describe("UserController", func() {
 			})
 
 			It("should return bad request for invalid input", func() {
-				updateInput := map[string]interface{}{
+				updateInput := map[string]any{
 					"somerandomparam": 123,
 				}
 				resp, _ := testHelperUser1.MakeRequest(http.MethodPatch, "/user", updateInput)

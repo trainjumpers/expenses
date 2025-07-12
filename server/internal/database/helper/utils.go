@@ -11,7 +11,7 @@ import (
 )
 
 // CreateUpdateParams generates an SQL update clause and values from a struct pointer.
-func CreateUpdateParams(obj interface{}) (string, []interface{}, int, error) {
+func CreateUpdateParams(obj any) (string, []any, int, error) {
 	_, values, dbFields, err := extractDbFields(obj, true)
 	if err != nil {
 		return "", nil, 0, err
@@ -28,7 +28,7 @@ func CreateUpdateParams(obj interface{}) (string, []interface{}, int, error) {
 }
 
 // CreateInsertQuery generates an SQL insert clause and values from a struct pointer.
-func CreateInsertQuery(insertObj interface{}, outputObj interface{}, tableName string, schema string) (string, []interface{}, []interface{}, error) {
+func CreateInsertQuery(insertObj any, outputObj any, tableName string, schema string) (string, []any, []any, error) {
 	_, values, columns, err := extractDbFields(insertObj, true)
 	if err != nil {
 		return "", nil, nil, err
@@ -56,7 +56,7 @@ func CreateInsertQuery(insertObj interface{}, outputObj interface{}, tableName s
 }
 
 // GetDbFieldsFromObject returns pointers to all struct fields in order.
-func GetDbFieldsFromObject(obj interface{}) ([]interface{}, []string, error) {
+func GetDbFieldsFromObject(obj any) ([]any, []string, error) {
 	v := reflect.ValueOf(obj)
 	if v.Kind() != reflect.Ptr || v.IsNil() {
 		return nil, nil, errors.New("obj must be a non-nil pointer to a struct")
@@ -101,7 +101,7 @@ func ToSnakeCase(str string) string {
 }
 
 // extractDbFields extracts pointers, values, and column names for exported struct fields.
-func extractDbFields(obj interface{}, skipNull bool) ([]interface{}, []interface{}, []string, error) {
+func extractDbFields(obj any, skipNull bool) ([]any, []any, []string, error) {
 	ptrs, values, fields, err := utils.ExtractFields(obj, skipNull)
 	if err != nil {
 		return nil, nil, nil, err

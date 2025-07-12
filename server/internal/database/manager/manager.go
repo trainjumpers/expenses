@@ -19,14 +19,14 @@ type LockFunc func(tx pgx.Tx) error
 type DatabaseManager interface {
 	// ExecuteQuery executes a query that doesn't return rows (INSERT, UPDATE, DELETE)
 	// Returns the number of rows affected and any error
-	ExecuteQuery(ctx context.Context, query string, args ...interface{}) (rowsAffected int64, err error)
+	ExecuteQuery(ctx context.Context, query string, args ...any) (rowsAffected int64, err error)
 
 	// FetchOne executes a query and returns a single row
 	// Returns error if no rows found or multiple rows returned
-	FetchOne(ctx context.Context, query string, args ...interface{}) pgx.Row
+	FetchOne(ctx context.Context, query string, args ...any) pgx.Row
 
 	// FetchAll executes a query and returns multiple rows
-	FetchAll(ctx context.Context, query string, args ...interface{}) (pgx.Rows, error)
+	FetchAll(ctx context.Context, query string, args ...any) (pgx.Rows, error)
 
 	// WithTxn executes a function within a transaction
 	// Automatically commits on success, rolls back on error
