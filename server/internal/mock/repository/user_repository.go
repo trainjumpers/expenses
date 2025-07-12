@@ -3,6 +3,7 @@ package mock_repository
 import (
 	"expenses/internal/errors"
 	"expenses/internal/models"
+	"sync"
 
 	"github.com/gin-gonic/gin"
 )
@@ -10,6 +11,7 @@ import (
 type MockUserRepository struct {
 	users  map[string]models.UserWithPassword
 	nextId int64
+	mu     sync.RWMutex
 }
 
 func NewMockUserRepository() *MockUserRepository {
@@ -20,6 +22,8 @@ func NewMockUserRepository() *MockUserRepository {
 }
 
 func (m *MockUserRepository) CreateUser(c *gin.Context, newUser models.CreateUserInput) (models.UserResponse, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	if _, exists := m.users[newUser.Email]; exists {
 		return models.UserResponse{}, errors.NewUserAlreadyExistsError(nil)
 	}
@@ -41,6 +45,8 @@ func (m *MockUserRepository) CreateUser(c *gin.Context, newUser models.CreateUse
 }
 
 func (m *MockUserRepository) GetUserByEmailWithPassword(c *gin.Context, email string) (models.UserWithPassword, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	if user, exists := m.users[email]; exists {
 		return user, nil
 	}
@@ -48,6 +54,8 @@ func (m *MockUserRepository) GetUserByEmailWithPassword(c *gin.Context, email st
 }
 
 func (m *MockUserRepository) GetUserByIdWithPassword(c *gin.Context, userId int64) (models.UserWithPassword, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	for _, user := range m.users {
 		if user.Id == userId {
 			return user, nil
@@ -57,6 +65,8 @@ func (m *MockUserRepository) GetUserByIdWithPassword(c *gin.Context, userId int6
 }
 
 func (m *MockUserRepository) GetUserById(c *gin.Context, userId int64) (models.UserResponse, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	for _, user := range m.users {
 		if user.Id == userId {
 			return models.UserResponse{
@@ -70,6 +80,8 @@ func (m *MockUserRepository) GetUserById(c *gin.Context, userId int64) (models.U
 }
 
 func (m *MockUserRepository) DeleteUser(c *gin.Context, userId int64) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	for email, user := range m.users {
 		if user.Id == userId {
 			delete(m.users, email)

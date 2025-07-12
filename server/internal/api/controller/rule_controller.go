@@ -24,13 +24,13 @@ func NewRuleController(cfg *config.Config, ruleService service.RuleServiceInterf
 }
 
 func (rc *RuleController) CreateRule(c *gin.Context) {
-
 	var ruleReq models.CreateRuleRequest
+	userId := rc.GetAuthenticatedUserId(c)
 	if err := rc.BindJSON(c, &ruleReq); err != nil {
 		logger.Errorf("Failed to bind JSON: %v", err)
 		return
 	}
-	ruleReq.Rule.CreatedBy = rc.GetAuthenticatedUserId(c)
+	ruleReq.Rule.CreatedBy = userId
 	logger.Infof("Creating new rule for user %d", ruleReq.Rule.CreatedBy)
 
 	rule, err := rc.ruleService.CreateRule(c, ruleReq)

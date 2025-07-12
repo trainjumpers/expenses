@@ -3,6 +3,7 @@ package mock_repository
 import (
 	customErrors "expenses/internal/errors"
 	"expenses/internal/models"
+	"sync"
 
 	"github.com/gin-gonic/gin"
 )
@@ -10,6 +11,7 @@ import (
 type MockAccountRepository struct {
 	accounts map[int64]models.AccountResponse
 	nextId   int64
+	mu       sync.RWMutex
 }
 
 func NewMockAccountRepository() *MockAccountRepository {
@@ -20,6 +22,8 @@ func NewMockAccountRepository() *MockAccountRepository {
 }
 
 func (m *MockAccountRepository) CreateAccount(c *gin.Context, input models.CreateAccountInput) (models.AccountResponse, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	acc := models.AccountResponse{
 		Id:        m.nextId,
 		Name:      input.Name,
@@ -37,6 +41,8 @@ func (m *MockAccountRepository) CreateAccount(c *gin.Context, input models.Creat
 }
 
 func (m *MockAccountRepository) GetAccountById(c *gin.Context, accountId int64, userId int64) (models.AccountResponse, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	acc, ok := m.accounts[accountId]
 	if !ok || acc.CreatedBy != userId {
 		return models.AccountResponse{}, customErrors.NewAccountNotFoundError(nil)
@@ -45,6 +51,8 @@ func (m *MockAccountRepository) GetAccountById(c *gin.Context, accountId int64, 
 }
 
 func (m *MockAccountRepository) UpdateAccount(c *gin.Context, accountId int64, userId int64, input models.UpdateAccountInput) (models.AccountResponse, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	acc, ok := m.accounts[accountId]
 	if !ok || acc.CreatedBy != userId {
 		return models.AccountResponse{}, customErrors.NewAccountNotFoundError(nil)
@@ -66,6 +74,8 @@ func (m *MockAccountRepository) UpdateAccount(c *gin.Context, accountId int64, u
 }
 
 func (m *MockAccountRepository) DeleteAccount(c *gin.Context, accountId int64, userId int64) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	acc, ok := m.accounts[accountId]
 	if !ok || acc.CreatedBy != userId {
 		return customErrors.NewAccountNotFoundError(nil)
@@ -75,6 +85,8 @@ func (m *MockAccountRepository) DeleteAccount(c *gin.Context, accountId int64, u
 }
 
 func (m *MockAccountRepository) ListAccounts(c *gin.Context, userId int64) ([]models.AccountResponse, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	var result []models.AccountResponse
 	for _, acc := range m.accounts {
 		if acc.CreatedBy == userId {
