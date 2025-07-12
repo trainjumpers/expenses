@@ -172,7 +172,7 @@ func (b *BaseController) GetAuthenticatedUserId(ctx *gin.Context) int64 {
 	return ctx.GetInt64("authUserId")
 }
 
-// setAuthCookie sets a secure, HTTP-only cookie with SameSite=Lax for auth tokens
+// setAuthCookie sets a secure, HTTP-only cookie with SameSite=None for cross-site auth tokens
 func (b *BaseController) setAuthCookie(ctx *gin.Context, name, value string, maxAge int) {
 	domain := ""
 	if b.cfg.IsProd() {
@@ -184,9 +184,9 @@ func (b *BaseController) setAuthCookie(ctx *gin.Context, name, value string, max
 		Path:     "/",
 		Domain:   domain,
 		MaxAge:   maxAge,
-		Secure:   b.cfg.IsProd(),
+		Secure:   true,
 		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode,
+		SameSite: http.SameSiteNoneMode,
 	}
 	// Gin's SetCookie does not support SameSite, so use Header directly
 	h := cookie.String()
