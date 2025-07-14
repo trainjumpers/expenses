@@ -1,6 +1,7 @@
 "use client";
 
 import Dashboard from "@/components/custom/Dashboard/Dashboard";
+import { ImportStatementModal } from "@/components/custom/Modal/Statement/ImportStatementModal";
 import { AddTransactionModal } from "@/components/custom/Modal/Transaction/AddTransactionModal";
 import UpdateTransactionModal from "@/components/custom/Modal/Transaction/UpdateTransactionModal";
 import TransactionFilters from "@/components/custom/Transaction/TransactionFilters";
@@ -13,7 +14,7 @@ import {
 } from "@/components/hooks/useTransactions";
 import { Button } from "@/components/ui/button";
 import { Transaction, TransactionQueryParams } from "@/lib/models/transaction";
-import { Pencil, Plus, Trash } from "lucide-react";
+import { Pencil, Plus, Trash, Upload } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -60,6 +61,8 @@ export default function TransactionPage() {
   const [isAddTransactionModalOpen, setIsAddTransactionModalOpen] =
     useState(false);
   const [isUpdateTransactionModalOpen, setIsUpdateTransactionModalOpen] =
+    useState(false);
+  const [isImportStatementModalOpen, setIsImportStatementModalOpen] =
     useState(false);
   const [transactionToUpdate, setTransactionToUpdate] =
     useState<Transaction | null>(null);
@@ -159,6 +162,10 @@ export default function TransactionPage() {
     setIsAddTransactionModalOpen(true);
   };
 
+  const handleImportClick = () => {
+    setIsImportStatementModalOpen(true);
+  };
+
   const handleDeleteClick = async () => {
     if (selectedRows.size === 0) return;
     const ids = Array.from(selectedRows);
@@ -202,6 +209,10 @@ export default function TransactionPage() {
           </div>
         </div>
         <div className="flex justify-end items-center gap-2 mr-4 mb-1">
+          <Button variant="outline" onClick={handleImportClick}>
+            <Upload className="h-4 w-4" />
+            Import
+          </Button>
           <Button onClick={handleAddClick}>
             <Plus className="h-4 w-4" />
             Add Transaction
@@ -257,6 +268,11 @@ export default function TransactionPage() {
         isOpen={isUpdateTransactionModalOpen}
         onOpenChange={setIsUpdateTransactionModalOpen}
         transaction={transactionToUpdate}
+      />
+
+      <ImportStatementModal
+        isOpen={isImportStatementModalOpen}
+        onOpenChange={setIsImportStatementModalOpen}
       />
     </Dashboard>
   );

@@ -157,17 +157,18 @@ func (t *TransactionController) bindTransactionListQuery(ctx *gin.Context) model
 	pageSize, _ := strconv.Atoi(ctx.DefaultQuery("page_size", "15"))
 
 	return models.TransactionListQuery{
-		Page:       page,
-		PageSize:   pageSize,
-		SortBy:     ctx.DefaultQuery("sort_by", "date"),
-		SortOrder:  ctx.DefaultQuery("sort_order", "desc"),
-		AccountId:  parseInt64QueryParam(ctx, "account_id"),
-		CategoryId: parseInt64QueryParam(ctx, "category_id"),
-		MinAmount:  parseFloat64QueryParam(ctx, "min_amount"),
-		MaxAmount:  parseFloat64QueryParam(ctx, "max_amount"),
-		DateFrom:   parseTimeQueryParam(ctx, "date_from", "2006-01-02"),
-		DateTo:     parseTimeQueryParam(ctx, "date_to", "2006-01-02"),
-		Search:     parseStringQueryParam(ctx, "search"),
+		Page:        page,
+		PageSize:    pageSize,
+		SortBy:      ctx.DefaultQuery("sort_by", "date"),
+		SortOrder:   ctx.DefaultQuery("sort_order", "desc"),
+		AccountId:   parseInt64QueryParam(ctx, "account_id"),
+		CategoryId:  parseInt64QueryParam(ctx, "category_id"),
+		MinAmount:   parseFloat64QueryParam(ctx, "min_amount"),
+		MaxAmount:   parseFloat64QueryParam(ctx, "max_amount"),
+		DateFrom:    parseTimeQueryParam(ctx, "date_from", "2006-01-02"),
+		DateTo:      parseTimeQueryParam(ctx, "date_to", "2006-01-02"),
+		StatementId: parseInt64QueryParam(ctx, "statement_id"),
+		Search:      parseStringQueryParam(ctx, "search"),
 	}
 }
 

@@ -19,6 +19,7 @@ func Init(
 	categoryService service.CategoryServiceInterface,
 	transactionService service.TransactionServiceInterface,
 	ruleService service.RuleServiceInterface,
+	statementService service.StatementServiceInterface,
 ) *gin.Engine {
 	router := gin.New()
 	if !cfg.IsTest() || cfg.LoggingLevel != "" {
@@ -53,6 +54,8 @@ func Init(
 	categoryController := controller.NewCategoryController(cfg, categoryService)
 	transactionController := controller.NewTransactionController(cfg, transactionService)
 	ruleController := controller.NewRuleController(cfg, ruleService)
+	statementController := controller.NewStatementController(cfg, statementService)
+
 	api := router.Group("/api/v1")
 	{
 		base := api.Group("")
@@ -101,8 +104,16 @@ func Init(
 			transaction.DELETE("/:transactionId", transactionController.DeleteTransaction)
 		}
 
+		// Statement routes
+		statement := base.Group("/statement", middleware.Protected(cfg))
+		{
+			statement.POST("", statementController.CreateStatement)
+			statement.GET("", statementController.GetStatements)
+			statement.GET("/:id", statementController.GetStatementStatus)
+		}
+
 		// Rule routes
-		rule := base.Group("/rule").Use(gin.HandlerFunc(middleware.Protected(cfg)))
+		rule := base.Group("/rule", middleware.ProtectedWithCreatedBy(cfg)...)
 		{
 			rule.GET("", ruleController.ListRules)
 			rule.POST("", ruleController.CreateRule)

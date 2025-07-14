@@ -10,6 +10,7 @@ import (
 	database "expenses/internal/database/manager"
 	"expenses/internal/repository"
 	"expenses/internal/service"
+	"expenses/internal/validator"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/wire"
@@ -45,10 +46,12 @@ var ProviderSet = wire.NewSet(
 	controllerSet,
 	repositorySet,
 	serviceSet,
+	validatorSet,
 )
 
 var controllerSet = wire.NewSet(
 	controller.NewAuthController,
+	controller.NewStatementController,
 )
 
 var repositorySet = wire.NewSet(
@@ -57,6 +60,7 @@ var repositorySet = wire.NewSet(
 	repository.NewCategoryRepository,
 	repository.NewTransactionRepository,
 	repository.NewRuleRepository,
+	repository.NewStatementRepository,
 )
 
 var serviceSet = wire.NewSet(
@@ -66,4 +70,9 @@ var serviceSet = wire.NewSet(
 	service.NewCategoryService,
 	service.NewTransactionService,
 	service.NewRuleService,
+	service.NewStatementService,
+)
+
+var validatorSet = wire.NewSet(
+	validator.NewStatementValidator,
 )

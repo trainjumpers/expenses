@@ -10,9 +10,11 @@ import (
 	"expenses/internal/api"
 	"expenses/internal/api/controller"
 	"expenses/internal/config"
-	"expenses/internal/database/manager"
+	database "expenses/internal/database/manager"
 	"expenses/internal/repository"
 	"expenses/internal/service"
+	"expenses/internal/validator"
+
 	"github.com/gin-gonic/gin"
 	"github.com/google/wire"
 )
@@ -39,7 +41,10 @@ func InitializeApplication() (*Provider, error) {
 	transactionServiceInterface := service.NewTransactionService(transactionRepositoryInterface, categoryRepositoryInterface, accountRepositoryInterface, databaseManager)
 	ruleRepositoryInterface := repository.NewRuleRepository(databaseManager, configConfig)
 	ruleServiceInterface := service.NewRuleService(ruleRepositoryInterface, transactionRepositoryInterface, databaseManager)
-	engine := api.Init(configConfig, authServiceInterface, userServiceInterface, accountServiceInterface, categoryServiceInterface, transactionServiceInterface, ruleServiceInterface)
+	statementRepositoryInterface := repository.NewStatementRepository(databaseManager, configConfig)
+	statementValidator := validator.NewStatementValidator()
+	statementServiceInterface := service.NewStatementService(statementRepositoryInterface, accountRepositoryInterface, statementValidator, transactionServiceInterface)
+	engine := api.Init(configConfig, authServiceInterface, userServiceInterface, accountServiceInterface, categoryServiceInterface, transactionServiceInterface, ruleServiceInterface, statementServiceInterface)
 	provider := NewProvider(engine, databaseManager)
 	return provider, nil
 }
@@ -67,10 +72,13 @@ var ProviderSet = wire.NewSet(
 	NewProvider, database.NewDatabaseManager, config.NewConfig, api.Init, controllerSet,
 	repositorySet,
 	serviceSet,
+	validatorSet,
 )
 
-var controllerSet = wire.NewSet(controller.NewAuthController)
+var controllerSet = wire.NewSet(controller.NewAuthController, controller.NewStatementController)
 
-var repositorySet = wire.NewSet(repository.NewUserRepository, repository.NewAccountRepository, repository.NewCategoryRepository, repository.NewTransactionRepository, repository.NewRuleRepository)
+var repositorySet = wire.NewSet(repository.NewUserRepository, repository.NewAccountRepository, repository.NewCategoryRepository, repository.NewTransactionRepository, repository.NewRuleRepository, repository.NewStatementRepository)
 
-var serviceSet = wire.NewSet(service.NewUserService, service.NewAuthService, service.NewAccountService, service.NewCategoryService, service.NewTransactionService, service.NewRuleService)
+var serviceSet = wire.NewSet(service.NewUserService, service.NewAuthService, service.NewAccountService, service.NewCategoryService, service.NewTransactionService, service.NewRuleService, service.NewStatementService)
+
+var validatorSet = wire.NewSet(validator.NewStatementValidator)

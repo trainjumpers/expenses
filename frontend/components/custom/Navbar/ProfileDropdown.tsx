@@ -8,17 +8,19 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Key, LogOut, User, UserCircle } from "lucide-react";
+import { FileText, Key, LogOut, User, UserCircle } from "lucide-react";
 import { useState } from "react";
 
 import { PasswordModal } from "../Modal/PasswordModal";
 import { ProfileModal } from "../Modal/ProfileModal";
+import { ViewStatementsModal } from "../Modal/Statement/ViewStatementsModal";
 
 export function ProfileDropdown() {
   const { data: user } = useUser();
   const logoutMutation = useLogout();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isPasswordOpen, setIsPasswordOpen] = useState(false);
+  const [isStatementsOpen, setIsStatementsOpen] = useState(false);
 
   const getInitials = (name: string | null | undefined) => {
     if (!name) return "PN";
@@ -82,6 +84,14 @@ export function ProfileDropdown() {
             <Button
               variant="ghost"
               className="w-full justify-start"
+              onClick={() => setIsStatementsOpen(true)}
+            >
+              <FileText className="mr-2 h-4 w-4" />
+              View Statements
+            </Button>
+            <Button
+              variant="ghost"
+              className="w-full justify-start"
               onClick={handleLogout}
               disabled={logoutMutation.isPending}
             >
@@ -95,6 +105,11 @@ export function ProfileDropdown() {
       <ProfileModal isOpen={isProfileOpen} onOpenChange={setIsProfileOpen} />
 
       <PasswordModal isOpen={isPasswordOpen} onOpenChange={setIsPasswordOpen} />
+
+      <ViewStatementsModal
+        isOpen={isStatementsOpen}
+        onOpenChange={setIsStatementsOpen}
+      />
     </>
   );
 }

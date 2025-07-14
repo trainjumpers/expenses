@@ -4,8 +4,17 @@
     "adapter": "Delve",
     "type": "go",
     "request": "launch",
-    "program": "${workspaceFolder}/cmd/server",
+    "program": "./server/cmd/neurospend",
+    "cwd": "${ZED_WORKTREE_ROOT}/server",
     "args": [],
     "mode": "debug"
+  },
+  {
+    "adapter": "Delve",
+    "label": "Debug Tests",
+    "request": "launch",
+    "mode": "test",
+    "program": "./server/internal/service",
+    "cwd": "/Users/beelzebub/Projects/expenses/server"
   }
 ]
