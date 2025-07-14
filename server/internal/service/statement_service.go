@@ -47,7 +47,7 @@ func (s *StatementService) ParseStatement(c *gin.Context, fileBytes []byte, file
 	if strings.HasSuffix(fileName, ".xls") || strings.HasSuffix(fileName, ".xlsx") {
 		fileType = "excel"
 	}
-	
+
 	account, err := s.accountService.GetAccountById(c, accountId, userId)
 	if err != nil {
 		return models.StatementResponse{}, err
