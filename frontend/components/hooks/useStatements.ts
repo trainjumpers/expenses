@@ -1,13 +1,18 @@
+import {
+  getStatement,
+  listStatements,
+  uploadStatement,
+} from "@/lib/api/statement";
+import { PaginatedStatementResponse } from "@/lib/api/statement";
+import { CreateStatementRequest } from "@/lib/models/statement";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { uploadStatement, getStatement, listStatements } from "@/lib/api/statement";
-import { CreateStatementRequest } from "@/lib/models/statement";
-import { PaginatedStatementResponse } from "@/lib/api/statement";
 
 const STATEMENT_KEYS = {
   all: ["statements"] as const,
   lists: () => [...STATEMENT_KEYS.all, "list"] as const,
-  list: (filters: Record<string, unknown>) => [...STATEMENT_KEYS.lists(), filters] as const,
+  list: (filters: Record<string, unknown>) =>
+    [...STATEMENT_KEYS.lists(), filters] as const,
   details: () => [...STATEMENT_KEYS.all, "detail"] as const,
   detail: (id: number) => [...STATEMENT_KEYS.details(), id] as const,
 };
@@ -15,7 +20,8 @@ const STATEMENT_KEYS = {
 export const useStatements = (page: number = 1, pageSize: number = 10) => {
   return useQuery<PaginatedStatementResponse>({
     queryKey: ["statements", page, pageSize],
-    queryFn: ({ signal }) => listStatements(signal, { page, page_size: pageSize }),
+    queryFn: ({ signal }) =>
+      listStatements(signal, { page, page_size: pageSize }),
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 };
@@ -37,8 +43,10 @@ export const useUploadStatement = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: STATEMENT_KEYS.all });
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
-      
-      toast.success("Statement uploaded successfully! Processing will begin shortly.");
+
+      toast.success(
+        "Statement uploaded successfully! Processing will begin shortly."
+      );
     },
     onError: (error: Error) => {
       toast.error(error.message || "Failed to upload statement");

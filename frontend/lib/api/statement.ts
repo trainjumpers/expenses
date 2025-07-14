@@ -1,8 +1,14 @@
 import { apiRequest } from "@/lib/api/request";
 import { API_BASE_URL } from "@/lib/constants/api";
-import { CreateStatementRequest, Statement, StatementUploadResponse } from "@/lib/models/statement";
+import {
+  CreateStatementRequest,
+  Statement,
+  StatementUploadResponse,
+} from "@/lib/models/statement";
 
-export async function uploadStatement(data: CreateStatementRequest): Promise<StatementUploadResponse> {
+export async function uploadStatement(
+  data: CreateStatementRequest
+): Promise<StatementUploadResponse> {
   const formData = new FormData();
   formData.append("account_id", data.account_id.toString());
   formData.append("file", data.file);

@@ -1,9 +1,9 @@
 "use client";
 
 import Dashboard from "@/components/custom/Dashboard/Dashboard";
+import { ImportStatementModal } from "@/components/custom/Modal/Statement/ImportStatementModal";
 import { AddTransactionModal } from "@/components/custom/Modal/Transaction/AddTransactionModal";
 import UpdateTransactionModal from "@/components/custom/Modal/Transaction/UpdateTransactionModal";
-import { ImportStatementModal } from "@/components/custom/Modal/Statement/ImportStatementModal";
 import TransactionFilters from "@/components/custom/Transaction/TransactionFilters";
 import { TransactionsTable } from "@/components/custom/Transaction/TransactionsTable";
 import { useAccounts } from "@/components/hooks/useAccounts";

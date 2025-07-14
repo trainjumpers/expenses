@@ -8,7 +8,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Key, LogOut, User, UserCircle, FileText } from "lucide-react";
+import { FileText, Key, LogOut, User, UserCircle } from "lucide-react";
 import { useState } from "react";
 
 import { PasswordModal } from "../Modal/PasswordModal";
@@ -106,7 +106,10 @@ export function ProfileDropdown() {
 
       <PasswordModal isOpen={isPasswordOpen} onOpenChange={setIsPasswordOpen} />
 
-      <ViewStatementsModal isOpen={isStatementsOpen} onOpenChange={setIsStatementsOpen} />
+      <ViewStatementsModal
+        isOpen={isStatementsOpen}
+        onOpenChange={setIsStatementsOpen}
+      />
     </>
   );
 }
