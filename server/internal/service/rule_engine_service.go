@@ -68,7 +68,7 @@ func (s *ruleEngineService) ExecuteRules(c *gin.Context, userId int64, request m
 		if err != nil {
 			return models.ExecuteRulesResponse{}, fmt.Errorf("failed to fetch specific transactions: %w", err)
 		}
-		
+
 		result := engine.ExecuteRules(rules, transactions)
 		allChangesets = append(allChangesets, result.Changesets...)
 		allSkipped = append(allSkipped, result.Skipped...)
@@ -84,6 +84,7 @@ func (s *ruleEngineService) ExecuteRules(c *gin.Context, userId int64, request m
 			}
 
 			result, err := s.transactionRepo.ListTransactions(c, userId, query)
+			fmt.Println("Transactions", result)
 			if err != nil {
 				return models.ExecuteRulesResponse{}, fmt.Errorf("failed to fetch transactions page %d: %w", page, err)
 			}
@@ -104,6 +105,7 @@ func (s *ruleEngineService) ExecuteRules(c *gin.Context, userId int64, request m
 		}
 	}
 
+	fmt.Println("Changesets", allChangesets)
 	modified, err := s.applyChangesets(c, allChangesets)
 	if err != nil {
 		return models.ExecuteRulesResponse{}, fmt.Errorf("failed to apply changesets: %w", err)
@@ -250,6 +252,7 @@ func (s *ruleEngineService) applyChangesets(c *gin.Context, changesets []RuleCha
 	for _, changeset := range changesets {
 		err := s.applyChangesetToTransaction(c, changeset)
 		if err != nil {
+			fmt.Println("Error applying changeset:", err)
 			logger.Errorf("Failed to apply changeset to transaction %d: %v", changeset.TransactionId, err)
 			continue
 		}
@@ -261,6 +264,7 @@ func (s *ruleEngineService) applyChangesets(c *gin.Context, changesets []RuleCha
 		})
 	}
 
+	fmt.Println("Modified", modified)
 	return modified, nil
 }
 
@@ -278,6 +282,7 @@ func (s *ruleEngineService) applyChangesetToTransaction(c *gin.Context, changese
 		}
 
 		transaction, err := s.transactionRepo.GetTransactionById(c, changeset.TransactionId, 0)
+		fmt.Println("Transaction", transaction)
 		if err != nil {
 			return fmt.Errorf("failed to get transaction for update: %w", err)
 		}
