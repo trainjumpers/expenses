@@ -65,6 +65,8 @@ export default function TransactionPage() {
     useState(false);
   const [isUpdateTransactionModalOpen, setIsUpdateTransactionModalOpen] =
     useState(false);
+  const [isImportStatementModalOpen, setIsImportStatementModalOpen] =
+    useState(false);
   const [transactionToUpdate, setTransactionToUpdate] =
     useState<Transaction | null>(null);
 
@@ -207,6 +209,10 @@ export default function TransactionPage() {
           </div>
         </div>
         <div className="flex justify-end items-center gap-2 mr-4 mb-1">
+          <Button variant="outline" onClick={handleImportClick}>
+            <Upload className="h-4 w-4" />
+            Import
+          </Button>
           <Button onClick={handleAddClick}>
             <Plus className="h-4 w-4" />
             Add Transaction
@@ -259,6 +265,11 @@ export default function TransactionPage() {
         transaction={transactionToUpdate}
         onTransactionUpdated={fetchTransactions}
         isRefreshing={loading}
+      />
+
+      <ImportStatementModal
+        isOpen={isImportStatementModalOpen}
+        onOpenChange={setIsImportStatementModalOpen}
       />
     </Dashboard>
   );

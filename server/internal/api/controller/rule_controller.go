@@ -30,7 +30,6 @@ func (rc *RuleController) CreateRule(c *gin.Context) {
 		logger.Errorf("Failed to bind JSON: %v", err)
 		return
 	}
-	ruleReq.Rule.CreatedBy = rc.GetAuthenticatedUserId(c)
 	logger.Infof("Creating new rule for user %d", ruleReq.Rule.CreatedBy)
 
 	rule, err := rc.ruleService.CreateRule(c, ruleReq)
