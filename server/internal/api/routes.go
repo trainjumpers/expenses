@@ -110,6 +110,8 @@ func Init(
 			statement.POST("", statementController.CreateStatement)
 			statement.GET("", statementController.GetStatements)
 			statement.GET("/:id", statementController.GetStatementStatus)
+			statement.POST("/preview", statementController.PreviewCSV)
+			statement.POST("/custom", statementController.CustomImport)
 		}
 
 		// Rule routes

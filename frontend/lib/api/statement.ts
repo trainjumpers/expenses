@@ -13,6 +13,14 @@ export async function uploadStatement(
   formData.append("account_id", data.account_id.toString());
   formData.append("file", data.file);
 
+  // Add optional metadata parameters
+  if (data.metadata?.skip_rows !== undefined) {
+    formData.append("skip_rows", data.metadata.skip_rows.toString());
+  }
+  if (data.metadata?.mappings && data.metadata.mappings.length > 0) {
+    formData.append("mappings", JSON.stringify(data.metadata.mappings));
+  }
+
   const response = await fetch(`${API_BASE_URL}/statement`, {
     method: "POST",
     credentials: "include",
@@ -69,3 +77,5 @@ export async function getStatement(id: number): Promise<Statement> {
     "Failed to fetch statement"
   );
 }
+// REMOVED: previewCSV function - now using client-side preview functionality
+// REMOVED: customImport function - now using unified uploadStatement function

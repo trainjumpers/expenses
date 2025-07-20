@@ -505,4 +505,327 @@ var _ = Describe("StatementService", func() {
 			Expect(resp.PageSize).To(Equal(10)) // Assuming 10 is the max allowed
 		})
 	})
+
+	// New comprehensive integration tests for unified ProcessStatement method
+	Describe("Unified ProcessStatement Integration Tests", func() {
+		var testAccount models.AccountResponse
+
+		BeforeEach(func() {
+			// Create a test account for each test
+			balance := 1000.0
+			acc, err := accountService.CreateAccount(nil, models.CreateAccountInput{
+				Name:      "Test Account",
+				BankType:  models.BankTypeSBI,
+				Currency:  models.CurrencyINR,
+				Balance:   &balance,
+				CreatedBy: userId,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			testAccount = acc
+		})
+
+		Context("with different bank types", func() {
+			It("should process SBI statement with empty metadata", func() {
+				fileBytes := []byte(`Txn Date	Value Date	Description	Ref No.	Debit	Credit	Balance
+1 Aug 2022	1 Aug 2022	TO TRANSFER-UPI/DR/221356312527/RITIK  S/SBIN/rs6321908@/UPI--	123456	100.00		1000.00
+Computer Generated Statement`)
+				
+				metadata := models.NewCreateStatementMetadata()
+				
+				result, err := service.ProcessStatement(nil, fileBytes, "statement.csv", testAccount.Id, userId, metadata)
+				
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result.Id).To(BeNumerically(">", 0))
+				Expect(result.Status).To(Equal(models.StatementStatusDone))
+				Expect(result.TransactionsCreated).To(Equal(1))
+			})
+
+			It("should process SBI statement and ignore custom metadata", func() {
+				fileBytes := []byte(`Txn Date	Value Date	Description	Ref No.	Debit	Credit	Balance
+1 Aug 2022	1 Aug 2022	Test Transaction	123456	100.00		1000.00
+Computer Generated Statement`)
+				
+				metadata := models.CreateStatementMetadata{
+					SkipRows: 5, // Should be ignored by SBI parser
+					Mappings: []models.ColumnMapping{
+						{SourceColumn: "Description", TargetField: "name"},
+					},
+				}
+				
+				result, err := service.ProcessStatement(nil, fileBytes, "statement.csv", testAccount.Id, userId, metadata)
+				
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result.TransactionsCreated).To(Equal(1))
+			})
+
+			It("should handle unknown bank type gracefully", func() {
+				// Create account with unknown bank type
+				unknownAcc, err := accountService.CreateAccount(nil, models.CreateAccountInput{
+					Name:      "Unknown Bank Account",
+					BankType:  "UNKNOWN_BANK",
+					Currency:  models.CurrencyINR,
+					CreatedBy: userId,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				fileBytes := []byte("some,csv,data\n1,2,3")
+				metadata := models.NewCreateStatementMetadata()
+				
+				_, err = service.ProcessStatement(nil, fileBytes, "statement.csv", unknownAcc.Id, userId, metadata)
+				
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("No parser available"))
+			})
+		})
+
+		Context("with custom CSV metadata", func() {
+			var customAccount models.AccountResponse
+
+			BeforeEach(func() {
+				// Create account that would use custom CSV parser
+				acc, err := accountService.CreateAccount(nil, models.CreateAccountInput{
+					Name:      "Custom CSV Account",
+					BankType:  models.BankTypeCustom,
+					Currency:  models.CurrencyINR,
+					CreatedBy: userId,
+				})
+				Expect(err).NotTo(HaveOccurred())
+				customAccount = acc
+			})
+
+			It("should process custom CSV with valid metadata", func() {
+				fileBytes := []byte(`Header Row 1
+Header Row 2
+Date,Description,Amount
+2022-08-01,Test Transaction,100.00
+2022-08-02,Another Transaction,-200.00`)
+				
+				metadata := models.CreateStatementMetadata{
+					SkipRows: 2,
+					Mappings: []models.ColumnMapping{
+						{SourceColumn: "Date", TargetField: "date"},
+						{SourceColumn: "Description", TargetField: "name"},
+						{SourceColumn: "Amount", TargetField: "amount"},
+					},
+				}
+				
+				result, err := service.ProcessStatement(nil, fileBytes, "statement.csv", customAccount.Id, userId, metadata)
+				
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result.TransactionsCreated).To(Equal(2))
+			})
+
+			It("should error when required mappings are missing", func() {
+				fileBytes := []byte(`Date,Description,Amount
+2022-08-01,Test Transaction,100.00`)
+				
+				metadata := models.CreateStatementMetadata{
+					SkipRows: 0,
+					Mappings: []models.ColumnMapping{
+						{SourceColumn: "Date", TargetField: "date"},
+						// Missing required name and amount mappings
+					},
+				}
+				
+				_, err := service.ProcessStatement(nil, fileBytes, "statement.csv", customAccount.Id, userId, metadata)
+				
+				Expect(err).To(HaveOccurred())
+			})
+
+			It("should handle debit/credit columns correctly", func() {
+				fileBytes := []byte(`Date,Description,Debit,Credit
+2022-08-01,Purchase,100.00,
+2022-08-02,Refund,,50.00`)
+				
+				metadata := models.CreateStatementMetadata{
+					SkipRows: 0,
+					Mappings: []models.ColumnMapping{
+						{SourceColumn: "Date", TargetField: "date"},
+						{SourceColumn: "Description", TargetField: "name"},
+						{SourceColumn: "Debit", TargetField: "debit"},
+						{SourceColumn: "Credit", TargetField: "credit"},
+					},
+				}
+				
+				result, err := service.ProcessStatement(nil, fileBytes, "statement.csv", customAccount.Id, userId, metadata)
+				
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result.TransactionsCreated).To(Equal(2))
+			})
+		})
+
+		Context("parameter validation", func() {
+			It("should validate file size limits", func() {
+				// Create file larger than 256KB
+				largeFile := make([]byte, 300*1024)
+				for i := range largeFile {
+					largeFile[i] = 'a'
+				}
+				
+				metadata := models.NewCreateStatementMetadata()
+				
+				_, err := service.ProcessStatement(nil, largeFile, "large.csv", testAccount.Id, userId, metadata)
+				
+				Expect(err).To(HaveOccurred())
+			})
+
+			It("should validate column mappings when provided", func() {
+				fileBytes := []byte("Date,Description,Amount\n2022-08-01,Test,100.00")
+				
+				metadata := models.CreateStatementMetadata{
+					SkipRows: 0,
+					Mappings: []models.ColumnMapping{
+						{SourceColumn: "Date", TargetField: "date"},
+						{SourceColumn: "Description", TargetField: "name"},
+						// Duplicate mapping should cause validation error
+						{SourceColumn: "Amount", TargetField: "name"},
+					},
+				}
+				
+				_, err := service.ProcessStatement(nil, fileBytes, "statement.csv", testAccount.Id, userId, metadata)
+				
+				Expect(err).To(HaveOccurred())
+			})
+
+			It("should validate account ownership", func() {
+				// Create account for different user
+				otherUserAccount, err := accountService.CreateAccount(nil, models.CreateAccountInput{
+					Name:      "Other User Account",
+					BankType:  models.BankTypeSBI,
+					Currency:  models.CurrencyINR,
+					CreatedBy: 999, // Different user
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				fileBytes := []byte("some,data")
+				metadata := models.NewCreateStatementMetadata()
+				
+				_, err = service.ProcessStatement(nil, fileBytes, "statement.csv", otherUserAccount.Id, userId, metadata)
+				
+				Expect(err).To(HaveOccurred())
+			})
+		})
+
+		Context("error handling and edge cases", func() {
+			It("should handle empty file gracefully", func() {
+				fileBytes := []byte("")
+				metadata := models.NewCreateStatementMetadata()
+				
+				_, err := service.ProcessStatement(nil, fileBytes, "empty.csv", testAccount.Id, userId, metadata)
+				
+				Expect(err).To(HaveOccurred())
+			})
+
+			It("should handle malformed CSV data", func() {
+				fileBytes := []byte("invalid\ncsv\ndata\nwith\nno\nstructure")
+				metadata := models.NewCreateStatementMetadata()
+				
+				_, err := service.ProcessStatement(nil, fileBytes, "malformed.csv", testAccount.Id, userId, metadata)
+				
+				Expect(err).To(HaveOccurred())
+			})
+
+			It("should handle skip rows exceeding file length", func() {
+				fileBytes := []byte("Date,Description,Amount\n2022-08-01,Test,100.00")
+				
+				metadata := models.CreateStatementMetadata{
+					SkipRows: 10, // More rows than in file
+					Mappings: []models.ColumnMapping{
+						{SourceColumn: "Date", TargetField: "date"},
+						{SourceColumn: "Description", TargetField: "name"},
+						{SourceColumn: "Amount", TargetField: "amount"},
+					},
+				}
+				
+				_, err := service.ProcessStatement(nil, fileBytes, "statement.csv", testAccount.Id, userId, metadata)
+				
+				Expect(err).To(HaveOccurred())
+			})
+		})
+
+		Context("transaction creation integration", func() {
+			It("should create transactions and update statement status", func() {
+				fileBytes := []byte(`Txn Date	Value Date	Description	Ref No.	Debit	Credit	Balance
+1 Aug 2022	1 Aug 2022	Transaction 1	123456	100.00		1000.00
+2 Aug 2022	2 Aug 2022	Transaction 2	654321		200.00	1200.00
+Computer Generated Statement`)
+				
+				metadata := models.NewCreateStatementMetadata()
+				
+				result, err := service.ProcessStatement(nil, fileBytes, "statement.csv", testAccount.Id, userId, metadata)
+				
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result.TransactionsCreated).To(Equal(2))
+				Expect(result.Status).To(Equal(models.StatementStatusDone))
+				
+				// Verify transactions were actually created
+				txns, err := txnService.ListTransactions(nil, userId, models.TransactionListQuery{})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(len(txns.Transactions)).To(BeNumerically(">=", 2))
+			})
+
+			It("should handle partial success scenarios", func() {
+				// Mix of valid and invalid transaction rows
+				fileBytes := []byte(`Txn Date	Value Date	Description	Ref No.	Debit	Credit	Balance
+1 Aug 2022	1 Aug 2022	Valid Transaction	123456	100.00		1000.00
+INVALID ROW
+2 Aug 2022	2 Aug 2022	Another Valid Transaction	654321		200.00	1200.00
+Computer Generated Statement`)
+				
+				metadata := models.NewCreateStatementMetadata()
+				
+				result, err := service.ProcessStatement(nil, fileBytes, "statement.csv", testAccount.Id, userId, metadata)
+				
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result.TransactionsCreated).To(Equal(2)) // Should skip invalid row
+				Expect(result.Status).To(Equal(models.StatementStatusDone))
+			})
+		})
+
+		Context("metadata helper methods", func() {
+			It("should correctly identify empty metadata", func() {
+				emptyMetadata := models.NewCreateStatementMetadata()
+				Expect(emptyMetadata.IsEmpty()).To(BeTrue())
+				Expect(emptyMetadata.HasCustomMappings()).To(BeFalse())
+				Expect(emptyMetadata.HasRowSkipping()).To(BeFalse())
+			})
+
+			It("should correctly identify non-empty metadata", func() {
+				metadata := models.CreateStatementMetadata{
+					SkipRows: 2,
+					Mappings: []models.ColumnMapping{
+						{SourceColumn: "Date", TargetField: "date"},
+					},
+				}
+				
+				Expect(metadata.IsEmpty()).To(BeFalse())
+				Expect(metadata.HasCustomMappings()).To(BeTrue())
+				Expect(metadata.HasRowSkipping()).To(BeTrue())
+			})
+
+			It("should handle metadata with only skip rows", func() {
+				metadata := models.CreateStatementMetadata{
+					SkipRows: 3,
+					Mappings: []models.ColumnMapping{},
+				}
+				
+				Expect(metadata.IsEmpty()).To(BeFalse())
+				Expect(metadata.HasCustomMappings()).To(BeFalse())
+				Expect(metadata.HasRowSkipping()).To(BeTrue())
+			})
+
+			It("should handle metadata with only mappings", func() {
+				metadata := models.CreateStatementMetadata{
+					SkipRows: 0,
+					Mappings: []models.ColumnMapping{
+						{SourceColumn: "Date", TargetField: "date"},
+					},
+				}
+				
+				Expect(metadata.IsEmpty()).To(BeFalse())
+				Expect(metadata.HasCustomMappings()).To(BeTrue())
+				Expect(metadata.HasRowSkipping()).To(BeFalse())
+			})
+		})
+	})
 })

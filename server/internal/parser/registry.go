@@ -5,7 +5,7 @@ import "expenses/internal/models"
 var parserRegistry = make(map[models.BankType]BankStatementParser)
 
 type BankStatementParser interface {
-	Parse(fileBytes []byte) ([]models.CreateTransactionInput, error)
+	Parse(fileBytes []byte, metadata models.CreateStatementMetadata) ([]models.CreateTransactionInput, error)
 }
 
 func RegisterParser(bankType models.BankType, parser BankStatementParser) {

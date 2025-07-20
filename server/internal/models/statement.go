@@ -1,7 +1,5 @@
 package models
 
-import "time"
-
 type StatementStatus string
 
 const (
@@ -33,7 +31,6 @@ type StatementResponse struct {
 	FileType         string          `json:"file_type"`
 	Status           StatementStatus `json:"status"`
 	Message          *string         `json:"message,omitempty"`
-	CreatedAt        time.Time       `json:"created_at"`
 }
 
 type PaginatedStatementResponse struct {
@@ -41,4 +38,50 @@ type PaginatedStatementResponse struct {
 	Total      int                 `json:"total"`
 	Page       int                 `json:"page"`
 	PageSize   int                 `json:"page_size"`
+}
+
+// Custom CSV Import Models
+type CSVPreviewInput struct {
+	AccountId int64
+	FileBytes []byte
+	Filename  string
+	SkipRows  int
+}
+
+type CSVPreviewResult struct {
+	Columns []string   `json:"columns"`
+	Rows    [][]string `json:"rows"`
+	Total   int        `json:"total"`
+}
+
+type ColumnMapping struct {
+	SourceColumn string `json:"source_column" binding:"required"`
+	TargetField  string `json:"target_field" binding:"required,oneof=name amount description date credit debit"`
+}
+
+type CustomImportInput struct {
+	AccountId int64           `json:"account_id" binding:"required"`
+	SkipRows  int             `json:"skip_rows" binding:"min=0"`
+	Mappings  []ColumnMapping `json:"mappings" binding:"required,min=1"`
+}
+
+type CustomImportResult struct {
+	Statement          StatementResponse `json:"statement"`
+	TransactionsCreated int              `json:"transactions_created"`
+	Message            string           `json:"message"`
+}
+
+// Note: ParseOptions and related types are now defined in parser.go
+// StatementImportMetadata is kept here for backward compatibility if needed
+type StatementImportMetadata struct {
+	SkipRows int             `json:"skip_rows"`
+	Mappings []ColumnMapping `json:"mappings"`
+}
+
+// ToParseOptions converts StatementImportMetadata to ParseOptions
+func (m StatementImportMetadata) ToParseOptions() ParseOptions {
+	return ParseOptions{
+		SkipRows: m.SkipRows,
+		Mappings: m.Mappings,
+	}
 }

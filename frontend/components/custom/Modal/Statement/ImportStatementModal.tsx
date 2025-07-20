@@ -9,22 +9,19 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { AlertCircle, ArrowLeft } from "lucide-react";
+import { useState } from "react";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+  ColumnMapping
+} from "@/lib/models/statement";
 import {
-  AlertCircle,
-  ChevronDownIcon,
-  FileText,
-  Upload,
-  X,
-} from "lucide-react";
-import { useCallback, useState } from "react";
+  ImportTypeSelection,
+  FileUploadStep,
+  CSVPreview as CSVPreviewComponent,
+  ColumnMapping as ColumnMappingComponent
+} from "./components";
+
+type Step = 'import-type' | 'file-upload' | 'preview' | 'mapping';
 
 interface ImportStatementModalProps {
   isOpen: boolean;
@@ -38,12 +35,23 @@ export function ImportStatementModal({
   const { data: accounts = [] } = useAccounts();
   const uploadStatementMutation = useUploadStatement();
 
+  const [currentStep, setCurrentStep] = useState<Step>('import-type');
+  const [importType, setImportType] = useState<'bank' | 'custom'>('bank');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedAccountId, setSelectedAccountId] = useState<number>(
     accounts[0]?.id || 0
   );
   const [dragActive, setDragActive] = useState(false);
   const [error, setError] = useState<string>("");
+  const [csvPreview, setCsvPreview] = useState<{
+    columns: string[];
+    rows: string[][];
+    total: number;
+  } | null>(null);
+  const [skipRows, setSkipRows] = useState<number>(0);
+  const [columnMappings, setColumnMappings] = useState<ColumnMapping[]>([]);
+  const [isLoadingPreview, setIsLoadingPreview] = useState(false);
+  const [isRefreshingPreview, setIsRefreshingPreview] = useState(false);
 
   const validateFile = (file: File): string | null => {
     // Check file size (256KB)
@@ -82,71 +90,19 @@ export function ImportStatementModal({
     setSelectedFile(file);
   };
 
-  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      handleFileSelect(file);
-    }
-  };
 
-  const handleDrag = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.type === "dragenter" || e.type === "dragover") {
-      setDragActive(true);
-    } else if (e.type === "dragleave") {
-      setDragActive(false);
-    }
-  }, []);
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
 
-    const file = e.dataTransfer.files?.[0];
-    if (file) {
-      const validationError = validateFile(file);
-      if (validationError) {
-        setError(validationError);
-        setSelectedFile(null);
-        return;
-      }
-
-      setError("");
-      setSelectedFile(file);
-    }
-  }, []);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!selectedFile) {
-      setError("Please select a file");
-      return;
-    }
-
-    if (!selectedAccountId) {
-      setError("Please select an account");
-      return;
-    }
-
-    uploadStatementMutation.mutate(
-      {
-        account_id: selectedAccountId,
-        file: selectedFile,
-      },
-      {
-        onSuccess: () => {
-          handleCancel();
-        },
-      }
-    );
-  };
 
   const handleCancel = () => {
+    // Reset all state
+    setCurrentStep('import-type');
+    setImportType('bank');
     setSelectedFile(null);
     setSelectedAccountId(accounts[0]?.id || 0);
+    setCsvPreview(null);
+    setSkipRows(0);
+    setColumnMappings([]);
     setError("");
     onOpenChange(false);
   };
@@ -156,165 +112,280 @@ export function ImportStatementModal({
     setError("");
   };
 
+  const handleImportTypeSelect = (type: 'bank' | 'custom') => {
+    setImportType(type);
+    setCurrentStep('file-upload');
+  };
+
+  const handleFileNext = async () => {
+    if (!selectedFile || !selectedAccountId) {
+      setError("Please select a file and account");
+      return;
+    }
+
+    if (importType === 'bank') {
+      // For bank import, use unified endpoint with empty metadata
+      uploadStatementMutation.mutate(
+        {
+          account_id: selectedAccountId,
+          file: selectedFile,
+          // No metadata for bank imports - will use defaults (skip_rows=0, mappings=[])
+        },
+        {
+          onSuccess: () => {
+            handleCancel();
+          },
+        }
+      );
+    } else {
+      // For custom import, generate a simple preview from the file
+      setIsLoadingPreview(true);
+      try {
+        const text = await selectedFile.text();
+        const lines = text.split('\n').filter(line => line.trim());
+        
+        if (lines.length === 0) {
+          throw new Error('File appears to be empty');
+        }
+
+        // Parse CSV headers (first line)
+        const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+        
+        // Get preview rows (next few lines)
+        const previewRows = lines.slice(1, Math.min(6, lines.length))
+          .map(line => line.split(',').map(cell => cell.trim().replace(/"/g, '')));
+
+        setCsvPreview({
+          columns: headers,
+          rows: previewRows,
+          total: lines.length - 1, // Exclude header
+        });
+        setCurrentStep('preview');
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to preview CSV');
+      } finally {
+        setIsLoadingPreview(false);
+      }
+    }
+  };
+
+  const handleSkipRowsChange = async (newSkipRows: number) => {
+    if (!selectedFile) return;
+
+    setSkipRows(newSkipRows);
+    setIsRefreshingPreview(true);
+
+    try {
+      const text = await selectedFile.text();
+      const lines = text.split('\n').filter(line => line.trim());
+      
+      if (lines.length <= newSkipRows) {
+        throw new Error('Skip rows exceeds file length');
+      }
+
+      // Skip the specified number of rows, then parse headers
+      const remainingLines = lines.slice(newSkipRows);
+      const headers = remainingLines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+      
+      // Get preview rows (next few lines after headers)
+      const previewRows = remainingLines.slice(1, Math.min(6, remainingLines.length))
+        .map(line => line.split(',').map(cell => cell.trim().replace(/"/g, '')));
+
+      setCsvPreview({
+        columns: headers,
+        rows: previewRows,
+        total: remainingLines.length - 1, // Exclude header
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to refresh CSV preview');
+    } finally {
+      setIsRefreshingPreview(false);
+    }
+  };
+
+  const handlePreviewNext = () => {
+    setCurrentStep('mapping');
+  };
+
+  const handleCustomImportSubmit = async () => {
+    if (!selectedFile || !selectedAccountId || columnMappings.length === 0) {
+      setError("Please complete all required fields");
+      return;
+    }
+
+    // Validate required mappings
+    const hasName = columnMappings.some(m => m.target_field === 'name');
+    const hasDate = columnMappings.some(m => m.target_field === 'date');
+    const hasAmount = columnMappings.some(m => m.target_field === 'amount');
+    const hasCredit = columnMappings.some(m => m.target_field === 'credit');
+    const hasDebit = columnMappings.some(m => m.target_field === 'debit');
+
+    if (!hasName) {
+      setError("Name field is required");
+      return;
+    }
+
+    if (!hasDate) {
+      setError("Date field is required");
+      return;
+    }
+
+    if (!hasAmount && !(hasCredit && hasDebit)) {
+      setError("Either Amount OR both Credit and Debit fields are required");
+      return;
+    }
+
+    try {
+      // Use the unified uploadStatementMutation with metadata
+      uploadStatementMutation.mutate(
+        {
+          account_id: selectedAccountId,
+          file: selectedFile,
+          metadata: {
+            skip_rows: skipRows,
+            mappings: columnMappings,
+          },
+        },
+        {
+          onSuccess: () => {
+            handleCancel();
+          },
+        }
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to import CSV");
+    }
+  };
+
+  const handleBack = () => {
+    switch (currentStep) {
+      case 'file-upload':
+        setCurrentStep('import-type');
+        break;
+      case 'preview':
+        setCurrentStep('file-upload');
+        break;
+      case 'mapping':
+        setCurrentStep('preview');
+        break;
+    }
+  };
+
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className={`${currentStep === 'preview' || currentStep === 'mapping' ? 'sm:max-w-[800px]' : 'sm:max-w-[500px]'}`}>
           <DialogHeader>
             <DialogTitle>Import Bank Statement</DialogTitle>
           </DialogHeader>
 
-          <form onSubmit={handleSubmit}>
-            <div className="space-y-6 py-4">
-              {/* Account Selection */}
-              <div className="space-y-2">
-                <Label>Account</Label>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start text-left font-normal flex items-center"
-                      type="button"
-                    >
-                      {(() => {
-                        const selected = accounts.find(
-                          (acc) => acc.id === selectedAccountId
-                        );
-                        return selected
-                          ? `${selected.name} (${selected.bank_type.toUpperCase()})`
-                          : "Select account";
-                      })()}
-                      <ChevronDownIcon className="ml-auto w-4 h-4 opacity-60" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-56 max-h-64 overflow-y-auto">
-                    {accounts.map((account) => (
-                      <DropdownMenuItem
-                        key={account.id}
-                        onClick={() => setSelectedAccountId(account.id)}
-                        className={`py-1 px-2 text-sm min-h-0 h-8 cursor-pointer flex items-center ${
-                          selectedAccountId === account.id
-                            ? "bg-accent/40 font-semibold"
-                            : ""
-                        }`}
-                      >
-                        {account.name} ({account.bank_type.toUpperCase()})
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
+          <div className="space-y-6 py-4">
+            {/* Step 1: Import Type Selection */}
+            {currentStep === 'import-type' && (
+              <ImportTypeSelection onImportTypeSelect={handleImportTypeSelect} />
+            )}
+
+            {/* Step 2: File Upload */}
+            {currentStep === 'file-upload' && (
+              <FileUploadStep
+                accounts={accounts}
+                selectedAccountId={selectedAccountId}
+                selectedFile={selectedFile}
+                dragActive={dragActive}
+                importType={importType}
+                onAccountSelect={setSelectedAccountId}
+                onFileSelect={handleFileSelect}
+                onRemoveFile={removeFile}
+                onDragStateChange={setDragActive}
+              />
+            )}
+
+            {/* Step 3: CSV Preview */}
+            {currentStep === 'preview' && csvPreview && (
+              <CSVPreviewComponent
+                csvPreview={csvPreview}
+                skipRows={skipRows}
+                isRefreshingPreview={isRefreshingPreview}
+                onSkipRowsChange={handleSkipRowsChange}
+              />
+            )}
+
+            {/* Step 4: Column Mapping */}
+            {currentStep === 'mapping' && csvPreview && (
+              <ColumnMappingComponent
+                csvPreview={csvPreview}
+                columnMappings={columnMappings}
+                onColumnMappingChange={setColumnMappings}
+              />
+            )}
+
+
+
+            {/* Error Display */}
+            {error && (
+              <div className="text-sm text-destructive flex items-center space-x-2">
+                <AlertCircle className="h-4 w-4" />
+                <span>{error}</span>
               </div>
+            )}
+          </div>
 
-              {/* File Upload */}
-              <div className="space-y-2">
-                <Label>Statement File</Label>
-                <div className="space-y-4">
-                  {!selectedFile ? (
-                    <div
-                      onDragEnter={handleDrag}
-                      onDragLeave={handleDrag}
-                      onDragOver={handleDrag}
-                      onDrop={handleDrop}
-                      className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
-                        dragActive
-                          ? "border-primary bg-primary/5"
-                          : "border-border hover:border-primary dark:border-border dark:hover:border-primary"
-                      }`}
-                      onClick={() =>
-                        document.getElementById("file-input")?.click()
-                      }
-                    >
-                      <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                      <p className="text-sm text-foreground mb-2">
-                        {dragActive
-                          ? "Drop the file here..."
-                          : "Drag & drop your bank statement here, or click to select"}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Supports CSV, XLS, XLSX files (max 256KB)
-                      </p>
-                      <Input
-                        id="file-input"
-                        type="file"
-                        accept=".csv,.xls,.xlsx"
-                        onChange={handleFileInputChange}
-                        className="hidden"
-                      />
-                    </div>
-                  ) : (
-                    <div className="border rounded-lg p-4 bg-muted/50 dark:bg-muted/20">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                          <FileText className="h-8 w-8 text-blue-500 dark:text-blue-400" />
-                          <div>
-                            <p className="text-sm font-medium text-foreground">
-                              {selectedFile.name}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {(selectedFile.size / 1024).toFixed(1)} KB
-                            </p>
-                          </div>
-                        </div>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={removeFile}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Error Display */}
-                  {error && (
-                    <div className="text-sm text-destructive flex items-center space-x-2">
-                      <AlertCircle className="h-4 w-4" />
-                      <span>{error}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                <div className="flex items-start space-x-3">
-                  <AlertCircle className="h-5 w-5 text-blue-500 dark:text-blue-400 mt-0.5" />
-                  <div className="text-sm text-blue-700 dark:text-blue-300">
-                    <p className="font-medium mb-1">Processing Information:</p>
-                    <ul className="text-xs space-y-1 text-blue-600 dark:text-blue-400">
-                      <li>
-                        • Your statement will be processed in the background
-                      </li>
-                      <li>
-                        • You can check the processing status in the statements
-                        history
-                      </li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <DialogFooter>
+          <DialogFooter>
+            {currentStep !== 'import-type' && (
               <Button
                 type="button"
                 variant="outline"
-                onClick={handleCancel}
-                disabled={uploadStatementMutation.isPending}
+                onClick={handleBack}
+                disabled={isLoadingPreview || uploadStatementMutation.isPending}
               >
-                Cancel
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back
               </Button>
+            )}
+
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleCancel}
+              disabled={isLoadingPreview || uploadStatementMutation.isPending}
+            >
+              Cancel
+            </Button>
+
+            {currentStep === 'file-upload' && (
               <LoadingButton
-                type="submit"
-                loading={uploadStatementMutation.isPending}
-                disabled={uploadStatementMutation.isPending || !selectedFile}
+                type="button"
+                onClick={handleFileNext}
+                loading={isLoadingPreview || uploadStatementMutation.isPending}
+                disabled={!selectedFile || !selectedAccountId}
                 fixedWidth="140px"
               >
-                Import Statement
+                {importType === 'bank' ? 'Import Statement' : 'Preview'}
               </LoadingButton>
-            </DialogFooter>
-          </form>
+            )}
+
+            {currentStep === 'preview' && (
+              <Button
+                type="button"
+                onClick={handlePreviewNext}
+                disabled={!csvPreview}
+              >
+                Next: Map Columns
+              </Button>
+            )}
+
+            {currentStep === 'mapping' && (
+              <LoadingButton
+                type="button"
+                onClick={handleCustomImportSubmit}
+                loading={uploadStatementMutation.isPending}
+                disabled={columnMappings.length === 0}
+                fixedWidth="140px"
+              >
+                Import CSV
+              </LoadingButton>
+            )}
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>

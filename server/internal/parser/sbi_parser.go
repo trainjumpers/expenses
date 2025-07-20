@@ -15,7 +15,8 @@ import (
 
 type SBIParser struct{}
 
-func (p *SBIParser) Parse(fileBytes []byte) ([]models.CreateTransactionInput, error) {
+func (p *SBIParser) Parse(fileBytes []byte, metadata models.CreateStatementMetadata) ([]models.CreateTransactionInput, error) {
+	// SBI parser ignores metadata and uses its own parsing logic
 	scanner := bufio.NewScanner(bytes.NewReader(fileBytes))
 
 	var lines []string

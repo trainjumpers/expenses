@@ -512,4 +512,432 @@ var _ = Describe("StatementController", func() {
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 		})
 	})
+
+	// Comprehensive end-to-end tests for unified statement endpoint
+	Describe("Unified Statement Import API Tests", func() {
+		Context("Bank Statement Uploads (Empty Metadata)", func() {
+			It("should process SBI statement with no metadata parameters", func() {
+				testHelper := createUniqueUser(baseURL)
+				accountId := createAccount(testHelper, "SBI Test Account", 1000.0)
+
+				fileContent := []byte(`Txn Date	Value Date	Description	Ref No.	Debit	Credit	Balance
+1 Aug 2022	1 Aug 2022	TO TRANSFER-UPI/DR/221356312527/RITIK  S/SBIN/rs6321908@/UPI--	123456	100.00		1000.00
+2 Aug 2022	2 Aug 2022	BY TRANSFER-NEFT*HDFC0000001*N215222062454075*QURIATE TECHNOLO--	654321		200.00	1200.00
+Computer Generated Statement`)
+
+				statementInput := map[string]any{
+					"account_id": int64(accountId),
+					"file":       fileContent,
+				}
+
+				resp, response := testHelper.MakeMultipartRequest(http.MethodPost, "/statement", statementInput)
+				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+				
+				statementId := response["data"].(map[string]any)["id"].(float64)
+				statementData := waitForStatementDone(testHelper, statementId)
+				
+				Expect(statementData["status"]).To(Equal("done"))
+				Expect(statementData["transactions_created"]).To(Equal(2.0))
+			})
+
+			It("should ignore metadata parameters for bank statements", func() {
+				testHelper := createUniqueUser(baseURL)
+				accountId := createAccount(testHelper, "SBI Ignore Metadata Account", 1000.0)
+
+				fileContent := []byte(`Txn Date	Value Date	Description	Ref No.	Debit	Credit	Balance
+1 Aug 2022	1 Aug 2022	Test Transaction	123456	100.00		1000.00
+Computer Generated Statement`)
+
+				statementInput := map[string]any{
+					"account_id": int64(accountId),
+					"file":       fileContent,
+					"skip_rows":  "5", // Should be ignored
+					"mappings":   `[{"source_column":"Description","target_field":"name"}]`, // Should be ignored
+				}
+
+				resp, response := testHelper.MakeMultipartRequest(http.MethodPost, "/statement", statementInput)
+				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+				
+				statementId := response["data"].(map[string]any)["id"].(float64)
+				statementData := waitForStatementDone(testHelper, statementId)
+				
+				Expect(statementData["status"]).To(Equal("done"))
+				Expect(statementData["transactions_created"]).To(Equal(1.0))
+			})
+		})
+
+		Context("Custom CSV Uploads (With Metadata)", func() {
+			var customAccount float64
+			var testHelper *TestHelper
+
+			BeforeEach(func() {
+				testHelper = createUniqueUser(baseURL)
+				// Create account with custom bank type for CSV parsing
+				accountInput := models.CreateAccountInput{
+					Name:     "Custom CSV Account",
+					BankType: "custom",
+					Currency: "inr",
+					Balance:  floatPtr(1000.0),
+				}
+				resp, response := testHelper.MakeRequest(http.MethodPost, "/account", accountInput)
+				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+				customAccount = response["data"].(map[string]any)["id"].(float64)
+			})
+
+			It("should process custom CSV with skip_rows and mappings", func() {
+				fileContent := []byte(`Bank Statement Header
+Account Information
+Date,Description,Amount
+2022-08-01,Test Transaction,100.00
+2022-08-02,Another Transaction,-200.00`)
+
+				statementInput := map[string]any{
+					"account_id": int64(customAccount),
+					"file":       fileContent,
+					"skip_rows":  "2",
+					"mappings":   `[{"source_column":"Date","target_field":"date"},{"source_column":"Description","target_field":"name"},{"source_column":"Amount","target_field":"amount"}]`,
+				}
+
+				resp, response := testHelper.MakeMultipartRequest(http.MethodPost, "/statement", statementInput)
+				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+				
+				statementId := response["data"].(map[string]any)["id"].(float64)
+				statementData := waitForStatementDone(testHelper, statementId)
+				
+				Expect(statementData["status"]).To(Equal("done"))
+				Expect(statementData["transactions_created"]).To(Equal(2.0))
+			})
+
+			It("should process custom CSV with debit/credit columns", func() {
+				fileContent := []byte(`Date,Description,Debit,Credit
+2022-08-01,Purchase at Store,100.00,
+2022-08-02,Salary Credit,,2000.00`)
+
+				statementInput := map[string]any{
+					"account_id": int64(customAccount),
+					"file":       fileContent,
+					"skip_rows":  "0",
+					"mappings":   `[{"source_column":"Date","target_field":"date"},{"source_column":"Description","target_field":"name"},{"source_column":"Debit","target_field":"debit"},{"source_column":"Credit","target_field":"credit"}]`,
+				}
+
+				resp, response := testHelper.MakeMultipartRequest(http.MethodPost, "/statement", statementInput)
+				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+				
+				statementId := response["data"].(map[string]any)["id"].(float64)
+				statementData := waitForStatementDone(testHelper, statementId)
+				
+				Expect(statementData["status"]).To(Equal("done"))
+				Expect(statementData["transactions_created"]).To(Equal(2.0))
+			})
+
+			It("should handle complex CSV with multiple skip rows", func() {
+				fileContent := []byte(`Bank Statement Report
+Generated on: 2022-08-01
+Account: 123456789
+Period: August 2022
+Transaction Details:
+Date,Desc,Amount
+2022-08-01,Test Transaction,100.00`)
+
+				statementInput := map[string]any{
+					"account_id": int64(customAccount),
+					"file":       fileContent,
+					"skip_rows":  "5",
+					"mappings":   `[{"source_column":"Date","target_field":"date"},{"source_column":"Desc","target_field":"name"},{"source_column":"Amount","target_field":"amount"}]`,
+				}
+
+				resp, response := testHelper.MakeMultipartRequest(http.MethodPost, "/statement", statementInput)
+				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+				
+				statementId := response["data"].(map[string]any)["id"].(float64)
+				statementData := waitForStatementDone(testHelper, statementId)
+				
+				Expect(statementData["status"]).To(Equal("done"))
+				Expect(statementData["transactions_created"]).To(Equal(1.0))
+			})
+		})
+
+		Context("Parameter Validation", func() {
+			It("should validate required mappings for custom CSV", func() {
+				testHelper := createUniqueUser(baseURL)
+				accountInput := models.CreateAccountInput{
+					Name:     "Validation Test Account",
+					BankType: "custom",
+					Currency: "inr",
+					Balance:  floatPtr(1000.0),
+				}
+				resp, response := testHelper.MakeRequest(http.MethodPost, "/account", accountInput)
+				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+				customAccount := response["data"].(map[string]any)["id"].(float64)
+
+				fileContent := []byte(`Date,Description,Amount
+2022-08-01,Test Transaction,100.00`)
+
+				statementInput := map[string]any{
+					"account_id": int64(customAccount),
+					"file":       fileContent,
+					"skip_rows":  "0",
+					"mappings":   `[{"source_column":"Date","target_field":"date"}]`, // Missing required mappings
+				}
+
+				resp, response = testHelper.MakeMultipartRequest(http.MethodPost, "/statement", statementInput)
+				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+				
+				statementId := response["data"].(map[string]any)["id"].(float64)
+				
+				// Wait and check that it failed
+				var status string
+				for i := 0; i < 10; i++ {
+					resp, response = testHelper.MakeRequest(http.MethodGet, "/statement/"+strconv.FormatFloat(statementId, 'f', 0, 64), nil)
+					Expect(resp.StatusCode).To(Equal(http.StatusOK))
+					data := response["data"].(map[string]any)
+					status = data["status"].(string)
+					if status == "error" || status == "done" {
+						break
+					}
+					time.Sleep(1 * time.Second)
+				}
+				Expect(status).To(Equal("error"))
+			})
+
+			It("should validate skip_rows parameter", func() {
+				testHelper := createUniqueUser(baseURL)
+				accountInput := models.CreateAccountInput{
+					Name:     "Skip Rows Test Account",
+					BankType: "custom",
+					Currency: "inr",
+					Balance:  floatPtr(1000.0),
+				}
+				resp, response := testHelper.MakeRequest(http.MethodPost, "/account", accountInput)
+				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+				customAccount := response["data"].(map[string]any)["id"].(float64)
+
+				fileContent := []byte(`Date,Description,Amount
+2022-08-01,Test Transaction,100.00`)
+
+				statementInput := map[string]any{
+					"account_id": int64(customAccount),
+					"file":       fileContent,
+					"skip_rows":  "10", // More than available rows
+					"mappings":   `[{"source_column":"Date","target_field":"date"},{"source_column":"Description","target_field":"name"},{"source_column":"Amount","target_field":"amount"}]`,
+				}
+
+				resp, response = testHelper.MakeMultipartRequest(http.MethodPost, "/statement", statementInput)
+				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+				
+				statementId := response["data"].(map[string]any)["id"].(float64)
+				
+				// Wait and check that it failed
+				var status string
+				for i := 0; i < 10; i++ {
+					resp, response = testHelper.MakeRequest(http.MethodGet, "/statement/"+strconv.FormatFloat(statementId, 'f', 0, 64), nil)
+					Expect(resp.StatusCode).To(Equal(http.StatusOK))
+					data := response["data"].(map[string]any)
+					status = data["status"].(string)
+					if status == "error" || status == "done" {
+						break
+					}
+					time.Sleep(1 * time.Second)
+				}
+				Expect(status).To(Equal("error"))
+			})
+
+			It("should handle invalid JSON in mappings parameter", func() {
+				testHelper := createUniqueUser(baseURL)
+				accountId := createAccount(testHelper, "Invalid JSON Account", 1000.0)
+
+				fileContent := []byte(`Date,Description,Amount
+2022-08-01,Test Transaction,100.00`)
+
+				statementInput := map[string]any{
+					"account_id": int64(accountId),
+					"file":       fileContent,
+					"skip_rows":  "0",
+					"mappings":   `invalid json`, // Invalid JSON
+				}
+
+				resp, _ := testHelper.MakeMultipartRequest(http.MethodPost, "/statement", statementInput)
+				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+			})
+
+			It("should handle invalid skip_rows parameter", func() {
+				testHelper := createUniqueUser(baseURL)
+				accountId := createAccount(testHelper, "Invalid Skip Rows Account", 1000.0)
+
+				fileContent := []byte(`Date,Description,Amount
+2022-08-01,Test Transaction,100.00`)
+
+				statementInput := map[string]any{
+					"account_id": int64(accountId),
+					"file":       fileContent,
+					"skip_rows":  "not_a_number", // Invalid number
+					"mappings":   `[{"source_column":"Date","target_field":"date"}]`,
+				}
+
+				resp, _ := testHelper.MakeMultipartRequest(http.MethodPost, "/statement", statementInput)
+				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+			})
+		})
+
+		Context("Error Handling", func() {
+			It("should handle file size validation", func() {
+				testHelper := createUniqueUser(baseURL)
+				accountId := createAccount(testHelper, "File Size Test Account", 1000.0)
+
+				// Create file larger than 256KB
+				largeFile := make([]byte, 300*1024)
+				for i := range largeFile {
+					largeFile[i] = 'a'
+				}
+
+				statementInput := map[string]any{
+					"account_id": int64(accountId),
+					"file":       largeFile,
+				}
+
+				resp, _ := testHelper.MakeMultipartRequest(http.MethodPost, "/statement", statementInput)
+				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+			})
+
+			It("should handle unknown bank type gracefully", func() {
+				testHelper := createUniqueUser(baseURL)
+				
+				// Create account with unknown bank type
+				accountInput := models.CreateAccountInput{
+					Name:     "Unknown Bank Account",
+					BankType: "unknown_bank",
+					Currency: "inr",
+					Balance:  floatPtr(1000.0),
+				}
+				resp, response := testHelper.MakeRequest(http.MethodPost, "/account", accountInput)
+				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+				unknownAccount := response["data"].(map[string]any)["id"].(float64)
+
+				fileContent := []byte("some,csv,data\n1,2,3")
+				statementInput := map[string]any{
+					"account_id": int64(unknownAccount),
+					"file":       fileContent,
+				}
+
+				resp, response = testHelper.MakeMultipartRequest(http.MethodPost, "/statement", statementInput)
+				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+				
+				statementId := response["data"].(map[string]any)["id"].(float64)
+				
+				// Wait and check that it failed
+				var status string
+				for i := 0; i < 10; i++ {
+					resp, response = testHelper.MakeRequest(http.MethodGet, "/statement/"+strconv.FormatFloat(statementId, 'f', 0, 64), nil)
+					Expect(resp.StatusCode).To(Equal(http.StatusOK))
+					data := response["data"].(map[string]any)
+					status = data["status"].(string)
+					if status == "error" || status == "done" {
+						break
+					}
+					time.Sleep(1 * time.Second)
+				}
+				Expect(status).To(Equal("error"))
+			})
+
+			It("should handle malformed CSV data", func() {
+				testHelper := createUniqueUser(baseURL)
+				accountId := createAccount(testHelper, "Malformed CSV Account", 1000.0)
+
+				fileContent := []byte("invalid\ncsv\ndata\nwith\nno\nstructure")
+				statementInput := map[string]any{
+					"account_id": int64(accountId),
+					"file":       fileContent,
+				}
+
+				resp, response := testHelper.MakeMultipartRequest(http.MethodPost, "/statement", statementInput)
+				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+				
+				statementId := response["data"].(map[string]any)["id"].(float64)
+				
+				// Wait and check that it failed
+				var status string
+				for i := 0; i < 10; i++ {
+					resp, response = testHelper.MakeRequest(http.MethodGet, "/statement/"+strconv.FormatFloat(statementId, 'f', 0, 64), nil)
+					Expect(resp.StatusCode).To(Equal(http.StatusOK))
+					data := response["data"].(map[string]any)
+					status = data["status"].(string)
+					if status == "error" || status == "done" {
+						break
+					}
+					time.Sleep(1 * time.Second)
+				}
+				Expect(status).To(Equal("error"))
+			})
+
+			It("should handle empty file gracefully", func() {
+				testHelper := createUniqueUser(baseURL)
+				accountId := createAccount(testHelper, "Empty File Account", 1000.0)
+
+				fileContent := []byte("")
+				statementInput := map[string]any{
+					"account_id": int64(accountId),
+					"file":       fileContent,
+				}
+
+				resp, response := testHelper.MakeMultipartRequest(http.MethodPost, "/statement", statementInput)
+				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+				
+				statementId := response["data"].(map[string]any)["id"].(float64)
+				
+				// Wait and check that it failed
+				var status string
+				for i := 0; i < 10; i++ {
+					resp, response = testHelper.MakeRequest(http.MethodGet, "/statement/"+strconv.FormatFloat(statementId, 'f', 0, 64), nil)
+					Expect(resp.StatusCode).To(Equal(http.StatusOK))
+					data := response["data"].(map[string]any)
+					status = data["status"].(string)
+					if status == "error" || status == "done" {
+						break
+					}
+					time.Sleep(1 * time.Second)
+				}
+				Expect(status).To(Equal("error"))
+			})
+		})
+
+		Context("Response Format Validation", func() {
+			It("should return consistent response format for all import types", func() {
+				testHelper := createUniqueUser(baseURL)
+				accountId := createAccount(testHelper, "Response Format Account", 1000.0)
+
+				fileContent := []byte(`Txn Date	Value Date	Description	Ref No.	Debit	Credit	Balance
+1 Aug 2022	1 Aug 2022	Test Transaction	123456	100.00		1000.00
+Computer Generated Statement`)
+
+				statementInput := map[string]any{
+					"account_id": int64(accountId),
+					"file":       fileContent,
+				}
+
+				resp, response := testHelper.MakeMultipartRequest(http.MethodPost, "/statement", statementInput)
+				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+				
+				// Validate response structure
+				Expect(response).To(HaveKey("message"))
+				Expect(response).To(HaveKey("data"))
+				
+				data := response["data"].(map[string]any)
+				Expect(data).To(HaveKey("id"))
+				Expect(data).To(HaveKey("account_id"))
+				Expect(data).To(HaveKey("status"))
+				Expect(data).To(HaveKey("created_at"))
+				
+				statementId := data["id"].(float64)
+				statementData := waitForStatementDone(testHelper, statementId)
+				
+				// Validate final response structure
+				Expect(statementData).To(HaveKey("id"))
+				Expect(statementData).To(HaveKey("account_id"))
+				Expect(statementData).To(HaveKey("status"))
+				Expect(statementData).To(HaveKey("transactions_created"))
+				Expect(statementData).To(HaveKey("created_at"))
+				Expect(statementData).To(HaveKey("updated_at"))
+			})
+		})
+	})
 })
