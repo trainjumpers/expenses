@@ -36,7 +36,10 @@ interface TransactionsTableProps {
   sortOrder: "asc" | "desc";
   setSortBy: (key: string) => void;
   setSortOrder: (order: "asc" | "desc") => void;
-  onFilterChange?: (filters: { minAmount?: number; maxAmount?: number }) => void;
+  onFilterChange?: (filters: {
+    minAmount?: number;
+    maxAmount?: number;
+  }) => void;
 }
 
 export function TransactionsTable({
@@ -87,7 +90,7 @@ export function TransactionsTable({
     if (onFilterChange) {
       onFilterChange({
         maxAmount: -0.01, // Only negative amounts (credits)
-        minAmount: undefined // Clear minAmount filter
+        minAmount: undefined, // Clear minAmount filter
       });
     }
   };
@@ -98,7 +101,7 @@ export function TransactionsTable({
     if (onFilterChange) {
       onFilterChange({
         minAmount: 0.01, // Only positive amounts (debits)
-        maxAmount: undefined // Clear maxAmount filter
+        maxAmount: undefined, // Clear maxAmount filter
       });
     }
   };
