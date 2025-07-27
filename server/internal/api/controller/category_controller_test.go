@@ -16,7 +16,7 @@ var _ = Describe("CategoryController", func() {
 				Name: "Food with icon",
 				Icon: "burger-icon",
 			}
-			resp, response := testHelperUser1.MakeRequest(http.MethodPost, "/category", input)
+			resp, response := testUser1.MakeRequest(http.MethodPost, "/category", input)
 			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
 			Expect(response["message"]).To(Equal("Category created successfully"))
 			Expect(response["data"]).To(HaveKey("id"))
@@ -29,7 +29,7 @@ var _ = Describe("CategoryController", func() {
 				Name: "Entertainment without icon",
 				Icon: "",
 			}
-			resp, response := testHelperUser1.MakeRequest(http.MethodPost, "/category", input)
+			resp, response := testUser1.MakeRequest(http.MethodPost, "/category", input)
 			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
 			Expect(response["message"]).To(Equal("Category created successfully"))
 			Expect(response["data"]).To(HaveKey("id"))
@@ -42,7 +42,7 @@ var _ = Describe("CategoryController", func() {
 				Name: "  Whitespace Category  ", // Name with leading and trailing whitespace
 				Icon: "space-icon",
 			}
-			resp, response := testHelperUser1.MakeRequest(http.MethodPost, "/category", input)
+			resp, response := testUser1.MakeRequest(http.MethodPost, "/category", input)
 			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
 			Expect(response["message"]).To(Equal("Category created successfully"))
 			Expect(response["data"]).To(HaveKey("id"))
@@ -55,7 +55,7 @@ var _ = Describe("CategoryController", func() {
 				Name: "\t  Complex Tab Category  \n", // Name with tabs and newlines
 				Icon: "tab-icon",
 			}
-			resp, response := testHelperUser1.MakeRequest(http.MethodPost, "/category", input)
+			resp, response := testUser1.MakeRequest(http.MethodPost, "/category", input)
 			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
 			Expect(response["message"]).To(Equal("Category created successfully"))
 			Expect(response["data"]).To(HaveKey("id"))
@@ -68,7 +68,7 @@ var _ = Describe("CategoryController", func() {
 				Name: "Icon Whitespace Test",
 				Icon: "  trimmed-icon  ", // Icon with whitespace
 			}
-			resp, response := testHelperUser1.MakeRequest(http.MethodPost, "/category", input)
+			resp, response := testUser1.MakeRequest(http.MethodPost, "/category", input)
 			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
 			Expect(response["message"]).To(Equal("Category created successfully"))
 			Expect(response["data"]).To(HaveKey("id"))
@@ -81,7 +81,7 @@ var _ = Describe("CategoryController", func() {
 				Name: "   ", // Only whitespace - will become empty after trimming
 				Icon: "error-icon",
 			}
-			resp, response := testHelperUser1.MakeRequest(http.MethodPost, "/category", input)
+			resp, response := testUser1.MakeRequest(http.MethodPost, "/category", input)
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			Expect(response["message"]).To(ContainSubstring("required"))
 		})
@@ -91,7 +91,7 @@ var _ = Describe("CategoryController", func() {
 				Name: "\t\n  \r  ", // Only various whitespace characters
 				Icon: "error-icon",
 			}
-			resp, response := testHelperUser1.MakeRequest(http.MethodPost, "/category", input)
+			resp, response := testUser1.MakeRequest(http.MethodPost, "/category", input)
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			Expect(response["message"]).To(ContainSubstring("required"))
 		})
@@ -102,11 +102,11 @@ var _ = Describe("CategoryController", func() {
 				Icon: "car-icon",
 			}
 			// Create first category
-			resp, _ := testHelperUser1.MakeRequest(http.MethodPost, "/category", input)
+			resp, _ := testUser1.MakeRequest(http.MethodPost, "/category", input)
 			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
 
 			// Try to create same category again
-			resp, response := testHelperUser1.MakeRequest(http.MethodPost, "/category", input)
+			resp, response := testUser1.MakeRequest(http.MethodPost, "/category", input)
 			Expect(resp.StatusCode).To(Equal(http.StatusConflict))
 			Expect(response["message"]).To(Equal("category with this name already exists for this user"))
 		})
@@ -117,11 +117,11 @@ var _ = Describe("CategoryController", func() {
 				Icon: "shopping-icon",
 			}
 			// Create category for first user
-			resp, _ := testHelperUser1.MakeRequest(http.MethodPost, "/category", input)
+			resp, _ := testUser1.MakeRequest(http.MethodPost, "/category", input)
 			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
 
 			// Create category with same name for second user
-			resp, _ = testHelperUser2.MakeRequest(http.MethodPost, "/category", input)
+			resp, _ = testUser2.MakeRequest(http.MethodPost, "/category", input)
 			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
 		})
 
@@ -138,12 +138,12 @@ var _ = Describe("CategoryController", func() {
 			input := models.CreateCategoryInput{
 				Icon: "burger-icon",
 			}
-			resp, _ := testHelperUser1.MakeRequest(http.MethodPost, "/category", input)
+			resp, _ := testUser1.MakeRequest(http.MethodPost, "/category", input)
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 		})
 
 		It("should return error for invalid JSON", func() {
-			resp, _ := testHelperUser1.MakeRequest(http.MethodPost, "/category", "invalid json")
+			resp, _ := testUser1.MakeRequest(http.MethodPost, "/category", "invalid json")
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 		})
 
@@ -153,30 +153,30 @@ var _ = Describe("CategoryController", func() {
 					Name: "Malformed Token Category",
 					Icon: "icon",
 				}
-				checkMalformedTokens(testHelperUser1, http.MethodPost, "/category", input)
+				checkMalformedTokens(testUser1, http.MethodPost, "/category", input)
 			})
 			It("should return unauthorized or bad request for malformed tokens on list", func() {
-				checkMalformedTokens(testHelperUser1, http.MethodGet, "/category", nil)
+				checkMalformedTokens(testUser1, http.MethodGet, "/category", nil)
 			})
 			It("should return unauthorized or bad request for malformed tokens on get", func() {
 				url := "/category/1"
-				checkMalformedTokens(testHelperUser1, http.MethodGet, url, nil)
+				checkMalformedTokens(testUser1, http.MethodGet, url, nil)
 			})
 			It("should return unauthorized or bad request for malformed tokens on update", func() {
 				update := models.UpdateCategoryInput{Name: "Malformed Update"}
 				url := "/category/1"
-				checkMalformedTokens(testHelperUser1, http.MethodPatch, url, update)
+				checkMalformedTokens(testUser1, http.MethodPatch, url, update)
 			})
 			It("should return unauthorized or bad request for malformed tokens on delete", func() {
 				url := "/category/1"
-				checkMalformedTokens(testHelperUser1, http.MethodDelete, url, nil)
+				checkMalformedTokens(testUser1, http.MethodDelete, url, nil)
 			})
 		})
 	})
 
 	Describe("ListCategories", func() {
 		It("should list categories for authenticated user", func() {
-			resp, response := testHelperUser1.MakeRequest(http.MethodGet, "/category", nil)
+			resp, response := testUser1.MakeRequest(http.MethodGet, "/category", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["message"]).To(Equal("Categories retrieved successfully"))
 			Expect(response["data"]).To(BeAssignableToTypeOf([]any{}))
@@ -185,7 +185,7 @@ var _ = Describe("CategoryController", func() {
 		})
 
 		It("should return empty list for user with no categories", func() {
-			resp, response := testHelperUser3.MakeRequest(http.MethodGet, "/category", nil)
+			resp, response := testUser3.MakeRequest(http.MethodGet, "/category", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["message"]).To(Equal("Categories retrieved successfully"))
 			Expect(len(response["data"].([]any))).To(Equal(0))
@@ -201,7 +201,7 @@ var _ = Describe("CategoryController", func() {
 		var categoryId int64 = 1 // From seed data
 		It("should get category by id successfully", func() {
 			url := "/category/" + strconv.FormatInt(categoryId, 10)
-			resp, response := testHelperUser1.MakeRequest(http.MethodGet, url, nil)
+			resp, response := testUser1.MakeRequest(http.MethodGet, url, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["message"]).To(Equal("Category retrieved successfully"))
 			Expect(response["data"]).To(HaveKey("id"))
@@ -210,21 +210,21 @@ var _ = Describe("CategoryController", func() {
 
 		It("should return error for non-existent category id", func() {
 			url := "/category/9999"
-			resp, response := testHelperUser1.MakeRequest(http.MethodGet, url, nil)
+			resp, response := testUser1.MakeRequest(http.MethodGet, url, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 			Expect(response["message"]).To(Equal("category not found"))
 		})
 
 		It("should return error when accessing category of different user", func() {
 			url := "/category/" + strconv.FormatInt(categoryId, 10)
-			resp, response := testHelperUser2.MakeRequest(http.MethodGet, url, nil)
+			resp, response := testUser2.MakeRequest(http.MethodGet, url, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 			Expect(response["message"]).To(Equal("category not found"))
 		})
 
 		It("should return error for invalid category id", func() {
 			url := "/category/invalid"
-			resp, response := testHelperUser1.MakeRequest(http.MethodGet, url, nil)
+			resp, response := testUser1.MakeRequest(http.MethodGet, url, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			Expect(response["message"]).To(Equal("invalid category id"))
 		})
@@ -242,7 +242,7 @@ var _ = Describe("CategoryController", func() {
 		It("should update category name successfully", func() {
 			update := models.UpdateCategoryInput{Name: "Updated Category Name"}
 			url := "/category/" + strconv.FormatInt(categoryId, 10)
-			resp, response := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
+			resp, response := testUser1.MakeRequest(http.MethodPatch, url, update)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["message"]).To(Equal("Category updated successfully"))
 			Expect(response["data"].(map[string]any)["name"]).To(Equal("Updated Category Name"))
@@ -251,7 +251,7 @@ var _ = Describe("CategoryController", func() {
 		It("should trim whitespace from category name during update", func() {
 			update := models.UpdateCategoryInput{Name: "  Trimmed Update Name  "} // Name with whitespace
 			url := "/category/" + strconv.FormatInt(categoryId, 10)
-			resp, response := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
+			resp, response := testUser1.MakeRequest(http.MethodPatch, url, update)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["message"]).To(Equal("Category updated successfully"))
 			Expect(response["data"].(map[string]any)["name"]).To(Equal("Trimmed Update Name")) // Should be trimmed
@@ -260,7 +260,7 @@ var _ = Describe("CategoryController", func() {
 		It("should trim complex whitespace from category name during update", func() {
 			update := models.UpdateCategoryInput{Name: "\t  Complex Update Name  \n"} // Name with tabs and newlines
 			url := "/category/" + strconv.FormatInt(categoryId, 10)
-			resp, response := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
+			resp, response := testUser1.MakeRequest(http.MethodPatch, url, update)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["message"]).To(Equal("Category updated successfully"))
 			Expect(response["data"].(map[string]any)["name"]).To(Equal("Complex Update Name")) // Should be trimmed
@@ -269,7 +269,7 @@ var _ = Describe("CategoryController", func() {
 		It("should return error for whitespace-only category name during update", func() {
 			update := models.UpdateCategoryInput{Name: "   "} // Only whitespace - will become empty after trimming
 			url := "/category/" + strconv.FormatInt(categoryId, 10)
-			resp, response := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
+			resp, response := testUser1.MakeRequest(http.MethodPatch, url, update)
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			Expect(response["message"]).To(Equal("no fields to update"))
 		})
@@ -278,7 +278,7 @@ var _ = Describe("CategoryController", func() {
 			newIcon := "new-icon"
 			update := models.UpdateCategoryInput{Icon: &newIcon}
 			url := "/category/" + strconv.FormatInt(categoryId, 10)
-			resp, response := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
+			resp, response := testUser1.MakeRequest(http.MethodPatch, url, update)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["message"]).To(Equal("Category updated successfully"))
 			Expect(response["data"].(map[string]any)["icon"]).To(Equal(newIcon))
@@ -288,7 +288,7 @@ var _ = Describe("CategoryController", func() {
 			newIcon := "  trimmed-update-icon  " // Icon with whitespace
 			update := models.UpdateCategoryInput{Icon: &newIcon}
 			url := "/category/" + strconv.FormatInt(categoryId, 10)
-			resp, response := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
+			resp, response := testUser1.MakeRequest(http.MethodPatch, url, update)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["message"]).To(Equal("Category updated successfully"))
 			Expect(response["data"].(map[string]any)["icon"]).To(Equal("trimmed-update-icon")) // Should be trimmed
@@ -301,7 +301,7 @@ var _ = Describe("CategoryController", func() {
 				Icon: &newIcon,
 			}
 			url := "/category/" + strconv.FormatInt(categoryId, 10)
-			resp, response := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
+			resp, response := testUser1.MakeRequest(http.MethodPatch, url, update)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["message"]).To(Equal("Category updated successfully"))
 			Expect(response["data"].(map[string]any)["name"]).To(Equal("Complete Update"))
@@ -315,7 +315,7 @@ var _ = Describe("CategoryController", func() {
 				Icon: &newIcon,
 			}
 			url := "/category/" + strconv.FormatInt(categoryId, 10)
-			resp, response := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
+			resp, response := testUser1.MakeRequest(http.MethodPatch, url, update)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["message"]).To(Equal("Category updated successfully"))
 			Expect(response["data"].(map[string]any)["name"]).To(Equal("Complete Whitespace Update")) // Should be trimmed
@@ -325,7 +325,7 @@ var _ = Describe("CategoryController", func() {
 		It("should return error for non-existent category id", func() {
 			update := models.UpdateCategoryInput{Name: "Updated Name"}
 			url := "/category/9999"
-			resp, response := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
+			resp, response := testUser1.MakeRequest(http.MethodPatch, url, update)
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 			Expect(response["message"]).To(Equal("category not found"))
 		})
@@ -333,7 +333,7 @@ var _ = Describe("CategoryController", func() {
 		It("should return error when updating category of different user", func() {
 			update := models.UpdateCategoryInput{Name: "Updated Name"}
 			url := "/category/" + strconv.FormatInt(categoryId, 10)
-			resp, response := testHelperUser2.MakeRequest(http.MethodPatch, url, update)
+			resp, response := testUser2.MakeRequest(http.MethodPatch, url, update)
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 			Expect(response["message"]).To(Equal("category not found"))
 		})
@@ -344,13 +344,13 @@ var _ = Describe("CategoryController", func() {
 				Name: "Unique Category",
 				Icon: "unique-icon",
 			}
-			resp, _ := testHelperUser1.MakeRequest(http.MethodPost, "/category", input)
+			resp, _ := testUser1.MakeRequest(http.MethodPost, "/category", input)
 			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
 
 			// Try to update first category to have same name
 			update := models.UpdateCategoryInput{Name: "Unique Category"}
 			url := "/category/" + strconv.FormatInt(categoryId, 10)
-			resp, response := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
+			resp, response := testUser1.MakeRequest(http.MethodPatch, url, update)
 			Expect(resp.StatusCode).To(Equal(http.StatusConflict))
 			Expect(response["message"]).To(Equal("category with this name already exists for this user"))
 		})
@@ -358,14 +358,14 @@ var _ = Describe("CategoryController", func() {
 		It("should return error for invalid category id", func() {
 			update := models.UpdateCategoryInput{Name: "Updated Name"}
 			url := "/category/invalid"
-			resp, response := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
+			resp, response := testUser1.MakeRequest(http.MethodPatch, url, update)
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			Expect(response["message"]).To(Equal("invalid category id"))
 		})
 
 		It("should return error for invalid JSON", func() {
 			url := "/category/" + strconv.FormatInt(categoryId, 10)
-			resp, _ := testHelperUser1.MakeRequest(http.MethodPatch, url, "invalid json")
+			resp, _ := testUser1.MakeRequest(http.MethodPatch, url, "invalid json")
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 		})
 
@@ -386,37 +386,37 @@ var _ = Describe("CategoryController", func() {
 				Name: "Category to Delete",
 				Icon: "delete-icon",
 			}
-			resp, response := testHelperUser1.MakeRequest(http.MethodPost, "/category", input)
+			resp, response := testUser1.MakeRequest(http.MethodPost, "/category", input)
 			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
 			categoryId := int64(response["data"].(map[string]any)["id"].(float64))
 
 			// Delete the category
 			url := "/category/" + strconv.FormatInt(categoryId, 10)
-			resp, _ = testHelperUser1.MakeRequest(http.MethodDelete, url, nil)
+			resp, _ = testUser1.MakeRequest(http.MethodDelete, url, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
 
 			// Verify category is deleted by trying to get it
-			resp, _ = testHelperUser1.MakeRequest(http.MethodGet, url, nil)
+			resp, _ = testUser1.MakeRequest(http.MethodGet, url, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 		})
 
 		It("should return error for non-existent category id", func() {
 			url := "/category/9999"
-			resp, response := testHelperUser1.MakeRequest(http.MethodDelete, url, nil)
+			resp, response := testUser1.MakeRequest(http.MethodDelete, url, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 			Expect(response["message"]).To(Equal("category not found"))
 		})
 
 		It("should return error when deleting category of different user", func() {
 			url := "/category/" + strconv.FormatInt(categoryId, 10)
-			resp, response := testHelperUser2.MakeRequest(http.MethodDelete, url, nil)
+			resp, response := testUser2.MakeRequest(http.MethodDelete, url, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 			Expect(response["message"]).To(Equal("category not found"))
 		})
 
 		It("should return error for invalid category id", func() {
 			url := "/category/invalid"
-			resp, response := testHelperUser1.MakeRequest(http.MethodDelete, url, nil)
+			resp, response := testUser1.MakeRequest(http.MethodDelete, url, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			Expect(response["message"]).To(Equal("invalid category id"))
 		})

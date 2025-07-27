@@ -20,9 +20,9 @@ func TestController(t *testing.T) {
 
 var (
 	testHelperUnauthenticated *TestHelper
-	testHelperUser1           *TestHelper
-	testHelperUser2           *TestHelper
-	testHelperUser3           *TestHelper
+	testUser1           *TestHelper
+	testUser2           *TestHelper
+	testUser3           *TestHelper
 	baseURL                   string
 )
 
@@ -49,15 +49,15 @@ var _ = BeforeSuite(func() {
 	}
 
 	baseURL += "/api/v1"
-	testHelperUser1 = NewTestHelper(baseURL)
-	testHelperUser2 = NewTestHelper(baseURL)
-	testHelperUser3 = NewTestHelper(baseURL)
+	testUser1 = NewTestHelper(baseURL)
+	testUser2 = NewTestHelper(baseURL)
+	testUser3 = NewTestHelper(baseURL)
 	testHelperUnauthenticated = NewTestHelper(baseURL)
 
 	// Login test users (each helper manages its own cookies)
-	testHelperUser1.Login("test1@example.com", "password")
-	testHelperUser2.Login("test2@example.com", "password")
-	testHelperUser3.Login("test3@example.com", "password")
+	testUser1.Login("test1@example.com", "password")
+	testUser2.Login("test2@example.com", "password")
+	testUser3.Login("test3@example.com", "password")
 })
 
 // decodeJSON is a helper function to decode JSON from any io.Reader

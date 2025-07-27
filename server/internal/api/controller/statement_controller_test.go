@@ -70,7 +70,7 @@ func waitForStatementDone(testHelper *TestHelper, statementId float64) map[strin
 var _ = Describe("StatementController", func() {
 	Describe("ListStatements", func() {
 		It("should list all statements for the authenticated user", func() {
-			resp, response := testHelperUser1.MakeRequest(http.MethodGet, "/statement", nil)
+			resp, response := testUser1.MakeRequest(http.MethodGet, "/statement", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["message"]).To(Equal("Statements fetched successfully"))
 			Expect(response).To(HaveKey("data"))
@@ -95,7 +95,7 @@ var _ = Describe("StatementController", func() {
 		})
 
 		It("should return an empty list for a different user", func() {
-			resp, response := testHelperUser3.MakeRequest(http.MethodGet, "/statement", nil)
+			resp, response := testUser3.MakeRequest(http.MethodGet, "/statement", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response).To(HaveKey("data"))
 			data := response["data"].(map[string]any)
@@ -111,7 +111,7 @@ var _ = Describe("StatementController", func() {
 		})
 
 		It("should return only one statement when pageSize is 1 and page is 1", func() {
-			resp, response := testHelperUser1.MakeRequest(http.MethodGet, "/statement?page_size=1&page=1", nil)
+			resp, response := testUser1.MakeRequest(http.MethodGet, "/statement?page_size=1&page=1", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response).To(HaveKey("data"))
 			data := response["data"].(map[string]any)
@@ -129,7 +129,7 @@ var _ = Describe("StatementController", func() {
 		})
 
 		It("should return the second statement when pageSize is 1 and page is 2", func() {
-			resp, response := testHelperUser1.MakeRequest(http.MethodGet, "/statement?page_size=1&page=2", nil)
+			resp, response := testUser1.MakeRequest(http.MethodGet, "/statement?page_size=1&page=2", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response).To(HaveKey("data"))
 			data := response["data"].(map[string]any)
@@ -147,7 +147,7 @@ var _ = Describe("StatementController", func() {
 		})
 
 		It("should return the third statement when pageSize is 1 and page is 3", func() {
-			resp, response := testHelperUser1.MakeRequest(http.MethodGet, "/statement?page_size=1&page=3", nil)
+			resp, response := testUser1.MakeRequest(http.MethodGet, "/statement?page_size=1&page=3", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response).To(HaveKey("data"))
 			data := response["data"].(map[string]any)
@@ -159,7 +159,7 @@ var _ = Describe("StatementController", func() {
 		})
 
 		It("should return data as empty statement when requesting page beyond available data", func() {
-			resp, response := testHelperUser1.MakeRequest(http.MethodGet, "/statement?page_size=1&page=4", nil)
+			resp, response := testUser1.MakeRequest(http.MethodGet, "/statement?page_size=1&page=4", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response).To(HaveKey("data"))
 			data := response["data"].(map[string]any)
@@ -178,7 +178,7 @@ var _ = Describe("StatementController", func() {
 		})
 
 		It("should return success for invalid page parameter", func() {
-			resp, response := testHelperUser1.MakeRequest(http.MethodGet, "/statement?page=abc", nil)
+			resp, response := testUser1.MakeRequest(http.MethodGet, "/statement?page=abc", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
 			// Should have all the statements
@@ -191,7 +191,7 @@ var _ = Describe("StatementController", func() {
 		})
 
 		It("should return success for invalid pageSize parameter", func() {
-			resp, response := testHelperUser1.MakeRequest(http.MethodGet, "/statement?page_size=abc", nil)
+			resp, response := testUser1.MakeRequest(http.MethodGet, "/statement?page_size=abc", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
 			// Should have all the statements
@@ -204,7 +204,7 @@ var _ = Describe("StatementController", func() {
 		})
 
 		It("should return success for negative page parameter", func() {
-			resp, response := testHelperUser1.MakeRequest(http.MethodGet, "/statement?page=-1", nil)
+			resp, response := testUser1.MakeRequest(http.MethodGet, "/statement?page=-1", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
 			// Should have all the statements
@@ -220,7 +220,7 @@ var _ = Describe("StatementController", func() {
 		})
 
 		It("should return success for zero pageSize parameter", func() {
-			resp, response := testHelperUser1.MakeRequest(http.MethodGet, "/statement?page_size=0", nil)
+			resp, response := testUser1.MakeRequest(http.MethodGet, "/statement?page_size=0", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
 			// Should have all the statements
@@ -236,7 +236,7 @@ var _ = Describe("StatementController", func() {
 		})
 
 		It("should handle large pageSize gracefully", func() {
-			resp, response := testHelperUser1.MakeRequest(http.MethodGet, "/statement?page_size=1000", nil)
+			resp, response := testUser1.MakeRequest(http.MethodGet, "/statement?page_size=1000", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response).To(HaveKey("data"))
 			data := response["data"].(map[string]any)
@@ -248,7 +248,7 @@ var _ = Describe("StatementController", func() {
 
 	Describe("GetStatementByID", func() {
 		It("should fetch statement by id for user 1", func() {
-			resp, response := testHelperUser1.MakeRequest(http.MethodGet, "/statement/1", nil)
+			resp, response := testUser1.MakeRequest(http.MethodGet, "/statement/1", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response).To(HaveKey("data"))
 			data := response["data"].(map[string]any)
@@ -259,7 +259,7 @@ var _ = Describe("StatementController", func() {
 		})
 
 		It("should fetch statement by id for user 2", func() {
-			resp, response := testHelperUser2.MakeRequest(http.MethodGet, "/statement/4", nil)
+			resp, response := testUser2.MakeRequest(http.MethodGet, "/statement/4", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response).To(HaveKey("data"))
 			data := response["data"].(map[string]any)
@@ -270,7 +270,7 @@ var _ = Describe("StatementController", func() {
 		})
 
 		It("should return not found when fetching statement by id of another user", func() {
-			resp, response := testHelperUser1.MakeRequest(http.MethodGet, "/statement/4", nil)
+			resp, response := testUser1.MakeRequest(http.MethodGet, "/statement/4", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 			Expect(response).To(HaveKey("message"))
 			Expect(response["message"]).To(Equal("statement not found"))
@@ -284,14 +284,14 @@ var _ = Describe("StatementController", func() {
 		})
 
 		It("should return not found for non-existent statement id", func() {
-			resp, response := testHelperUser1.MakeRequest(http.MethodGet, "/statement/99999", nil)
+			resp, response := testUser1.MakeRequest(http.MethodGet, "/statement/99999", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 			Expect(response).To(HaveKey("message"))
 			Expect(response["message"]).To(Equal("statement not found"))
 		})
 
 		It("should return bad request for invalid statement id format", func() {
-			resp, response := testHelperUser1.MakeRequest(http.MethodGet, "/statement/abc", nil)
+			resp, response := testUser1.MakeRequest(http.MethodGet, "/statement/abc", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			Expect(response).To(HaveKey("message"))
 			Expect(response["message"]).To(Equal("Invalid statement_id"))
@@ -312,7 +312,7 @@ var _ = Describe("StatementController", func() {
 				"skip_rows": 0,
 				"row_size":  10,
 			}
-			resp, response := testHelperUser1.MakeMultipartRequest(http.MethodPost, "/statement/preview", previewInput)
+			resp, response := testUser1.MakeMultipartRequest(http.MethodPost, "/statement/preview", previewInput)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["message"]).To(Equal("Statement preview generated successfully"))
 			Expect(response).To(HaveKey("data"))
@@ -338,7 +338,7 @@ var _ = Describe("StatementController", func() {
 				"skip_rows": 2,
 				"row_size":  10,
 			}
-			resp, response := testHelperUser1.MakeMultipartRequest(http.MethodPost, "/statement/preview", previewInput)
+			resp, response := testUser1.MakeMultipartRequest(http.MethodPost, "/statement/preview", previewInput)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["message"]).To(Equal("Statement preview generated successfully"))
 			Expect(response).To(HaveKey("data"))
@@ -356,7 +356,7 @@ var _ = Describe("StatementController", func() {
 				"file":     fileContent,
 				"row_size": 2,
 			}
-			resp, response := testHelperUser1.MakeMultipartRequest(http.MethodPost, "/statement/preview", previewInput)
+			resp, response := testUser1.MakeMultipartRequest(http.MethodPost, "/statement/preview", previewInput)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["message"]).To(Equal("Statement preview generated successfully"))
 			Expect(response).To(HaveKey("data"))
@@ -379,7 +379,7 @@ var _ = Describe("StatementController", func() {
 				"skip_rows": 1,
 				"row_size":  2,
 			}
-			resp, response := testHelperUser1.MakeMultipartRequest(http.MethodPost, "/statement/preview", previewInput)
+			resp, response := testUser1.MakeMultipartRequest(http.MethodPost, "/statement/preview", previewInput)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["message"]).To(Equal("Statement preview generated successfully"))
 			Expect(response).To(HaveKey("data"))
@@ -390,7 +390,7 @@ var _ = Describe("StatementController", func() {
 				"skip_rows": 0,
 				"row_size":  10,
 			}
-			resp, response := testHelperUser1.MakeMultipartRequest(http.MethodPost, "/statement/preview", previewInput)
+			resp, response := testUser1.MakeMultipartRequest(http.MethodPost, "/statement/preview", previewInput)
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			Expect(response).To(HaveKey("message"))
 		})
@@ -403,7 +403,7 @@ var _ = Describe("StatementController", func() {
 				"skip_rows": 0,
 				"row_size":  10,
 			}
-			resp, response := testHelperUser1.MakeMultipartRequest(http.MethodPost, "/statement/preview", previewInput)
+			resp, response := testUser1.MakeMultipartRequest(http.MethodPost, "/statement/preview", previewInput)
 			Expect(resp.StatusCode).To(SatisfyAny(Equal(http.StatusBadRequest), Equal(http.StatusInternalServerError)))
 			Expect(response).To(HaveKey("message"))
 		})
@@ -420,7 +420,7 @@ var _ = Describe("StatementController", func() {
 				"skip_rows": 0,
 				"row_size":  10,
 			}
-			resp, response := testHelperUser1.MakeMultipartRequest(http.MethodPost, "/statement/preview", previewInput)
+			resp, response := testUser1.MakeMultipartRequest(http.MethodPost, "/statement/preview", previewInput)
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			Expect(response).To(HaveKey("message"))
 		})
@@ -434,7 +434,7 @@ var _ = Describe("StatementController", func() {
 				"file":      fileContent,
 				"skip_rows": "invalid",
 			}
-			resp, _ := testHelperUser1.MakeMultipartRequest(http.MethodPost, "/statement/preview", previewInput)
+			resp, _ := testUser1.MakeMultipartRequest(http.MethodPost, "/statement/preview", previewInput)
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 		})
 
@@ -447,7 +447,7 @@ var _ = Describe("StatementController", func() {
 				"file":     fileContent,
 				"row_size": "invalid",
 			}
-			resp, _ := testHelperUser1.MakeMultipartRequest(http.MethodPost, "/statement/preview", previewInput)
+			resp, _ := testUser1.MakeMultipartRequest(http.MethodPost, "/statement/preview", previewInput)
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 		})
 
@@ -460,7 +460,7 @@ var _ = Describe("StatementController", func() {
 				"file":      fileContent,
 				"skip_rows": -1,
 			}
-			resp, _ := testHelperUser1.MakeMultipartRequest(http.MethodPost, "/statement/preview", previewInput)
+			resp, _ := testUser1.MakeMultipartRequest(http.MethodPost, "/statement/preview", previewInput)
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 		})
 
@@ -473,7 +473,7 @@ var _ = Describe("StatementController", func() {
 				"file":     fileContent,
 				"row_size": -1,
 			}
-			resp, _ := testHelperUser1.MakeMultipartRequest(http.MethodPost, "/statement/preview", previewInput)
+			resp, _ := testUser1.MakeMultipartRequest(http.MethodPost, "/statement/preview", previewInput)
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 		})
 
@@ -486,7 +486,7 @@ var _ = Describe("StatementController", func() {
 				"file":     fileContent,
 				"row_size": 0,
 			}
-			resp, response := testHelperUser1.MakeMultipartRequest(http.MethodPost, "/statement/preview", previewInput)
+			resp, response := testUser1.MakeMultipartRequest(http.MethodPost, "/statement/preview", previewInput)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["message"]).To(Equal("Statement preview generated successfully"))
 		})
@@ -514,7 +514,7 @@ var _ = Describe("StatementController", func() {
 			previewInput := map[string]any{
 				"file": fileContent,
 			}
-			resp, response := testHelperUser1.MakeMultipartRequest(http.MethodPost, "/statement/preview", previewInput)
+			resp, response := testUser1.MakeMultipartRequest(http.MethodPost, "/statement/preview", previewInput)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["message"]).To(Equal("Statement preview generated successfully"))
 			Expect(response).To(HaveKey("data"))
@@ -539,7 +539,7 @@ var _ = Describe("StatementController", func() {
 			previewInput := map[string]any{
 				"file": fileContent,
 			}
-			resp, response := testHelperUser1.MakeMultipartRequest(http.MethodPost, "/statement/preview", previewInput)
+			resp, response := testUser1.MakeMultipartRequest(http.MethodPost, "/statement/preview", previewInput)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["message"]).To(Equal("Statement preview generated successfully"))
 			Expect(response).To(HaveKey("data"))
@@ -554,7 +554,7 @@ var _ = Describe("StatementController", func() {
 			previewInput := map[string]any{
 				"file": fileContent,
 			}
-			resp, response := testHelperUser1.MakeMultipartRequest(http.MethodPost, "/statement/preview", previewInput)
+			resp, response := testUser1.MakeMultipartRequest(http.MethodPost, "/statement/preview", previewInput)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["message"]).To(Equal("Statement preview generated successfully"))
 			Expect(response).To(HaveKey("data"))
@@ -570,7 +570,7 @@ var _ = Describe("StatementController", func() {
 			previewInput := map[string]any{
 				"file": fileContent,
 			}
-			resp, response := testHelperUser1.MakeMultipartRequest(http.MethodPost, "/statement/preview", previewInput)
+			resp, response := testUser1.MakeMultipartRequest(http.MethodPost, "/statement/preview", previewInput)
 			// Should either succeed with partial data or return an appropriate error
 			Expect(resp.StatusCode).To(SatisfyAny(Equal(http.StatusOK), Equal(http.StatusBadRequest), Equal(http.StatusInternalServerError)))
 			Expect(response).To(HaveKey("message"))
@@ -586,7 +586,7 @@ var _ = Describe("StatementController", func() {
 				"file":     fileContent,
 				"row_size": 10000,
 			}
-			resp, response := testHelperUser1.MakeMultipartRequest(http.MethodPost, "/statement/preview", previewInput)
+			resp, response := testUser1.MakeMultipartRequest(http.MethodPost, "/statement/preview", previewInput)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["message"]).To(Equal("Statement preview generated successfully"))
 			Expect(response).To(HaveKey("data"))
@@ -606,7 +606,7 @@ var _ = Describe("StatementController", func() {
 				"file":      fileContent,
 				"skip_rows": 10000,
 			}
-			resp, response := testHelperUser1.MakeMultipartRequest(http.MethodPost, "/statement/preview", previewInput)
+			resp, response := testUser1.MakeMultipartRequest(http.MethodPost, "/statement/preview", previewInput)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["message"]).To(Equal("Statement preview generated successfully"))
 			Expect(response).To(HaveKey("data"))
@@ -626,7 +626,7 @@ var _ = Describe("StatementController", func() {
 				"original_filename": "test.csv",
 				"file_type":         "csv",
 			}
-			resp, response := testHelperUser1.MakeMultipartRequest(http.MethodPost, "/statement", statementInput)
+			resp, response := testUser1.MakeMultipartRequest(http.MethodPost, "/statement", statementInput)
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			Expect(response).To(HaveKey("message"))
 		})
@@ -637,7 +637,7 @@ var _ = Describe("StatementController", func() {
 				"skip_rows": 0,
 				"row_size":  10,
 			}
-			resp, response := testHelperUser1.MakeMultipartRequest(http.MethodPost, "/statement/preview", previewInput)
+			resp, response := testUser1.MakeMultipartRequest(http.MethodPost, "/statement/preview", previewInput)
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			Expect(response).To(HaveKey("message"))
 		})
@@ -654,7 +654,7 @@ var _ = Describe("StatementController", func() {
 				"skip_rows": 0,
 				"row_size":  10,
 			}
-			resp, response := testHelperUser1.MakeMultipartRequest(http.MethodPost, "/statement/preview", previewInput)
+			resp, response := testUser1.MakeMultipartRequest(http.MethodPost, "/statement/preview", previewInput)
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			Expect(response).To(HaveKey("message"))
 		})
@@ -668,7 +668,7 @@ var _ = Describe("StatementController", func() {
 				"file_type":         "csv",
 				"file":              fileContent,
 			}
-			resp, response := testHelperUser1.MakeMultipartRequest(http.MethodPost, "/statement", statementInput)
+			resp, response := testUser1.MakeMultipartRequest(http.MethodPost, "/statement", statementInput)
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			Expect(response).To(HaveKey("message"))
 		})
@@ -681,21 +681,21 @@ var _ = Describe("StatementController", func() {
 				"file_type":         "csv",
 				"file":              fileContent,
 			}
-			resp, response := testHelperUser1.MakeMultipartRequest(http.MethodPost, "/statement", statementInput)
+			resp, response := testUser1.MakeMultipartRequest(http.MethodPost, "/statement", statementInput)
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 			Expect(response).To(HaveKey("message"))
 		})
 
 		It("should handle database error in GetStatements", func() {
 			// This would require mocking database failure, but we can test with extreme parameters
-			resp, response := testHelperUser1.MakeRequest(http.MethodGet, "/statement?page=999999&page_size=1", nil)
+			resp, response := testUser1.MakeRequest(http.MethodGet, "/statement?page=999999&page_size=1", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response).To(HaveKey("data"))
 		})
 
 		It("should handle database error in GetStatementStatus", func() {
 			// Test with statement ID that doesn't exist or belongs to another user
-			resp, response := testHelperUser1.MakeRequest(http.MethodGet, "/statement/99999", nil)
+			resp, response := testUser1.MakeRequest(http.MethodGet, "/statement/99999", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 			Expect(response).To(HaveKey("message"))
 		})
