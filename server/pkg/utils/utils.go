@@ -99,7 +99,7 @@ func ParseDate(dateStr string) (time.Time, error) {
 	return time.Time{}, fmt.Errorf("unable to parse date: %s", dateStr)
 }
 
-// parseAmount cleans and parses a string into a float64.
+// ParseFloat cleans and parses a string into a float64.
 func ParseFloat(amountStr string) (float64, error) {
 	if amountStr == "" {
 		return 0, nil
