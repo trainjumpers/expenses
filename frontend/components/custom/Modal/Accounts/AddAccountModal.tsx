@@ -110,6 +110,7 @@ export function AddAccountModal({
                   <SelectItem value="hdfc">HDFC Bank</SelectItem>
                   <SelectItem value="icici">ICICI Bank</SelectItem>
                   <SelectItem value="investment">Investment Account</SelectItem>
+                  <SelectItem value="others">Others</SelectItem>
                 </SelectContent>
               </Select>
             </div>
