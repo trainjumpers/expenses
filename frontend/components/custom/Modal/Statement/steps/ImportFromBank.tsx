@@ -1,3 +1,6 @@
+import { LoadingButton } from "@/components/ui/LoadingButton";
+import { Button } from "@/components/ui/button";
+import { DialogFooter } from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -6,6 +9,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Account } from "@/lib/models/account";
+import { StatementUploadResponse } from "@/lib/models/statement";
+import { CreateStatementRequest } from "@/lib/models/statement";
+import { UseMutationResult } from "@tanstack/react-query";
 import {
   AlertCircle,
   ChevronDownIcon,
@@ -13,13 +20,6 @@ import {
   Upload,
   X,
 } from "lucide-react";
-import { Account } from "@/lib/models/account";
-import { Button } from "@/components/ui/button";
-import { DialogFooter } from "@/components/ui/dialog";
-import { UseMutationResult } from "@tanstack/react-query";
-import { StatementUploadResponse } from "@/lib/models/statement";
-import { CreateStatementRequest } from "@/lib/models/statement";
-import { LoadingButton } from "@/components/ui/LoadingButton";
 
 interface ImportFromBankProps {
   accounts: Account[];
@@ -177,7 +177,8 @@ export function ImportFromBank({
               <ul className="text-xs space-y-1 text-blue-600 dark:text-blue-400">
                 <li>• Your statement will be processed in the background</li>
                 <li>
-                  • You can check the processing status in the statements history
+                  • You can check the processing status in the statements
+                  history
                 </li>
               </ul>
             </div>

@@ -123,7 +123,7 @@ func (p *CustomParser) Parse(fileBytes []byte, metadata string, fileName string)
 			}
 		}
 	}
-	
+
 	err = p.validateMappings(columnIndex)
 	if err != nil {
 		return nil, err

@@ -85,7 +85,10 @@ export async function previewStatement(
 ): Promise<StatementPreviewResponse> {
   const formData = new FormData();
   formData.append("file", file);
-  formData.append("metadata", JSON.stringify({ skip_rows: skipRows, row_size: rowSize }));
+  formData.append(
+    "metadata",
+    JSON.stringify({ skip_rows: skipRows, row_size: rowSize })
+  );
 
   const response = await fetch(`${API_BASE_URL}/statement/preview`, {
     method: "POST",

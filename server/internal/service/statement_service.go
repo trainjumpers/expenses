@@ -45,7 +45,7 @@ func (s *StatementService) ParseStatement(c *gin.Context, input models.ParseStat
 	if err := s.statementValidator.ValidateStatementUpload(input.AccountId, input.FileBytes, input.OriginalFilename); err != nil {
 		return models.StatementResponse{}, err
 	}
-	
+
 	fileType := "csv"
 	if strings.HasSuffix(input.OriginalFilename, ".xls") || strings.HasSuffix(input.OriginalFilename, ".xlsx") {
 		fileType = "excel"
@@ -184,11 +184,11 @@ func (s *StatementService) PreviewStatement(c *gin.Context, fileBytes []byte, fi
 	if rowSize == 0 {
 		rowSize = 10
 	}
-	
+
 	if err := s.statementValidator.ValidateStatementPreview(fileBytes, fileName, skipRows, rowSize); err != nil {
 		return nil, err
 	}
-	
+
 	p := parser.CustomParser{}
 	return p.Preview(fileBytes, fileName, skipRows, rowSize)
 }
