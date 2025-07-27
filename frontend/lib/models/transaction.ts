@@ -31,6 +31,7 @@ export interface TransactionQueryParams {
   sort_order?: "asc" | "desc";
   account_id?: number;
   category_id?: number;
+  uncategorized?: boolean;
   min_amount?: number;
   max_amount?: number;
   date_from?: string; // YYYY-MM-DD

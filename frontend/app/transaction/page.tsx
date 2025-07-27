@@ -22,6 +22,7 @@ import { toast } from "sonner";
 export interface TransactionFiltersState {
   accountId: number | undefined;
   categoryId: number | undefined;
+  uncategorized: boolean | undefined;
   minAmount: number | undefined;
   maxAmount: number | undefined;
   dateFrom: string | undefined;
@@ -32,6 +33,7 @@ export interface TransactionFiltersState {
 const initialFilters: TransactionFiltersState = {
   accountId: undefined,
   categoryId: undefined,
+  uncategorized: undefined,
   minAmount: undefined,
   maxAmount: undefined,
   dateFrom: undefined,
@@ -78,6 +80,7 @@ export default function TransactionPage() {
       sort_order: sortOrder,
       account_id: filters.accountId,
       category_id: filters.categoryId,
+      uncategorized: filters.uncategorized,
       min_amount: filters.minAmount,
       max_amount: filters.maxAmount,
       date_from: filters.dateFrom,
@@ -106,6 +109,8 @@ export default function TransactionPage() {
     setFilters({
       accountId: getNum("account_id"),
       categoryId: getNum("category_id"),
+      uncategorized:
+        searchParams.get("uncategorized") === "true" ? true : undefined,
       minAmount: getNum("min_amount"),
       maxAmount: getNum("max_amount"),
       dateFrom: searchParams.get("date_from") || undefined,
@@ -123,6 +128,7 @@ export default function TransactionPage() {
     if (filters.accountId) params.set("account_id", String(filters.accountId));
     if (filters.categoryId)
       params.set("category_id", String(filters.categoryId));
+    if (filters.uncategorized) params.set("uncategorized", "true");
     if (filters.minAmount !== undefined)
       params.set("min_amount", String(filters.minAmount));
     if (filters.maxAmount !== undefined)

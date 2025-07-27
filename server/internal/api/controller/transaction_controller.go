@@ -152,23 +152,40 @@ func parseStringQueryParam(ctx *gin.Context, key string) *string {
 	return &valStr
 }
 
+func parseBoolQueryParam(ctx *gin.Context, key string) *bool {
+	valStr := ctx.Query(key)
+	if valStr == "" {
+		return nil
+	}
+	if valStr == "true" || valStr == "1" {
+		val := true
+		return &val
+	}
+	if valStr == "false" || valStr == "0" {
+		val := false
+		return &val
+	}
+	return nil
+}
+
 func (t *TransactionController) bindTransactionListQuery(ctx *gin.Context) models.TransactionListQuery {
 	page, _ := strconv.Atoi(ctx.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(ctx.DefaultQuery("page_size", "15"))
 
 	return models.TransactionListQuery{
-		Page:        page,
-		PageSize:    pageSize,
-		SortBy:      ctx.DefaultQuery("sort_by", "date"),
-		SortOrder:   ctx.DefaultQuery("sort_order", "desc"),
-		AccountId:   parseInt64QueryParam(ctx, "account_id"),
-		CategoryId:  parseInt64QueryParam(ctx, "category_id"),
-		MinAmount:   parseFloat64QueryParam(ctx, "min_amount"),
-		MaxAmount:   parseFloat64QueryParam(ctx, "max_amount"),
-		DateFrom:    parseTimeQueryParam(ctx, "date_from", "2006-01-02"),
-		DateTo:      parseTimeQueryParam(ctx, "date_to", "2006-01-02"),
-		StatementId: parseInt64QueryParam(ctx, "statement_id"),
-		Search:      parseStringQueryParam(ctx, "search"),
+		Page:          page,
+		PageSize:      pageSize,
+		SortBy:        ctx.DefaultQuery("sort_by", "date"),
+		SortOrder:     ctx.DefaultQuery("sort_order", "desc"),
+		AccountId:     parseInt64QueryParam(ctx, "account_id"),
+		CategoryId:    parseInt64QueryParam(ctx, "category_id"),
+		Uncategorized: parseBoolQueryParam(ctx, "uncategorized"),
+		MinAmount:     parseFloat64QueryParam(ctx, "min_amount"),
+		MaxAmount:     parseFloat64QueryParam(ctx, "max_amount"),
+		DateFrom:      parseTimeQueryParam(ctx, "date_from", "2006-01-02"),
+		DateTo:        parseTimeQueryParam(ctx, "date_to", "2006-01-02"),
+		StatementId:   parseInt64QueryParam(ctx, "statement_id"),
+		Search:        parseStringQueryParam(ctx, "search"),
 	}
 }
 

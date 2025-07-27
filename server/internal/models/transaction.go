@@ -63,16 +63,17 @@ type PaginatedTransactionsResponse struct {
 
 // TransactionListQuery holds query params for filtering, sorting, and pagination
 type TransactionListQuery struct {
-	Page        int        // page number (1-based)
-	PageSize    int        // items per page
-	SortBy      string     // column to sort by (e.g., "date", "amount", "name")
-	SortOrder   string     // "asc" or "desc"
-	AccountId   *int64     // filter by account
-	CategoryId  *int64     // filter by category
-	MinAmount   *float64   // filter by min amount
-	MaxAmount   *float64   // filter by max amount
-	DateFrom    *time.Time // filter by start date
-	DateTo      *time.Time // filter by end date
-	StatementId *int64     // filter by statement
-	Search      *string    // search in name/description
+	Page          int        // page number (1-based)
+	PageSize      int        // items per page
+	SortBy        string     // column to sort by (e.g., "date", "amount", "name")
+	SortOrder     string     // "asc" or "desc"
+	AccountId     *int64     // filter by account
+	CategoryId    *int64     // filter by category
+	Uncategorized *bool      // filter for transactions without categories
+	MinAmount     *float64   // filter by min amount
+	MaxAmount     *float64   // filter by max amount
+	DateFrom      *time.Time // filter by start date
+	DateTo        *time.Time // filter by end date
+	StatementId   *int64     // filter by statement
+	Search        *string    // search in name/description
 }

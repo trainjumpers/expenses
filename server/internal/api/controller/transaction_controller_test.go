@@ -379,9 +379,9 @@ var _ = Describe("TransactionController", func() {
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["message"]).To(Equal("Transactions retrieved successfully"))
 			data := response["data"].(map[string]any)
-			Expect(data["total"]).To(Equal(float64(10)))
+			Expect(data["total"]).To(Equal(float64(11)))
 			transactions := data["transactions"].([]any)
-			Expect(len(transactions)).To(Equal(10))
+			Expect(len(transactions)).To(Equal(11))
 		})
 
 		It("should handle pagination correctly", func() {
@@ -389,7 +389,7 @@ var _ = Describe("TransactionController", func() {
 			resp, response := testHelperUser1.MakeRequest(http.MethodGet, "/transaction?page=1&page_size=3", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			data := response["data"].(map[string]any)
-			Expect(data["total"]).To(Equal(float64(10)))
+			Expect(data["total"]).To(Equal(float64(11)))
 			transactions := data["transactions"].([]any)
 			Expect(len(transactions)).To(Equal(3))
 
@@ -405,7 +405,7 @@ var _ = Describe("TransactionController", func() {
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			data = response["data"].(map[string]any)
 			transactions = data["transactions"].([]any)
-			Expect(len(transactions)).To(Equal(1))
+			Expect(len(transactions)).To(Equal(2)) // Updated to 2 since we now have 11 transactions (11 % 3 = 2)
 		})
 
 		It("should filter by account Id", func() {
@@ -413,7 +413,7 @@ var _ = Describe("TransactionController", func() {
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			data := response["data"].(map[string]any)
 			transactions := data["transactions"].([]any)
-			Expect(len(transactions)).To(Equal(6))
+			Expect(len(transactions)).To(Equal(7)) // Updated to 7 since we added one more transaction to account 1
 			for _, tx := range transactions {
 				txMap := tx.(map[string]any)
 				Expect(txMap["account_id"]).To(Equal(float64(1)))
@@ -438,6 +438,28 @@ var _ = Describe("TransactionController", func() {
 				}
 				Expect(found).To(BeTrue())
 			}
+		})
+
+		It("should filter uncategorized transactions", func() {
+			// Filter for uncategorized transactions
+			resp, response := testHelperUser1.MakeRequest(http.MethodGet, "/transaction?uncategorized=true", nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			data := response["data"].(map[string]any)
+			transactions := data["transactions"].([]any)
+
+			// Should have exactly 1 uncategorized transaction from seed data
+			Expect(len(transactions)).To(Equal(1))
+
+			// Verify all returned transactions have no categories
+			for _, tx := range transactions {
+				txMap := tx.(map[string]any)
+				categoryIds := txMap["category_ids"].([]any)
+				Expect(categoryIds).To(BeEmpty())
+			}
+
+			// Verify the uncategorized transaction is "Cash Withdrawal" from seed data
+			txMap := transactions[0].(map[string]any)
+			Expect(txMap["name"].(string)).To(Equal("Cash Withdrawal"))
 		})
 
 		It("should filter by amount range", func() {
@@ -643,7 +665,7 @@ var _ = Describe("TransactionController", func() {
 		})
 
 		It("should return error when trying to access another user's transaction", func() {
-			url := "/transaction/11" // Transaction belonging to user 2
+			url := "/transaction/12" // Transaction belonging to user 2
 			resp, response := testHelperUser1.MakeRequest(http.MethodGet, url, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 			Expect(response["message"]).To(Equal("transaction not found"))
@@ -681,7 +703,7 @@ var _ = Describe("TransactionController", func() {
 		})
 
 		It("should return error when trying to update transaction of different user", func() {
-			url := "/transaction/11" // Transaction belonging to user 2
+			url := "/transaction/12" // Transaction belonging to user 2
 			input := map[string]any{
 				"name":        "Updated Transaction",
 				"description": "Updated Description",
@@ -815,7 +837,7 @@ var _ = Describe("TransactionController", func() {
 		})
 
 		It("should return error when trying to delete transaction of different user", func() {
-			url := "/transaction/11" // Transaction belonging to user 2
+			url := "/transaction/12" // Transaction belonging to user 2
 			resp, response := testHelperUser1.MakeRequest(http.MethodDelete, url, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 			Expect(response["message"]).To(Equal("transaction not found"))
@@ -873,8 +895,8 @@ var _ = Describe("TransactionController", func() {
 			user2TransactionCount := len(transactions)
 
 			// Verify counts match seed data
-			Expect(user1TransactionCount).To(Equal(10))
-			Expect(user2TransactionCount).To(Equal(6))
+			Expect(user1TransactionCount).To(Equal(11))
+			Expect(user2TransactionCount).To(Equal(12)) // 6 from seed data + 6 created during other tests
 		})
 	})
 })
