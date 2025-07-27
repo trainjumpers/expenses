@@ -102,7 +102,19 @@ const TransactionTableRow: React.FC<TransactionTableRowProps> = ({
           );
           const currency = account?.currency || "usd";
           const symbol = currencyMap[currency as Currency] || "$";
-          return `${symbol}${transaction.amount.toFixed(2)}`;
+          // Credit: show amount if negative (< 0)
+          return transaction.amount < 0 ? `${symbol}${Math.abs(transaction.amount).toFixed(2)}` : "-";
+        })()}
+      </td>
+      <td className="text-right text-foreground font-medium py-4 px-6">
+        {(() => {
+          const account = accounts.find(
+            (acc) => acc.id === transaction.account_id
+          );
+          const currency = account?.currency || "usd";
+          const symbol = currencyMap[currency as Currency] || "$";
+          // Debit: show amount if positive (> 0)
+          return transaction.amount > 0 ? `${symbol}${transaction.amount.toFixed(2)}` : "-";
         })()}
       </td>
       <td className="text-foreground py-4 px-6 text-center">
