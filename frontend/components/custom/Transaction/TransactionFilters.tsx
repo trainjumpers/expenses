@@ -66,6 +66,7 @@ const TransactionFilters: React.FC<TransactionFiltersProps> = ({
     onFilterChange({
       accountId: tempFilters.accountId,
       categoryId: tempFilters.categoryId,
+      uncategorized: tempFilters.uncategorized,
       minAmount: tempFilters.minAmount,
       maxAmount: tempFilters.maxAmount,
       dateFrom: tempFilters.dateFrom,

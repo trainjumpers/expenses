@@ -245,6 +245,9 @@ func (r *TransactionRepository) buildTransactionWhereClause(userId int64, q mode
 		args = append(args, *q.CategoryId)
 		argIdx++
 	}
+	if q.Uncategorized != nil && *q.Uncategorized {
+		where = append(where, fmt.Sprintf("t.id NOT IN (SELECT transaction_id FROM %s.%s)", r.schema, r.transactionCategoryMappingTable))
+	}
 	if q.StatementId != nil {
 		where = append(where, fmt.Sprintf("t.id IN (SELECT transaction_id FROM %s.statement_transaction_mapping WHERE statement_id = $%d)", r.schema, argIdx))
 		args = append(args, *q.StatementId)

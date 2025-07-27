@@ -97,6 +97,17 @@ var _ = Describe("TransactionService", func() {
 			CreatedBy:   userId,
 			AccountId:   acc2.Id,
 		}, []int64{cat1.Id, cat2.Id})
+
+		// Create an uncategorized transaction for testing
+		amount5 := 25.0
+		mockRepo.CreateTransaction(ctx, models.CreateBaseTransactionInput{
+			Name:        "Cash withdrawal",
+			Description: "ATM withdrawal",
+			Amount:      &amount5,
+			Date:        testDate.AddDate(0, 0, 4),
+			CreatedBy:   userId,
+			AccountId:   acc1.Id,
+		}, []int64{}) // No categories
 	})
 
 	Describe("CreateTransaction", func() {
@@ -502,10 +513,10 @@ var _ = Describe("TransactionService", func() {
 		It("should return all transactions with default pagination", func() {
 			result, err := transactionService.ListTransactions(ctx, userId, models.TransactionListQuery{})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(result.Total).To(Equal(4))
+			Expect(result.Total).To(Equal(5))
 			Expect(result.Page).To(Equal(1))
 			Expect(result.PageSize).To(Equal(15))
-			Expect(result.Transactions).To(HaveLen(4))
+			Expect(result.Transactions).To(HaveLen(5))
 		})
 
 		It("should filter by account Id", func() {
@@ -514,7 +525,7 @@ var _ = Describe("TransactionService", func() {
 				AccountId: &accountId,
 			})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(result.Total).To(Equal(2))
+			Expect(result.Total).To(Equal(3))
 			for _, tx := range result.Transactions {
 				Expect(tx.AccountId).To(Equal(accountId))
 			}
@@ -536,6 +547,18 @@ var _ = Describe("TransactionService", func() {
 					}
 				}
 				Expect(found).To(BeTrue())
+			}
+		})
+
+		It("should filter uncategorized transactions", func() {
+			uncategorized := true
+			result, err := transactionService.ListTransactions(ctx, userId, models.TransactionListQuery{
+				Uncategorized: &uncategorized,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result.Total).To(Equal(1)) // Only one transaction without categories
+			for _, tx := range result.Transactions {
+				Expect(tx.CategoryIds).To(BeEmpty())
 			}
 		})
 
@@ -593,7 +616,7 @@ var _ = Describe("TransactionService", func() {
 				SortOrder: "asc",
 			})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(result.Total).To(Equal(4))
+			Expect(result.Total).To(Equal(5))
 			for i := 1; i < len(result.Transactions); i++ {
 				Expect(result.Transactions[i].Amount).To(BeNumerically(">=", result.Transactions[i-1].Amount))
 			}
@@ -605,7 +628,7 @@ var _ = Describe("TransactionService", func() {
 				SortOrder: "desc",
 			})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(result.Total).To(Equal(4))
+			Expect(result.Total).To(Equal(5))
 			for i := 1; i < len(result.Transactions); i++ {
 				Expect(result.Transactions[i].Date).To(BeTemporally("<=", result.Transactions[i-1].Date))
 			}
@@ -617,7 +640,7 @@ var _ = Describe("TransactionService", func() {
 				PageSize: 2,
 			})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(result.Total).To(Equal(4))
+			Expect(result.Total).To(Equal(5))
 			Expect(result.Page).To(Equal(2))
 			Expect(result.PageSize).To(Equal(2))
 			Expect(result.Transactions).To(HaveLen(2))

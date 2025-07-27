@@ -216,6 +216,12 @@ func (m *MockTransactionRepository) ListTransactions(c *gin.Context, userId int6
 			}
 		}
 
+		if query.Uncategorized != nil && *query.Uncategorized {
+			if len(tx.CategoryIds) > 0 {
+				continue
+			}
+		}
+
 		if query.MinAmount != nil && tx.Amount < *query.MinAmount {
 			continue
 		}
