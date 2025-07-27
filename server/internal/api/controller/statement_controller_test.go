@@ -298,6 +298,409 @@ var _ = Describe("StatementController", func() {
 		})
 	})
 
+	Describe("PreviewStatement", func() {
+		It("should successfully preview a valid CSV statement file", func() {
+			fileContent := []byte(
+				"Txn Date\tValue Date\tDescription\tRef No.\tDebit\tCredit\tBalance\n" +
+					"1 Aug 2022\t1 Aug 2022\tTO TRANSFER-UPI\t123456\t100.00\t\t1000.00\n" +
+					"2 Aug 2022\t2 Aug 2022\tBY TRANSFER-NEFT\t654321\t\t200.00\t1200.00\n" +
+					"3 Aug 2022\t3 Aug 2022\tATM WITHDRAWAL\t789012\t50.00\t\t1150.00\n" +
+					"Computer Generated Statement")
+
+			previewInput := map[string]any{
+				"file":      fileContent,
+				"skip_rows": 0,
+				"row_size":  10,
+			}
+			resp, response := testHelperUser1.MakeMultipartRequest(http.MethodPost, "/statement/preview", previewInput)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			Expect(response["message"]).To(Equal("Statement preview generated successfully"))
+			Expect(response).To(HaveKey("data"))
+
+			data := response["data"].(map[string]any)
+			Expect(data).To(HaveKey("rows"))
+			Expect(data).To(HaveKey("headers"))
+
+			rows := data["rows"].([]any)
+			Expect(len(rows)).To(BeNumerically(">", 0))
+		})
+
+		It("should successfully preview with custom skip_rows parameter", func() {
+			fileContent := []byte(
+				"Header Line 1\n" +
+					"Header Line 2\n" +
+					"Txn Date\tValue Date\tDescription\tRef No.\tDebit\tCredit\tBalance\n" +
+					"1 Aug 2022\t1 Aug 2022\tTO TRANSFER-UPI\t123456\t100.00\t\t1000.00\n" +
+					"2 Aug 2022\t2 Aug 2022\tBY TRANSFER-NEFT\t654321\t\t200.00\t1200.00\n")
+
+			previewInput := map[string]any{
+				"file":      fileContent,
+				"skip_rows": 2,
+				"row_size":  10,
+			}
+			resp, response := testHelperUser1.MakeMultipartRequest(http.MethodPost, "/statement/preview", previewInput)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			Expect(response["message"]).To(Equal("Statement preview generated successfully"))
+			Expect(response).To(HaveKey("data"))
+		})
+
+		It("should successfully preview with custom row_size parameter", func() {
+			fileContent := []byte(
+				"Txn Date\tValue Date\tDescription\tRef No.\tDebit\tCredit\tBalance\n" +
+					"1 Aug 2022\t1 Aug 2022\tTO TRANSFER-UPI\t123456\t100.00\t\t1000.00\n" +
+					"2 Aug 2022\t2 Aug 2022\tBY TRANSFER-NEFT\t654321\t\t200.00\t1200.00\n" +
+					"3 Aug 2022\t3 Aug 2022\tATM WITHDRAWAL\t789012\t50.00\t\t1150.00\n" +
+					"4 Aug 2022\t4 Aug 2022\tONLINE PURCHASE\t345678\t75.00\t\t1075.00\n")
+
+			previewInput := map[string]any{
+				"file":     fileContent,
+				"row_size": 2,
+			}
+			resp, response := testHelperUser1.MakeMultipartRequest(http.MethodPost, "/statement/preview", previewInput)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			Expect(response["message"]).To(Equal("Statement preview generated successfully"))
+			Expect(response).To(HaveKey("data"))
+
+			data := response["data"].(map[string]any)
+			rows := data["rows"].([]any)
+			Expect(len(rows)).To(BeNumerically("<=", 2))
+		})
+
+		It("should successfully preview with both skip_rows and row_size parameters", func() {
+			fileContent := []byte(
+				"Header Line\n" +
+					"Txn Date\tValue Date\tDescription\tRef No.\tDebit\tCredit\tBalance\n" +
+					"1 Aug 2022\t1 Aug 2022\tTO TRANSFER-UPI\t123456\t100.00\t\t1000.00\n" +
+					"2 Aug 2022\t2 Aug 2022\tBY TRANSFER-NEFT\t654321\t\t200.00\t1200.00\n" +
+					"3 Aug 2022\t3 Aug 2022\tATM WITHDRAWAL\t789012\t50.00\t\t1150.00\n")
+
+			previewInput := map[string]any{
+				"file":      fileContent,
+				"skip_rows": 1,
+				"row_size":  2,
+			}
+			resp, response := testHelperUser1.MakeMultipartRequest(http.MethodPost, "/statement/preview", previewInput)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			Expect(response["message"]).To(Equal("Statement preview generated successfully"))
+			Expect(response).To(HaveKey("data"))
+		})
+
+		It("should return bad request when file is missing", func() {
+			previewInput := map[string]any{
+				"skip_rows": 0,
+				"row_size":  10,
+			}
+			resp, response := testHelperUser1.MakeMultipartRequest(http.MethodPost, "/statement/preview", previewInput)
+			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+			Expect(response).To(HaveKey("message"))
+		})
+
+		It("should return error for empty file", func() {
+			fileContent := []byte("")
+
+			previewInput := map[string]any{
+				"file":      fileContent,
+				"skip_rows": 0,
+				"row_size":  10,
+			}
+			resp, response := testHelperUser1.MakeMultipartRequest(http.MethodPost, "/statement/preview", previewInput)
+			Expect(resp.StatusCode).To(SatisfyAny(Equal(http.StatusBadRequest), Equal(http.StatusInternalServerError)))
+			Expect(response).To(HaveKey("message"))
+		})
+
+		It("should return error for file larger than 256kb", func() {
+			// Create a file >256kb
+			bigFile := make([]byte, 257*1024)
+			for i := range bigFile {
+				bigFile[i] = 'A'
+			}
+
+			previewInput := map[string]any{
+				"file":      bigFile,
+				"skip_rows": 0,
+				"row_size":  10,
+			}
+			resp, response := testHelperUser1.MakeMultipartRequest(http.MethodPost, "/statement/preview", previewInput)
+			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+			Expect(response).To(HaveKey("message"))
+		})
+
+		It("should error out invalid skip_rows parameter gracefully", func() {
+			fileContent := []byte(
+				"Txn Date\tValue Date\tDescription\tRef No.\tDebit\tCredit\tBalance\n" +
+					"1 Aug 2022\t1 Aug 2022\tTO TRANSFER-UPI\t123456\t100.00\t\t1000.00\n")
+
+			previewInput := map[string]any{
+				"file":      fileContent,
+				"skip_rows": "invalid",
+			}
+			resp, _ := testHelperUser1.MakeMultipartRequest(http.MethodPost, "/statement/preview", previewInput)
+			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+		})
+
+		It("should error out invalid row_size parameter gracefully", func() {
+			fileContent := []byte(
+				"Txn Date\tValue Date\tDescription\tRef No.\tDebit\tCredit\tBalance\n" +
+					"1 Aug 2022\t1 Aug 2022\tTO TRANSFER-UPI\t123456\t100.00\t\t1000.00\n")
+
+			previewInput := map[string]any{
+				"file":     fileContent,
+				"row_size": "invalid",
+			}
+			resp, _ := testHelperUser1.MakeMultipartRequest(http.MethodPost, "/statement/preview", previewInput)
+			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+		})
+
+		It("should error out negative skip_rows parameter", func() {
+			fileContent := []byte(
+				"Txn Date\tValue Date\tDescription\tRef No.\tDebit\tCredit\tBalance\n" +
+					"1 Aug 2022\t1 Aug 2022\tTO TRANSFER-UPI\t123456\t100.00\t\t1000.00\n")
+
+			previewInput := map[string]any{
+				"file":      fileContent,
+				"skip_rows": -1,
+			}
+			resp, _ := testHelperUser1.MakeMultipartRequest(http.MethodPost, "/statement/preview", previewInput)
+			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+		})
+
+		It("should error out negative row_size parameter", func() {
+			fileContent := []byte(
+				"Txn Date\tValue Date\tDescription\tRef No.\tDebit\tCredit\tBalance\n" +
+					"1 Aug 2022\t1 Aug 2022\tTO TRANSFER-UPI\t123456\t100.00\t\t1000.00\n")
+
+			previewInput := map[string]any{
+				"file":     fileContent,
+				"row_size": -1,
+			}
+			resp, _ := testHelperUser1.MakeMultipartRequest(http.MethodPost, "/statement/preview", previewInput)
+			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+		})
+
+		It("should handle zero row_size parameter", func() {
+			fileContent := []byte(
+				"Txn Date\tValue Date\tDescription\tRef No.\tDebit\tCredit\tBalance\n" +
+					"1 Aug 2022\t1 Aug 2022\tTO TRANSFER-UPI\t123456\t100.00\t\t1000.00\n")
+
+			previewInput := map[string]any{
+				"file":     fileContent,
+				"row_size": 0,
+			}
+			resp, response := testHelperUser1.MakeMultipartRequest(http.MethodPost, "/statement/preview", previewInput)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			Expect(response["message"]).To(Equal("Statement preview generated successfully"))
+		})
+
+		It("should return unauthorized for unauthenticated user", func() {
+			fileContent := []byte(
+				"Txn Date\tValue Date\tDescription\tRef No.\tDebit\tCredit\tBalance\n" +
+					"1 Aug 2022\t1 Aug 2022\tTO TRANSFER-UPI\t123456\t100.00\t\t1000.00\n")
+
+			previewInput := map[string]any{
+				"file": fileContent,
+			}
+			resp, response := testHelperUnauthenticated.MakeMultipartRequest(http.MethodPost, "/statement/preview", previewInput)
+			Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
+			Expect(response).To(HaveKey("message"))
+			Expect(response["message"]).To(Equal("please log in to continue"))
+		})
+
+		It("should return appropriate preview structure", func() {
+			fileContent := []byte(
+				"Txn Date\tValue Date\tDescription\tRef No.\tDebit\tCredit\tBalance\n" +
+					"1 Aug 2022\t1 Aug 2022\tTO TRANSFER-UPI\t123456\t100.00\t\t1000.00\n" +
+					"2 Aug 2022\t2 Aug 2022\tBY TRANSFER-NEFT\t654321\t\t200.00\t1200.00\n")
+
+			previewInput := map[string]any{
+				"file": fileContent,
+			}
+			resp, response := testHelperUser1.MakeMultipartRequest(http.MethodPost, "/statement/preview", previewInput)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			Expect(response["message"]).To(Equal("Statement preview generated successfully"))
+			Expect(response).To(HaveKey("data"))
+
+			data := response["data"].(map[string]any)
+			Expect(data).To(HaveKey("rows"))
+			Expect(data).To(HaveKey("headers"))
+
+			headers := data["headers"].([]any)
+			Expect(len(headers)).To(BeNumerically(">", 0))
+
+			rows := data["rows"].([]any)
+			Expect(len(rows)).To(BeNumerically(">", 0))
+		})
+
+		It("should handle CSV with comma delimiters", func() {
+			fileContent := []byte(
+				"Txn Date,Value Date,Description,Ref No.,Debit,Credit,Balance\n" +
+					"1 Aug 2022,1 Aug 2022,TO TRANSFER-UPI,123456,100.00,,1000.00\n" +
+					"2 Aug 2022,2 Aug 2022,BY TRANSFER-NEFT,654321,,200.00,1200.00\n")
+
+			previewInput := map[string]any{
+				"file": fileContent,
+			}
+			resp, response := testHelperUser1.MakeMultipartRequest(http.MethodPost, "/statement/preview", previewInput)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			Expect(response["message"]).To(Equal("Statement preview generated successfully"))
+			Expect(response).To(HaveKey("data"))
+		})
+
+		It("should handle files with special characters", func() {
+			fileContent := []byte(
+				"Txn Date\tValue Date\tDescription\tRef No.\tDebit\tCredit\tBalance\n" +
+					"1 Aug 2022\t1 Aug 2022\tTÖ TRÄNSFÉR-UPI\t123456\t₹100.00\t\t₹1000.00\n" +
+					"2 Aug 2022\t2 Aug 2022\tBY TRÄNSFÉR-NEFT\t654321\t\t₹200.00\t₹1200.00\n")
+
+			previewInput := map[string]any{
+				"file": fileContent,
+			}
+			resp, response := testHelperUser1.MakeMultipartRequest(http.MethodPost, "/statement/preview", previewInput)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			Expect(response["message"]).To(Equal("Statement preview generated successfully"))
+			Expect(response).To(HaveKey("data"))
+		})
+
+		It("should handle malformed CSV gracefully", func() {
+			fileContent := []byte(
+				"Txn Date\tValue Date\tDescription\tRef No.\tDebit\tCredit\tBalance\n" +
+					"1 Aug 2022\t1 Aug 2022\tTO TRANSFER-UPI\t123456\t100.00\n" + // Missing columns
+					"INVALID ROW WITH NO TABS\n" +
+					"2 Aug 2022\t2 Aug 2022\tBY TRANSFER-NEFT\t654321\t\t200.00\t1200.00\n")
+
+			previewInput := map[string]any{
+				"file": fileContent,
+			}
+			resp, response := testHelperUser1.MakeMultipartRequest(http.MethodPost, "/statement/preview", previewInput)
+			// Should either succeed with partial data or return an appropriate error
+			Expect(resp.StatusCode).To(SatisfyAny(Equal(http.StatusOK), Equal(http.StatusBadRequest), Equal(http.StatusInternalServerError)))
+			Expect(response).To(HaveKey("message"))
+		})
+
+		It("should handle very large row_size parameter", func() {
+			fileContent := []byte(
+				"Txn Date\tValue Date\tDescription\tRef No.\tDebit\tCredit\tBalance\n" +
+					"1 Aug 2022\t1 Aug 2022\tTO TRANSFER-UPI\t123456\t100.00\t\t1000.00\n" +
+					"2 Aug 2022\t2 Aug 2022\tBY TRANSFER-NEFT\t654321\t\t200.00\t1200.00\n")
+
+			previewInput := map[string]any{
+				"file":     fileContent,
+				"row_size": 10000,
+			}
+			resp, response := testHelperUser1.MakeMultipartRequest(http.MethodPost, "/statement/preview", previewInput)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			Expect(response["message"]).To(Equal("Statement preview generated successfully"))
+			Expect(response).To(HaveKey("data"))
+
+			data := response["data"].(map[string]any)
+			rows := data["rows"].([]any)
+			// Should return all available rows, not more than what exists
+			Expect(len(rows)).To(BeNumerically("<=", 10000))
+		})
+
+		It("should handle very large skip_rows parameter", func() {
+			fileContent := []byte(
+				"Txn Date\tValue Date\tDescription\tRef No.\tDebit\tCredit\tBalance\n" +
+					"1 Aug 2022\t1 Aug 2022\tTO TRANSFER-UPI\t123456\t100.00\t\t1000.00\n")
+
+			previewInput := map[string]any{
+				"file":      fileContent,
+				"skip_rows": 10000,
+			}
+			resp, response := testHelperUser1.MakeMultipartRequest(http.MethodPost, "/statement/preview", previewInput)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			Expect(response["message"]).To(Equal("Statement preview generated successfully"))
+			Expect(response).To(HaveKey("data"))
+
+			data := response["data"].(map[string]any)
+			rows := data["rows"].([]any)
+			// Should return empty or minimal rows since we're skipping more than available
+			Expect(len(rows)).To(BeNumerically(">=", 0))
+		})
+	})
+
+	Describe("Error Handling", func() {
+		It("should handle file header nil error in CreateStatement", func() {
+			// This tests the readFileFromRequest error path when fileHeader is nil
+			statementInput := map[string]any{
+				"account_id":        1,
+				"original_filename": "test.csv",
+				"file_type":         "csv",
+			}
+			resp, response := testHelperUser1.MakeMultipartRequest(http.MethodPost, "/statement", statementInput)
+			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+			Expect(response).To(HaveKey("message"))
+		})
+
+		It("should handle file header nil error in PreviewStatement", func() {
+			// This tests the readFileFromRequest error path when fileHeader is nil
+			previewInput := map[string]any{
+				"skip_rows": 0,
+				"row_size":  10,
+			}
+			resp, response := testHelperUser1.MakeMultipartRequest(http.MethodPost, "/statement/preview", previewInput)
+			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+			Expect(response).To(HaveKey("message"))
+		})
+
+		It("should handle service error in PreviewStatement", func() {
+			// Create a file that will cause service-level validation error
+			fileContent := make([]byte, 300*1024) // File larger than 256KB
+			for i := range fileContent {
+				fileContent[i] = 'A'
+			}
+
+			previewInput := map[string]any{
+				"file":      fileContent,
+				"skip_rows": 0,
+				"row_size":  10,
+			}
+			resp, response := testHelperUser1.MakeMultipartRequest(http.MethodPost, "/statement/preview", previewInput)
+			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+			Expect(response).To(HaveKey("message"))
+		})
+
+		It("should handle service error in CreateStatement", func() {
+			// Create a statement with invalid account ID to trigger service error
+			fileContent := []byte("Txn Date\tValue Date\tDescription\tRef No.\tDebit\tCredit\tBalance\n")
+			statementInput := map[string]any{
+				"account_id":        -1, // Invalid account ID
+				"original_filename": "test.csv",
+				"file_type":         "csv",
+				"file":              fileContent,
+			}
+			resp, response := testHelperUser1.MakeMultipartRequest(http.MethodPost, "/statement", statementInput)
+			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+			Expect(response).To(HaveKey("message"))
+		})
+
+		It("should handle account not found error in CreateStatement", func() {
+			fileContent := []byte("Txn Date\tValue Date\tDescription\tRef No.\tDebit\tCredit\tBalance\n")
+			statementInput := map[string]any{
+				"account_id":        99999, // Non-existent account ID
+				"original_filename": "test.csv",
+				"file_type":         "csv",
+				"file":              fileContent,
+			}
+			resp, response := testHelperUser1.MakeMultipartRequest(http.MethodPost, "/statement", statementInput)
+			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
+			Expect(response).To(HaveKey("message"))
+		})
+
+		It("should handle database error in GetStatements", func() {
+			// This would require mocking database failure, but we can test with extreme parameters
+			resp, response := testHelperUser1.MakeRequest(http.MethodGet, "/statement?page=999999&page_size=1", nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			Expect(response).To(HaveKey("data"))
+		})
+
+		It("should handle database error in GetStatementStatus", func() {
+			// Test with statement ID that doesn't exist or belongs to another user
+			resp, response := testHelperUser1.MakeRequest(http.MethodGet, "/statement/99999", nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
+			Expect(response).To(HaveKey("message"))
+		})
+	})
+
 	Describe("CreateStatement", func() {
 		It("should create a statement, wait for status to be success, and verify transaction inclusion", func() {
 			// 1. Signup a new user

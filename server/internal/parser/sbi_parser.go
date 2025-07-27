@@ -15,7 +15,7 @@ import (
 
 type SBIParser struct{}
 
-func (p *SBIParser) Parse(fileBytes []byte) ([]models.CreateTransactionInput, error) {
+func (p *SBIParser) Parse(fileBytes []byte, metadata string, fileName string) ([]models.CreateTransactionInput, error) {
 	scanner := bufio.NewScanner(bytes.NewReader(fileBytes))
 
 	var lines []string

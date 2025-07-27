@@ -163,7 +163,7 @@ var _ = Describe("SBIParser", func() {
 1 Aug 2022	1 Aug 2022	TO TRANSFER-UPI/DR/221356312527/RITIK  S/SBIN/rs6321908@/UPI--	123456	100.00		1000.00
 2 Aug 2022	2 Aug 2022	BY TRANSFER-NEFT*HDFC0000001*N215222062454075*QURIATE TECHNOLO--	654321		200.00	1200.00
 Computer Generated Statement`
-				txns, err := parser.Parse([]byte(input))
+				txns, err := parser.Parse([]byte(input), "", "")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(txns).To(HaveLen(2))
 				Expect(txns[0].Name).To(Equal("UPI to RITIK  S"))
@@ -176,7 +176,7 @@ Computer Generated Statement`
 				input := `Txn Date	Value Date	Description	Ref No.	Debit	Credit	Balance
 3 Aug 2022	3 Aug 2022	Desc	789012	150.00	200.00	1300.00
 Computer Generated Statement`
-				txns, err := parser.Parse([]byte(input))
+				txns, err := parser.Parse([]byte(input), "", "")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(txns).To(HaveLen(1))
 				Expect(*txns[0].Amount).To(Equal(150.00))
@@ -186,7 +186,7 @@ Computer Generated Statement`
 				input := `Txn Date	Value Date	Description	Ref No.	Debit	Credit	Balance	Extra
 4 Aug 2022	4 Aug 2022	Desc	345678	100.00		1250.00	ExtraValue
 Computer Generated Statement`
-				txns, err := parser.Parse([]byte(input))
+				txns, err := parser.Parse([]byte(input), "", "")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(txns).To(HaveLen(1))
 			})
@@ -194,7 +194,7 @@ Computer Generated Statement`
 			It("should parse row with tabs in description", func() {
 				input := "Txn Date	Value Date	Description	Ref No.	Debit	Credit	Balance\n" +
 					"5 Aug 2022	5 Aug 2022	Desc with	tab	987654	100.00		1175.00\nComputer Generated Statement"
-				txns, err := parser.Parse([]byte(input))
+				txns, err := parser.Parse([]byte(input), "", "")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(txns).To(HaveLen(1))
 			})
@@ -202,7 +202,7 @@ Computer Generated Statement`
 			It("should parse header row with extra whitespace", func() {
 				input := "Txn Date	Value Date	Description	Ref No.	Debit	Credit	Balance\n" +
 					"7 Aug 2022	7 Aug 2022	नमस्ते	123456	100.00		1000.00\nComputer Generated Statement"
-				txns, err := parser.Parse([]byte(input))
+				txns, err := parser.Parse([]byte(input), "", "")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(txns).To(HaveLen(1))
 			})
@@ -210,7 +210,7 @@ Computer Generated Statement`
 			It("should parse row with non-ASCII characters in description", func() {
 				input := "Txn Date	Value Date	Description	Ref No.	Debit	Credit	Balance\n" +
 					"7 Aug 2022	7 Aug 2022	नमस्ते	123456	100.00		1000.00\nComputer Generated Statement"
-				txns, err := parser.Parse([]byte(input))
+				txns, err := parser.Parse([]byte(input), "", "")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(txns).To(HaveLen(1))
 				Expect(txns[0].Name).To(ContainSubstring("नमस्ते"))
@@ -218,7 +218,7 @@ Computer Generated Statement`
 
 			It("should error if header row is missing", func() {
 				input := "No header here\nJust some text"
-				_, err := parser.Parse([]byte(input))
+				_, err := parser.Parse([]byte(input), "", "")
 				Expect(err).To(MatchError(ContainSubstring("transaction header row not found")))
 			})
 
@@ -227,7 +227,7 @@ Computer Generated Statement`
 1 Aug 2022	1 Aug 2022	Desc	123456	100.00		1000.00
 Computer Generated Statement
 2 Aug 2022	2 Aug 2022	Desc	123456	100.00		1000.00`
-				txns, err := parser.Parse([]byte(input))
+				txns, err := parser.Parse([]byte(input), "", "")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(txns).To(HaveLen(1))
 			})
@@ -240,7 +240,7 @@ Computer Generated Statement
  	2 Aug 2022	2 Aug 2022	Desc	123456		200.00	1200.00
 
  	Computer Generated Statement`
-				txns, err := parser.Parse([]byte(input))
+				txns, err := parser.Parse([]byte(input), "", "")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(txns).To(HaveLen(2))
 			})
@@ -250,7 +250,7 @@ Computer Generated Statement
 1 Aug 2022	1 Aug 2022	Short	123456	100.00
 2 Aug 2022	2 Aug 2022	Desc	123456		200.00	1200.00
 Computer Generated Statement`
-				txns, err := parser.Parse([]byte(input))
+				txns, err := parser.Parse([]byte(input), "", "")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(txns).To(HaveLen(1))
 			})
@@ -260,7 +260,7 @@ Computer Generated Statement`
 1 Aug 2022	1 Aug 2022	Desc	123456	abc		1000.00
 2 Aug 2022	2 Aug 2022	Desc	123456		200.00	1200.00
 Computer Generated Statement`
-				txns, err := parser.Parse([]byte(input))
+				txns, err := parser.Parse([]byte(input), "", "")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(txns).To(HaveLen(1))
 			})
@@ -270,7 +270,7 @@ Computer Generated Statement`
  	1 Aug 2022	1 Aug 2022	Desc	123456	abc		1000.00
  	2 Aug 2022	2 Aug 2022	Desc	123456		200.00	1200.00
  	Computer Generated Statement`
-				txns, err := parser.Parse([]byte(input))
+				txns, err := parser.Parse([]byte(input), "", "")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(txns).To(HaveLen(1))
 			})
@@ -280,7 +280,7 @@ Computer Generated Statement`
 1 Aug 2022	1 Aug 2022	Desc		100.00		1000.00
 2 Aug 2022	2 Aug 2022	Desc	654321		200.00	1200.00
 Computer Generated Statement`
-				txns, err := parser.Parse([]byte(input))
+				txns, err := parser.Parse([]byte(input), "", "")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(txns).To(HaveLen(2))
 				Expect(txns[0].Description).To(Equal("Desc"))
@@ -291,7 +291,7 @@ Computer Generated Statement`
 				input := `Txn Date	Value Date	Description	Ref No.	Debit	Credit	Balance
  	1 Aug 2022	1 Aug 2022	Desc	123456	100.00		1000.00
  	Computer Generated Statement`
-				txns, err := parser.Parse([]byte(input))
+				txns, err := parser.Parse([]byte(input), "", "")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(txns).To(HaveLen(1))
 				Expect(txns[0].CategoryIds).To(BeEmpty())

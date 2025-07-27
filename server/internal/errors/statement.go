@@ -17,3 +17,7 @@ func NewStatementGetError(err error) *AuthError {
 func NewStatementUpdateError(err error) *AuthError {
 	return formatError(http.StatusInternalServerError, "failed to update statement", err, "StatementUpdateError")
 }
+
+func NewStatementBadRequestError(err error) *AuthError {
+	return formatError(http.StatusBadRequest, "invalid request", err, "StatementBadRequestError")
+}

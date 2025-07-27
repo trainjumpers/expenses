@@ -1,10 +1,14 @@
 import {
   getStatement,
   listStatements,
+  previewStatement,
   uploadStatement,
 } from "@/lib/api/statement";
 import { PaginatedStatementResponse } from "@/lib/api/statement";
-import { CreateStatementRequest } from "@/lib/models/statement";
+import {
+  CreateStatementRequest,
+  StatementPreviewResponse,
+} from "@/lib/models/statement";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -50,6 +54,20 @@ export const useUploadStatement = () => {
     },
     onError: (error: Error) => {
       toast.error(error.message || "Failed to upload statement");
+    },
+  });
+};
+
+export const usePreviewStatement = () => {
+  return useMutation<
+    StatementPreviewResponse,
+    Error,
+    { file: File; skipRows: number; rowSize: number }
+  >({
+    mutationFn: ({ file, skipRows, rowSize }) =>
+      previewStatement(file, skipRows, rowSize),
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to preview statement");
     },
   });
 };

@@ -1,6 +1,9 @@
 package models
 
-import "time"
+import (
+	"mime/multipart"
+	"time"
+)
 
 type StatementStatus string
 
@@ -18,6 +21,15 @@ type CreateStatementInput struct {
 	FileType         string          `json:"file_type" binding:"required"`
 	Status           StatementStatus `json:"status" binding:"required,oneof=pending processing done error"`
 	Message          *string         `json:"message,omitempty"`
+}
+
+type ParseStatementInput struct {
+	FileBytes        []byte `json:"file_bytes" binding:"required"`
+	FileName         string `json:"file_name" binding:"required"`
+	AccountId        int64  `json:"account_id" binding:"required"`
+	OriginalFilename string `json:"original_filename" binding:"required"`
+	BankType         string `json:"bank_type,omitempty" binding:"optional"`
+	Metadata         string `json:"metadata,omitempty" binding:"optional"`
 }
 
 type UpdateStatementStatusInput struct {
@@ -41,4 +53,23 @@ type PaginatedStatementResponse struct {
 	Total      int                 `json:"total"`
 	Page       int                 `json:"page"`
 	PageSize   int                 `json:"page_size"`
+}
+
+type StatementPreview struct {
+	Headers []string   `json:"headers"`
+	Rows    [][]string `json:"rows"`
+}
+
+// Form parsing
+type ParseStatementForm struct {
+	AccountId int64                 `form:"account_id" binding:"required"`
+	BankType  string                `form:"bank_type"`
+	Metadata  string                `form:"metadata"`
+	File      *multipart.FileHeader `form:"file" binding:"required"`
+}
+
+type PreviewStatementForm struct {
+	SkipRows int                   `form:"skip_rows"`
+	RowSize  int                   `form:"row_size"`
+	File     *multipart.FileHeader `form:"file" binding:"required"`
 }

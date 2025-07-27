@@ -2,7 +2,7 @@ package validator
 
 import (
 	"errors"
-	"mime/multipart"
+	apierrors "expenses/internal/errors"
 	"strings"
 )
 
@@ -12,32 +12,54 @@ func NewStatementValidator() *StatementValidator {
 	return &StatementValidator{}
 }
 
-func (v *StatementValidator) ValidateStatementUpload(accountId int64, file multipart.File, header *multipart.FileHeader) error {
-	// Validate accountId
+func (v *StatementValidator) ValidateStatementUpload(accountId int64, fileBytes []byte, fileName string) error {
 	if accountId <= 0 {
-		return errors.New("invalid account id")
+		return apierrors.NewStatementBadRequestError(errors.New("invalid account id"))
 	}
-
-	// Validate file
-	if file == nil || header == nil {
-		return errors.New("file is required")
+	if len(fileBytes) == 0 {
+		return apierrors.NewStatementBadRequestError(errors.New("file is required"))
 	}
-
-	// Validate filename is not empty
-	if strings.TrimSpace(header.Filename) == "" {
-		return errors.New("filename cannot be empty")
+	if strings.TrimSpace(fileName) == "" {
+		return apierrors.NewStatementBadRequestError(errors.New("filename cannot be empty"))
 	}
-
-	// Validate file size (256KB max)
-	if header.Size > 256*1024 {
-		return errors.New("file size must be less than 256KB")
+	if len(fileBytes) > 256*1024 {
+		return apierrors.NewStatementBadRequestError(errors.New("file size must be less than 256KB"))
 	}
-
-	// Validate file type
-	filename := strings.ToLower(strings.TrimSpace(header.Filename))
-	if !strings.HasSuffix(filename, ".csv") && !strings.HasSuffix(filename, ".xls") && !strings.HasSuffix(filename, ".xlsx") {
-		return errors.New("file must be CSV or Excel format (.csv, .xls, .xlsx)")
+	trimmedFileName := strings.ToLower(strings.TrimSpace(fileName))
+	if !strings.HasSuffix(trimmedFileName, ".csv") && !strings.HasSuffix(trimmedFileName, ".xls") && !strings.HasSuffix(trimmedFileName, ".xlsx") {
+		return apierrors.NewStatementBadRequestError(errors.New("file must be CSV or Excel format (.csv, .xls, .xlsx)"))
 	}
+	return nil
+}
 
+func (v *StatementValidator) ValidateStatementPreview(fileBytes []byte, fileName string, skipRows int, rowSize int) error {
+	if len(fileBytes) == 0 {
+		return apierrors.NewStatementBadRequestError(errors.New("file is required"))
+	}
+	// Reject file bytes that are only whitespace
+	if strings.TrimSpace(string(fileBytes)) == "" {
+		return apierrors.NewStatementBadRequestError(errors.New("file content cannot be only whitespace"))
+	}
+	if strings.TrimSpace(fileName) == "" {
+		return apierrors.NewStatementBadRequestError(errors.New("filename cannot be empty"))
+	}
+	if len(fileBytes) > 256*1024 {
+		return apierrors.NewStatementBadRequestError(errors.New("file size must be less than 256KB"))
+	}
+	trimmedFileName := strings.ToLower(strings.TrimSpace(fileName))
+	if !strings.HasSuffix(trimmedFileName, ".csv") && !strings.HasSuffix(trimmedFileName, ".xls") && !strings.HasSuffix(trimmedFileName, ".xlsx") {
+		return apierrors.NewStatementBadRequestError(errors.New("file must be CSV or Excel format (.csv, .xls, .xlsx)"))
+	}
+	for _, ext := range []string{".csv", ".xls", ".xlsx"} {
+		if strings.HasSuffix(trimmedFileName, ext) && len(strings.TrimSpace(strings.TrimSuffix(trimmedFileName, ext))) == 0 {
+			return apierrors.NewStatementBadRequestError(errors.New("filename cannot be only extension"))
+		}
+	}
+	if skipRows < 0 {
+		return apierrors.NewStatementBadRequestError(errors.New("skipRows cannot be negative"))
+	}
+	if rowSize <= 0 {
+		return apierrors.NewStatementBadRequestError(errors.New("rowSize must be positive"))
+	}
 	return nil
 }

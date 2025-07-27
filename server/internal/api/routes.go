@@ -108,6 +108,7 @@ func Init(
 		statement := base.Group("/statement", middleware.Protected(cfg))
 		{
 			statement.POST("", statementController.CreateStatement)
+			statement.POST("/preview", statementController.PreviewStatement)
 			statement.GET("", statementController.GetStatements)
 			statement.GET("/:id", statementController.GetStatementStatus)
 		}

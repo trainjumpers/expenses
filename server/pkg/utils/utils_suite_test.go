@@ -220,4 +220,98 @@ var _ = Describe("Utils", func() {
 			})
 		})
 	})
+
+	Describe("ParseDate", func() {
+		expectedDate := time.Date(2023, 10, 26, 0, 0, 0, 0, time.UTC)
+		expectedDateTime := time.Date(2023, 10, 26, 10, 0, 0, 0, time.UTC)
+
+		Context("with valid date strings", func() {
+			// Helper function to compare dates without time
+			dateComparator := func(parsedTime, expectedTime time.Time) bool {
+				y1, m1, d1 := parsedTime.Date()
+				y2, m2, d2 := expectedTime.Date()
+				return y1 == y2 && m1 == m2 && d1 == d2
+			}
+			It("should parse layout 2006-01-02", func() {
+				t, err := ParseDate("2023-10-26")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(dateComparator(t, expectedDate)).To(BeTrue())
+			})
+			It("should parse layout 01-02-2006", func() {
+				t, err := ParseDate("10-26-2023")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(dateComparator(t, expectedDate)).To(BeTrue())
+			})
+			It("should parse layout 01/02/2006", func() {
+				t, err := ParseDate("10/26/2023")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(dateComparator(t, expectedDate)).To(BeTrue())
+			})
+			It("should parse layout Jan 2, 2006", func() {
+				t, err := ParseDate("Oct 26, 2023")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(dateComparator(t, expectedDate)).To(BeTrue())
+			})
+			It("should parse layout RFC3339", func() {
+				t, err := ParseDate("2023-10-26T10:00:00Z")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(t.Equal(expectedDateTime)).To(BeTrue())
+			})
+		})
+
+		Context("with invalid date strings", func() {
+			It("should return an error for an invalid format", func() {
+				_, err := ParseDate("not-a-date")
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(Equal("unable to parse date: not-a-date"))
+			})
+			It("should return an error for an empty string", func() {
+				_, err := ParseDate("")
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(Equal("unable to parse date: "))
+			})
+		})
+	})
+
+	Describe("ParseFloat", func() {
+		Context("with valid amount strings", func() {
+			It("should parse a standard float string", func() {
+				f, err := ParseFloat("123.45")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(f).To(Equal(123.45))
+			})
+			It("should parse a string with commas", func() {
+				f, err := ParseFloat("1,234.56")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(f).To(Equal(1234.56))
+			})
+			It("should parse an integer string", func() {
+				f, err := ParseFloat("789")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(f).To(Equal(789.0))
+			})
+			It("should handle leading/trailing spaces", func() {
+				f, err := ParseFloat("  987.65  ")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(f).To(Equal(987.65))
+			})
+			It("should handle a negative number", func() {
+				f, err := ParseFloat("-50.25")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(f).To(Equal(-50.25))
+			})
+			It("should return 0 for an empty string without an error", func() {
+				f, err := ParseFloat("")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(f).To(Equal(0.0))
+			})
+		})
+
+		Context("with an invalid amount string", func() {
+			It("should return an error", func() {
+				_, err := ParseFloat("not-a-number")
+				Expect(err).To(HaveOccurred())
+			})
+		})
+	})
 })
