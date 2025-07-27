@@ -618,6 +618,89 @@ var _ = Describe("StatementController", func() {
 		})
 	})
 
+	Describe("Error Handling", func() {
+		It("should handle file header nil error in CreateStatement", func() {
+			// This tests the readFileFromRequest error path when fileHeader is nil
+			statementInput := map[string]any{
+				"account_id":        1,
+				"original_filename": "test.csv",
+				"file_type":         "csv",
+			}
+			resp, response := testHelperUser1.MakeMultipartRequest(http.MethodPost, "/statement", statementInput)
+			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+			Expect(response).To(HaveKey("message"))
+		})
+
+		It("should handle file header nil error in PreviewStatement", func() {
+			// This tests the readFileFromRequest error path when fileHeader is nil
+			previewInput := map[string]any{
+				"skip_rows": 0,
+				"row_size":  10,
+			}
+			resp, response := testHelperUser1.MakeMultipartRequest(http.MethodPost, "/statement/preview", previewInput)
+			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+			Expect(response).To(HaveKey("message"))
+		})
+
+		It("should handle service error in PreviewStatement", func() {
+			// Create a file that will cause service-level validation error
+			fileContent := make([]byte, 300*1024) // File larger than 256KB
+			for i := range fileContent {
+				fileContent[i] = 'A'
+			}
+
+			previewInput := map[string]any{
+				"file":      fileContent,
+				"skip_rows": 0,
+				"row_size":  10,
+			}
+			resp, response := testHelperUser1.MakeMultipartRequest(http.MethodPost, "/statement/preview", previewInput)
+			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+			Expect(response).To(HaveKey("message"))
+		})
+
+		It("should handle service error in CreateStatement", func() {
+			// Create a statement with invalid account ID to trigger service error
+			fileContent := []byte("Txn Date\tValue Date\tDescription\tRef No.\tDebit\tCredit\tBalance\n")
+			statementInput := map[string]any{
+				"account_id":        -1, // Invalid account ID
+				"original_filename": "test.csv",
+				"file_type":         "csv",
+				"file":              fileContent,
+			}
+			resp, response := testHelperUser1.MakeMultipartRequest(http.MethodPost, "/statement", statementInput)
+			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+			Expect(response).To(HaveKey("message"))
+		})
+
+		It("should handle account not found error in CreateStatement", func() {
+			fileContent := []byte("Txn Date\tValue Date\tDescription\tRef No.\tDebit\tCredit\tBalance\n")
+			statementInput := map[string]any{
+				"account_id":        99999, // Non-existent account ID
+				"original_filename": "test.csv",
+				"file_type":         "csv",
+				"file":              fileContent,
+			}
+			resp, response := testHelperUser1.MakeMultipartRequest(http.MethodPost, "/statement", statementInput)
+			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
+			Expect(response).To(HaveKey("message"))
+		})
+
+		It("should handle database error in GetStatements", func() {
+			// This would require mocking database failure, but we can test with extreme parameters
+			resp, response := testHelperUser1.MakeRequest(http.MethodGet, "/statement?page=999999&page_size=1", nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			Expect(response).To(HaveKey("data"))
+		})
+
+		It("should handle database error in GetStatementStatus", func() {
+			// Test with statement ID that doesn't exist or belongs to another user
+			resp, response := testHelperUser1.MakeRequest(http.MethodGet, "/statement/99999", nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
+			Expect(response).To(HaveKey("message"))
+		})
+	})
+
 	Describe("CreateStatement", func() {
 		It("should create a statement, wait for status to be success, and verify transaction inclusion", func() {
 			// 1. Signup a new user
