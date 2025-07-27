@@ -51,6 +51,19 @@ var _ = Describe("AccountController", func() {
 				Expect(response["data"]).To(HaveKey("id"))
 				Expect(response["data"].(map[string]any)["balance"]).To(Equal(0.0))
 			})
+
+			It("should create account with 'others' bank type", func() {
+				input := models.CreateAccountInput{
+					Name:     "Others Bank Account",
+					BankType: models.BankTypeOthers,
+					Currency: models.CurrencyINR,
+				}
+				resp, response := testHelperUser1.MakeRequest(http.MethodPost, "/account", input)
+				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+				Expect(response["message"]).To(Equal("Account created successfully"))
+				Expect(response["data"]).To(HaveKey("id"))
+				Expect(response["data"].(map[string]any)["bank_type"]).To(Equal("others"))
+			})
 		})
 
 		Context("with invalid input", func() {
@@ -254,6 +267,15 @@ var _ = Describe("AccountController", func() {
 			url := "/account/1"
 			resp, _ := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+		})
+
+		It("should update account bank type to 'others'", func() {
+			update := models.UpdateAccountInput{BankType: models.BankTypeOthers}
+			url := "/account/1"
+			resp, response := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			Expect(response["message"]).To(Equal("Account updated successfully"))
+			Expect(response["data"].(map[string]any)["bank_type"]).To(Equal("others"))
 		})
 
 		It("should return error for invalid currency in update", func() {

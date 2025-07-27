@@ -1,4 +1,4 @@
-export type BankType = "investment" | "axis" | "sbi" | "hdfc" | "icici";
+export type BankType = "investment" | "axis" | "sbi" | "hdfc" | "icici" | "others";
 export type Currency = "inr" | "usd";
 
 export interface CreateAccountInput {

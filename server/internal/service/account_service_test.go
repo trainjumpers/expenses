@@ -49,6 +49,19 @@ var _ = Describe("AccountService", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(acc.Balance).To(Equal(bal))
 		})
+		It("should create a new account with 'others' bank type", func() {
+			input := models.CreateAccountInput{
+				Name:      "Others Bank Account",
+				BankType:  models.BankTypeOthers,
+				Currency:  models.CurrencyINR,
+				CreatedBy: 1,
+			}
+			acc, err := accountService.CreateAccount(ctx, input)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(acc.Name).To(Equal(input.Name))
+			Expect(acc.BankType).To(Equal(models.BankTypeOthers))
+			Expect(acc.Balance).To(Equal(0.0))
+		})
 	})
 
 	Describe("GetAccountById", func() {
@@ -114,6 +127,12 @@ var _ = Describe("AccountService", func() {
 			acc, err := accountService.UpdateAccount(ctx, created.Id, 4, update)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(acc.BankType).To(Equal(models.BankTypeHDFC))
+		})
+		It("should update account bank type to 'others'", func() {
+			update := models.UpdateAccountInput{BankType: models.BankTypeOthers}
+			acc, err := accountService.UpdateAccount(ctx, created.Id, 4, update)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(acc.BankType).To(Equal(models.BankTypeOthers))
 		})
 		It("should update account currency", func() {
 			update := models.UpdateAccountInput{Currency: models.CurrencyUSD}
