@@ -14,9 +14,10 @@ import (
 )
 
 type StatementServiceInterface interface {
-	ParseStatement(c *gin.Context, fileBytes []byte, fileName string, accountId int64, userId int64) (models.StatementResponse, error)
+	ParseStatement(c *gin.Context, input models.ParseStatementInput, userId int64) (models.StatementResponse, error)
 	GetStatementStatus(c *gin.Context, statementId int64, userId int64) (models.StatementResponse, error)
 	ListStatements(c *gin.Context, userId int64, page int, pageSize int) (models.PaginatedStatementResponse, error)
+	PreviewStatement(c *gin.Context, fileBytes []byte, fileName string, skipRows int, rowSize int) (*models.StatementPreview, error)
 }
 
 type StatementService struct {
@@ -40,55 +41,66 @@ func NewStatementService(
 	}
 }
 
-func (s *StatementService) ParseStatement(c *gin.Context, fileBytes []byte, fileName string, accountId int64, userId int64) (models.StatementResponse, error) {
-
+func (s *StatementService) ParseStatement(c *gin.Context, input models.ParseStatementInput, userId int64) (models.StatementResponse, error) {
+	if err := s.statementValidator.ValidateStatementUpload(input.AccountId, input.FileBytes, input.OriginalFilename); err != nil {
+		return models.StatementResponse{}, err
+	}
+	
 	fileType := "csv"
-	fileName = strings.ToLower(fileName)
-	if strings.HasSuffix(fileName, ".xls") || strings.HasSuffix(fileName, ".xlsx") {
+	if strings.HasSuffix(input.OriginalFilename, ".xls") || strings.HasSuffix(input.OriginalFilename, ".xlsx") {
 		fileType = "excel"
 	}
 
-	account, err := s.accountService.GetAccountById(c, accountId, userId)
+	account, err := s.accountService.GetAccountById(c, input.AccountId, userId)
 	if err != nil {
 		return models.StatementResponse{}, err
 	}
 
-	input := models.CreateStatementInput{
+	// Create a statement record in the database.
+	createStatement := models.CreateStatementInput{
 		AccountId:        account.Id,
 		CreatedBy:        userId,
-		OriginalFilename: fileName,
+		OriginalFilename: input.OriginalFilename,
 		FileType:         fileType,
 		Status:           models.StatementStatusPending,
 	}
 
-	statement, err := s.repo.CreateStatement(c, input)
+	statement, err := s.repo.CreateStatement(c, createStatement)
 	if err != nil {
 		return models.StatementResponse{}, err
 	}
-	go s.processStatementAsync(c, statement.Id, input.AccountId, input.CreatedBy, fileBytes)
+
+	// Process the statement asynchronously.
+	go s.processStatementAsync(c, statement.Id, input, userId)
 	return statement, nil
 }
 
-func (s *StatementService) processStatementAsync(c *gin.Context, statementId int64, accountId int64, userId int64, fileBytes []byte) {
-	logger.Debugf("Processing statement ID %d for account ID %d by user ID %d", statementId, accountId, userId)
+// processStatementAsync processes the statement in a separate goroutine.
+func (s *StatementService) processStatementAsync(c *gin.Context, statementId int64, input models.ParseStatementInput, userId int64) {
+	logger.Debugf("Processing statement ID %d for account ID %d by user ID %d", statementId, input.AccountId, userId)
 	_, _ = s.repo.UpdateStatementStatus(c, statementId, models.UpdateStatementStatusInput{
 		Status: models.StatementStatusProcessing,
 	})
 
-	account, err := s.accountService.GetAccountById(c, accountId, userId)
-	if err != nil {
-		errMsg := fmt.Sprintf("Failed to fetch account: %v", err)
-		_, _ = s.repo.UpdateStatementStatus(c, statementId, models.UpdateStatementStatusInput{
-			Status:  models.StatementStatusError,
-			Message: &errMsg,
-		})
-		return
+	parserType := input.BankType
+	if parserType == "" {
+		logger.Debugf("No bank type provided, fetching account details for account ID %d", input.AccountId)
+		account, err := s.accountService.GetAccountById(c, input.AccountId, userId)
+		if err != nil {
+			errMsg := fmt.Sprintf("Failed to fetch account: %v", err)
+			_, _ = s.repo.UpdateStatementStatus(c, statementId, models.UpdateStatementStatusInput{
+				Status:  models.StatementStatusError,
+				Message: &errMsg,
+			})
+			return
+		}
+		parserType = string(account.BankType)
 	}
 
-	logger.Debugf("Fetching Parser for bank: %v", account.BankType)
-	parserImpl, ok := parser.GetParser(account.BankType)
+	logger.Debugf("Fetching Parser for bank: %v", parserType)
+	parserImpl, ok := parser.GetParser(models.BankType(parserType))
 	if !ok {
-		errMsg := fmt.Sprintf("No parser available for bank type: %s", account.BankType)
+		errMsg := fmt.Sprintf("No parser available for bank type: %s", parserType)
 		_, _ = s.repo.UpdateStatementStatus(c, statementId, models.UpdateStatementStatusInput{
 			Status:  models.StatementStatusError,
 			Message: &errMsg,
@@ -96,8 +108,8 @@ func (s *StatementService) processStatementAsync(c *gin.Context, statementId int
 		return
 	}
 
-	logger.Debugf("Using parser: %T for bank type: %s", parserImpl, account.BankType)
-	parsedTxs, err := parserImpl.Parse(fileBytes)
+	logger.Debugf("Using parser: %T for bank type: %s", parserImpl, parserType)
+	parsedTxs, err := parserImpl.Parse(input.FileBytes, input.Metadata, input.OriginalFilename)
 	if err != nil {
 		errMsg := fmt.Sprintf("Failed to parse statement: %v", err)
 		_, _ = s.repo.UpdateStatementStatus(c, statementId, models.UpdateStatementStatusInput{
@@ -110,7 +122,7 @@ func (s *StatementService) processStatementAsync(c *gin.Context, statementId int
 	logger.Debugf("Parsed %d transactions from statement ID %d", len(parsedTxs), statementId)
 	var successCount, failCount int
 	for _, tx := range parsedTxs {
-		tx.AccountId = accountId
+		tx.AccountId = input.AccountId
 		tx.CreatedBy = userId
 		transaction, err := s.txService.CreateTransaction(c, tx)
 		if err != nil {
@@ -166,4 +178,17 @@ func (s *StatementService) ListStatements(c *gin.Context, userId int64, page int
 		Page:       page,
 		PageSize:   pageSize,
 	}, nil
+}
+
+func (s *StatementService) PreviewStatement(c *gin.Context, fileBytes []byte, fileName string, skipRows int, rowSize int) (*models.StatementPreview, error) {
+	if rowSize == 0 {
+		rowSize = 10
+	}
+	
+	if err := s.statementValidator.ValidateStatementPreview(fileBytes, fileName, skipRows, rowSize); err != nil {
+		return nil, err
+	}
+	
+	p := parser.CustomParser{}
+	return p.Preview(fileBytes, fileName, skipRows, rowSize)
 }

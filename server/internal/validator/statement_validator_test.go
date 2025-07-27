@@ -1,25 +1,9 @@
 package validator
 
 import (
-	"mime/multipart"
-	"strings"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
-
-// Mock multipart.File for testing
-type mockFile struct {
-	*strings.Reader
-}
-
-func (m *mockFile) Close() error {
-	return nil
-}
-
-func newMockFile(content string) multipart.File {
-	return &mockFile{Reader: strings.NewReader(content)}
-}
 
 var _ = Describe("StatementValidator", func() {
 	var validator *StatementValidator
@@ -29,212 +13,207 @@ var _ = Describe("StatementValidator", func() {
 	})
 
 	Describe("ValidateStatementUpload", func() {
+		var (
+			accountId int64
+			fileBytes []byte
+			fileName  string
+		)
+
+		BeforeEach(func() {
+			accountId = 123
+			fileBytes = []byte("test,data\n1,2")
+			fileName = "test.csv"
+		})
+
 		Context("with valid input", func() {
 			It("should validate successfully", func() {
-				fileContent := "test,data\n1,2"
-				file := newMockFile(fileContent)
-				header := &multipart.FileHeader{
-					Filename: "test.csv",
-					Size:     int64(len(fileContent)),
-				}
-
-				err := validator.ValidateStatementUpload(int64(123), file, header)
+				err := validator.ValidateStatementUpload(accountId, fileBytes, fileName)
 				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 
 		Context("with invalid account_id", func() {
-			It("should return error for empty account_id", func() {
-				file := newMockFile("test")
-				header := &multipart.FileHeader{Filename: "test.csv", Size: 4}
-
-				err := validator.ValidateStatementUpload(int64(0), file, header)
-				Expect(err).To(HaveOccurred())
-			})
-
-			It("should return error for invalid account_id", func() {
-				file := newMockFile("test")
-				header := &multipart.FileHeader{Filename: "test.csv", Size: 4}
-
-				err := validator.ValidateStatementUpload(int64(-1), file, header)
+			It("should return error for zero account_id", func() {
+				err := validator.ValidateStatementUpload(0, fileBytes, fileName)
 				Expect(err).To(HaveOccurred())
 			})
 
 			It("should return error for negative account_id", func() {
-				file := newMockFile("test")
-				header := &multipart.FileHeader{Filename: "test.csv", Size: 4}
-
-				err := validator.ValidateStatementUpload(int64(-1), file, header)
+				err := validator.ValidateStatementUpload(-1, fileBytes, fileName)
 				Expect(err).To(HaveOccurred())
 			})
 		})
 
 		Context("with invalid file", func() {
-			It("should return error for nil file", func() {
-				err := validator.ValidateStatementUpload(int64(123), nil, nil)
+			It("should return error for nil file bytes", func() {
+				err := validator.ValidateStatementUpload(accountId, nil, fileName)
+				Expect(err).To(HaveOccurred())
+			})
+
+			It("should return error for empty file bytes", func() {
+				err := validator.ValidateStatementUpload(accountId, []byte{}, fileName)
 				Expect(err).To(HaveOccurred())
 			})
 
 			It("should return error for file too large", func() {
-				file := newMockFile("test")
-				header := &multipart.FileHeader{
-					Filename: "test.csv",
-					Size:     300 * 1024, // 300KB > 256KB limit
-				}
-
-				err := validator.ValidateStatementUpload(int64(123), file, header)
+				largeFile := make([]byte, 256*1024+1)
+				err := validator.ValidateStatementUpload(accountId, largeFile, fileName)
 				Expect(err).To(HaveOccurred())
 			})
 
 			It("should return error for invalid file type", func() {
-				file := newMockFile("test")
-				header := &multipart.FileHeader{
-					Filename: "test.txt",
-					Size:     4,
-				}
-
-				err := validator.ValidateStatementUpload(int64(123), file, header)
+				err := validator.ValidateStatementUpload(accountId, fileBytes, "test.txt")
 				Expect(err).To(HaveOccurred())
 			})
 
 			It("should return error for empty filename", func() {
-				file := newMockFile("test")
-				header := &multipart.FileHeader{
-					Filename: "",
-					Size:     4,
-				}
+				err := validator.ValidateStatementUpload(accountId, fileBytes, "")
+				Expect(err).To(HaveOccurred())
+			})
 
-				err := validator.ValidateStatementUpload(int64(123), file, header)
+			It("should return error for filename with only spaces", func() {
+				err := validator.ValidateStatementUpload(accountId, fileBytes, "   ")
 				Expect(err).To(HaveOccurred())
 			})
 		})
 
-		Context("with different file types", func() {
-			It("should accept CSV files", func() {
-				file := newMockFile("test")
-				header := &multipart.FileHeader{Filename: "test.csv", Size: 4}
-
-				err := validator.ValidateStatementUpload(int64(123), file, header)
+		Context("with different valid file types", func() {
+			It("should accept .csv files", func() {
+				err := validator.ValidateStatementUpload(accountId, fileBytes, "test.csv")
 				Expect(err).NotTo(HaveOccurred())
 			})
 
-			It("should accept XLS files", func() {
-				file := newMockFile("test")
-				header := &multipart.FileHeader{Filename: "test.xls", Size: 4}
-
-				err := validator.ValidateStatementUpload(int64(123), file, header)
+			It("should accept .xls files", func() {
+				err := validator.ValidateStatementUpload(accountId, fileBytes, "test.xls")
 				Expect(err).NotTo(HaveOccurred())
 			})
 
-			It("should accept XLSX files", func() {
-				file := newMockFile("test")
-				header := &multipart.FileHeader{Filename: "test.xlsx", Size: 4}
-
-				err := validator.ValidateStatementUpload(int64(123), file, header)
+			It("should accept .xlsx files", func() {
+				err := validator.ValidateStatementUpload(accountId, fileBytes, "test.xlsx")
 				Expect(err).NotTo(HaveOccurred())
+			})
+		})
+
+		Context("with edge cases", func() {
+			It("should accept file exactly at 256KB limit", func() {
+				limitFile := make([]byte, 256*1024)
+				err := validator.ValidateStatementUpload(accountId, limitFile, fileName)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should accept uppercase file extensions", func() {
+				err := validator.ValidateStatementUpload(accountId, fileBytes, "test.CSV")
+				Expect(err).NotTo(HaveOccurred())
+				err = validator.ValidateStatementUpload(accountId, fileBytes, "test.XLS")
+				Expect(err).NotTo(HaveOccurred())
+				err = validator.ValidateStatementUpload(accountId, fileBytes, "test.XLSX")
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should handle filenames with leading/trailing spaces", func() {
+				err := validator.ValidateStatementUpload(accountId, fileBytes, " test.csv ")
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should reject file with no extension", func() {
+				err := validator.ValidateStatementUpload(accountId, fileBytes, "statement")
+				Expect(err).To(HaveOccurred())
 			})
 		})
 	})
 
-	Describe("Page/PageSize Param Parsing (service integration)", func() {
-		It("should default to page 1 and page_size 10 if not provided", func() {
-			page := 1
-			pageSize := 10
-			Expect(page).To(Equal(1))
-			Expect(pageSize).To(Equal(10))
-		})
-		It("should parse valid page and page_size", func() {
-			page := 2
-			pageSize := 25
-			Expect(page).To(Equal(2))
-			Expect(pageSize).To(Equal(25))
-		})
-		It("should clamp page_size to 10 if out of range", func() {
-			pageSize := 200
-			if pageSize < 1 || pageSize > 100 {
-				pageSize = 10
-			}
-			Expect(pageSize).To(Equal(10))
-		})
-		It("should clamp page to 1 if less than 1", func() {
-			page := -5
-			if page < 1 {
-				page = 1
-			}
-			Expect(page).To(Equal(1))
-		})
-	})
+	Describe("ValidateStatementPreview", func() {
+		var (
+			fileBytes []byte
+			fileName  string
+			skipRows  int
+			rowSize   int
+		)
 
-	Describe("Additional Edge Cases", func() {
-		It("should accept file exactly at 256KB limit", func() {
-			fileContent := strings.Repeat("a", 256*1024)
-			file := newMockFile(fileContent)
-			header := &multipart.FileHeader{Filename: "test.csv", Size: int64(len(fileContent))}
-			err := validator.ValidateStatementUpload(int64(123), file, header)
-			Expect(err).NotTo(HaveOccurred())
+		BeforeEach(func() {
+			fileBytes = []byte("header1,header2\ndata1,data2")
+			fileName = "preview.csv"
+			skipRows = 0
+			rowSize = 10
 		})
 
-		It("should reject file just above 256KB limit", func() {
-			fileContent := strings.Repeat("a", 256*1024+1)
-			file := newMockFile(fileContent)
-			header := &multipart.FileHeader{Filename: "test.csv", Size: int64(len(fileContent))}
-			err := validator.ValidateStatementUpload(int64(123), file, header)
-			Expect(err).To(HaveOccurred())
+		Context("with valid input", func() {
+			It("should validate successfully", func() {
+				err := validator.ValidateStatementPreview(fileBytes, fileName, skipRows, rowSize)
+				Expect(err).NotTo(HaveOccurred())
+			})
 		})
 
-		It("should accept uppercase file extensions", func() {
-			file := newMockFile("test")
-			header := &multipart.FileHeader{Filename: "test.CSV", Size: 4}
-			err := validator.ValidateStatementUpload(int64(123), file, header)
-			Expect(err).NotTo(HaveOccurred())
-			header = &multipart.FileHeader{Filename: "test.XLS", Size: 4}
-			err = validator.ValidateStatementUpload(int64(123), file, header)
-			Expect(err).NotTo(HaveOccurred())
-			header = &multipart.FileHeader{Filename: "test.XLSX", Size: 4}
-			err = validator.ValidateStatementUpload(int64(123), file, header)
-			Expect(err).NotTo(HaveOccurred())
+		Context("with invalid file", func() {
+			It("should return error for nil file bytes", func() {
+				err := validator.ValidateStatementPreview(nil, fileName, skipRows, rowSize)
+				Expect(err).To(HaveOccurred())
+			})
+			It("should return error for empty filename", func() {
+				err := validator.ValidateStatementPreview(fileBytes, "", skipRows, rowSize)
+				Expect(err).To(HaveOccurred())
+			})
+			It("should return error for file too large", func() {
+				largeFile := make([]byte, 256*1024+1)
+				err := validator.ValidateStatementPreview(largeFile, fileName, skipRows, rowSize)
+				Expect(err).To(HaveOccurred())
+			})
+			It("should return error for invalid file type (.txt)", func() {
+				err := validator.ValidateStatementPreview(fileBytes, "test.txt", skipRows, rowSize)
+				Expect(err).To(HaveOccurred())
+			})
 		})
 
-		It("should handle filenames with leading/trailing spaces", func() {
-			file := newMockFile("test")
-			header := &multipart.FileHeader{Filename: " test.csv ", Size: 4}
-			err := validator.ValidateStatementUpload(int64(123), file, header)
-			Expect(err).NotTo(HaveOccurred())
+		Context("with invalid parameters", func() {
+			It("should return error for negative skipRows", func() {
+				err := validator.ValidateStatementPreview(fileBytes, fileName, -1, rowSize)
+				Expect(err).To(HaveOccurred())
+			})
+			It("should return error for zero rowSize", func() {
+				err := validator.ValidateStatementPreview(fileBytes, fileName, skipRows, 0)
+				Expect(err).To(HaveOccurred())
+			})
+			It("should return error for negative rowSize", func() {
+				err := validator.ValidateStatementPreview(fileBytes, fileName, skipRows, -1)
+				Expect(err).To(HaveOccurred())
+			})
+		})
+		Context("with edge cases for filenames", func() {
+			It("should accept filename with multiple dots", func() {
+				err := validator.ValidateStatementPreview([]byte("data"), "report.final.csv", skipRows, rowSize)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should accept unicode/special characters in filename", func() {
+				err := validator.ValidateStatementPreview([]byte("data"), "résumé.csv", skipRows, rowSize)
+				Expect(err).NotTo(HaveOccurred())
+				err = validator.ValidateStatementPreview([]byte("data"), "data_测试.xlsx", skipRows, rowSize)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should reject filename with only extension", func() {
+				err := validator.ValidateStatementPreview([]byte("data"), ".csv", skipRows, rowSize)
+				Expect(err).To(HaveOccurred())
+			})
 		})
 
-		It("should accept filenames with multiple dots", func() {
-			file := newMockFile("test")
-			header := &multipart.FileHeader{Filename: "statement.final.csv", Size: 4}
-			err := validator.ValidateStatementUpload(int64(123), file, header)
-			Expect(err).NotTo(HaveOccurred())
+		Context("with edge cases for file content", func() {
+			It("should reject file with whitespace-only content", func() {
+				err := validator.ValidateStatementPreview([]byte("   "), "test.csv", skipRows, rowSize)
+				Expect(err).To(HaveOccurred())
+			})
 		})
 
-		It("should reject file with no extension", func() {
-			file := newMockFile("test")
-			header := &multipart.FileHeader{Filename: "statement", Size: 4}
-			err := validator.ValidateStatementUpload(int64(123), file, header)
-			Expect(err).To(HaveOccurred())
-		})
+		Context("with edge cases for preview parameters", func() {
+			It("should accept large rowSize if allowed", func() {
+				err := validator.ValidateStatementPreview([]byte("header1,header2\ndata1,data2"), "preview.csv", 0, 1000)
+				Expect(err).NotTo(HaveOccurred())
+			})
 
-		It("should handle file with valid extension but empty content", func() {
-			file := newMockFile("")
-			header := &multipart.FileHeader{Filename: "test.csv", Size: 0}
-			err := validator.ValidateStatementUpload(int64(123), file, header)
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("should accept very large positive account_id", func() {
-			file := newMockFile("test")
-			header := &multipart.FileHeader{Filename: "test.csv", Size: 4}
-			err := validator.ValidateStatementUpload(int64(1<<60), file, header)
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("should accept file with special characters in filename if extension is valid", func() {
-			file := newMockFile("test")
-			header := &multipart.FileHeader{Filename: "t@st#file!.csv", Size: 4}
-			err := validator.ValidateStatementUpload(int64(123), file, header)
-			Expect(err).NotTo(HaveOccurred())
+			It("should accept skipRows exceeding file line count", func() {
+				err := validator.ValidateStatementPreview([]byte("header1,header2\ndata1,data2"), "preview.csv", 100, 10)
+				Expect(err).NotTo(HaveOccurred())
+			})
 		})
 	})
 })

@@ -2,7 +2,11 @@ package utils
 
 import (
 	"errors"
+	"fmt"
 	"reflect"
+	"strconv"
+	"strings"
+	"time"
 )
 
 // extractFields extracts pointers, values, and column names for exported struct fields.
@@ -77,4 +81,30 @@ func ConvertStruct(src any, dst any) {
 			dstVal.Field(i).Set(srcVal.FieldByName(dstField.Name))
 		}
 	}
+}
+
+// parseDate tries to parse a date string with multiple common layouts.
+func ParseDate(dateStr string) (time.Time, error) {
+	layouts := []string{
+		"2006-01-02", "01-02-2006", "01/02/2006", "2006/01/02",
+		"Jan 2, 2006", "2 Jan 2006", "02 Jan 2006",
+		"January 2, 2006", "2 January 2006", "02 January 2006",
+		time.RFC3339,
+	}
+	for _, layout := range layouts {
+		if t, err := time.Parse(layout, dateStr); err == nil {
+			return t, nil
+		}
+	}
+	return time.Time{}, fmt.Errorf("unable to parse date: %s", dateStr)
+}
+
+// parseAmount cleans and parses a string into a float64.
+func ParseFloat(amountStr string) (float64, error) {
+	if amountStr == "" {
+		return 0, nil
+	}
+	cleanAmount := strings.ReplaceAll(amountStr, ",", "")
+	cleanAmount = strings.TrimSpace(cleanAmount)
+	return strconv.ParseFloat(cleanAmount, 64)
 }

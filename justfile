@@ -81,3 +81,8 @@ db-downgrade-reset reset=default_downgrade:
 
 @test test_file="":
   cd server && bash e2e_test.sh {{test_file}}
+  
+# Start the frontend development server
+[working-directory: 'frontend']
+@frontend:
+    npm run dev

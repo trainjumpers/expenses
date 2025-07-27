@@ -2,14 +2,19 @@ package controller
 
 import (
 	"expenses/internal/config"
+	"expenses/internal/models"
 	"expenses/internal/service"
 	"expenses/internal/validator"
 	"expenses/pkg/logger"
+	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
 )
 
 type StatementController struct {
@@ -26,16 +31,49 @@ func NewStatementController(cfg *config.Config, statementService service.Stateme
 	}
 }
 
+func (s *StatementController) readFileFromRequest(fileHeader *multipart.FileHeader) ([]byte, string, error) {
+	if fileHeader == nil {
+		return nil, "", fmt.Errorf("file header is nil")
+	}
+	file, err := fileHeader.Open()
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to open file: %w", err)
+	}
+	defer file.Close()
+
+	fileBytes, err := io.ReadAll(file)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to read file: %w", err)
+	}
+	fileName := strings.ToLower(fileHeader.Filename)
+	return fileBytes, fileName, nil
+}
+
 func (s *StatementController) CreateStatement(ctx *gin.Context) {
 	userId := s.GetAuthenticatedUserId(ctx)
 	logger.Infof("Creating statement for user %d", userId)
 
-	fileBytes, fileName, accountId, err := s.extractFileFromContext(ctx)
-	if err != nil {
+	var form models.ParseStatementForm
+	if err := ctx.ShouldBindWith(&form, binding.FormMultipart); err != nil {
+		s.SendError(ctx, http.StatusBadRequest, fmt.Sprintf("Failed to parse form data: %v", err))
 		return
 	}
 
-	statement, err := s.statementService.ParseStatement(ctx, fileBytes, fileName, accountId, userId)
+	fileBytes, fileName, err := s.readFileFromRequest(form.File)
+	if err != nil {
+		s.SendError(ctx, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	input := models.ParseStatementInput{
+		AccountId:        form.AccountId,
+		BankType:         form.BankType,
+		Metadata:         form.Metadata,
+		OriginalFilename: fileName,
+		FileBytes:        fileBytes,
+	}
+
+	statement, err := s.statementService.ParseStatement(ctx, input, userId)
 	if err != nil {
 		logger.Errorf("Error creating statement: %v", err)
 		s.HandleError(ctx, err)
@@ -46,7 +84,32 @@ func (s *StatementController) CreateStatement(ctx *gin.Context) {
 	s.SendSuccess(ctx, http.StatusCreated, "Statement uploaded successfully and processing has begun", statement)
 }
 
-// GetStatements handles GET /statements
+func (s *StatementController) PreviewStatement(ctx *gin.Context) {
+	logger.Info("Loading Preview for statement")
+
+	var form models.PreviewStatementForm
+	if err := ctx.ShouldBindWith(&form, binding.FormMultipart); err != nil {
+		s.SendError(ctx, http.StatusBadRequest, fmt.Sprintf("Failed to parse form data: %v", err))
+		return
+	}
+
+	fileBytes, fileName, err := s.readFileFromRequest(form.File)
+	if err != nil {
+		s.SendError(ctx, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	preview, err := s.statementService.PreviewStatement(ctx, fileBytes, fileName, form.SkipRows, form.RowSize)
+	if err != nil {
+		logger.Errorf("Error previewing statement: %v", err)
+		s.HandleError(ctx, err)
+		return
+	}
+
+	logger.Info("Statement preview generated successfully")
+	s.SendSuccess(ctx, http.StatusOK, "Statement preview generated successfully", preview)
+}
+
 func (s *StatementController) GetStatements(ctx *gin.Context) {
 	userID := s.GetAuthenticatedUserId(ctx)
 	logger.Infof("Fetching statements for user %d", userID)
@@ -65,7 +128,6 @@ func (s *StatementController) GetStatements(ctx *gin.Context) {
 	s.SendSuccess(ctx, http.StatusOK, "Statements fetched successfully", resp)
 }
 
-// GetStatement handles GET /statements/:id
 func (s *StatementController) GetStatementStatus(ctx *gin.Context) {
 	userID := s.GetAuthenticatedUserId(ctx)
 	statementId, err := strconv.ParseInt(ctx.Param("id"), 10, 64)
@@ -84,45 +146,4 @@ func (s *StatementController) GetStatementStatus(ctx *gin.Context) {
 	}
 	logger.Infof("Successfully fetched statement %d for user %d", statementId, userID)
 	s.SendSuccess(ctx, http.StatusOK, "Statement fetched successfully", statement)
-}
-
-// Helper to extract file bytes, file name, and accountId from context
-func (s *StatementController) extractFileFromContext(ctx *gin.Context) ([]byte, string, int64, error) {
-	err := ctx.Request.ParseMultipartForm(256 << 10) // 256KB max
-	if err != nil {
-		logger.Errorf("Failed to parse multipart form: %v", err)
-		s.SendError(ctx, http.StatusBadRequest, "Failed to parse form data")
-		return nil, "", 0, err
-	}
-
-	accountId, err := strconv.ParseInt(ctx.PostForm("account_id"), 10, 64)
-	if err != nil {
-		logger.Errorf("Failed to parse account_id: %v", err)
-		s.SendError(ctx, http.StatusBadRequest, "Invalid account_id")
-		return nil, "", 0, err
-	}
-
-	file, header, err := ctx.Request.FormFile("file")
-	if err != nil {
-		logger.Errorf("Failed to get file from form: %v", err)
-		s.SendError(ctx, http.StatusBadRequest, "File not found in form data")
-		return nil, "", 0, err
-	}
-	defer file.Close()
-
-	err = s.statementValidator.ValidateStatementUpload(accountId, file, header)
-	if err != nil {
-		logger.Errorf("Failed to validate statement upload: %v", err)
-		s.SendError(ctx, http.StatusBadRequest, "Invalid statement upload")
-		return nil, "", 0, err
-	}
-
-	fileBytes, err := io.ReadAll(file)
-	if err != nil {
-		logger.Errorf("Failed to read file bytes: %v", err)
-		s.SendError(ctx, http.StatusBadRequest, "Failed to read file")
-		return nil, "", 0, err
-	}
-
-	return fileBytes, header.Filename, accountId, nil
 }

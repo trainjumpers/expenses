@@ -14,9 +14,16 @@ export interface Statement {
 export interface CreateStatementRequest {
   account_id: number;
   file: File;
+  bank_type?: string;
+  metadata?: string;
 }
 
 export interface StatementUploadResponse {
   statement: Statement;
   message: string;
+}
+
+export interface StatementPreviewResponse {
+  headers: string[];
+  rows: string[][];
 }
