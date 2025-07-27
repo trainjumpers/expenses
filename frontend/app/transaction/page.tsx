@@ -263,6 +263,7 @@ export default function TransactionPage() {
         sortOrder={sortOrder}
         setSortBy={setSortBy}
         setSortOrder={setSortOrder}
+        onFilterChange={handleFilterChange}
       />
 
       <AddTransactionModal

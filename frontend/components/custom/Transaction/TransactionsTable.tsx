@@ -36,6 +36,10 @@ interface TransactionsTableProps {
   sortOrder: "asc" | "desc";
   setSortBy: (key: string) => void;
   setSortOrder: (order: "asc" | "desc") => void;
+  onFilterChange?: (filters: {
+    minAmount?: number;
+    maxAmount?: number;
+  }) => void;
 }
 
 export function TransactionsTable({
@@ -52,6 +56,7 @@ export function TransactionsTable({
   sortOrder,
   setSortBy,
   setSortOrder,
+  onFilterChange,
 }: TransactionsTableProps) {
   const [editing, setEditing] = useState<{
     id: number;
@@ -71,6 +76,33 @@ export function TransactionsTable({
     } else {
       setSortBy(key);
       setSortOrder("asc");
+    }
+
+    // Clear amount filters when sorting by other columns
+    if (key !== "amount" && onFilterChange) {
+      onFilterChange({ minAmount: undefined, maxAmount: undefined });
+    }
+  };
+
+  const handleCreditSort = () => {
+    // Sort by amount and filter for credit transactions (amount < 0)
+    handleSort("amount");
+    if (onFilterChange) {
+      onFilterChange({
+        maxAmount: -0.01, // Only negative amounts (credits)
+        minAmount: undefined, // Clear minAmount filter
+      });
+    }
+  };
+
+  const handleDebitSort = () => {
+    // Sort by amount and filter for debit transactions (amount > 0)
+    handleSort("amount");
+    if (onFilterChange) {
+      onFilterChange({
+        minAmount: 0.01, // Only positive amounts (debits)
+        maxAmount: undefined, // Clear maxAmount filter
+      });
     }
   };
 
@@ -203,10 +235,20 @@ export function TransactionsTable({
                 <TableHead className="text-right text-muted-foreground py-4 px-6">
                   <Button
                     variant="ghost"
-                    onClick={() => handleSort("amount")}
+                    onClick={handleCreditSort}
                     className="flex items-center gap-1 ml-auto hover:bg-muted"
                   >
-                    Amount
+                    Credit
+                    {getSortIcon("amount")}
+                  </Button>
+                </TableHead>
+                <TableHead className="text-right text-muted-foreground py-4 px-6">
+                  <Button
+                    variant="ghost"
+                    onClick={handleDebitSort}
+                    className="flex items-center gap-1 ml-auto hover:bg-muted"
+                  >
+                    Debit
                     {getSortIcon("amount")}
                   </Button>
                 </TableHead>
@@ -245,7 +287,7 @@ export function TransactionsTable({
               ) : (
                 <TableRow>
                   <TableCell
-                    colSpan={7}
+                    colSpan={8}
                     className="h-[500px] text-center text-muted-foreground"
                   >
                     No transactions found
