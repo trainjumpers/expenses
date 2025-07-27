@@ -12,7 +12,7 @@ var _ = Describe("UserController", func() {
 	Describe("GetUserById", func() {
 		Context("with valid token", func() {
 			It("should get user details successfully", func() {
-				resp, response := testHelperUser1.MakeRequest(http.MethodGet, "/user", nil)
+				resp, response := testUser1.MakeRequest(http.MethodGet, "/user", nil)
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 				Expect(response["message"]).To(Equal("User retrieved successfully"))
 				Expect(response["data"]).To(HaveKey("id"))
@@ -43,7 +43,7 @@ var _ = Describe("UserController", func() {
 				updateInput := models.UpdateUserInput{
 					Name: "Updated Name",
 				}
-				resp, response := testHelperUser1.MakeRequest(http.MethodPatch, "/user", updateInput)
+				resp, response := testUser1.MakeRequest(http.MethodPatch, "/user", updateInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 				Expect(response["message"]).To(Equal("User updated successfully"))
 				data := response["data"].(map[string]any)
@@ -54,7 +54,7 @@ var _ = Describe("UserController", func() {
 				updateInput := models.UpdateUserInput{
 					Name: "  Trimmed Name  ", // Name with leading and trailing whitespace
 				}
-				resp, response := testHelperUser1.MakeRequest(http.MethodPatch, "/user", updateInput)
+				resp, response := testUser1.MakeRequest(http.MethodPatch, "/user", updateInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 				Expect(response["message"]).To(Equal("User updated successfully"))
 				data := response["data"].(map[string]any)
@@ -65,7 +65,7 @@ var _ = Describe("UserController", func() {
 				updateInput := models.UpdateUserInput{
 					Name: "\t  Complex Whitespace Name  \n", // Name with tabs and newlines
 				}
-				resp, response := testHelperUser1.MakeRequest(http.MethodPatch, "/user", updateInput)
+				resp, response := testUser1.MakeRequest(http.MethodPatch, "/user", updateInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 				Expect(response["message"]).To(Equal("User updated successfully"))
 				data := response["data"].(map[string]any)
@@ -75,12 +75,12 @@ var _ = Describe("UserController", func() {
 
 		Context("with invalid input", func() {
 			It("should return bad request for invalid JSON", func() {
-				resp, _ := testHelperUser1.MakeRequest(http.MethodPatch, "/user", "invalid json")
+				resp, _ := testUser1.MakeRequest(http.MethodPatch, "/user", "invalid json")
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 
 			It("should return bad request for empty body", func() {
-				resp, _ := testHelperUser1.MakeRequest(http.MethodPatch, "/user", "")
+				resp, _ := testUser1.MakeRequest(http.MethodPatch, "/user", "")
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 
@@ -88,7 +88,7 @@ var _ = Describe("UserController", func() {
 				updateInput := models.UpdateUserInput{
 					Name: "   ",
 				}
-				resp, response := testHelperUser1.MakeRequest(http.MethodPatch, "/user", updateInput)
+				resp, response := testUser1.MakeRequest(http.MethodPatch, "/user", updateInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 				Expect(response["message"]).To(Equal("no fields to update"))
 			})
@@ -97,7 +97,7 @@ var _ = Describe("UserController", func() {
 				updateInput := models.UpdateUserInput{
 					Name: "\t\n  \r  ", // Only various whitespace characters
 				}
-				resp, response := testHelperUser1.MakeRequest(http.MethodPatch, "/user", updateInput)
+				resp, response := testUser1.MakeRequest(http.MethodPatch, "/user", updateInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 				Expect(response["message"]).To(ContainSubstring("no fields to update"))
 			})
@@ -106,7 +106,7 @@ var _ = Describe("UserController", func() {
 				updateInput := map[string]any{
 					"somerandomparam": 123,
 				}
-				resp, _ := testHelperUser1.MakeRequest(http.MethodPatch, "/user", updateInput)
+				resp, _ := testUser1.MakeRequest(http.MethodPatch, "/user", updateInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 
@@ -218,17 +218,17 @@ var _ = Describe("UserController", func() {
 					OldPassword: "wrongpassword",
 					NewPassword: "newpassword123",
 				}
-				resp, _ := testHelperUser1.MakeRequest(http.MethodPost, "/user/password", updateInput)
+				resp, _ := testUser1.MakeRequest(http.MethodPost, "/user/password", updateInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
 			})
 
 			It("should return bad request for invalid JSON", func() {
-				resp, _ := testHelperUser1.MakeRequest(http.MethodPost, "/user/password", "invalid json")
+				resp, _ := testUser1.MakeRequest(http.MethodPost, "/user/password", "invalid json")
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 
 			It("should return bad request for empty body", func() {
-				resp, _ := testHelperUser1.MakeRequest(http.MethodPost, "/user/password", "")
+				resp, _ := testUser1.MakeRequest(http.MethodPost, "/user/password", "")
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 
@@ -237,7 +237,7 @@ var _ = Describe("UserController", func() {
 					OldPassword: "   ", // Only whitespace - will become empty after trimming
 					NewPassword: "newpassword123",
 				}
-				resp, response := testHelperUser1.MakeRequest(http.MethodPost, "/user/password", updateInput)
+				resp, response := testUser1.MakeRequest(http.MethodPost, "/user/password", updateInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 				Expect(response["message"]).To(ContainSubstring("required"))
 			})
@@ -247,7 +247,7 @@ var _ = Describe("UserController", func() {
 					OldPassword: "password123",
 					NewPassword: "   ", // Only whitespace - will become empty after trimming
 				}
-				resp, response := testHelperUser1.MakeRequest(http.MethodPost, "/user/password", updateInput)
+				resp, response := testUser1.MakeRequest(http.MethodPost, "/user/password", updateInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 				Expect(response["message"]).To(ContainSubstring("validation"))
 			})
@@ -266,7 +266,7 @@ var _ = Describe("UserController", func() {
 				updateInput := models.UpdateUserPasswordInput{
 					NewPassword: "newpassword123",
 				}
-				resp, _ := testHelperUser1.MakeRequest(http.MethodPost, "/user/password", updateInput)
+				resp, _ := testUser1.MakeRequest(http.MethodPost, "/user/password", updateInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 
@@ -274,7 +274,7 @@ var _ = Describe("UserController", func() {
 				updateInput := models.UpdateUserPasswordInput{
 					OldPassword: "password",
 				}
-				resp, _ := testHelperUser1.MakeRequest(http.MethodPost, "/user/password", updateInput)
+				resp, _ := testUser1.MakeRequest(http.MethodPost, "/user/password", updateInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 

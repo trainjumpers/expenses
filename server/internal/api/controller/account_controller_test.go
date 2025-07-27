@@ -20,7 +20,7 @@ var _ = Describe("AccountController", func() {
 					Currency: models.CurrencyINR,
 					Balance:  &balance,
 				}
-				resp, response := testHelperUser1.MakeRequest(http.MethodPost, "/account", input)
+				resp, response := testUser1.MakeRequest(http.MethodPost, "/account", input)
 				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
 				Expect(response["message"]).To(Equal("Account created successfully"))
 				Expect(response["data"]).To(HaveKey("id"))
@@ -33,7 +33,7 @@ var _ = Describe("AccountController", func() {
 					BankType: models.BankTypeAxis,
 					Currency: models.CurrencyINR,
 				}
-				resp, response := testHelperUser1.MakeRequest(http.MethodPost, "/account", input)
+				resp, response := testUser1.MakeRequest(http.MethodPost, "/account", input)
 				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
 				Expect(response["message"]).To(Equal("Account created successfully"))
 				Expect(response["data"]).To(HaveKey("id"))
@@ -45,7 +45,7 @@ var _ = Describe("AccountController", func() {
 					BankType: models.BankTypeAxis,
 					Currency: models.CurrencyINR,
 				}
-				resp, response := testHelperUser1.MakeRequest(http.MethodPost, "/account", input)
+				resp, response := testUser1.MakeRequest(http.MethodPost, "/account", input)
 				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
 				Expect(response["message"]).To(Equal("Account created successfully"))
 				Expect(response["data"]).To(HaveKey("id"))
@@ -58,7 +58,7 @@ var _ = Describe("AccountController", func() {
 					BankType: models.BankTypeOthers,
 					Currency: models.CurrencyINR,
 				}
-				resp, response := testHelperUser1.MakeRequest(http.MethodPost, "/account", input)
+				resp, response := testUser1.MakeRequest(http.MethodPost, "/account", input)
 				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
 				Expect(response["message"]).To(Equal("Account created successfully"))
 				Expect(response["data"]).To(HaveKey("id"))
@@ -73,7 +73,7 @@ var _ = Describe("AccountController", func() {
 					BankType: "invalid",
 					Currency: models.CurrencyINR,
 				}
-				resp, _ := testHelperUser1.MakeRequest(http.MethodPost, "/account", input)
+				resp, _ := testUser1.MakeRequest(http.MethodPost, "/account", input)
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 
@@ -83,7 +83,7 @@ var _ = Describe("AccountController", func() {
 					BankType: models.BankTypeAxis,
 					Currency: "invalid",
 				}
-				resp, _ := testHelperUser1.MakeRequest(http.MethodPost, "/account", input)
+				resp, _ := testUser1.MakeRequest(http.MethodPost, "/account", input)
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 
@@ -92,7 +92,7 @@ var _ = Describe("AccountController", func() {
 					Name:     "Integration Account",
 					BankType: models.BankTypeAxis,
 				}
-				resp, _ := testHelperUser1.MakeRequest(http.MethodPost, "/account", input)
+				resp, _ := testUser1.MakeRequest(http.MethodPost, "/account", input)
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 
@@ -101,17 +101,17 @@ var _ = Describe("AccountController", func() {
 					BankType: models.BankTypeAxis,
 					Currency: models.CurrencyINR,
 				}
-				resp, _ := testHelperUser1.MakeRequest(http.MethodPost, "/account", input)
+				resp, _ := testUser1.MakeRequest(http.MethodPost, "/account", input)
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 
 			It("should return error for invalid JSON", func() {
-				resp, _ := testHelperUser1.MakeRequest(http.MethodPost, "/account", "{ name: invalid json }")
+				resp, _ := testUser1.MakeRequest(http.MethodPost, "/account", "{ name: invalid json }")
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 
 			It("should return error for empty body", func() {
-				resp, _ := testHelperUser1.MakeRequest(http.MethodPost, "/account", "")
+				resp, _ := testUser1.MakeRequest(http.MethodPost, "/account", "")
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 
@@ -121,7 +121,7 @@ var _ = Describe("AccountController", func() {
 					BankType: models.BankTypeAxis,
 					Currency: "USD", // should be lowercase 'usd'
 				}
-				resp, _ := testHelperUser1.MakeRequest(http.MethodPost, "/account", input)
+				resp, _ := testUser1.MakeRequest(http.MethodPost, "/account", input)
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 
@@ -131,7 +131,7 @@ var _ = Describe("AccountController", func() {
 					BankType: "AXIS", // should be lowercase 'axis'
 					Currency: models.CurrencyINR,
 				}
-				resp, _ := testHelperUser1.MakeRequest(http.MethodPost, "/account", input)
+				resp, _ := testUser1.MakeRequest(http.MethodPost, "/account", input)
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 
@@ -142,7 +142,7 @@ var _ = Describe("AccountController", func() {
 					"currency": "inr",
 					"balance": "invalid_string"
 				}`
-				resp, _ := testHelperUser1.MakeRequest(http.MethodPost, "/account", requestBody)
+				resp, _ := testUser1.MakeRequest(http.MethodPost, "/account", requestBody)
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
 		})
@@ -166,30 +166,30 @@ var _ = Describe("AccountController", func() {
 					BankType: models.BankTypeAxis,
 					Currency: models.CurrencyINR,
 				}
-				checkMalformedTokens(testHelperUser1, http.MethodPost, "/account", input)
+				checkMalformedTokens(testUser1, http.MethodPost, "/account", input)
 			})
 			It("should return unauthorized or bad request for malformed tokens on list", func() {
-				checkMalformedTokens(testHelperUser1, http.MethodGet, "/account", nil)
+				checkMalformedTokens(testUser1, http.MethodGet, "/account", nil)
 			})
 			It("should return unauthorized or bad request for malformed tokens on get", func() {
 				url := "/account/1"
-				checkMalformedTokens(testHelperUser1, http.MethodGet, url, nil)
+				checkMalformedTokens(testUser1, http.MethodGet, url, nil)
 			})
 			It("should return unauthorized or bad request for malformed tokens on update", func() {
 				update := models.UpdateAccountInput{Name: "Malformed Update"}
 				url := "/account/1"
-				checkMalformedTokens(testHelperUser1, http.MethodPatch, url, update)
+				checkMalformedTokens(testUser1, http.MethodPatch, url, update)
 			})
 			It("should return unauthorized or bad request for malformed tokens on delete", func() {
 				url := "/account/1"
-				checkMalformedTokens(testHelperUser1, http.MethodDelete, url, nil)
+				checkMalformedTokens(testUser1, http.MethodDelete, url, nil)
 			})
 		})
 	})
 
 	Describe("ListAccounts", func() {
 		It("should list accounts", func() {
-			resp, response := testHelperUser1.MakeRequest(http.MethodGet, "/account", nil)
+			resp, response := testUser1.MakeRequest(http.MethodGet, "/account", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["message"]).To(Equal("Accounts retrieved successfully"))
 			Expect(response["data"]).To(BeAssignableToTypeOf([]any{}))
@@ -200,7 +200,7 @@ var _ = Describe("AccountController", func() {
 			Expect(response["message"]).To(Equal("please log in to continue"))
 		})
 		It("should return empty list for user with no accounts", func() {
-			resp, response := testHelperUser3.MakeRequest(http.MethodGet, "/account", nil)
+			resp, response := testUser3.MakeRequest(http.MethodGet, "/account", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["message"]).To(Equal("Accounts retrieved successfully"))
 			Expect(len(response["data"].([]any))).To(Equal(0))
@@ -210,7 +210,7 @@ var _ = Describe("AccountController", func() {
 	Describe("GetAccount", func() {
 		It("should get account by id", func() {
 			url := "/account/1"
-			resp, response := testHelperUser1.MakeRequest(http.MethodGet, url, nil)
+			resp, response := testUser1.MakeRequest(http.MethodGet, url, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["message"]).To(Equal("Account retrieved successfully"))
 			Expect(response["data"]).To(HaveKey("id"))
@@ -218,20 +218,20 @@ var _ = Describe("AccountController", func() {
 
 		It("should return error for invalid account id format", func() {
 			url := "/account/invalid_id"
-			resp, response := testHelperUser1.MakeRequest(http.MethodGet, url, nil)
+			resp, response := testUser1.MakeRequest(http.MethodGet, url, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			Expect(response["message"]).To(Equal("invalid account id"))
 		})
 
 		It("should return error for non-existent account id", func() {
 			url := "/account/9999"
-			resp, response := testHelperUser1.MakeRequest(http.MethodGet, url, nil)
+			resp, response := testUser1.MakeRequest(http.MethodGet, url, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 			Expect(response["message"]).To(Equal("account not found"))
 		})
 		It("should return error for non-existent user id", func() {
 			url := "/account/1"
-			resp, response := testHelperUser2.MakeRequest(http.MethodGet, url, nil)
+			resp, response := testUser2.MakeRequest(http.MethodGet, url, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 			Expect(response["message"]).To(Equal("account not found"))
 		})
@@ -241,7 +241,7 @@ var _ = Describe("AccountController", func() {
 		It("should update account name", func() {
 			update := models.UpdateAccountInput{Name: "Updated Name"}
 			url := "/account/1"
-			resp, response := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
+			resp, response := testUser1.MakeRequest(http.MethodPatch, url, update)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["message"]).To(Equal("Account updated successfully"))
 			Expect(response["data"].(map[string]any)["name"]).To(Equal("Updated Name"))
@@ -250,14 +250,14 @@ var _ = Describe("AccountController", func() {
 		It("should return error when trying to update account of different user", func() {
 			update := models.UpdateAccountInput{Name: "Unauthorized Update"}
 			url := "/account/1"
-			resp, _ := testHelperUser2.MakeRequest(http.MethodPatch, url, update)
+			resp, _ := testUser2.MakeRequest(http.MethodPatch, url, update)
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 		})
 
 		It("should return error for empty name in update", func() {
 			update := models.UpdateAccountInput{Name: ""}
 			url := "/account/1"
-			resp, _ := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
+			resp, _ := testUser1.MakeRequest(http.MethodPatch, url, update)
 			// Should succeed if empty name is allowed, or return 400 if validation prevents it
 			Expect(resp.StatusCode).To(SatisfyAny(Equal(http.StatusOK), Equal(http.StatusBadRequest)))
 		})
@@ -265,14 +265,14 @@ var _ = Describe("AccountController", func() {
 		It("should return error for invalid bank type in update", func() {
 			update := models.UpdateAccountInput{BankType: "invalid_bank"}
 			url := "/account/1"
-			resp, _ := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
+			resp, _ := testUser1.MakeRequest(http.MethodPatch, url, update)
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 		})
 
 		It("should update account bank type to 'others'", func() {
 			update := models.UpdateAccountInput{BankType: models.BankTypeOthers}
 			url := "/account/1"
-			resp, response := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
+			resp, response := testUser1.MakeRequest(http.MethodPatch, url, update)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["message"]).To(Equal("Account updated successfully"))
 			Expect(response["data"].(map[string]any)["bank_type"]).To(Equal("others"))
@@ -281,32 +281,32 @@ var _ = Describe("AccountController", func() {
 		It("should return error for invalid currency in update", func() {
 			update := models.UpdateAccountInput{Currency: "invalid_currency"}
 			url := "/account/1"
-			resp, _ := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
+			resp, _ := testUser1.MakeRequest(http.MethodPatch, url, update)
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 		})
 
 		It("should return error for invalid JSON in update", func() {
 			url := "/account/1"
-			resp, _ := testHelperUser1.MakeRequest(http.MethodPatch, url, "{ name: invalid }")
+			resp, _ := testUser1.MakeRequest(http.MethodPatch, url, "{ name: invalid }")
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 		})
 
 		It("should return error for empty body in update", func() {
 			url := "/account/1"
-			resp, _ := testHelperUser1.MakeRequest(http.MethodPatch, url, "")
+			resp, _ := testUser1.MakeRequest(http.MethodPatch, url, "")
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 		})
 
 		It("should return error for non-existent account id", func() {
 			url := "/account/9999"
-			resp, _ := testHelperUser1.MakeRequest(http.MethodPatch, url, nil)
+			resp, _ := testUser1.MakeRequest(http.MethodPatch, url, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 		})
 
 		It("should return error for invalid account id format in update", func() {
 			update := models.UpdateAccountInput{Name: "Updated Name"}
 			url := "/account/invalid_id"
-			resp, response := testHelperUser1.MakeRequest(http.MethodPatch, url, update)
+			resp, response := testUser1.MakeRequest(http.MethodPatch, url, update)
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			Expect(response["message"]).To(Equal("invalid account id"))
 		})
@@ -328,13 +328,13 @@ var _ = Describe("AccountController", func() {
 				Currency: models.CurrencyINR,
 				Balance:  &balance,
 			}
-			resp, response := testHelperUser1.MakeRequest(http.MethodPost, "/account", input)
+			resp, response := testUser1.MakeRequest(http.MethodPost, "/account", input)
 			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
 			Expect(response["message"]).To(Equal("Account created successfully"))
 			accountId := response["data"].(map[string]any)["id"].(float64)
 
 			url := "/account/" + strconv.FormatFloat(accountId, 'f', 0, 64)
-			resp, _ = testHelperUser1.MakeRequest(http.MethodDelete, url, nil)
+			resp, _ = testUser1.MakeRequest(http.MethodDelete, url, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
 		})
 
@@ -345,17 +345,17 @@ var _ = Describe("AccountController", func() {
 				BankType: models.BankTypeAxis,
 				Currency: models.CurrencyINR,
 			}
-			resp, response := testHelperUser1.MakeRequest(http.MethodPost, "/account", input)
+			resp, response := testUser1.MakeRequest(http.MethodPost, "/account", input)
 			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
 			accountId := int64(response["data"].(map[string]any)["id"].(float64))
 
 			// Try to delete with different user
 			url := "/account/" + strconv.FormatInt(accountId, 10)
-			resp, _ = testHelperUser2.MakeRequest(http.MethodDelete, url, nil) // Different user
+			resp, _ = testUser2.MakeRequest(http.MethodDelete, url, nil) // Different user
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 
 			// Ensure account is not deleted
-			resp, response = testHelperUser1.MakeRequest(http.MethodGet, url, nil)
+			resp, response = testUser1.MakeRequest(http.MethodGet, url, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["message"]).To(Equal("Account retrieved successfully"))
 			Expect(response["data"]).To(HaveKey("id"))
@@ -364,13 +364,13 @@ var _ = Describe("AccountController", func() {
 
 		It("should return error for invalid account id format in delete", func() {
 			url := "/account/invalid"
-			resp, _ := testHelperUser1.MakeRequest(http.MethodDelete, url, nil)
+			resp, _ := testUser1.MakeRequest(http.MethodDelete, url, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 		})
 
 		It("should return 404 when deleting non-existent account id", func() {
 			url := "/account/99999"
-			resp, _ := testHelperUser1.MakeRequest(http.MethodDelete, url, nil)
+			resp, _ := testUser1.MakeRequest(http.MethodDelete, url, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 		})
 	})
@@ -384,23 +384,23 @@ var _ = Describe("AccountController", func() {
 				BankType: models.BankTypeAxis,
 				Currency: models.CurrencyINR,
 			}
-			resp, response := testHelperUser1.MakeRequest(http.MethodPost, "/account", input)
+			resp, response := testUser1.MakeRequest(http.MethodPost, "/account", input)
 			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
 			accountId = int64(response["data"].(map[string]any)["id"].(float64))
 		})
 
 		It("should not include soft-deleted accounts in list", func() {
-			resp, response := testHelperUser1.MakeRequest(http.MethodGet, "/account", nil)
+			resp, response := testUser1.MakeRequest(http.MethodGet, "/account", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			initialCount := len(response["data"].([]any))
 			Expect(initialCount).To(BeNumerically(">", 0))
 			// Delete the account
 			url := "/account/" + strconv.FormatInt(accountId, 10)
-			resp, _ = testHelperUser1.MakeRequest(http.MethodDelete, url, nil)
+			resp, _ = testUser1.MakeRequest(http.MethodDelete, url, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
 
 			// List accounts again - should have one less account
-			resp, response = testHelperUser1.MakeRequest(http.MethodGet, "/account", nil)
+			resp, response = testUser1.MakeRequest(http.MethodGet, "/account", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			finalCount := len(response["data"].([]any))
 			Expect(finalCount).To(Equal(initialCount - 1))
@@ -408,19 +408,19 @@ var _ = Describe("AccountController", func() {
 
 		It("should return 404 when fetching soft-deleted account", func() {
 			url := "/account/" + strconv.FormatInt(accountId, 10)
-			resp, _ := testHelperUser1.MakeRequest(http.MethodDelete, url, nil)
+			resp, _ := testUser1.MakeRequest(http.MethodDelete, url, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
 
-			resp, _ = testHelperUser1.MakeRequest(http.MethodGet, url, nil)
+			resp, _ = testUser1.MakeRequest(http.MethodGet, url, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 		})
 
 		It("should return 404 when deleting already deleted account", func() {
 			url := "/account/" + strconv.FormatInt(accountId, 10)
-			resp, _ := testHelperUser1.MakeRequest(http.MethodDelete, url, nil)
+			resp, _ := testUser1.MakeRequest(http.MethodDelete, url, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
 
-			resp, _ = testHelperUser1.MakeRequest(http.MethodDelete, url, nil)
+			resp, _ = testUser1.MakeRequest(http.MethodDelete, url, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 		})
 	})

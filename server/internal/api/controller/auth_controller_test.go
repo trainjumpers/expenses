@@ -140,7 +140,7 @@ var _ = Describe("AuthController", func() {
 					Password: "password",
 				}
 
-				resp, response := testHelperUser1.MakeRequest(http.MethodPost, "/login", loginInput)
+				resp, response := testUser1.MakeRequest(http.MethodPost, "/login", loginInput)
 
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 				Expect(response["message"]).To(Equal("User logged in successfully"))
@@ -198,7 +198,7 @@ var _ = Describe("AuthController", func() {
 		Context("with valid refresh token", func() {
 			It("should refresh token successfully", func() {
 				// No need to provide refreshToken, cookies are managed by http.Client
-				resp, response := testHelperUser1.MakeRequest(http.MethodPost, "/refresh", nil)
+				resp, response := testUser1.MakeRequest(http.MethodPost, "/refresh", nil)
 
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 				Expect(response["message"]).To(Equal("Token refreshed successfully"))
@@ -212,7 +212,7 @@ var _ = Describe("AuthController", func() {
 				}{
 					RefreshToken: "invalid-refresh-token",
 				}
-				resp, _ := testHelperUser1.MakeRequest(http.MethodPost, "/refresh", refreshInput)
+				resp, _ := testUser1.MakeRequest(http.MethodPost, "/refresh", refreshInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
 			})
 
@@ -223,7 +223,7 @@ var _ = Describe("AuthController", func() {
 					RefreshToken: "",
 				}
 
-				resp, _ := testHelperUser1.MakeRequest(http.MethodPost, "/refresh", refreshInput)
+				resp, _ := testUser1.MakeRequest(http.MethodPost, "/refresh", refreshInput)
 				Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
 			})
 		})
