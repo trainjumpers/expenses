@@ -20,9 +20,9 @@ func TestController(t *testing.T) {
 
 var (
 	testHelperUnauthenticated *TestHelper
-	testUser1           *TestHelper
-	testUser2           *TestHelper
-	testUser3           *TestHelper
+	testUser1                 *TestHelper
+	testUser2                 *TestHelper
+	testUser3                 *TestHelper
 	baseURL                   string
 )
 
