@@ -9,6 +9,9 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
+	_ "expenses/docs" // Import docs for swagger
 )
 
 func Init(
@@ -47,6 +50,11 @@ func Init(
 			"message": "Welcome to the expense tracker server",
 		})
 	})
+
+	// Swagger documentation - only in development
+	if cfg.IsDev() {
+		router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	}
 
 	authController := controller.NewAuthController(cfg, authService)
 	userController := controller.NewUserController(cfg, userService, authService)

@@ -24,6 +24,16 @@ func NewAuthController(cfg *config.Config, authService service.AuthServiceInterf
 }
 
 // Signup controller handles creation of a new user, and returns the user data along with an access token
+// @Summary Create a new user account
+// @Description Register a new user with email, name, and password
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param user body models.CreateUserInput true "User registration data"
+// @Success 201 {object} map[string]interface{} "User created successfully"
+// @Failure 400 {object} map[string]interface{} "Bad request"
+// @Failure 409 {object} map[string]interface{} "User already exists"
+// @Router /signup [post]
 func (a *AuthController) Signup(ctx *gin.Context) {
 	var newUser models.CreateUserInput
 	if err := a.BindJSON(ctx, &newUser); err != nil {
@@ -45,6 +55,16 @@ func (a *AuthController) Signup(ctx *gin.Context) {
 }
 
 // Login controller handles user login and sends back an access token
+// @Summary User login
+// @Description Authenticate user with email and password. Returns user data and sets authentication cookies. For API testing, you can extract the access_token from cookies and use it in the Authorization header as "Bearer <token>".
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param credentials body models.LoginInput true "Login credentials"
+// @Success 200 {object} map[string]interface{} "Login successful - check cookies for access_token"
+// @Failure 400 {object} map[string]interface{} "Bad request"
+// @Failure 401 {object} map[string]interface{} "Invalid credentials"
+// @Router /login [post]
 func (a *AuthController) Login(ctx *gin.Context) {
 	var loginInput models.LoginInput
 	if err := a.BindJSON(ctx, &loginInput); err != nil {
@@ -68,6 +88,13 @@ func (a *AuthController) Login(ctx *gin.Context) {
 }
 
 // RefreshToken endpoint issues a new access token if the refresh token is valid
+// @Summary Refresh access token
+// @Description Get a new access token using refresh token from cookies
+// @Tags auth
+// @Produce json
+// @Success 200 {object} map[string]interface{} "Token refreshed successfully"
+// @Failure 401 {object} map[string]interface{} "Invalid refresh token"
+// @Router /refresh [post]
 func (a *AuthController) RefreshToken(ctx *gin.Context) {
 	refreshToken, err := ctx.Cookie("refresh_token")
 	if err != nil || refreshToken == "" {
@@ -92,6 +119,12 @@ func (a *AuthController) RefreshToken(ctx *gin.Context) {
 }
 
 // Logout endpoint clears the auth cookies
+// @Summary User logout
+// @Description Clear authentication cookies and log out user
+// @Tags auth
+// @Produce json
+// @Success 200 {object} map[string]interface{} "Logged out successfully"
+// @Router /logout [post]
 func (a *AuthController) Logout(ctx *gin.Context) {
 	// Set cookies to expire in the past
 	a.setAuthCookie(ctx, "access_token", "", -1)

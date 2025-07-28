@@ -23,6 +23,18 @@ func NewRuleController(cfg *config.Config, ruleService service.RuleServiceInterf
 	}
 }
 
+// CreateRule creates a new rule
+// @Summary Create a new rule
+// @Description Create a new transaction categorization rule for the authenticated user
+// @Tags rules
+// @Accept json
+// @Produce json
+// @Security BasicAuth
+// @Param rule body models.CreateRuleRequest true "Rule data"
+// @Success 201 {object} models.RuleResponse "Rule created successfully"
+// @Failure 400 {object} map[string]interface{} "Bad request"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Router /rule [post]
 func (rc *RuleController) CreateRule(c *gin.Context) {
 	var ruleReq models.CreateRuleRequest
 	userId := rc.GetAuthenticatedUserId(c)
@@ -44,6 +56,16 @@ func (rc *RuleController) CreateRule(c *gin.Context) {
 	rc.SendSuccess(c, http.StatusCreated, "Rule created successfully", rule)
 }
 
+// ListRules retrieves all rules for the user
+// @Summary List all rules
+// @Description Get all transaction categorization rules for the authenticated user
+// @Tags rules
+// @Produce json
+// @Security BasicAuth
+// @Success 200 {array} models.RuleResponse "List of rules"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Router /rule [get]
 func (rc *RuleController) ListRules(c *gin.Context) {
 	userId := rc.GetAuthenticatedUserId(c)
 	logger.Infof("Fetching all rules for user %d", userId)
@@ -58,6 +80,18 @@ func (rc *RuleController) ListRules(c *gin.Context) {
 	rc.SendSuccess(c, http.StatusOK, "Rules fetched successfully", rules)
 }
 
+// GetRuleById retrieves a specific rule
+// @Summary Get rule by ID
+// @Description Get rule details by rule ID for the authenticated user
+// @Tags rules
+// @Produce json
+// @Security BasicAuth
+// @Param ruleId path int true "Rule ID"
+// @Success 200 {object} models.RuleResponse "Rule details"
+// @Failure 400 {object} map[string]interface{} "Bad request"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Failure 404 {object} map[string]interface{} "Rule not found"
+// @Router /rule/{ruleId} [get]
 func (rc *RuleController) GetRuleById(c *gin.Context) {
 	userId := rc.GetAuthenticatedUserId(c)
 	logger.Infof("Fetching rule details for user %d", userId)
@@ -78,6 +112,20 @@ func (rc *RuleController) GetRuleById(c *gin.Context) {
 	rc.SendSuccess(c, http.StatusOK, "Rule fetched successfully", rule)
 }
 
+// UpdateRule updates an existing rule
+// @Summary Update rule
+// @Description Update rule details by rule ID for the authenticated user
+// @Tags rules
+// @Accept json
+// @Produce json
+// @Security BasicAuth
+// @Param ruleId path int true "Rule ID"
+// @Param rule body models.UpdateRuleRequest true "Updated rule data"
+// @Success 200 {object} models.RuleResponse "Rule updated successfully"
+// @Failure 400 {object} map[string]interface{} "Bad request"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Failure 404 {object} map[string]interface{} "Rule not found"
+// @Router /rule/{ruleId} [patch]
 func (rc *RuleController) UpdateRule(c *gin.Context) {
 	userId := rc.GetAuthenticatedUserId(c)
 	logger.Infof("Starting rule update for user %d", userId)
@@ -104,6 +152,21 @@ func (rc *RuleController) UpdateRule(c *gin.Context) {
 	rc.SendSuccess(c, http.StatusOK, "Rule updated successfully", rule)
 }
 
+// UpdateRuleAction updates a rule action
+// @Summary Update rule action
+// @Description Update a specific action within a rule for the authenticated user
+// @Tags rules
+// @Accept json
+// @Produce json
+// @Security BasicAuth
+// @Param ruleId path int true "Rule ID"
+// @Param id path int true "Action ID"
+// @Param action body models.UpdateRuleActionRequest true "Updated action data"
+// @Success 200 {object} models.RuleActionResponse "Rule action updated successfully"
+// @Failure 400 {object} map[string]interface{} "Bad request"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Failure 404 {object} map[string]interface{} "Rule or action not found"
+// @Router /rule/{ruleId}/action/{id} [patch]
 func (rc *RuleController) UpdateRuleAction(c *gin.Context) {
 	userId := rc.GetAuthenticatedUserId(c)
 	logger.Infof("Starting rule action update for user %d", userId)
@@ -134,6 +197,21 @@ func (rc *RuleController) UpdateRuleAction(c *gin.Context) {
 	rc.SendSuccess(c, http.StatusOK, "Rule action updated successfully", ruleAction)
 }
 
+// UpdateRuleCondition updates a rule condition
+// @Summary Update rule condition
+// @Description Update a specific condition within a rule for the authenticated user
+// @Tags rules
+// @Accept json
+// @Produce json
+// @Security BasicAuth
+// @Param ruleId path int true "Rule ID"
+// @Param id path int true "Condition ID"
+// @Param condition body models.UpdateRuleConditionRequest true "Updated condition data"
+// @Success 200 {object} models.RuleConditionResponse "Rule condition updated successfully"
+// @Failure 400 {object} map[string]interface{} "Bad request"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Failure 404 {object} map[string]interface{} "Rule or condition not found"
+// @Router /rule/{ruleId}/condition/{id} [patch]
 func (rc *RuleController) UpdateRuleCondition(c *gin.Context) {
 	userId := rc.GetAuthenticatedUserId(c)
 	logger.Infof("Starting rule condition update for user %d", userId)
@@ -164,6 +242,18 @@ func (rc *RuleController) UpdateRuleCondition(c *gin.Context) {
 	rc.SendSuccess(c, http.StatusOK, "Rule condition updated successfully", ruleCondition)
 }
 
+// DeleteRule deletes a rule
+// @Summary Delete rule
+// @Description Delete rule by rule ID for the authenticated user
+// @Tags rules
+// @Produce json
+// @Security BasicAuth
+// @Param ruleId path int true "Rule ID"
+// @Success 204 "Rule deleted successfully"
+// @Failure 400 {object} map[string]interface{} "Bad request"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Failure 404 {object} map[string]interface{} "Rule not found"
+// @Router /rule/{ruleId} [delete]
 func (rc *RuleController) DeleteRule(c *gin.Context) {
 	userId := rc.GetAuthenticatedUserId(c)
 	logger.Infof("Starting rule deletion for user %d", userId)
