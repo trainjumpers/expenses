@@ -1,4 +1,10 @@
-import { createRule, deleteRule, listRules, updateRule } from "@/lib/api/rule";
+import {
+  createRule,
+  deleteRule,
+  executeRules,
+  listRules,
+  updateRule,
+} from "@/lib/api/rule";
 import { CreateRuleInput, Rule, UpdateRuleInput } from "@/lib/models/rule";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -42,6 +48,17 @@ export function useUpdateRule() {
           rule.id === updatedRule.id ? updatedRule : rule
         );
       });
+    },
+  });
+}
+
+export function useExecuteRules() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload?: { transaction_ids?: number[] }) =>
+      executeRules(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["transactions"] });
     },
   });
 }

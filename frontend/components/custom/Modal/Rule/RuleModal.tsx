@@ -59,7 +59,7 @@ export function RuleModal({
     initialData?.rule || {
       name: "",
       description: "",
-      effective_from: new Date().toISOString(),
+      effective_from: new Date(0).toISOString(),
     }
   );
   const [conditions, setConditions] = useState<BaseRuleCondition[]>(
@@ -92,7 +92,7 @@ export function RuleModal({
         initialData.rule || {
           name: "",
           description: "",
-          effective_from: new Date().toISOString(),
+          effective_from: new Date(0).toISOString(),
         }
       );
       setConditions(
@@ -148,7 +148,7 @@ export function RuleModal({
     if (effectiveScope === "from" && effectiveFromDate) {
       effective_from = effectiveFromDate.toISOString();
     } else {
-      effective_from = new Date().toISOString();
+      effective_from = new Date(0).toISOString();
     }
 
     // Pass form data to parent handler
@@ -168,7 +168,7 @@ export function RuleModal({
       initialData?.rule || {
         name: "",
         description: "",
-        effective_from: new Date().toISOString(),
+        effective_from: new Date(0).toISOString(),
       }
     );
     setConditions(

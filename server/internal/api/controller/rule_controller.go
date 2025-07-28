@@ -13,13 +13,15 @@ import (
 
 type RuleController struct {
 	*BaseController
-	ruleService service.RuleServiceInterface
+	ruleService       service.RuleServiceInterface
+	ruleEngineService service.RuleEngineServiceInterface
 }
 
-func NewRuleController(cfg *config.Config, ruleService service.RuleServiceInterface) *RuleController {
+func NewRuleController(cfg *config.Config, ruleService service.RuleServiceInterface, ruleEngineService service.RuleEngineServiceInterface) *RuleController {
 	return &RuleController{
-		BaseController: NewBaseController(cfg),
-		ruleService:    ruleService,
+		BaseController:    NewBaseController(cfg),
+		ruleService:       ruleService,
+		ruleEngineService: ruleEngineService,
 	}
 }
 
@@ -181,6 +183,28 @@ func (rc *RuleController) DeleteRule(c *gin.Context) {
 
 	logger.Infof("Rule %d deleted successfully for user %d", ruleId, userId)
 	rc.SendSuccess(c, http.StatusNoContent, "Rule deleted successfully", nil)
+}
+
+func (rc *RuleController) ExecuteRules(c *gin.Context) {
+	userId := rc.GetAuthenticatedUserId(c)
+	logger.Infof("Starting rule execution for user %d", userId)
+
+	var request models.ExecuteRulesRequest
+	if err := rc.BindJSON(c, &request); err != nil {
+		logger.Errorf("Failed to bind JSON: %v", err)
+		return
+	}
+
+	result, err := rc.ruleEngineService.ExecuteRules(c, userId, request)
+	if err != nil {
+		logger.Errorf("Error executing rules: %v", err)
+		rc.HandleError(c, err)
+		return
+	}
+
+	logger.Infof("Rule execution completed for user %d: %d modified, %d skipped",
+		userId, len(result.Modified), len(result.Skipped))
+	rc.SendSuccess(c, http.StatusOK, "Rules executed successfully", result)
 }
 
 // parseIdFromParam retrieves an Id from a URL parameter.

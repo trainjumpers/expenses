@@ -19,6 +19,7 @@ func Init(
 	categoryService service.CategoryServiceInterface,
 	transactionService service.TransactionServiceInterface,
 	ruleService service.RuleServiceInterface,
+	ruleEngineService service.RuleEngineServiceInterface,
 	statementService service.StatementServiceInterface,
 ) *gin.Engine {
 	router := gin.New()
@@ -53,7 +54,7 @@ func Init(
 	accountController := controller.NewAccountController(cfg, accountService)
 	categoryController := controller.NewCategoryController(cfg, categoryService)
 	transactionController := controller.NewTransactionController(cfg, transactionService)
-	ruleController := controller.NewRuleController(cfg, ruleService)
+	ruleController := controller.NewRuleController(cfg, ruleService, ruleEngineService)
 	statementController := controller.NewStatementController(cfg, statementService)
 
 	api := router.Group("/api/v1")
@@ -118,6 +119,7 @@ func Init(
 		{
 			rule.GET("", ruleController.ListRules)
 			rule.POST("", ruleController.CreateRule)
+			rule.POST("/execute", ruleController.ExecuteRules)
 			rule.GET("/:ruleId", ruleController.GetRuleById)
 			rule.PATCH("/:ruleId", ruleController.UpdateRule)
 			rule.DELETE("/:ruleId", ruleController.DeleteRule)

@@ -69,7 +69,7 @@ export interface DescribeRuleResponse {
 
 export interface ExecuteRulesResponse {
   modified: ModifiedResult[];
-  skipped: SkippedResult[];
+  processed_transactions: SkippedResult[];
 }
 
 export interface ModifiedResult {

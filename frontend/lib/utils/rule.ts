@@ -33,8 +33,11 @@ export function getEffectiveScopeAndDate(effective_from?: string): {
     if (isNaN(effDate.getTime())) {
       return { effectiveScope: "all", effectiveFromDate: undefined };
     }
-    const isToday = effDate.toDateString() === new Date().toDateString();
-    if (isToday) {
+
+    // A rule with effective_from set to the earliest possible date is considered to be for "all" time.
+    const isEarliest = effDate.getTime() === new Date(0).getTime();
+
+    if (isEarliest) {
       return { effectiveScope: "all", effectiveFromDate: undefined };
     } else {
       return { effectiveScope: "from", effectiveFromDate: effDate };
