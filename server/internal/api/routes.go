@@ -7,11 +7,11 @@ import (
 	"expenses/internal/service"
 	"time"
 
+	_ "expenses/docs" // Import docs for swagger
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
-	_ "expenses/docs" // Import docs for swagger
 )
 
 func Init(
