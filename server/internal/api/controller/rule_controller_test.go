@@ -1695,7 +1695,7 @@ var _ = Describe("RuleController", func() {
 
 			It("should return an empty result for a user with no rules", func() {
 				executeReq := models.ExecuteRulesRequest{}
-				resp, response := testUser2.MakeRequest(http.MethodPost, "/rule/execute", executeReq)
+				resp, response := testUser3.MakeRequest(http.MethodPost, "/rule/execute", executeReq)
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 				Expect(response["data"]).ToNot(BeNil())
 				By(fmt.Sprintf("Inspecting the response data: %+v", response["data"]))
