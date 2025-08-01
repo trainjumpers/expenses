@@ -118,8 +118,6 @@ func (s *ruleEngineService) executeRulesInBackground(c *gin.Context, userId int6
 		return
 	}
 
-
-
 	logger.Infof("Rule execution completed for user %d: %d modified, %d total processed",
 		userId, len(modified), totalProcessed)
 }
@@ -286,7 +284,7 @@ func (s *ruleEngineService) mapRuleTransaction(c *gin.Context, changeset *Change
 	for _, ruleId := range changeset.AppliedRules {
 		err := s.ruleRepo.CreateRuleTransactionMapping(c, ruleId, changeset.TransactionId)
 		if err != nil {
-			logger.Errorf("Failed to map rule application for rule %d and transaction %d: %v", 
+			logger.Errorf("Failed to map rule application for rule %d and transaction %d: %v",
 				ruleId, changeset.TransactionId, err)
 		}
 	}
