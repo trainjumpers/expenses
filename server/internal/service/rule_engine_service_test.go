@@ -508,7 +508,7 @@ var _ = Describe("RuleEngineService", func() {
 				Expect(ruleResponse.Conditions).To(HaveLen(1))
 			})
 
-			It("should handle error when fetching actions fails", func() {
+			It("should return empty actions and conditions when none exist", func() {
 				// This test demonstrates the behavior when actions/conditions don't exist
 				// The mock repository returns empty slices rather than errors for non-existent data
 				invalidRule := models.RuleResponse{Id: 999, Name: "Invalid", CreatedBy: userId}
