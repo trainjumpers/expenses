@@ -8,13 +8,21 @@ import TransactionFilters from "@/components/custom/Transaction/TransactionFilte
 import { TransactionsTable } from "@/components/custom/Transaction/TransactionsTable";
 import { useAccounts } from "@/components/hooks/useAccounts";
 import { useCategories } from "@/components/hooks/useCategories";
+import { useExecuteRules } from "@/components/hooks/useRules";
 import {
   useDeleteTransaction,
   useTransactions,
 } from "@/components/hooks/useTransactions";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Transaction, TransactionQueryParams } from "@/lib/models/transaction";
-import { Pencil, Plus, Trash, Upload } from "lucide-react";
+import { MoreVertical, Pencil, Play, Plus, Trash, Upload } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -70,6 +78,7 @@ export default function TransactionPage() {
     useState<Transaction | null>(null);
 
   const deleteTransactionMutation = useDeleteTransaction();
+  const executeRulesMutation = useExecuteRules();
 
   // Build query params for transactions
   const transactionParams: TransactionQueryParams = useMemo(
@@ -200,6 +209,12 @@ export default function TransactionPage() {
     }
   };
 
+  const handleExecuteRulesClick = async () => {
+    const transaction_ids =
+      selectedRows.size > 0 ? Array.from(selectedRows) : undefined;
+    executeRulesMutation.mutate({ transaction_ids });
+  };
+
   return (
     <Dashboard>
       <div className="flex justify-between items-center bg-card rounded-lg mb-4">
@@ -215,37 +230,47 @@ export default function TransactionPage() {
           </div>
         </div>
         <div className="flex justify-end items-center gap-2 mr-4 mb-1">
-          <Button variant="outline" onClick={handleImportClick}>
-            <Upload className="h-4 w-4" />
-            Import
-          </Button>
           <Button onClick={handleAddClick}>
             <Plus className="h-4 w-4" />
             Add Transaction
           </Button>
-          {selectedRows.size > 0 && (
-            <>
-              {selectedRows.size === 1 && (
-                <Button
-                  variant="default"
-                  className="gap-2"
-                  onClick={handleUpdateClick}
-                >
-                  <Pencil className="w-4 h-4" />
-                  Update
-                </Button>
-              )}
-              <Button
-                variant="destructive"
-                className="gap-2"
-                onClick={handleDeleteClick}
-                disabled={deleteTransactionMutation.status === "pending"}
-              >
-                <Trash className="w-4 h-4" />
-                Delete
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon">
+                <MoreVertical className="h-4 w-4" />
               </Button>
-            </>
-          )}
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onSelect={handleExecuteRulesClick}
+                disabled={executeRulesMutation.status === "pending"}
+              >
+                <Play className="mr-2 h-4 w-4" />
+                <span>Execute Rules</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={handleImportClick}>
+                <Upload className="mr-2 h-4 w-4" />
+                <span>Import Statement</span>
+              </DropdownMenuItem>
+              {selectedRows.size > 0 && <DropdownMenuSeparator />}
+              {selectedRows.size === 1 && (
+                <DropdownMenuItem onSelect={handleUpdateClick}>
+                  <Pencil className="mr-2 w-4 h-4" />
+                  <span>Update</span>
+                </DropdownMenuItem>
+              )}
+              {selectedRows.size > 0 && (
+                <DropdownMenuItem
+                  onSelect={handleDeleteClick}
+                  disabled={deleteTransactionMutation.status === "pending"}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <Trash className="mr-2 w-4 h-4" />
+                  <span>Delete</span>
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 

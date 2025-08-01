@@ -671,7 +671,7 @@ var _ = Describe("RuleController", func() {
 	Describe("ListRules", func() {
 		It("should return an empty list when there are no rules", func() {
 			// Use a fresh user/token with no rules
-			resp, response := testUser2.MakeRequest(http.MethodGet, "/rule", nil)
+			resp, response := testUser3.MakeRequest(http.MethodGet, "/rule", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["message"]).To(Equal("Rules fetched successfully"))
 			Expect(response["data"]).To(BeAssignableToTypeOf([]any{}))
@@ -1629,6 +1629,136 @@ var _ = Describe("RuleController", func() {
 		It("should return 404 when deleting non-existent rule id", func() {
 			resp, _ := testUser1.MakeRequest(http.MethodDelete, "/rule/999999", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
+		})
+	})
+	Describe("ExecuteRules", func() {
+		// Helper to get a transaction by ID for verification
+		getTestTransaction := func(id int64, user *TestHelper) map[string]any {
+			resp, response := user.MakeRequest(http.MethodGet, fmt.Sprintf("/transaction/%d", id), nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			Expect(response["data"]).ToNot(BeNil())
+			return response["data"].(map[string]any)
+		}
+
+		Context("when executing rules using seeded data", func() {
+			It("should accept the request and modify a transaction in the background for User 1", func() {
+				originalTxn := getTestTransaction(1, testUser1)
+				Expect(originalTxn["description"]).To(Equal("Test Description"))
+
+				executeReq := models.ExecuteRulesRequest{}
+				resp, _ := testUser1.MakeRequest(http.MethodPost, "/rule/execute", executeReq)
+				Expect(resp.StatusCode).To(Equal(http.StatusAccepted))
+
+				// Allow time for the background goroutine to execute
+				time.Sleep(2 * time.Second)
+
+				// Verify the transaction was actually updated in the database.
+				updatedTxn := getTestTransaction(1, testUser1)
+				Expect(updatedTxn["description"]).To(Equal("Updated by Name Rule"))
+			})
+
+			It("should accept the request but not modify any transaction if no conditions are met", func() {
+				// Get original state to compare against
+				originalTxn := getTestTransaction(1, testUser1)
+
+				executeReq := models.ExecuteRulesRequest{
+					RuleIds: &[]int64{1}, // Execute only Rule ID 1
+				}
+				resp, _ := testUser1.MakeRequest(http.MethodPost, "/rule/execute", executeReq)
+				Expect(resp.StatusCode).To(Equal(http.StatusAccepted))
+
+				// Allow time for background processing
+				time.Sleep(2 * time.Second)
+
+				// Verify the transaction was not updated
+				updatedTxn := getTestTransaction(1, testUser1)
+				Expect(updatedTxn["description"]).To(Equal(originalTxn["description"]))
+			})
+
+			It("should accept the request for a user with no rules", func() {
+				executeReq := models.ExecuteRulesRequest{}
+				resp, _ := testUser3.MakeRequest(http.MethodPost, "/rule/execute", executeReq)
+				Expect(resp.StatusCode).To(Equal(http.StatusAccepted))
+			})
+
+			Context("with invalid requests or data", func() {
+				It("should return unauthorized when no auth token is provided", func() {
+					executeReq := models.ExecuteRulesRequest{}
+					unauthenticatedUser := NewTestHelper(baseURL)
+					resp, _ := unauthenticatedUser.MakeRequest(http.MethodPost, "/rule/execute", executeReq)
+					Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
+				})
+
+				It("should accept the request for a non-existent rule_id", func() {
+					executeReq := models.ExecuteRulesRequest{
+						RuleIds: &[]int64{9999}, // This rule does not exist
+					}
+					resp, _ := testUser1.MakeRequest(http.MethodPost, "/rule/execute", executeReq)
+					Expect(resp.StatusCode).To(Equal(http.StatusAccepted))
+				})
+
+				It("should accept the request for a non-existent transaction_id", func() {
+					executeReq := models.ExecuteRulesRequest{
+						TransactionIds: &[]int64{9999}, // This transaction does not exist
+					}
+					resp, _ := testUser1.MakeRequest(http.MethodPost, "/rule/execute", executeReq)
+					Expect(resp.StatusCode).To(Equal(http.StatusAccepted))
+				})
+
+				It("should accept the request for a rule that belongs to another user", func() {
+					executeReq := models.ExecuteRulesRequest{
+						RuleIds: &[]int64{2},
+					}
+					resp, _ := testUser2.MakeRequest(http.MethodPost, "/rule/execute", executeReq)
+					Expect(resp.StatusCode).To(Equal(http.StatusAccepted))
+				})
+
+				It("should not apply a rule action if the target category does not exist", func() {
+					ruleInput := models.CreateRuleRequest{
+						Rule: models.CreateBaseRuleRequest{
+							Name:          "Bad Category Rule",
+							EffectiveFrom: time.Now().Add(-24 * time.Hour),
+						},
+						Conditions: []models.CreateRuleConditionRequest{
+							{
+								ConditionType:     models.RuleFieldName,
+								ConditionOperator: models.OperatorEquals,
+								ConditionValue:    "Coffee Shop", // Matches Transaction ID 10
+							},
+						},
+						Actions: []models.CreateRuleActionRequest{
+							{
+								ActionType:  models.RuleFieldCategory,
+								ActionValue: "9999", // This category ID does not exist
+							},
+						},
+					}
+					resp, _ := testUser1.MakeRequest(http.MethodPost, "/rule", ruleInput)
+					Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+					originalTxn := getTestTransaction(10, testUser1)
+					originalCategories := originalTxn["category_ids"].([]any)
+					executeReq := models.ExecuteRulesRequest{}
+					resp, _ = testUser1.MakeRequest(http.MethodPost, "/rule/execute", executeReq)
+					Expect(resp.StatusCode).To(Equal(http.StatusAccepted))
+
+					// Allow time for background processing
+					time.Sleep(2 * time.Second)
+
+					// Verify the transaction categories were not updated
+					updatedTxn := getTestTransaction(10, testUser1)
+					updatedCategories := updatedTxn["category_ids"].([]any)
+					Expect(updatedCategories).To(HaveLen(len(originalCategories)))
+
+				})
+
+				It("should return a 400 Bad Request for invalid data types in request", func() {
+					invalidBody := map[string]any{
+						"rule_ids": "not-an-array-of-integers",
+					}
+					resp, _ := testUser1.MakeRequest(http.MethodPost, "/rule/execute", invalidBody)
+					Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+				})
+			})
 		})
 	})
 })

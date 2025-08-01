@@ -134,12 +134,15 @@ export async function updateRuleConditions(
 }
 
 // Execute rules (example endpoint, adjust as needed)
-export async function executeRules(): Promise<ExecuteRulesResponse> {
+export async function executeRules(payload?: {
+  transaction_ids?: number[];
+}): Promise<ExecuteRulesResponse> {
   return apiRequest<ExecuteRulesResponse>(
     `${API_BASE_URL}/rule/execute`,
     {
       method: "POST",
       credentials: "include",
+      body: payload ? JSON.stringify(payload) : undefined,
     },
     "rule",
     [],

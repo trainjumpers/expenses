@@ -1,6 +1,13 @@
-import { createRule, deleteRule, listRules, updateRule } from "@/lib/api/rule";
+import {
+  createRule,
+  deleteRule,
+  executeRules,
+  listRules,
+  updateRule,
+} from "@/lib/api/rule";
 import { CreateRuleInput, Rule, UpdateRuleInput } from "@/lib/models/rule";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 export function useRules() {
   return useQuery<Rule[]>({
@@ -42,6 +49,19 @@ export function useUpdateRule() {
           rule.id === updatedRule.id ? updatedRule : rule
         );
       });
+    },
+  });
+}
+
+export function useExecuteRules() {
+  return useMutation({
+    mutationFn: (payload?: { transaction_ids?: number[] }) =>
+      executeRules(payload),
+    onSuccess: () => {
+      toast.success("Rule execution started in the background.");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to start rule execution.");
     },
   });
 }

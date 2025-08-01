@@ -18,6 +18,7 @@ type RuleRepositoryInterface interface {
 	CreateRule(c *gin.Context, rule models.CreateBaseRuleRequest) (models.RuleResponse, error)
 	CreateRuleActions(c *gin.Context, actions []models.CreateRuleActionRequest) ([]models.RuleActionResponse, error)
 	CreateRuleConditions(c *gin.Context, conditions []models.CreateRuleConditionRequest) ([]models.RuleConditionResponse, error)
+	CreateRuleTransactionMapping(c *gin.Context, ruleId int64, transactionId int64) error
 	GetRule(c *gin.Context, id int64, userId int64) (models.RuleResponse, error)
 	ListRules(c *gin.Context, userId int64) ([]models.RuleResponse, error)
 	ListRuleActionsByRuleId(c *gin.Context, ruleId int64) ([]models.RuleActionResponse, error)
@@ -31,20 +32,22 @@ type RuleRepositoryInterface interface {
 }
 
 type RuleRepository struct {
-	db                 database.DatabaseManager
-	schema             string
-	ruleTable          string
-	ruleActionTable    string
-	ruleConditionTable string
+	db                          database.DatabaseManager
+	schema                      string
+	ruleTable                   string
+	ruleActionTable             string
+	ruleConditionTable          string
+	ruleTransactionMappingTable string
 }
 
 func NewRuleRepository(db database.DatabaseManager, cfg *config.Config) RuleRepositoryInterface {
 	return &RuleRepository{
-		db:                 db,
-		schema:             cfg.DBSchema,
-		ruleTable:          "rule",
-		ruleActionTable:    "rule_action",
-		ruleConditionTable: "rule_condition",
+		db:                          db,
+		schema:                      cfg.DBSchema,
+		ruleTable:                   "rule",
+		ruleActionTable:             "rule_action",
+		ruleConditionTable:          "rule_condition",
+		ruleTransactionMappingTable: "rule_transaction_mapping",
 	}
 }
 
@@ -303,6 +306,20 @@ func (r *RuleRepository) DeleteRule(c *gin.Context, id int64, userId int64) erro
 	}
 	if rowsAffected == 0 {
 		return errorsPkg.NewRuleNotFoundError(fmt.Errorf("rule with id %d not found", id))
+	}
+	return nil
+}
+
+func (r *RuleRepository) CreateRuleTransactionMapping(c *gin.Context, ruleId int64, transactionId int64) error {
+	query := fmt.Sprintf(`
+		INSERT INTO %s.%s (rule_id, transaction_id) 
+		VALUES ($1, $2) 
+		ON CONFLICT (rule_id, transaction_id) DO NOTHING
+	`, r.schema, r.ruleTransactionMappingTable)
+
+	_, err := r.db.ExecuteQuery(c, query, ruleId, transactionId)
+	if err != nil {
+		return errorsPkg.NewRuleRepositoryError("failed to create rule transaction mapping", err)
 	}
 	return nil
 }
