@@ -2,6 +2,7 @@ package mock_repository
 
 import (
 	"errors"
+	"fmt"
 	"sync"
 
 	"expenses/internal/models"
@@ -14,6 +15,7 @@ type MockRuleRepository struct {
 	rules           map[int64]models.RuleResponse
 	actions         map[int64]models.RuleActionResponse
 	conditions      map[int64]models.RuleConditionResponse
+	mappings        map[string]bool // key: "ruleId:transactionId"
 	nextRuleId      int64
 	nextActionId    int64
 	nextConditionId int64
@@ -24,6 +26,7 @@ func NewMockRuleRepository() *MockRuleRepository {
 		rules:           make(map[int64]models.RuleResponse),
 		actions:         make(map[int64]models.RuleActionResponse),
 		conditions:      make(map[int64]models.RuleConditionResponse),
+		mappings:        make(map[string]bool),
 		nextRuleId:      1,
 		nextActionId:    1,
 		nextConditionId: 1,
@@ -226,5 +229,13 @@ func (m *MockRuleRepository) DeleteRule(c *gin.Context, id int64, userId int64) 
 			delete(m.conditions, cid)
 		}
 	}
+	return nil
+}
+
+func (m *MockRuleRepository) CreateRuleTransactionMapping(c *gin.Context, ruleId int64, transactionId int64) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	key := fmt.Sprintf("%d:%d", ruleId, transactionId)
+	m.mappings[key] = true
 	return nil
 }

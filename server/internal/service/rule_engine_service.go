@@ -235,8 +235,8 @@ func (s *ruleEngineService) applyChangesets(c *gin.Context, userId int64, change
 			continue
 		}
 
-		// TODO: Add rule_txn mapping table tracking here
-		// s.trackRuleApplication(c, changeset)
+		// map rule transaction in mapping table
+		s.mapRuleTransaction(c, changeset)
 
 		modified = append(modified, models.ModifiedResult{
 			TransactionId: changeset.TransactionId,
@@ -280,6 +280,16 @@ func (s *ruleEngineService) applyChangeset(c *gin.Context, userId int64, changes
 	}
 
 	return nil
+}
+
+func (s *ruleEngineService) mapRuleTransaction(c *gin.Context, changeset *Changeset) {
+	for _, ruleId := range changeset.AppliedRules {
+		err := s.ruleRepo.CreateRuleTransactionMapping(c, ruleId, changeset.TransactionId)
+		if err != nil {
+			logger.Errorf("Failed to map rule application for rule %d and transaction %d: %v", 
+				ruleId, changeset.TransactionId, err)
+		}
+	}
 }
 
 func (s *ruleEngineService) getUpdatedFields(changeset *Changeset) []models.RuleFieldType {
