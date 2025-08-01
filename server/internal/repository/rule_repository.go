@@ -32,21 +32,21 @@ type RuleRepositoryInterface interface {
 }
 
 type RuleRepository struct {
-	db                         database.DatabaseManager
-	schema                     string
-	ruleTable                  string
-	ruleActionTable            string
-	ruleConditionTable         string
+	db                          database.DatabaseManager
+	schema                      string
+	ruleTable                   string
+	ruleActionTable             string
+	ruleConditionTable          string
 	ruleTransactionMappingTable string
 }
 
 func NewRuleRepository(db database.DatabaseManager, cfg *config.Config) RuleRepositoryInterface {
 	return &RuleRepository{
-		db:                         db,
-		schema:                     cfg.DBSchema,
-		ruleTable:                  "rule",
-		ruleActionTable:            "rule_action",
-		ruleConditionTable:         "rule_condition",
+		db:                          db,
+		schema:                      cfg.DBSchema,
+		ruleTable:                   "rule",
+		ruleActionTable:             "rule_action",
+		ruleConditionTable:          "rule_condition",
 		ruleTransactionMappingTable: "rule_transaction_mapping",
 	}
 }
@@ -316,7 +316,7 @@ func (r *RuleRepository) CreateRuleTransactionMapping(c *gin.Context, ruleId int
 		VALUES ($1, $2) 
 		ON CONFLICT (rule_id, transaction_id) DO NOTHING
 	`, r.schema, r.ruleTransactionMappingTable)
-	
+
 	_, err := r.db.ExecuteQuery(c, query, ruleId, transactionId)
 	if err != nil {
 		return errorsPkg.NewRuleRepositoryError("failed to create rule transaction mapping", err)

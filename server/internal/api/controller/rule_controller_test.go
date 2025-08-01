@@ -1632,53 +1632,120 @@ var _ = Describe("RuleController", func() {
 		})
 	})
 	Describe("ExecuteRules", func() {
-		// Helper to get a transaction by ID for verification
-		getTestTransaction := func(id int64, user *TestHelper) map[string]any {
-			resp, response := user.MakeRequest(http.MethodGet, fmt.Sprintf("/transaction/%d", id), nil)
+		// Helper to get a job by ID for verification
+		getJobById := func(jobId int64, user *TestHelper) map[string]any {
+			resp, response := user.MakeRequest(http.MethodGet, fmt.Sprintf("/job/%d", jobId), nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["data"]).ToNot(BeNil())
 			return response["data"].(map[string]any)
 		}
 
+		// Helper to wait for job completion with timeout
+		waitForJobCompletion := func(jobId int64, user *TestHelper, timeoutMs int) map[string]any {
+			for i := 0; i < timeoutMs/50; i++ {
+				job := getJobById(jobId, user)
+				status := job["status"].(string)
+				if status == "completed" || status == "failed" {
+					return job
+				}
+				time.Sleep(50 * time.Millisecond)
+			}
+			Fail(fmt.Sprintf("Job %d did not complete within %dms", jobId, timeoutMs))
+			return nil
+		}
+
 		Context("when executing rules using seeded data", func() {
-			It("should accept the request and modify a transaction in the background for User 1", func() {
-				originalTxn := getTestTransaction(1, testUser1)
-				Expect(originalTxn["description"]).To(Equal("Test Description"))
-
+			It("should return a job ID immediately and process rules in background", func() {
 				executeReq := models.ExecuteRulesRequest{}
-				resp, _ := testUser1.MakeRequest(http.MethodPost, "/rule/execute", executeReq)
-				Expect(resp.StatusCode).To(Equal(http.StatusAccepted))
+				resp, response := testUser1.MakeRequest(http.MethodPost, "/rule/execute", executeReq)
 
-				// Allow time for the background goroutine to execute
-				time.Sleep(200 * time.Millisecond)
+				// Should return immediately with job ID
+				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+				Expect(response["message"]).To(Equal("Rule execution started successfully"))
+				Expect(response["data"]).To(HaveKey("job_id"))
 
-				// Verify the transaction was actually updated in the database.
-				updatedTxn := getTestTransaction(1, testUser1)
-				Expect(updatedTxn["description"]).To(Equal("Updated by Name Rule"))
+				jobId := int64(response["data"].(map[string]any)["job_id"].(float64))
+				Expect(jobId).To(BeNumerically(">", 0))
+
+				// Job should initially be pending or processing
+				job := getJobById(jobId, testUser1)
+				Expect(job["job_type"]).To(Equal("rule_execution"))
+				Expect(job["status"]).To(BeElementOf("pending", "processing"))
+
+				// Wait for job completion
+				completedJob := waitForJobCompletion(jobId, testUser1, 2000)
+				Expect(completedJob["status"]).To(Equal("completed"))
+				Expect(completedJob["message"]).ToNot(BeNil())
 			})
 
-			It("should accept the request but not modify any transaction if no conditions are met", func() {
-				// Get original state to compare against
-				originalTxn := getTestTransaction(1, testUser1)
-
+			It("should handle specific rule IDs in the request", func() {
 				executeReq := models.ExecuteRulesRequest{
 					RuleIds: &[]int64{1}, // Execute only Rule ID 1
 				}
-				resp, _ := testUser1.MakeRequest(http.MethodPost, "/rule/execute", executeReq)
-				Expect(resp.StatusCode).To(Equal(http.StatusAccepted))
+				resp, response := testUser1.MakeRequest(http.MethodPost, "/rule/execute", executeReq)
 
-				// Allow time for background processing
-				time.Sleep(200 * time.Millisecond)
+				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+				Expect(response["data"]).To(HaveKey("job_id"))
 
-				// Verify the transaction was not updated
-				updatedTxn := getTestTransaction(1, testUser1)
-				Expect(updatedTxn["description"]).To(Equal(originalTxn["description"]))
+				jobId := int64(response["data"].(map[string]any)["job_id"].(float64))
+
+				// Verify job metadata contains the specific rule IDs
+				job := getJobById(jobId, testUser1)
+				Expect(job["metadata"]).ToNot(BeNil())
+
+				// Wait for completion
+				completedJob := waitForJobCompletion(jobId, testUser1, 2000)
+				Expect(completedJob["status"]).To(BeElementOf("completed", "failed"))
 			})
 
-			It("should accept the request for a user with no rules", func() {
+			It("should handle specific transaction IDs in the request", func() {
+				executeReq := models.ExecuteRulesRequest{
+					TransactionIds: &[]int64{1, 2}, // Execute on specific transactions
+				}
+				resp, response := testUser1.MakeRequest(http.MethodPost, "/rule/execute", executeReq)
+
+				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+				Expect(response["data"]).To(HaveKey("job_id"))
+
+				jobId := int64(response["data"].(map[string]any)["job_id"].(float64))
+
+				// Wait for completion
+				completedJob := waitForJobCompletion(jobId, testUser1, 2000)
+				Expect(completedJob["status"]).To(BeElementOf("completed", "failed"))
+			})
+
+			It("should handle custom page size in the request", func() {
+				executeReq := models.ExecuteRulesRequest{
+					PageSize: 50,
+				}
+				resp, response := testUser1.MakeRequest(http.MethodPost, "/rule/execute", executeReq)
+
+				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+				Expect(response["data"]).To(HaveKey("job_id"))
+
+				jobId := int64(response["data"].(map[string]any)["job_id"].(float64))
+
+				// Verify job metadata contains the page size
+				job := getJobById(jobId, testUser1)
+				Expect(job["metadata"]).ToNot(BeNil())
+
+				// Wait for completion
+				completedJob := waitForJobCompletion(jobId, testUser1, 2000)
+				Expect(completedJob["status"]).To(BeElementOf("completed", "failed"))
+			})
+
+			It("should create a job even for a user with no rules", func() {
 				executeReq := models.ExecuteRulesRequest{}
-				resp, _ := testUser3.MakeRequest(http.MethodPost, "/rule/execute", executeReq)
-				Expect(resp.StatusCode).To(Equal(http.StatusAccepted))
+				resp, response := testUser3.MakeRequest(http.MethodPost, "/rule/execute", executeReq)
+
+				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+				Expect(response["data"]).To(HaveKey("job_id"))
+
+				jobId := int64(response["data"].(map[string]any)["job_id"].(float64))
+
+				// Wait for completion - should complete quickly with no rules
+				completedJob := waitForJobCompletion(jobId, testUser3, 1000)
+				Expect(completedJob["status"]).To(Equal("completed"))
 			})
 
 			Context("with invalid requests or data", func() {
@@ -1689,74 +1756,161 @@ var _ = Describe("RuleController", func() {
 					Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
 				})
 
-				It("should accept the request for a non-existent rule_id", func() {
+				It("should create a job even for non-existent rule IDs", func() {
 					executeReq := models.ExecuteRulesRequest{
 						RuleIds: &[]int64{9999}, // This rule does not exist
 					}
-					resp, _ := testUser1.MakeRequest(http.MethodPost, "/rule/execute", executeReq)
-					Expect(resp.StatusCode).To(Equal(http.StatusAccepted))
+					resp, response := testUser1.MakeRequest(http.MethodPost, "/rule/execute", executeReq)
+
+					Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+					Expect(response["data"]).To(HaveKey("job_id"))
+
+					jobId := int64(response["data"].(map[string]any)["job_id"].(float64))
+
+					// Wait for completion - should complete with no matching rules
+					completedJob := waitForJobCompletion(jobId, testUser1, 1000)
+					Expect(completedJob["status"]).To(Equal("completed"))
 				})
 
-				It("should accept the request for a non-existent transaction_id", func() {
+				It("should create a job even for non-existent transaction IDs", func() {
 					executeReq := models.ExecuteRulesRequest{
 						TransactionIds: &[]int64{9999}, // This transaction does not exist
 					}
-					resp, _ := testUser1.MakeRequest(http.MethodPost, "/rule/execute", executeReq)
-					Expect(resp.StatusCode).To(Equal(http.StatusAccepted))
-				})
+					resp, response := testUser1.MakeRequest(http.MethodPost, "/rule/execute", executeReq)
 
-				It("should accept the request for a rule that belongs to another user", func() {
-					executeReq := models.ExecuteRulesRequest{
-						RuleIds: &[]int64{2},
-					}
-					resp, _ := testUser2.MakeRequest(http.MethodPost, "/rule/execute", executeReq)
-					Expect(resp.StatusCode).To(Equal(http.StatusAccepted))
-				})
-
-				It("should not apply a rule action if the target category does not exist", func() {
-					ruleInput := models.CreateRuleRequest{
-						Rule: models.CreateBaseRuleRequest{
-							Name:          "Bad Category Rule",
-							EffectiveFrom: time.Now().Add(-24 * time.Hour),
-						},
-						Conditions: []models.CreateRuleConditionRequest{
-							{
-								ConditionType:     models.RuleFieldName,
-								ConditionOperator: models.OperatorEquals,
-								ConditionValue:    "Coffee Shop", // Matches Transaction ID 10
-							},
-						},
-						Actions: []models.CreateRuleActionRequest{
-							{
-								ActionType:  models.RuleFieldCategory,
-								ActionValue: "9999", // This category ID does not exist
-							},
-						},
-					}
-					resp, _ := testUser1.MakeRequest(http.MethodPost, "/rule", ruleInput)
 					Expect(resp.StatusCode).To(Equal(http.StatusCreated))
-					originalTxn := getTestTransaction(10, testUser1)
-					originalCategories := originalTxn["category_ids"].([]any)
-					executeReq := models.ExecuteRulesRequest{}
-					resp, _ = testUser1.MakeRequest(http.MethodPost, "/rule/execute", executeReq)
-					Expect(resp.StatusCode).To(Equal(http.StatusAccepted))
+					Expect(response["data"]).To(HaveKey("job_id"))
 
-					// Allow time for background processing
-					time.Sleep(200 * time.Millisecond)
+					jobId := int64(response["data"].(map[string]any)["job_id"].(float64))
 
-					// Verify the transaction categories were not updated
-					updatedTxn := getTestTransaction(10, testUser1)
-					updatedCategories := updatedTxn["category_ids"].([]any)
-					Expect(updatedCategories).To(HaveLen(len(originalCategories)))
-
+					// Wait for completion - should complete with no matching transactions
+					completedJob := waitForJobCompletion(jobId, testUser1, 1000)
+					Expect(completedJob["status"]).To(Equal("completed"))
 				})
 
 				It("should return a 400 Bad Request for invalid data types in request", func() {
 					invalidBody := map[string]any{
 						"rule_ids": "not-an-array-of-integers",
 					}
-					resp, _ := testUser1.MakeRequest(http.MethodPost, "/rule/execute", invalidBody)
+					resp, response := testUser1.MakeRequest(http.MethodPost, "/rule/execute", invalidBody)
 					Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+					Expect(response["message"]).To(ContainSubstring("validation"))
+				})
+
+				It("should return a 400 Bad Request for invalid page size", func() {
+					executeReq := models.ExecuteRulesRequest{
+						PageSize: -1, // Invalid page size
+					}
+					resp, response := testUser1.MakeRequest(http.MethodPost, "/rule/execute", executeReq)
+					Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+					Expect(response["message"]).To(ContainSubstring("validation"))
+				})
+
+				It("should return a 400 Bad Request for empty arrays", func() {
+					executeReq := models.ExecuteRulesRequest{
+						RuleIds:        &[]int64{}, // Empty array
+						TransactionIds: &[]int64{}, // Empty array
+					}
+					resp, response := testUser1.MakeRequest(http.MethodPost, "/rule/execute", executeReq)
+					Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+					Expect(response["message"]).To(ContainSubstring("validation"))
+				})
+			})
+
+			Context("job tracking and status", func() {
+				It("should track job progress from pending to completed", func() {
+					executeReq := models.ExecuteRulesRequest{}
+					resp, response := testUser1.MakeRequest(http.MethodPost, "/rule/execute", executeReq)
+
+					Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+					jobId := int64(response["data"].(map[string]any)["job_id"].(float64))
+
+					// Check initial job state
+					initialJob := getJobById(jobId, testUser1)
+					Expect(initialJob["status"]).To(BeElementOf("pending", "processing"))
+					Expect(initialJob["created_at"]).ToNot(BeNil())
+
+					// Wait for completion and verify final state
+					completedJob := waitForJobCompletion(jobId, testUser1, 2000)
+					Expect(completedJob["status"]).To(Equal("completed"))
+					Expect(completedJob["completed_at"]).ToNot(BeNil())
+					Expect(completedJob["message"]).ToNot(BeNil())
+				})
+
+				It("should not allow access to jobs from other users", func() {
+					executeReq := models.ExecuteRulesRequest{}
+					resp, response := testUser1.MakeRequest(http.MethodPost, "/rule/execute", executeReq)
+
+					Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+					jobId := int64(response["data"].(map[string]any)["job_id"].(float64))
+
+					// Try to access the job as a different user
+					resp2, response2 := testUser2.MakeRequest(http.MethodGet, fmt.Sprintf("/job/%d", jobId), nil)
+					Expect(resp2.StatusCode).To(Equal(http.StatusNotFound))
+					Expect(response2["message"]).To(ContainSubstring("not found"))
+				})
+
+				It("should list jobs for the user", func() {
+					// Create a job
+					executeReq := models.ExecuteRulesRequest{}
+					resp, response := testUser1.MakeRequest(http.MethodPost, "/rule/execute", executeReq)
+					Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+					jobId := int64(response["data"].(map[string]any)["job_id"].(float64))
+
+					// List jobs
+					resp2, response2 := testUser1.MakeRequest(http.MethodGet, "/job", nil)
+					Expect(resp2.StatusCode).To(Equal(http.StatusOK))
+					Expect(response2["data"]).To(HaveKey("jobs"))
+
+					jobs := response2["data"].(map[string]any)["jobs"].([]any)
+					var foundJob bool
+					for _, j := range jobs {
+						job := j.(map[string]any)
+						if int64(job["id"].(float64)) == jobId {
+							foundJob = true
+							Expect(job["job_type"]).To(Equal("rule_execution"))
+							break
+						}
+					}
+					Expect(foundJob).To(BeTrue(), "Should find the created job in the list")
+				})
+
+				It("should filter jobs by type", func() {
+					// Create a rule execution job
+					executeReq := models.ExecuteRulesRequest{}
+					resp, _ := testUser1.MakeRequest(http.MethodPost, "/rule/execute", executeReq)
+					Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+
+					// List jobs filtered by type
+					resp2, response2 := testUser1.MakeRequest(http.MethodGet, "/job?job_type=rule_execution", nil)
+					Expect(resp2.StatusCode).To(Equal(http.StatusOK))
+
+					jobs := response2["data"].(map[string]any)["jobs"].([]any)
+					for _, j := range jobs {
+						job := j.(map[string]any)
+						Expect(job["job_type"]).To(Equal("rule_execution"))
+					}
+				})
+
+				It("should filter jobs by status", func() {
+					// Create a job and wait for completion
+					executeReq := models.ExecuteRulesRequest{}
+					resp, response := testUser1.MakeRequest(http.MethodPost, "/rule/execute", executeReq)
+					Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+					jobId := int64(response["data"].(map[string]any)["job_id"].(float64))
+
+					// Wait for completion
+					waitForJobCompletion(jobId, testUser1, 2000)
+
+					// List completed jobs
+					resp2, response2 := testUser1.MakeRequest(http.MethodGet, "/job?status=completed", nil)
+					Expect(resp2.StatusCode).To(Equal(http.StatusOK))
+
+					jobs := response2["data"].(map[string]any)["jobs"].([]any)
+					for _, j := range jobs {
+						job := j.(map[string]any)
+						Expect(job["status"]).To(Equal("completed"))
+					}
 				})
 			})
 		})

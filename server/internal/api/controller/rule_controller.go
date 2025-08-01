@@ -195,15 +195,15 @@ func (rc *RuleController) ExecuteRules(c *gin.Context) {
 		return
 	}
 
-	_, err := rc.ruleEngineService.ExecuteRules(c, userId, request)
+	response, err := rc.ruleEngineService.ExecuteRules(c, userId, request)
 	if err != nil {
 		logger.Errorf("Error executing rules: %v", err)
 		rc.HandleError(c, err)
 		return
 	}
 
-	logger.Infof("Rule execution request accepted for user %d", userId)
-	rc.SendSuccess(c, http.StatusAccepted, "Rule execution started", nil)
+	logger.Infof("Rule execution started successfully for user %d, job ID: %d", userId, response.JobId)
+	rc.SendSuccess(c, http.StatusCreated, "Rule execution started successfully", response)
 }
 
 // parseIdFromParam retrieves an Id from a URL parameter.

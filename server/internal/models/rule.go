@@ -100,10 +100,7 @@ type ExecuteRulesRequest struct {
 }
 
 type ExecuteRulesResponse struct {
-	Modified      []ModifiedResult `json:"modified"`
-	Skipped       []SkippedResult  `json:"skipped"`
-	TotalRules    int              `json:"total_rules"`
-	ProcessedTxns int              `json:"processed_transactions"`
+	JobId int64 `json:"job_id"`
 }
 
 type ModifiedResult struct {

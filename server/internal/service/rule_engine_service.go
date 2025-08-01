@@ -1,6 +1,7 @@
 package service
 
 import (
+	"encoding/json"
 	"expenses/internal/models"
 	"expenses/internal/repository"
 	"expenses/pkg/logger"
@@ -18,33 +19,77 @@ type ruleEngineService struct {
 	ruleRepo        repository.RuleRepositoryInterface
 	transactionRepo repository.TransactionRepositoryInterface
 	categoryRepo    repository.CategoryRepositoryInterface
+	jobRepo         repository.JobRepositoryInterface
 }
 
 func NewRuleEngineService(
 	ruleRepo repository.RuleRepositoryInterface,
 	transactionRepo repository.TransactionRepositoryInterface,
 	categoryRepo repository.CategoryRepositoryInterface,
+	jobRepo repository.JobRepositoryInterface,
 ) RuleEngineServiceInterface {
 	return &ruleEngineService{
 		ruleRepo:        ruleRepo,
 		transactionRepo: transactionRepo,
 		categoryRepo:    categoryRepo,
+		jobRepo:         jobRepo,
 	}
 }
 
 func (s *ruleEngineService) ExecuteRules(c *gin.Context, userId int64, request models.ExecuteRulesRequest) (models.ExecuteRulesResponse, error) {
-	go s.executeRulesInBackground(c.Copy(), userId, request)
-	logger.Infof("Rule execution started in background for user %d", userId)
-	return models.ExecuteRulesResponse{}, nil
+	// Create job metadata
+	metadata := models.RuleExecutionMetadata{
+		RuleIds:        request.RuleIds,
+		TransactionIds: request.TransactionIds,
+		PageSize:       request.PageSize,
+	}
+	metadataBytes, err := json.Marshal(metadata)
+	if err != nil {
+		logger.Errorf("Failed to marshal job metadata: %v", err)
+		return models.ExecuteRulesResponse{}, err
+	}
+
+	// Create job record
+	jobInput := models.CreateJobInput{
+		JobType:   models.JobTypeRuleExecution,
+		CreatedBy: userId,
+		Status:    models.JobStatusPending,
+		Metadata:  metadataBytes,
+	}
+
+	job, err := s.jobRepo.CreateJob(c, jobInput)
+	if err != nil {
+		logger.Errorf("Failed to create job for rule execution: %v", err)
+		return models.ExecuteRulesResponse{}, err
+	}
+
+	// Start background execution
+	go s.executeRulesInBackground(c.Copy(), userId, request, job.Id)
+	logger.Infof("Rule execution started in background for user %d, job ID: %d", userId, job.Id)
+
+	return models.ExecuteRulesResponse{
+		JobId: job.Id,
+	}, nil
 }
 
-func (s *ruleEngineService) executeRulesInBackground(c *gin.Context, userId int64, request models.ExecuteRulesRequest) {
-	logger.Infof("Executing rules for user %d", userId)
+func (s *ruleEngineService) executeRulesInBackground(c *gin.Context, userId int64, request models.ExecuteRulesRequest, jobId int64) {
+	logger.Infof("Executing rules for user %d, job ID: %d", userId, jobId)
+
+	// Update job status to processing
+	now := time.Now()
+	_, err := s.jobRepo.UpdateJobStatus(c, jobId, models.UpdateJobStatusInput{
+		Status:    models.JobStatusProcessing,
+		StartedAt: &now,
+	})
+	if err != nil {
+		logger.Errorf("Failed to update job status to processing: %v", err)
+	}
 
 	// Step 1: Fetch all categories
 	categories, err := s.categoryRepo.ListCategories(c, userId)
 	if err != nil {
 		logger.Errorf("Rule execution for user %d failed to fetch categories: %v", userId, err)
+		s.markJobAsFailed(c, jobId, fmt.Sprintf("Failed to fetch categories: %v", err))
 		return
 	}
 
@@ -57,6 +102,7 @@ func (s *ruleEngineService) executeRulesInBackground(c *gin.Context, userId int6
 	}
 	if err != nil {
 		logger.Errorf("Rule execution for user %d failed to fetch rules: %v", userId, err)
+		s.markJobAsFailed(c, jobId, fmt.Sprintf("Failed to fetch rules: %v", err))
 		return
 	}
 
@@ -81,6 +127,7 @@ func (s *ruleEngineService) executeRulesInBackground(c *gin.Context, userId int6
 		transactions, err := s.fetchSpecificTransactions(c, userId, *request.TransactionIds)
 		if err != nil {
 			logger.Errorf("Rule execution for user %d failed to fetch specific transactions: %v", userId, err)
+			s.markJobAsFailed(c, jobId, fmt.Sprintf("Failed to fetch specific transactions: %v", err))
 			return
 		}
 
@@ -93,6 +140,7 @@ func (s *ruleEngineService) executeRulesInBackground(c *gin.Context, userId int6
 			transactions, err := s.fetchTransactionPage(c, userId, page, pageSize)
 			if err != nil {
 				logger.Errorf("Rule execution for user %d failed to fetch transactions page %d: %v", userId, page, err)
+				s.markJobAsFailed(c, jobId, fmt.Sprintf("Failed to fetch transactions page %d: %v", page, err))
 				return
 			}
 
@@ -115,10 +163,12 @@ func (s *ruleEngineService) executeRulesInBackground(c *gin.Context, userId int6
 	modified, err := s.applyChangesets(c, userId, allChangesets)
 	if err != nil {
 		logger.Errorf("Rule execution for user %d failed to apply changesets: %v", userId, err)
+		s.markJobAsFailed(c, jobId, fmt.Sprintf("Failed to apply changesets: %v", err))
 		return
 	}
 
-
+	// Mark job as completed
+	s.markJobAsCompleted(c, jobId, len(modified), totalProcessed, len(rules))
 
 	logger.Infof("Rule execution completed for user %d: %d modified, %d total processed",
 		userId, len(modified), totalProcessed)
@@ -286,7 +336,7 @@ func (s *ruleEngineService) mapRuleTransaction(c *gin.Context, changeset *Change
 	for _, ruleId := range changeset.AppliedRules {
 		err := s.ruleRepo.CreateRuleTransactionMapping(c, ruleId, changeset.TransactionId)
 		if err != nil {
-			logger.Errorf("Failed to map rule application for rule %d and transaction %d: %v", 
+			logger.Errorf("Failed to map rule application for rule %d and transaction %d: %v",
 				ruleId, changeset.TransactionId, err)
 		}
 	}
@@ -304,4 +354,31 @@ func (s *ruleEngineService) getUpdatedFields(changeset *Changeset) []models.Rule
 		fields = append(fields, models.RuleFieldCategory)
 	}
 	return fields
+}
+
+func (s *ruleEngineService) markJobAsFailed(c *gin.Context, jobId int64, message string) {
+	now := time.Now()
+	_, err := s.jobRepo.UpdateJobStatus(c, jobId, models.UpdateJobStatusInput{
+		Status:      models.JobStatusFailed,
+		Message:     &message,
+		CompletedAt: &now,
+	})
+	if err != nil {
+		logger.Errorf("Failed to update job %d status to failed: %v", jobId, err)
+	}
+}
+
+func (s *ruleEngineService) markJobAsCompleted(c *gin.Context, jobId int64, modifiedCount, processedCount, rulesCount int) {
+	now := time.Now()
+	message := fmt.Sprintf("Completed: %d rules processed, %d transactions modified out of %d processed",
+		rulesCount, modifiedCount, processedCount)
+
+	_, err := s.jobRepo.UpdateJobStatus(c, jobId, models.UpdateJobStatusInput{
+		Status:      models.JobStatusCompleted,
+		Message:     &message,
+		CompletedAt: &now,
+	})
+	if err != nil {
+		logger.Errorf("Failed to update job %d status to completed: %v", jobId, err)
+	}
 }
