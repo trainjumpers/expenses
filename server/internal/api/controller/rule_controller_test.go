@@ -1641,72 +1641,44 @@ var _ = Describe("RuleController", func() {
 		}
 
 		Context("when executing rules using seeded data", func() {
-			It("should apply a seeded rule and modify a transaction for User 1", func() {
+			It("should accept the request and modify a transaction in the background for User 1", func() {
 				originalTxn := getTestTransaction(1, testUser1)
 				Expect(originalTxn["description"]).To(Equal("Test Description"))
+
 				executeReq := models.ExecuteRulesRequest{}
-				resp, response := testUser1.MakeRequest(http.MethodPost, "/rule/execute", executeReq)
-				Expect(resp.StatusCode).To(Equal(http.StatusOK))
-				Expect(response["data"]).ToNot(BeNil())
-				By(fmt.Sprintf("Inspecting the response data: %+v", response["data"]))
-				data, ok := response["data"].(map[string]any)
-				Expect(ok).To(BeTrue(), "Response data is not a map[string]any")
+				resp, _ := testUser1.MakeRequest(http.MethodPost, "/rule/execute", executeReq)
+				Expect(resp.StatusCode).To(Equal(http.StatusAccepted))
 
-				Expect(data).To(And(
-					HaveKeyWithValue("total_rules", Not(BeNil())),
-					HaveKeyWithValue("processed_transactions", Not(BeNil())),
-					HaveKeyWithValue("modified", Not(BeNil())),
-				))
-
-				Expect(int(data["total_rules"].(float64))).To(BeNumerically(">", 0))
-				Expect(int(data["processed_transactions"].(float64))).To(BeNumerically(">", 0))
-
-				modified, ok := data["modified"].([]any)
-				Expect(ok).To(BeTrue())
-				Expect(modified).To(HaveLen(1))
-
-				modifiedResult := modified[0].(map[string]any)
-				Expect(int64(modifiedResult["transaction_id"].(float64))).To(Equal(int64(1)))
-				appliedRules := modifiedResult["applied_rules"].([]any)
-				Expect(appliedRules).To(HaveLen(1))
-				Expect(int64(appliedRules[0].(float64))).To(Equal(int64(2))) // Rule ID 2
+				// Allow time for the background goroutine to execute
+				time.Sleep(200 * time.Millisecond)
 
 				// Verify the transaction was actually updated in the database.
 				updatedTxn := getTestTransaction(1, testUser1)
 				Expect(updatedTxn["description"]).To(Equal("Updated by Name Rule"))
 			})
 
-			It("should run but not modify any transaction if no conditions are met", func() {
+			It("should accept the request but not modify any transaction if no conditions are met", func() {
+				// Get original state to compare against
+				originalTxn := getTestTransaction(1, testUser1)
+
 				executeReq := models.ExecuteRulesRequest{
 					RuleIds: &[]int64{1}, // Execute only Rule ID 1
 				}
-				resp, response := testUser1.MakeRequest(http.MethodPost, "/rule/execute", executeReq)
-				Expect(resp.StatusCode).To(Equal(http.StatusOK))
-				Expect(response["data"]).ToNot(BeNil())
-				By(fmt.Sprintf("Inspecting the response data: %+v", response["data"]))
-				data, ok := response["data"].(map[string]any)
-				Expect(ok).To(BeTrue(), "Response data is not a map[string]any")
+				resp, _ := testUser1.MakeRequest(http.MethodPost, "/rule/execute", executeReq)
+				Expect(resp.StatusCode).To(Equal(http.StatusAccepted))
 
-				Expect(data).To(HaveKey("total_rules"))
-				Expect(data).To(HaveKey("processed_transactions"))
-				Expect(int(data["total_rules"].(float64))).To(Equal(1))
-				Expect(data["modified"]).To(SatisfyAny(BeNil(), BeEmpty()))
+				// Allow time for background processing
+				time.Sleep(200 * time.Millisecond)
+
+				// Verify the transaction was not updated
+				updatedTxn := getTestTransaction(1, testUser1)
+				Expect(updatedTxn["description"]).To(Equal(originalTxn["description"]))
 			})
 
-			It("should return an empty result for a user with no rules", func() {
+			It("should accept the request for a user with no rules", func() {
 				executeReq := models.ExecuteRulesRequest{}
-				resp, response := testUser3.MakeRequest(http.MethodPost, "/rule/execute", executeReq)
-				Expect(resp.StatusCode).To(Equal(http.StatusOK))
-				Expect(response["data"]).ToNot(BeNil())
-				By(fmt.Sprintf("Inspecting the response data: %+v", response["data"]))
-				data, ok := response["data"].(map[string]any)
-				Expect(ok).To(BeTrue(), "Response data is not a map[string]any")
-
-				Expect(data).To(HaveKey("total_rules"))
-				Expect(data).To(HaveKey("processed_transactions"))
-				Expect(int(data["total_rules"].(float64))).To(Equal(0))
-				Expect(int(data["processed_transactions"].(float64))).To(Equal(0))
-				Expect(data["modified"]).To(SatisfyAny(BeNil(), BeEmpty()))
+				resp, _ := testUser3.MakeRequest(http.MethodPost, "/rule/execute", executeReq)
+				Expect(resp.StatusCode).To(Equal(http.StatusAccepted))
 			})
 
 			Context("with invalid requests or data", func() {
@@ -1717,37 +1689,28 @@ var _ = Describe("RuleController", func() {
 					Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
 				})
 
-				It("should process successfully but not modify anything for a non-existent rule_id", func() {
+				It("should accept the request for a non-existent rule_id", func() {
 					executeReq := models.ExecuteRulesRequest{
 						RuleIds: &[]int64{9999}, // This rule does not exist
 					}
-					resp, response := testUser1.MakeRequest(http.MethodPost, "/rule/execute", executeReq)
-					Expect(resp.StatusCode).To(Equal(http.StatusOK))
-					data := response["data"].(map[string]any)
-					Expect(int(data["total_rules"].(float64))).To(Equal(0))
-					Expect(data["modified"]).To(SatisfyAny(BeNil(), BeEmpty()))
+					resp, _ := testUser1.MakeRequest(http.MethodPost, "/rule/execute", executeReq)
+					Expect(resp.StatusCode).To(Equal(http.StatusAccepted))
 				})
 
-				It("should process successfully but not modify anything for a non-existent transaction_id", func() {
+				It("should accept the request for a non-existent transaction_id", func() {
 					executeReq := models.ExecuteRulesRequest{
 						TransactionIds: &[]int64{9999}, // This transaction does not exist
 					}
-					resp, response := testUser1.MakeRequest(http.MethodPost, "/rule/execute", executeReq)
-					Expect(resp.StatusCode).To(Equal(http.StatusOK))
-					data := response["data"].(map[string]any)
-					Expect(int(data["processed_transactions"].(float64))).To(Equal(0))
-					Expect(data["modified"]).To(SatisfyAny(BeNil(), BeEmpty()))
+					resp, _ := testUser1.MakeRequest(http.MethodPost, "/rule/execute", executeReq)
+					Expect(resp.StatusCode).To(Equal(http.StatusAccepted))
 				})
 
-				It("should not execute a rule that belongs to another user", func() {
+				It("should accept the request for a rule that belongs to another user", func() {
 					executeReq := models.ExecuteRulesRequest{
 						RuleIds: &[]int64{2},
 					}
-					resp, response := testUser2.MakeRequest(http.MethodPost, "/rule/execute", executeReq)
-					Expect(resp.StatusCode).To(Equal(http.StatusOK))
-					data := response["data"].(map[string]any)
-					Expect(int(data["total_rules"].(float64))).To(Equal(0)) // Rule should not be found for User 2
-					Expect(data["modified"]).To(SatisfyAny(BeNil(), BeEmpty()))
+					resp, _ := testUser2.MakeRequest(http.MethodPost, "/rule/execute", executeReq)
+					Expect(resp.StatusCode).To(Equal(http.StatusAccepted))
 				})
 
 				It("should not apply a rule action if the target category does not exist", func() {
@@ -1775,29 +1738,17 @@ var _ = Describe("RuleController", func() {
 					originalTxn := getTestTransaction(10, testUser1)
 					originalCategories := originalTxn["category_ids"].([]any)
 					executeReq := models.ExecuteRulesRequest{}
-					resp, response := testUser1.MakeRequest(http.MethodPost, "/rule/execute", executeReq)
-					Expect(resp.StatusCode).To(Equal(http.StatusOK))
-					data := response["data"].(map[string]any)
-					// The rule engine will process the rule, but since the action is invalid,
-					// it won't create a changeset. So, no modifications.
-					modified, ok := data["modified"].([]any)
-					Expect(ok).To(BeTrue())
+					resp, _ = testUser1.MakeRequest(http.MethodPost, "/rule/execute", executeReq)
+					Expect(resp.StatusCode).To(Equal(http.StatusAccepted))
 
-					// Find if transaction 10 was modified
-					var wasModified bool
-					for _, m := range modified {
-						mod := m.(map[string]any)
-						if int64(mod["transaction_id"].(float64)) == 10 {
-							wasModified = true
-							break
-						}
-					}
-					Expect(wasModified).To(BeFalse(), "Transaction 10 should not have been modified")
+					// Allow time for background processing
+					time.Sleep(200 * time.Millisecond)
 
-					// Verify transaction 10 in the database is unchanged
+					// Verify the transaction categories were not updated
 					updatedTxn := getTestTransaction(10, testUser1)
 					updatedCategories := updatedTxn["category_ids"].([]any)
 					Expect(updatedCategories).To(HaveLen(len(originalCategories)))
+
 				})
 
 				It("should return a 400 Bad Request for invalid data types in request", func() {

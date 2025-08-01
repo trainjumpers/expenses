@@ -7,6 +7,7 @@ import {
 } from "@/lib/api/rule";
 import { CreateRuleInput, Rule, UpdateRuleInput } from "@/lib/models/rule";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 export function useRules() {
   return useQuery<Rule[]>({
@@ -53,12 +54,14 @@ export function useUpdateRule() {
 }
 
 export function useExecuteRules() {
-  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (payload?: { transaction_ids?: number[] }) =>
       executeRules(payload),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      toast.success("Rule execution started in the background.");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to start rule execution.");
     },
   });
 }

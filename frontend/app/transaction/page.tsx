@@ -212,20 +212,7 @@ export default function TransactionPage() {
   const handleExecuteRulesClick = async () => {
     const transaction_ids =
       selectedRows.size > 0 ? Array.from(selectedRows) : undefined;
-    const promise = executeRulesMutation.mutateAsync({ transaction_ids });
-
-    toast.promise(promise, {
-      loading: "Executing rules...",
-      success: (data) => {
-        const { modified, processed_transactions } = data;
-        setSelectedRows(new Set());
-        if (modified && modified.length > 0) {
-          return `${modified.length} of ${processed_transactions} transactions modified.`;
-        }
-        return `Rules executed on ${processed_transactions} transactions. No changes made.`;
-      },
-      error: "Failed to execute rules.",
-    });
+    executeRulesMutation.mutate({ transaction_ids });
   };
 
   return (

@@ -33,12 +33,19 @@ func NewRuleEngineService(
 }
 
 func (s *ruleEngineService) ExecuteRules(c *gin.Context, userId int64, request models.ExecuteRulesRequest) (models.ExecuteRulesResponse, error) {
+	go s.executeRulesInBackground(c.Copy(), userId, request)
+	logger.Infof("Rule execution started in background for user %d", userId)
+	return models.ExecuteRulesResponse{}, nil
+}
+
+func (s *ruleEngineService) executeRulesInBackground(c *gin.Context, userId int64, request models.ExecuteRulesRequest) {
 	logger.Infof("Executing rules for user %d", userId)
 
 	// Step 1: Fetch all categories
 	categories, err := s.categoryRepo.ListCategories(c, userId)
 	if err != nil {
-		return models.ExecuteRulesResponse{}, fmt.Errorf("failed to fetch categories: %w", err)
+		logger.Errorf("Rule execution for user %d failed to fetch categories: %v", userId, err)
+		return
 	}
 
 	// Step 2: Fetch rules - use specific rules if provided, otherwise fetch all
@@ -49,11 +56,13 @@ func (s *ruleEngineService) ExecuteRules(c *gin.Context, userId int64, request m
 		rules, err = s.fetchAllUserRules(c, userId)
 	}
 	if err != nil {
-		return models.ExecuteRulesResponse{}, fmt.Errorf("failed to fetch rules: %w", err)
+		logger.Errorf("Rule execution for user %d failed to fetch rules: %v", userId, err)
+		return
 	}
 
 	if len(rules) == 0 {
-		return models.ExecuteRulesResponse{TotalRules: 0, ProcessedTxns: 0}, nil
+		logger.Infof("No rules found for user %d, skipping execution.", userId)
+		return
 	}
 
 	// Create rule engine with categories and rules
@@ -71,7 +80,8 @@ func (s *ruleEngineService) ExecuteRules(c *gin.Context, userId int64, request m
 	if request.TransactionIds != nil && len(*request.TransactionIds) > 0 {
 		transactions, err := s.fetchSpecificTransactions(c, userId, *request.TransactionIds)
 		if err != nil {
-			return models.ExecuteRulesResponse{}, fmt.Errorf("failed to fetch specific transactions: %w", err)
+			logger.Errorf("Rule execution for user %d failed to fetch specific transactions: %v", userId, err)
+			return
 		}
 
 		changesets := s.processTransactions(engine, transactions)
@@ -82,7 +92,8 @@ func (s *ruleEngineService) ExecuteRules(c *gin.Context, userId int64, request m
 		for {
 			transactions, err := s.fetchTransactionPage(c, userId, page, pageSize)
 			if err != nil {
-				return models.ExecuteRulesResponse{}, fmt.Errorf("failed to fetch transactions page %d: %w", page, err)
+				logger.Errorf("Rule execution for user %d failed to fetch transactions page %d: %v", userId, page, err)
+				return
 			}
 
 			if len(transactions) == 0 {
@@ -103,19 +114,14 @@ func (s *ruleEngineService) ExecuteRules(c *gin.Context, userId int64, request m
 	// Step 4: Apply changesets
 	modified, err := s.applyChangesets(c, userId, allChangesets)
 	if err != nil {
-		return models.ExecuteRulesResponse{}, fmt.Errorf("failed to apply changesets: %w", err)
+		logger.Errorf("Rule execution for user %d failed to apply changesets: %v", userId, err)
+		return
 	}
 
-	response := models.ExecuteRulesResponse{
-		Modified:      modified,
-		Skipped:       []models.SkippedResult{},
-		TotalRules:    len(rules),
-		ProcessedTxns: totalProcessed,
-	}
+
 
 	logger.Infof("Rule execution completed for user %d: %d modified, %d total processed",
 		userId, len(modified), totalProcessed)
-	return response, nil
 }
 
 func (s *ruleEngineService) buildRuleResponse(c *gin.Context, rule models.RuleResponse) (*models.DescribeRuleResponse, error) {
