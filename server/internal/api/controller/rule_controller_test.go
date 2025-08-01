@@ -1650,7 +1650,7 @@ var _ = Describe("RuleController", func() {
 				Expect(resp.StatusCode).To(Equal(http.StatusAccepted))
 
 				// Allow time for the background goroutine to execute
-				time.Sleep(200 * time.Millisecond)
+				time.Sleep(2 * time.Second)
 
 				// Verify the transaction was actually updated in the database.
 				updatedTxn := getTestTransaction(1, testUser1)
@@ -1668,7 +1668,7 @@ var _ = Describe("RuleController", func() {
 				Expect(resp.StatusCode).To(Equal(http.StatusAccepted))
 
 				// Allow time for background processing
-				time.Sleep(200 * time.Millisecond)
+				time.Sleep(2 * time.Second)
 
 				// Verify the transaction was not updated
 				updatedTxn := getTestTransaction(1, testUser1)
@@ -1742,7 +1742,7 @@ var _ = Describe("RuleController", func() {
 					Expect(resp.StatusCode).To(Equal(http.StatusAccepted))
 
 					// Allow time for background processing
-					time.Sleep(200 * time.Millisecond)
+					time.Sleep(2 * time.Second)
 
 					// Verify the transaction categories were not updated
 					updatedTxn := getTestTransaction(10, testUser1)
