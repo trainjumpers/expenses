@@ -671,7 +671,7 @@ var _ = Describe("RuleController", func() {
 	Describe("ListRules", func() {
 		It("should return an empty list when there are no rules", func() {
 			// Use a fresh user/token with no rules
-			resp, response := testUser2.MakeRequest(http.MethodGet, "/rule", nil)
+			resp, response := testUser3.MakeRequest(http.MethodGet, "/rule", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["message"]).To(Equal("Rules fetched successfully"))
 			Expect(response["data"]).To(BeAssignableToTypeOf([]any{}))
