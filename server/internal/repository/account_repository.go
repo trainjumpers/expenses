@@ -100,6 +100,9 @@ func (r *AccountRepository) DeleteAccount(c *gin.Context, accountId int64, userI
 		r.schema, r.tableName)
 	rowsAffected, err := r.db.ExecuteQuery(c, query, accountId, userId)
 	if err != nil {
+		if customErrors.CheckForeignKey(err, "fk_transaction_account_id") {
+			return customErrors.NewAccountHasTransactionsError(err)
+		}
 		return err
 	}
 	if rowsAffected == 0 {

@@ -4,6 +4,7 @@ import (
 	"expenses/internal/models"
 	"net/http"
 	"strconv"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -372,6 +373,41 @@ var _ = Describe("AccountController", func() {
 			url := "/account/99999"
 			resp, _ := testUser1.MakeRequest(http.MethodDelete, url, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
+		})
+
+		It("should return 409 conflict when trying to delete account with transactions", func() {
+			// First create an account
+			input := models.CreateAccountInput{
+				Name:     "Account with Transactions",
+				BankType: models.BankTypeAxis,
+				Currency: models.CurrencyINR,
+			}
+			resp, response := testUser2.MakeRequest(http.MethodPost, "/account", input)
+			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+			accountId := int64(response["data"].(map[string]any)["id"].(float64))
+
+			// Create a transaction for this account
+			amount := 100.50
+			transactionDate, _ := time.Parse("2006-01-02", "2024-01-15")
+			transactionInput := models.CreateBaseTransactionInput{
+				Name:      "Test Transaction",
+				Amount:    &amount,
+				Date:      transactionDate,
+				AccountId: accountId,
+			}
+			resp, _ = testUser2.MakeRequest(http.MethodPost, "/transaction", transactionInput)
+			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+
+			// Now try to delete the account - should fail with 409 conflict
+			url := "/account/" + strconv.FormatInt(accountId, 10)
+			resp, response = testUser2.MakeRequest(http.MethodDelete, url, nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusConflict))
+			Expect(response["message"]).To(Equal("cannot delete account with existing transactions"))
+
+			// Verify account still exists
+			resp, response = testUser2.MakeRequest(http.MethodGet, url, nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			Expect(response["message"]).To(Equal("Account retrieved successfully"))
 		})
 	})
 

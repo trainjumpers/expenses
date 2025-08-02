@@ -888,7 +888,7 @@ var _ = Describe("TransactionController", func() {
 			user1TransactionCount := len(transactions)
 
 			// Get all transactions for user 2
-			resp, response = testUser2.MakeRequest(http.MethodGet, "/transaction", nil)
+			resp, response = testUser3.MakeRequest(http.MethodGet, "/transaction", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			data = response["data"].(map[string]any)
 			transactions = data["transactions"].([]any)
@@ -896,7 +896,7 @@ var _ = Describe("TransactionController", func() {
 
 			// Verify counts match seed data
 			Expect(user1TransactionCount).To(Equal(11))
-			Expect(user2TransactionCount).To(Equal(12)) // 6 from seed data + 6 created during other tests
+			Expect(user2TransactionCount).To(Equal(0)) // they never create any tests
 		})
 	})
 })

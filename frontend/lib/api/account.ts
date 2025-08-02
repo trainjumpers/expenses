@@ -1,6 +1,7 @@
 import { apiRequest } from "@/lib/api/request";
 import { API_BASE_URL } from "@/lib/constants/api";
 import { Account, CreateAccountInput } from "@/lib/models/account";
+import { toast } from "sonner";
 
 export async function listAccounts(signal?: AbortSignal): Promise<Account[]> {
   return apiRequest<Account[]>(
@@ -61,6 +62,21 @@ export async function updateAccount(
 }
 
 export async function deleteAccount(id: number): Promise<void> {
+  const customErrorHandlers = [
+    (response: Response, data: unknown) => {
+      if (response.status === 409) {
+        const errorData = data as { message?: string };
+        if (errorData.message?.includes("existing transactions")) {
+          toast.error("Cannot delete account with existing transactions", {
+            duration: 2000,
+          });
+          return true;
+        }
+      }
+      return false;
+    },
+  ];
+
   return apiRequest<void>(
     `${API_BASE_URL}/account/${id}`,
     {
@@ -68,7 +84,7 @@ export async function deleteAccount(id: number): Promise<void> {
       credentials: "include",
     },
     "account",
-    [],
+    customErrorHandlers,
     "Failed to delete account"
   );
 }

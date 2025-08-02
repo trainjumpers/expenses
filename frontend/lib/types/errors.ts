@@ -56,7 +56,16 @@ export interface NotFoundError extends HttpError {
   status: 404;
   data?: {
     message?: string;
-    resource?: string;
+    error?: string;
+  };
+}
+
+// Conflict Error (409 responses)
+export interface ConflictError extends HttpError {
+  status: 409;
+  data?: {
+    message?: string;
+    error?: string;
   };
 }
 
@@ -79,6 +88,7 @@ export type ApiErrorType =
   | AuthError
   | ForbiddenError
   | NotFoundError
+  | ConflictError
   | ServerError;
 
 // Type guard functions
@@ -104,6 +114,10 @@ export function isForbiddenError(error: unknown): error is ForbiddenError {
 
 export function isNotFoundError(error: unknown): error is NotFoundError {
   return isHttpError(error) && error.status === 404;
+}
+
+export function isConflictError(error: unknown): error is ConflictError {
+  return isHttpError(error) && error.status === 409;
 }
 
 export function isServerError(error: unknown): error is ServerError {
