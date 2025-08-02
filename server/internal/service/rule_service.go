@@ -1,14 +1,14 @@
 package service
 
 import (
-	database "expenses/internal/database/manager"
+	"context"
 	"expenses/internal/models"
 	"expenses/internal/repository"
 	"expenses/internal/validator"
+	database "expenses/pkg/database/manager"
 	"expenses/pkg/logger"
 
 	"github.com/gin-gonic/gin"
-	"github.com/jackc/pgx/v5"
 )
 
 type RuleServiceInterface interface {
@@ -44,7 +44,7 @@ func (s *ruleService) CreateRule(c *gin.Context, ruleReq models.CreateRuleReques
 		return ruleResponse, err
 	}
 
-	err := s.db.WithTxn(c, func(tx pgx.Tx) error {
+	err := s.db.WithTxn(c, func(ctx context.Context) error {
 		rule, err := s.ruleRepo.CreateRule(c, ruleReq.Rule)
 		if err != nil {
 			return err
@@ -161,7 +161,7 @@ func (s *ruleService) UpdateRuleCondition(c *gin.Context, id int64, ruleId int64
 
 func (s *ruleService) DeleteRule(c *gin.Context, id int64, userId int64) error {
 	logger.Debugf("Deleting rule %d for user %d", id, userId)
-	err := s.db.WithTxn(c, func(tx pgx.Tx) error {
+	err := s.db.WithTxn(c, func(ctx context.Context) error {
 		err := s.ruleRepo.DeleteRuleActionsByRuleId(c, id)
 		if err != nil {
 			return err

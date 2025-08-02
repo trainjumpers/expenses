@@ -1,16 +1,16 @@
 package service
 
 import (
-	database "expenses/internal/database/manager"
+	"context"
 	customErrors "expenses/internal/errors"
 	"expenses/internal/models"
 	"expenses/internal/repository"
+	database "expenses/pkg/database/manager"
 	"expenses/pkg/utils"
 	"fmt"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/jackc/pgx/v5"
 )
 
 type TransactionServiceInterface interface {
@@ -62,7 +62,7 @@ func (s *TransactionService) UpdateTransaction(c *gin.Context, transactionId int
 	}
 
 	var transaction models.TransactionResponse
-	err := s.db.WithTxn(c, func(tx pgx.Tx) error {
+	err := s.db.WithTxn(c, func(ctx context.Context) error {
 		// Update base transaction if there are fields to update
 		var baseInput models.UpdateBaseTransactionInput
 		utils.ConvertStruct(&input, &baseInput)

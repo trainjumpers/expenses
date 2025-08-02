@@ -1,12 +1,13 @@
 package repository
 
 import (
+	"context"
 	"errors"
 	"expenses/internal/config"
 	"expenses/internal/database/helper"
-	database "expenses/internal/database/manager"
 	customErrors "expenses/internal/errors"
 	"expenses/internal/models"
+	database "expenses/pkg/database/manager"
 	"fmt"
 	"strings"
 
@@ -132,22 +133,22 @@ func (r *CategoryRepository) UpdateCategory(c *gin.Context, categoryId int64, us
 
 func (r *CategoryRepository) DeleteCategory(c *gin.Context, categoryId int64, userId int64) error {
 	// Use a transaction to first delete mappings, then delete the category
-	return r.db.WithTxn(c, func(tx pgx.Tx) error {
+	return r.db.WithTxn(c, func(ctx context.Context) error {
 		// Delete all transaction-category mappings for this category
 		deleteMappingsQuery := fmt.Sprintf(`DELETE FROM %s.transaction_category_mapping WHERE category_id = $1;`, r.schema)
-		_, err := tx.Exec(c, deleteMappingsQuery, categoryId)
+		_, err := r.db.ExecuteQuery(ctx, deleteMappingsQuery, categoryId)
 		if err != nil {
 			return err
 		}
 
 		// Now delete the category itself
 		deleteCategoryQuery := fmt.Sprintf(`DELETE FROM %s.%s WHERE id = $1 AND created_by = $2;`, r.schema, r.tableName)
-		result, err := tx.Exec(c, deleteCategoryQuery, categoryId, userId)
+		rowsAffected, err := r.db.ExecuteQuery(ctx, deleteCategoryQuery, categoryId, userId)
 		if err != nil {
 			return err
 		}
 
-		if result.RowsAffected() == 0 {
+		if rowsAffected == 0 {
 			return customErrors.NewCategoryNotFoundError(fmt.Errorf("category with id %d not found", categoryId))
 		}
 

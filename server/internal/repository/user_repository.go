@@ -4,9 +4,9 @@ import (
 	"errors"
 	"expenses/internal/config"
 	"expenses/internal/database/helper"
-	database "expenses/internal/database/manager"
 	commonErrors "expenses/internal/errors"
 	"expenses/internal/models"
+	database "expenses/pkg/database/manager"
 	"fmt"
 	"strings"
 
@@ -68,7 +68,7 @@ func (u *UserRepository) GetUserByEmailWithPassword(c *gin.Context, email string
 		return models.UserWithPassword{}, err
 	}
 	query := fmt.Sprintf(`
-		SELECT %s FROM %s.%s 
+		SELECT %s FROM %s.%s
 		WHERE email = $1 AND deleted_at IS NULL;`,
 		strings.Join(dbFields, ", "), u.schema, u.tableName)
 	err = u.db.FetchOne(c, query, email).Scan(ptrs...)
@@ -116,8 +116,8 @@ func (u *UserRepository) GetUserById(c *gin.Context, userId int64) (models.UserR
 		return models.UserResponse{}, err
 	}
 	query := fmt.Sprintf(`
-		SELECT %s 
-		FROM %s.%s 
+		SELECT %s
+		FROM %s.%s
 		WHERE id = $1 AND deleted_at IS NULL;`,
 		strings.Join(dbFields, ", "), u.schema, u.tableName)
 	err = u.db.FetchOne(c, query, userId).Scan(ptrs...)
@@ -137,8 +137,8 @@ returns: nil
 */
 func (u *UserRepository) DeleteUser(c *gin.Context, userId int64) error {
 	query := fmt.Sprintf(`
-	UPDATE %s.%s 
-	SET deleted_at = NOW() 
+	UPDATE %s.%s
+	SET deleted_at = NOW()
 	WHERE id = $1 AND deleted_at IS NULL;
 	`, u.schema, u.tableName)
 
@@ -172,7 +172,7 @@ func (u *UserRepository) UpdateUser(c *gin.Context, userId int64, updatedUser mo
 	}
 
 	query := fmt.Sprintf(`
-		UPDATE %s.%s SET %s 
+		UPDATE %s.%s SET %s
 		WHERE id = $%d AND deleted_at IS NULL %s;`,
 		u.schema, u.tableName, fieldsClause, argIndex, "RETURNING "+strings.Join(dbFields, ", "))
 

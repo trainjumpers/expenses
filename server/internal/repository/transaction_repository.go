@@ -1,12 +1,13 @@
 package repository
 
 import (
+	"context"
 	"errors"
 	"expenses/internal/config"
 	"expenses/internal/database/helper"
-	database "expenses/internal/database/manager"
 	customErrors "expenses/internal/errors"
 	"expenses/internal/models"
+	database "expenses/pkg/database/manager"
 	"fmt"
 	"strings"
 
@@ -50,12 +51,12 @@ func (r *TransactionRepository) CreateTransaction(c *gin.Context, transactionInp
 	var transactionResponse models.TransactionResponse
 	var transaction models.TransactionBaseResponse
 
-	err := r.db.WithTxn(c, func(tx pgx.Tx) error {
+	err := r.db.WithTxn(c, func(ctx context.Context) error {
 		query, values, ptrs, err := helper.CreateInsertQuery(&transactionInput, &transaction, r.tableName, r.schema)
 		if err != nil {
 			return err
 		}
-		err = tx.QueryRow(c, query, values...).Scan(ptrs...)
+		err = r.db.FetchOne(ctx, query, values...).Scan(ptrs...)
 		if err != nil {
 			if customErrors.CheckForeignKey(err, "idx_transaction_unique_composite") {
 				return customErrors.NewTransactionAlreadyExistsError(err)
@@ -63,7 +64,7 @@ func (r *TransactionRepository) CreateTransaction(c *gin.Context, transactionInp
 			return err
 		}
 
-		if err := r.addMappings(c, tx, transaction.Id, categoryIds); err != nil {
+		if err := r.addMappings(ctx, transaction.Id, categoryIds); err != nil {
 			return err
 		}
 
@@ -81,8 +82,8 @@ func (r *TransactionRepository) CreateTransaction(c *gin.Context, transactionInp
 	return transactionResponse, nil
 }
 
-func (r *TransactionRepository) addMappings(c *gin.Context, tx pgx.Tx, transactionId int64, categoryIds []int64) error {
-	if err := r.updateMapping(c, tx, r.transactionCategoryMappingTable, "transaction_id", "category_id", transactionId, categoryIds); err != nil {
+func (r *TransactionRepository) addMappings(ctx context.Context, transactionId int64, categoryIds []int64) error {
+	if err := r.updateMapping(ctx, r.transactionCategoryMappingTable, "transaction_id", "category_id", transactionId, categoryIds); err != nil {
 		if customErrors.CheckForeignKey(err, "fk_category") {
 			return customErrors.NewCategoryNotFoundError(err)
 		}
@@ -161,9 +162,9 @@ func (r *TransactionRepository) DeleteTransaction(c *gin.Context, transactionId 
 	return nil
 }
 
-func (r *TransactionRepository) updateMapping(c *gin.Context, tx pgx.Tx, mappingTable, transactionColumn, idColumn string, transactionId int64, ids []int64) error {
+func (r *TransactionRepository) updateMapping(ctx context.Context, mappingTable, transactionColumn, idColumn string, transactionId int64, ids []int64) error {
 	// Clear existing mappings
-	_, err := tx.Exec(c, fmt.Sprintf(`DELETE FROM %s.%s WHERE %s = $1;`, r.schema, mappingTable, transactionColumn), transactionId)
+	_, err := r.db.ExecuteQuery(ctx, fmt.Sprintf(`DELETE FROM %s.%s WHERE %s = $1;`, r.schema, mappingTable, transactionColumn), transactionId)
 	if err != nil {
 		return err
 	}
@@ -172,18 +173,10 @@ func (r *TransactionRepository) updateMapping(c *gin.Context, tx pgx.Tx, mapping
 		return nil
 	}
 
-	// Prepare the insert statement
+	// Insert new mappings one by one (since we can't use batch with the current interface)
 	query := fmt.Sprintf(`INSERT INTO %s.%s (%s, %s) VALUES ($1, $2) ON CONFLICT DO NOTHING;`, r.schema, mappingTable, idColumn, transactionColumn)
-	batch := &pgx.Batch{}
 	for _, id := range ids {
-		batch.Queue(query, id, transactionId)
-	}
-
-	results := tx.SendBatch(c, batch)
-	defer results.Close()
-
-	for i := 0; i < len(ids); i++ {
-		_, err := results.Exec()
+		_, err := r.db.ExecuteQuery(ctx, query, id, transactionId)
 		if err != nil {
 			return err
 		}
@@ -193,8 +186,8 @@ func (r *TransactionRepository) updateMapping(c *gin.Context, tx pgx.Tx, mapping
 }
 
 func (r *TransactionRepository) UpdateCategoryMapping(c *gin.Context, transactionId int64, userId int64, categoryIds []int64) error {
-	err := r.db.WithTxn(c, func(tx pgx.Tx) error {
-		return r.updateMapping(c, tx, r.transactionCategoryMappingTable, "transaction_id", "category_id", transactionId, categoryIds)
+	err := r.db.WithTxn(c, func(ctx context.Context) error {
+		return r.updateMapping(ctx, r.transactionCategoryMappingTable, "transaction_id", "category_id", transactionId, categoryIds)
 	})
 
 	if err != nil {

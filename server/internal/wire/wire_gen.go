@@ -10,10 +10,10 @@ import (
 	"expenses/internal/api"
 	"expenses/internal/api/controller"
 	"expenses/internal/config"
-	"expenses/internal/database/manager"
 	"expenses/internal/repository"
 	"expenses/internal/service"
 	"expenses/internal/validator"
+	"expenses/pkg/database/manager"
 	"github.com/gin-gonic/gin"
 	"github.com/google/wire"
 )
@@ -25,27 +25,27 @@ func InitializeApplication() (*Provider, error) {
 	if err != nil {
 		return nil, err
 	}
-	databaseManager, err := database.NewDatabaseManager(configConfig)
+	v, err := manager.NewDatabaseManager(configConfig)
 	if err != nil {
 		return nil, err
 	}
-	userRepositoryInterface := repository.NewUserRepository(databaseManager, configConfig)
+	userRepositoryInterface := repository.NewUserRepository(v, configConfig)
 	userServiceInterface := service.NewUserService(userRepositoryInterface)
 	authServiceInterface := service.NewAuthService(userServiceInterface, configConfig)
-	accountRepositoryInterface := repository.NewAccountRepository(databaseManager, configConfig)
+	accountRepositoryInterface := repository.NewAccountRepository(v, configConfig)
 	accountServiceInterface := service.NewAccountService(accountRepositoryInterface)
-	categoryRepositoryInterface := repository.NewCategoryRepository(databaseManager, configConfig)
+	categoryRepositoryInterface := repository.NewCategoryRepository(v, configConfig)
 	categoryServiceInterface := service.NewCategoryService(categoryRepositoryInterface)
-	transactionRepositoryInterface := repository.NewTransactionRepository(databaseManager, configConfig)
-	transactionServiceInterface := service.NewTransactionService(transactionRepositoryInterface, categoryRepositoryInterface, accountRepositoryInterface, databaseManager)
-	ruleRepositoryInterface := repository.NewRuleRepository(databaseManager, configConfig)
-	ruleServiceInterface := service.NewRuleService(ruleRepositoryInterface, transactionRepositoryInterface, databaseManager)
+	transactionRepositoryInterface := repository.NewTransactionRepository(v, configConfig)
+	transactionServiceInterface := service.NewTransactionService(transactionRepositoryInterface, categoryRepositoryInterface, accountRepositoryInterface, v)
+	ruleRepositoryInterface := repository.NewRuleRepository(v, configConfig)
+	ruleServiceInterface := service.NewRuleService(ruleRepositoryInterface, transactionRepositoryInterface, v)
 	ruleEngineServiceInterface := service.NewRuleEngineService(ruleRepositoryInterface, transactionRepositoryInterface, categoryRepositoryInterface)
-	statementRepositoryInterface := repository.NewStatementRepository(databaseManager, configConfig)
+	statementRepositoryInterface := repository.NewStatementRepository(v, configConfig)
 	statementValidator := validator.NewStatementValidator()
 	statementServiceInterface := service.NewStatementService(statementRepositoryInterface, accountServiceInterface, statementValidator, transactionServiceInterface)
 	engine := api.Init(configConfig, authServiceInterface, userServiceInterface, accountServiceInterface, categoryServiceInterface, transactionServiceInterface, ruleServiceInterface, ruleEngineServiceInterface, statementServiceInterface)
-	provider := NewProvider(engine, databaseManager)
+	provider := NewProvider(engine, v)
 	return provider, nil
 }
 
@@ -53,7 +53,7 @@ func InitializeApplication() (*Provider, error) {
 
 type Provider struct {
 	Handler   *gin.Engine
-	dbManager database.DatabaseManager
+	dbManager manager.DatabaseManager
 }
 
 // Close all connections app makes in various places
@@ -61,7 +61,7 @@ func (p *Provider) Close() error {
 	return p.dbManager.Close()
 }
 
-func NewProvider(handler *gin.Engine, dbManager database.DatabaseManager) *Provider {
+func NewProvider(handler *gin.Engine, dbManager manager.DatabaseManager) *Provider {
 	return &Provider{
 		Handler:   handler,
 		dbManager: dbManager,
@@ -69,16 +69,16 @@ func NewProvider(handler *gin.Engine, dbManager database.DatabaseManager) *Provi
 }
 
 var ProviderSet = wire.NewSet(
-	NewProvider, database.NewDatabaseManager, config.NewConfig, api.Init, controllerSet,
+	NewProvider, manager.NewDatabaseManager, config.NewConfig, api.Init, controllerSet,
 	repositorySet,
 	serviceSet,
 	validatorSet,
 )
 
-var controllerSet = wire.NewSet(controller.NewAuthController, controller.NewStatementController)
+var controllerSet = wire.NewSet(controller.NewAccountController, controller.NewAuthController, controller.NewCategoryController, controller.NewRuleController, controller.NewStatementController, controller.NewTransactionController)
 
-var repositorySet = wire.NewSet(repository.NewUserRepository, repository.NewAccountRepository, repository.NewCategoryRepository, repository.NewTransactionRepository, repository.NewRuleRepository, repository.NewStatementRepository)
+var repositorySet = wire.NewSet(repository.NewAccountRepository, repository.NewCategoryRepository, repository.NewRuleRepository, repository.NewStatementRepository, repository.NewTransactionRepository, repository.NewUserRepository)
 
-var serviceSet = wire.NewSet(service.NewUserService, service.NewAuthService, service.NewAccountService, service.NewCategoryService, service.NewTransactionService, service.NewRuleService, service.NewRuleEngineService, service.NewStatementService)
+var serviceSet = wire.NewSet(service.NewAccountService, service.NewAuthService, service.NewCategoryService, service.NewRuleEngineService, service.NewRuleService, service.NewStatementService, service.NewTransactionService, service.NewUserService)
 
 var validatorSet = wire.NewSet(validator.NewStatementValidator)

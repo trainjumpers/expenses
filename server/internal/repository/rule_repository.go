@@ -4,9 +4,9 @@ import (
 	"errors"
 	"expenses/internal/config"
 	"expenses/internal/database/helper"
-	database "expenses/internal/database/manager"
 	errorsPkg "expenses/internal/errors"
 	"expenses/internal/models"
+	database "expenses/pkg/database/manager"
 	"fmt"
 	"strings"
 
@@ -312,8 +312,8 @@ func (r *RuleRepository) DeleteRule(c *gin.Context, id int64, userId int64) erro
 
 func (r *RuleRepository) CreateRuleTransactionMapping(c *gin.Context, ruleId int64, transactionId int64) error {
 	query := fmt.Sprintf(`
-		INSERT INTO %s.%s (rule_id, transaction_id) 
-		VALUES ($1, $2) 
+		INSERT INTO %s.%s (rule_id, transaction_id)
+		VALUES ($1, $2)
 		ON CONFLICT (rule_id, transaction_id) DO NOTHING
 	`, r.schema, r.ruleTransactionMappingTable)
 
