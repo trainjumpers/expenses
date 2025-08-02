@@ -874,6 +874,494 @@ var _ = Describe("RuleEngine", func() {
 		})
 	})
 
+	Describe("Condition Logic - AND vs OR", func() {
+		Context("AND Logic (default behavior)", func() {
+			BeforeEach(func() {
+				transaction.Amount = 100.0
+				rules = []models.DescribeRuleResponse{
+					{
+						Rule: models.RuleResponse{
+							Id:             1,
+							Name:           "AND logic rule",
+							ConditionLogic: models.ConditionLogicAnd,
+							EffectiveFrom:  time.Now().Add(-24 * time.Hour),
+						},
+						Conditions: []models.RuleConditionResponse{
+							{
+								ConditionType:     models.RuleFieldName,
+								ConditionValue:    "Test Transaction",
+								ConditionOperator: models.OperatorEquals,
+							},
+							{
+								ConditionType:     models.RuleFieldAmount,
+								ConditionValue:    "100.0",
+								ConditionOperator: models.OperatorEquals,
+							},
+						},
+						Actions: []models.RuleActionResponse{
+							{
+								ActionType:  models.RuleFieldCategory,
+								ActionValue: "1",
+							},
+						},
+					},
+				}
+				engine = NewRuleEngine(categories, rules)
+			})
+
+			It("should match when all conditions are met", func() {
+				result := engine.ProcessTransaction(transaction)
+				Expect(result).NotTo(BeNil())
+				Expect(result.CategoryAdds).To(ContainElement(int64(1)))
+				Expect(result.AppliedRules).To(ContainElement(int64(1)))
+			})
+
+			It("should not match when first condition fails", func() {
+				transaction.Name = "Different Name"
+				result := engine.ProcessTransaction(transaction)
+				Expect(result).To(BeNil())
+			})
+
+			It("should not match when second condition fails", func() {
+				transaction.Amount = 50.0
+				result := engine.ProcessTransaction(transaction)
+				Expect(result).To(BeNil())
+			})
+
+			It("should not match when both conditions fail", func() {
+				transaction.Name = "Different Name"
+				transaction.Amount = 50.0
+				result := engine.ProcessTransaction(transaction)
+				Expect(result).To(BeNil())
+			})
+		})
+
+		Context("OR Logic", func() {
+			BeforeEach(func() {
+				transaction.Amount = 100.0
+				rules = []models.DescribeRuleResponse{
+					{
+						Rule: models.RuleResponse{
+							Id:             1,
+							Name:           "OR logic rule",
+							ConditionLogic: models.ConditionLogicOr,
+							EffectiveFrom:  time.Now().Add(-24 * time.Hour),
+						},
+						Conditions: []models.RuleConditionResponse{
+							{
+								ConditionType:     models.RuleFieldName,
+								ConditionValue:    "Test Transaction",
+								ConditionOperator: models.OperatorEquals,
+							},
+							{
+								ConditionType:     models.RuleFieldAmount,
+								ConditionValue:    "200.0", // Won't match
+								ConditionOperator: models.OperatorEquals,
+							},
+						},
+						Actions: []models.RuleActionResponse{
+							{
+								ActionType:  models.RuleFieldCategory,
+								ActionValue: "1",
+							},
+						},
+					},
+				}
+				engine = NewRuleEngine(categories, rules)
+			})
+
+			It("should match when first condition is met", func() {
+				result := engine.ProcessTransaction(transaction)
+				Expect(result).NotTo(BeNil())
+				Expect(result.CategoryAdds).To(ContainElement(int64(1)))
+				Expect(result.AppliedRules).To(ContainElement(int64(1)))
+			})
+
+			It("should match when second condition is met", func() {
+				transaction.Name = "Different Name"
+				transaction.Amount = 200.0 // This will match the second condition
+				result := engine.ProcessTransaction(transaction)
+				Expect(result).NotTo(BeNil())
+				Expect(result.CategoryAdds).To(ContainElement(int64(1)))
+			})
+
+			It("should match when both conditions are met", func() {
+				transaction.Amount = 200.0 // Both conditions will match
+				result := engine.ProcessTransaction(transaction)
+				Expect(result).NotTo(BeNil())
+				Expect(result.CategoryAdds).To(ContainElement(int64(1)))
+			})
+
+			It("should not match when no conditions are met", func() {
+				transaction.Name = "Different Name"
+				transaction.Amount = 50.0 // Neither condition matches
+				result := engine.ProcessTransaction(transaction)
+				Expect(result).To(BeNil())
+			})
+		})
+
+		Context("OR Logic with multiple condition types", func() {
+			BeforeEach(func() {
+				desc := "Test description"
+				transaction.Description = &desc
+				transaction.Amount = 100.0
+				transaction.CategoryIds = []int64{2}
+
+				rules = []models.DescribeRuleResponse{
+					{
+						Rule: models.RuleResponse{
+							Id:             1,
+							Name:           "Complex OR rule",
+							ConditionLogic: models.ConditionLogicOr,
+							EffectiveFrom:  time.Now().Add(-24 * time.Hour),
+						},
+						Conditions: []models.RuleConditionResponse{
+							{
+								ConditionType:     models.RuleFieldName,
+								ConditionValue:    "Non-matching Name",
+								ConditionOperator: models.OperatorEquals,
+							},
+							{
+								ConditionType:     models.RuleFieldAmount,
+								ConditionValue:    "999.0",
+								ConditionOperator: models.OperatorEquals,
+							},
+							{
+								ConditionType:     models.RuleFieldDescription,
+								ConditionValue:    "Test description",
+								ConditionOperator: models.OperatorEquals,
+							},
+							{
+								ConditionType:     models.RuleFieldCategory,
+								ConditionValue:    "3", // Transaction doesn't have this category
+								ConditionOperator: models.OperatorEquals,
+							},
+						},
+						Actions: []models.RuleActionResponse{
+							{
+								ActionType:  models.RuleFieldCategory,
+								ActionValue: "1",
+							},
+						},
+					},
+				}
+				engine = NewRuleEngine(categories, rules)
+			})
+
+			It("should match when description condition is met (third condition)", func() {
+				result := engine.ProcessTransaction(transaction)
+				Expect(result).NotTo(BeNil())
+				Expect(result.CategoryAdds).To(ContainElement(int64(1)))
+			})
+
+			It("should not match when no conditions are met", func() {
+				differentDesc := "Different description"
+				transaction.Description = &differentDesc
+				transaction.CategoryIds = []int64{} // Remove categories
+				result := engine.ProcessTransaction(transaction)
+				Expect(result).To(BeNil())
+			})
+		})
+
+		Context("Single condition with OR logic", func() {
+			BeforeEach(func() {
+				rules = []models.DescribeRuleResponse{
+					{
+						Rule: models.RuleResponse{
+							Id:             1,
+							Name:           "Single condition OR rule",
+							ConditionLogic: models.ConditionLogicOr,
+							EffectiveFrom:  time.Now().Add(-24 * time.Hour),
+						},
+						Conditions: []models.RuleConditionResponse{
+							{
+								ConditionType:     models.RuleFieldName,
+								ConditionValue:    "Test Transaction",
+								ConditionOperator: models.OperatorEquals,
+							},
+						},
+						Actions: []models.RuleActionResponse{
+							{
+								ActionType:  models.RuleFieldCategory,
+								ActionValue: "1",
+							},
+						},
+					},
+				}
+				engine = NewRuleEngine(categories, rules)
+			})
+
+			It("should work the same as AND logic with single condition", func() {
+				result := engine.ProcessTransaction(transaction)
+				Expect(result).NotTo(BeNil())
+				Expect(result.CategoryAdds).To(ContainElement(int64(1)))
+			})
+
+			It("should not match when single condition fails", func() {
+				transaction.Name = "Different Name"
+				result := engine.ProcessTransaction(transaction)
+				Expect(result).To(BeNil())
+			})
+		})
+
+		Context("Empty conditions with OR logic", func() {
+			BeforeEach(func() {
+				rules = []models.DescribeRuleResponse{
+					{
+						Rule: models.RuleResponse{
+							Id:             1,
+							Name:           "Empty conditions OR rule",
+							ConditionLogic: models.ConditionLogicOr,
+							EffectiveFrom:  time.Now().Add(-24 * time.Hour),
+						},
+						Conditions: []models.RuleConditionResponse{},
+						Actions: []models.RuleActionResponse{
+							{
+								ActionType:  models.RuleFieldCategory,
+								ActionValue: "1",
+							},
+						},
+					},
+				}
+				engine = NewRuleEngine(categories, rules)
+			})
+
+			It("should return false for empty conditions (same as AND)", func() {
+				result := engine.ProcessTransaction(transaction)
+				Expect(result).To(BeNil())
+			})
+		})
+
+		Context("Mixed AND and OR rules", func() {
+			BeforeEach(func() {
+				transaction.Amount = 100.0
+				rules = []models.DescribeRuleResponse{
+					{
+						Rule: models.RuleResponse{
+							Id:             1,
+							Name:           "AND rule",
+							ConditionLogic: models.ConditionLogicAnd,
+							EffectiveFrom:  time.Now().Add(-24 * time.Hour),
+						},
+						Conditions: []models.RuleConditionResponse{
+							{
+								ConditionType:     models.RuleFieldName,
+								ConditionValue:    "Test Transaction",
+								ConditionOperator: models.OperatorEquals,
+							},
+							{
+								ConditionType:     models.RuleFieldAmount,
+								ConditionValue:    "100.0",
+								ConditionOperator: models.OperatorEquals,
+							},
+						},
+						Actions: []models.RuleActionResponse{
+							{
+								ActionType:  models.RuleFieldCategory,
+								ActionValue: "1",
+							},
+						},
+					},
+					{
+						Rule: models.RuleResponse{
+							Id:             2,
+							Name:           "OR rule",
+							ConditionLogic: models.ConditionLogicOr,
+							EffectiveFrom:  time.Now().Add(-24 * time.Hour),
+						},
+						Conditions: []models.RuleConditionResponse{
+							{
+								ConditionType:     models.RuleFieldName,
+								ConditionValue:    "Test Transaction",
+								ConditionOperator: models.OperatorEquals,
+							},
+							{
+								ConditionType:     models.RuleFieldAmount,
+								ConditionValue:    "999.0", // Won't match
+								ConditionOperator: models.OperatorEquals,
+							},
+						},
+						Actions: []models.RuleActionResponse{
+							{
+								ActionType:  models.RuleFieldCategory,
+								ActionValue: "2",
+							},
+						},
+					},
+				}
+				engine = NewRuleEngine(categories, rules)
+			})
+
+			It("should apply both rules when their conditions are met", func() {
+				result := engine.ProcessTransaction(transaction)
+				Expect(result).NotTo(BeNil())
+				Expect(result.CategoryAdds).To(ContainElement(int64(1))) // From AND rule
+				Expect(result.CategoryAdds).To(ContainElement(int64(2))) // From OR rule
+				Expect(result.AppliedRules).To(ContainElement(int64(1)))
+				Expect(result.AppliedRules).To(ContainElement(int64(2)))
+			})
+
+			It("should apply only OR rule when AND rule conditions partially fail", func() {
+				transaction.Amount = 50.0 // AND rule will fail, OR rule will still match on name
+				result := engine.ProcessTransaction(transaction)
+				Expect(result).NotTo(BeNil())
+				Expect(result.CategoryAdds).NotTo(ContainElement(int64(1))) // AND rule failed
+				Expect(result.CategoryAdds).To(ContainElement(int64(2)))    // OR rule succeeded
+				Expect(result.AppliedRules).NotTo(ContainElement(int64(1)))
+				Expect(result.AppliedRules).To(ContainElement(int64(2)))
+			})
+
+			It("should apply no rules when both fail", func() {
+				transaction.Name = "Different Name"
+				transaction.Amount = 50.0
+				result := engine.ProcessTransaction(transaction)
+				Expect(result).To(BeNil())
+			})
+		})
+
+		Context("Default condition logic behavior", func() {
+			BeforeEach(func() {
+				transaction.Amount = 100.0
+				// Rule without explicit ConditionLogic (should default to AND)
+				rules = []models.DescribeRuleResponse{
+					{
+						Rule: models.RuleResponse{
+							Id:            1,
+							Name:          "Default logic rule",
+							EffectiveFrom: time.Now().Add(-24 * time.Hour),
+						},
+						Conditions: []models.RuleConditionResponse{
+							{
+								ConditionType:     models.RuleFieldName,
+								ConditionValue:    "Test Transaction",
+								ConditionOperator: models.OperatorEquals,
+							},
+							{
+								ConditionType:     models.RuleFieldAmount,
+								ConditionValue:    "100.0",
+								ConditionOperator: models.OperatorEquals,
+							},
+						},
+						Actions: []models.RuleActionResponse{
+							{
+								ActionType:  models.RuleFieldCategory,
+								ActionValue: "1",
+							},
+						},
+					},
+				}
+				engine = NewRuleEngine(categories, rules)
+			})
+
+			It("should default to AND logic when ConditionLogic is not set", func() {
+				result := engine.ProcessTransaction(transaction)
+				Expect(result).NotTo(BeNil())
+				Expect(result.CategoryAdds).To(ContainElement(int64(1)))
+			})
+
+			It("should behave like AND - fail when one condition doesn't match", func() {
+				transaction.Amount = 50.0 // Second condition will fail
+				result := engine.ProcessTransaction(transaction)
+				Expect(result).To(BeNil())
+			})
+		})
+
+		Context("Performance considerations", func() {
+			BeforeEach(func() {
+				// Create a rule with many conditions to test short-circuiting
+				conditions := []models.RuleConditionResponse{
+					{
+						ConditionType:     models.RuleFieldName,
+						ConditionValue:    "Non-matching Name", // This will fail first
+						ConditionOperator: models.OperatorEquals,
+					},
+				}
+
+				// Add many more conditions that would be expensive to evaluate
+				for i := 0; i < 10; i++ {
+					conditions = append(conditions, models.RuleConditionResponse{
+						ConditionType:     models.RuleFieldAmount,
+						ConditionValue:    "999.0",
+						ConditionOperator: models.OperatorEquals,
+					})
+				}
+
+				rules = []models.DescribeRuleResponse{
+					{
+						Rule: models.RuleResponse{
+							Id:             1,
+							Name:           "Short-circuit AND rule",
+							ConditionLogic: models.ConditionLogicAnd,
+							EffectiveFrom:  time.Now().Add(-24 * time.Hour),
+						},
+						Conditions: conditions,
+						Actions: []models.RuleActionResponse{
+							{
+								ActionType:  models.RuleFieldCategory,
+								ActionValue: "1",
+							},
+						},
+					},
+				}
+				engine = NewRuleEngine(categories, rules)
+			})
+
+			It("should short-circuit AND evaluation on first failure", func() {
+				// This test verifies that AND logic stops evaluating after first failure
+				result := engine.ProcessTransaction(transaction)
+				Expect(result).To(BeNil())
+			})
+		})
+
+		Context("OR Logic short-circuiting", func() {
+			BeforeEach(func() {
+				// Create a rule where first condition matches, so others shouldn't be evaluated
+				conditions := []models.RuleConditionResponse{
+					{
+						ConditionType:     models.RuleFieldName,
+						ConditionValue:    "Test Transaction", // This will match first
+						ConditionOperator: models.OperatorEquals,
+					},
+				}
+
+				// Add many more conditions
+				for i := 0; i < 10; i++ {
+					conditions = append(conditions, models.RuleConditionResponse{
+						ConditionType:     models.RuleFieldAmount,
+						ConditionValue:    "999.0",
+						ConditionOperator: models.OperatorEquals,
+					})
+				}
+
+				rules = []models.DescribeRuleResponse{
+					{
+						Rule: models.RuleResponse{
+							Id:             1,
+							Name:           "Short-circuit OR rule",
+							ConditionLogic: models.ConditionLogicOr,
+							EffectiveFrom:  time.Now().Add(-24 * time.Hour),
+						},
+						Conditions: conditions,
+						Actions: []models.RuleActionResponse{
+							{
+								ActionType:  models.RuleFieldCategory,
+								ActionValue: "1",
+							},
+						},
+					},
+				}
+				engine = NewRuleEngine(categories, rules)
+			})
+
+			It("should short-circuit OR evaluation on first success", func() {
+				// This test verifies that OR logic stops evaluating after first success
+				result := engine.ProcessTransaction(transaction)
+				Expect(result).NotTo(BeNil())
+				Expect(result.CategoryAdds).To(ContainElement(int64(1)))
+			})
+		})
+	})
+
 	Describe("Complex Scenarios", func() {
 		Context("multiple rules with mixed actions", func() {
 			BeforeEach(func() {

@@ -2,6 +2,7 @@ import { RuleInput } from "@/components/custom/Modal/Rule/components/RuleInput";
 import { Button } from "@/components/ui/button";
 import {
   BaseRuleCondition,
+  ConditionLogic,
   RULE_FIELD_TYPES,
   RULE_OPERATORS,
   RuleFieldType,
@@ -12,12 +13,16 @@ import { Plus, Trash2 } from "lucide-react";
 interface RuleConditionsProps {
   conditions: BaseRuleCondition[];
   onConditionsChange: (conditions: BaseRuleCondition[]) => void;
+  conditionLogic: ConditionLogic;
+  onConditionLogicChange: (logic: ConditionLogic) => void;
   disabled?: boolean;
 }
 
 export function RuleConditions({
   conditions,
   onConditionsChange,
+  conditionLogic,
+  onConditionLogicChange,
   disabled = false,
 }: RuleConditionsProps) {
   const handleAddCondition = () => {
@@ -49,13 +54,28 @@ export function RuleConditions({
   return (
     <div className="space-y-4">
       <h3 className="text-lg font-semibold">IF</h3>
-      <div className="space-y-3">
+      <div className="flex items-center gap-2 text-sm">
+        <span>Match</span>
+        <select
+          value={conditionLogic}
+          onChange={(e) =>
+            onConditionLogicChange(e.target.value as ConditionLogic)
+          }
+          disabled={disabled || conditions.length < 2}
+          className="px-2 py-1 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
+        >
+          <option value={ConditionLogic.AND}>All</option>
+          <option value={ConditionLogic.OR}>Any</option>
+        </select>
+        <span>of the following conditions:</span>
+      </div>
+      <div className="space-y-3 pl-4 border-l-2">
         {conditions.map((condition, idx) => (
           <div key={idx} className="space-y-3">
             {idx > 0 && (
               <div className="flex items-center">
                 <span className="text-sm font-medium text-muted-foreground bg-muted px-2 py-1 rounded">
-                  AND
+                  {conditionLogic}
                 </span>
               </div>
             )}
@@ -117,18 +137,18 @@ export function RuleConditions({
             </div>
           </div>
         ))}
-      </div>
-      <div className="flex items-center gap-4">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleAddCondition}
-          disabled={disabled}
-          className="text-muted-foreground hover:text-foreground"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Add condition
-        </Button>
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleAddCondition}
+            disabled={disabled}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add condition
+          </Button>
+        </div>
       </div>
     </div>
   );

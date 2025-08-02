@@ -31,6 +31,8 @@ func NewRuleEngine(categories []models.CategoryResponse, rules []models.Describe
 	}
 }
 
+// ProcessTransaction evaluates a transaction against all rules in the engine.
+// It returns a Changeset if any rule applies, otherwise it returns nil.
 func (e *RuleEngine) ProcessTransaction(transaction models.TransactionResponse) *Changeset {
 	changeset := &Changeset{
 		TransactionId: transaction.Id,
@@ -45,12 +47,11 @@ func (e *RuleEngine) ProcessTransaction(transaction models.TransactionResponse) 
 			continue
 		}
 
-		if !e.evaluateConditions(rule.Conditions, transaction) {
+		if !e.evaluateConditions(rule, transaction) {
 			continue
 		}
 
 		ruleApplied := false
-
 		for _, action := range rule.Actions {
 			switch action.ActionType {
 			case models.RuleFieldName:
@@ -95,20 +96,52 @@ func (e *RuleEngine) ProcessTransaction(transaction models.TransactionResponse) 
 	return changeset
 }
 
-func (e *RuleEngine) evaluateConditions(conditions []models.RuleConditionResponse, transaction models.TransactionResponse) bool {
-	if len(conditions) == 0 {
-		return false
+// evaluateConditions dispatches condition evaluation based on the rule's logic.
+func (e *RuleEngine) evaluateConditions(rule models.DescribeRuleResponse, transaction models.TransactionResponse) bool {
+	if len(rule.Conditions) == 0 {
+		return false // A rule must have at least one condition.
 	}
 
-	for _, condition := range conditions {
-		if !e.evaluateCondition(condition, transaction) {
-			return false
-		}
+	if rule.Rule.ConditionLogic == models.ConditionLogicOr {
+		return e.evaluateOrConditions(rule.Conditions, transaction)
 	}
-	return true
+
+	// Default to AND logic
+	return e.evaluateAndConditions(rule.Conditions, transaction)
 }
 
+// evaluateAndConditions checks if all conditions are met for a transaction.
+func (e *RuleEngine) evaluateAndConditions(conditions []models.RuleConditionResponse, transaction models.TransactionResponse) bool {
+	for _, condition := range conditions {
+		if !e.evaluateCondition(condition, transaction) {
+			return false // For AND, if any condition is false, the whole thing is false.
+		}
+	}
+	return true // If loop finishes, all conditions were met.
+}
+
+// evaluateOrConditions checks if at least one condition is met for a transaction.
+func (e *RuleEngine) evaluateOrConditions(conditions []models.RuleConditionResponse, transaction models.TransactionResponse) bool {
+	for _, condition := range conditions {
+		if e.evaluateCondition(condition, transaction) {
+			return true // For OR, if any condition is true, the whole thing is true.
+		}
+	}
+	return false // If loop finishes, no conditions were met.
+}
+
+// evaluateCondition dispatches the evaluation to the correct function based on the condition type.
 func (e *RuleEngine) evaluateCondition(condition models.RuleConditionResponse, transaction models.TransactionResponse) bool {
+	switch condition.ConditionType {
+	case models.RuleFieldCategory:
+		return e.evaluateCategoryCondition(condition, transaction.CategoryIds)
+	default:
+		return e.evaluateStandardFieldCondition(condition, transaction)
+	}
+}
+
+// evaluateStandardFieldCondition handles the evaluation for primitive transaction fields.
+func (e *RuleEngine) evaluateStandardFieldCondition(condition models.RuleConditionResponse, transaction models.TransactionResponse) bool {
 	switch condition.ConditionType {
 	case models.RuleFieldAmount:
 		return e.evaluateAmountCondition(condition, transaction.Amount)
@@ -120,8 +153,6 @@ func (e *RuleEngine) evaluateCondition(condition models.RuleConditionResponse, t
 			desc = *transaction.Description
 		}
 		return e.evaluateStringCondition(condition, desc)
-	case models.RuleFieldCategory:
-		return e.evaluateCategoryCondition(condition, transaction.CategoryIds)
 	}
 	return false
 }
