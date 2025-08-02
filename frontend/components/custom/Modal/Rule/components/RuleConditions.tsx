@@ -22,6 +22,7 @@ interface RuleConditionsProps {
   conditionLogic: ConditionLogic;
   onConditionLogicChange: (logic: ConditionLogic) => void;
   disabled?: boolean;
+  loading?: boolean;
 }
 
 export function RuleConditions({
@@ -30,6 +31,7 @@ export function RuleConditions({
   conditionLogic,
   onConditionLogicChange,
   disabled = false,
+  loading = false,
 }: RuleConditionsProps) {
   const handleAddCondition = () => {
     const newConditions = [
@@ -67,7 +69,7 @@ export function RuleConditions({
             <Button
               variant="outline"
               size="sm"
-              disabled={disabled || conditions.length < 2}
+              disabled={loading || conditions.length < 2}
               className="h-7 px-2 text-sm font-medium bg-background hover:bg-muted border-border"
             >
               {conditionLogic === ConditionLogic.AND ? "All" : "Any"}
@@ -102,7 +104,7 @@ export function RuleConditions({
                 onChange={(e) =>
                   handleConditionChange(idx, "condition_type", e.target.value)
                 }
-                disabled={disabled}
+                disabled={disabled || loading}
               >
                 {RULE_FIELD_TYPES.map((ft) => (
                   <option key={ft.value} value={ft.value}>
@@ -120,7 +122,7 @@ export function RuleConditions({
                     e.target.value
                   )
                 }
-                disabled={disabled}
+                disabled={disabled || loading}
               >
                 {RULE_OPERATORS.map((op) => (
                   <option key={op.value} value={op.value}>
@@ -139,13 +141,13 @@ export function RuleConditions({
                     ? "Enter amount"
                     : "Enter a value"
                 }
-                disabled={disabled}
+                disabled={disabled || loading}
               />
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => handleRemoveCondition(idx)}
-                disabled={disabled || conditions.length === 1}
+                disabled={disabled || loading || conditions.length === 1}
                 className="h-8 w-8 text-muted-foreground hover:text-destructive"
               >
                 <Trash2 className="h-4 w-4" />
@@ -158,7 +160,7 @@ export function RuleConditions({
             variant="ghost"
             size="sm"
             onClick={handleAddCondition}
-            disabled={disabled}
+            disabled={disabled || loading}
             className="text-muted-foreground hover:text-foreground"
           >
             <Plus className="h-4 w-4 mr-2" />
