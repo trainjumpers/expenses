@@ -382,7 +382,7 @@ var _ = Describe("AccountController", func() {
 				BankType: models.BankTypeAxis,
 				Currency: models.CurrencyINR,
 			}
-			resp, response := testUser1.MakeRequest(http.MethodPost, "/account", input)
+			resp, response := testUser2.MakeRequest(http.MethodPost, "/account", input)
 			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
 			accountId := int64(response["data"].(map[string]any)["id"].(float64))
 
@@ -395,17 +395,17 @@ var _ = Describe("AccountController", func() {
 				Date:      transactionDate,
 				AccountId: accountId,
 			}
-			resp, _ = testUser1.MakeRequest(http.MethodPost, "/transaction", transactionInput)
+			resp, _ = testUser2.MakeRequest(http.MethodPost, "/transaction", transactionInput)
 			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
 
 			// Now try to delete the account - should fail with 409 conflict
 			url := "/account/" + strconv.FormatInt(accountId, 10)
-			resp, response = testUser1.MakeRequest(http.MethodDelete, url, nil)
+			resp, response = testUser2.MakeRequest(http.MethodDelete, url, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusConflict))
 			Expect(response["message"]).To(Equal("cannot delete account with existing transactions"))
 
 			// Verify account still exists
-			resp, response = testUser1.MakeRequest(http.MethodGet, url, nil)
+			resp, response = testUser2.MakeRequest(http.MethodGet, url, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["message"]).To(Equal("Account retrieved successfully"))
 		})
