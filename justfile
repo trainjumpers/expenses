@@ -86,3 +86,9 @@ db-downgrade-reset reset=default_downgrade:
 [working-directory: 'frontend']
 @frontend:
     npm run dev
+    
+# Format all files
+@format:
+    cd server && go fmt ./...
+    cd server && go mod tidy
+    cd frontend && npm run format
