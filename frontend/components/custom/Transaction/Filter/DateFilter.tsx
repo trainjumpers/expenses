@@ -34,9 +34,12 @@ export const DateFilter: React.FC<DateFilterProps> = ({
               <Calendar className="w-4 h-4 ml-2 opacity-50" />
             </Button>
           </PopoverTrigger>
-          <PopoverContent align="start" className="p-0">
+          <PopoverContent align="center" side="bottom" className="p-0 w-fit">
             <DatePicker
               mode="single"
+              captionLayout="dropdown"
+              startMonth={new Date(1900, 0)}
+              endMonth={new Date(2030, 11)}
               selected={
                 filters.dateFrom ? new Date(filters.dateFrom) : undefined
               }
@@ -64,9 +67,12 @@ export const DateFilter: React.FC<DateFilterProps> = ({
               <Calendar className="w-4 h-4 ml-2 opacity-50" />
             </Button>
           </PopoverTrigger>
-          <PopoverContent align="start" className="p-0">
+          <PopoverContent align="center" side="bottom" className="p-0 w-fit">
             <DatePicker
               mode="single"
+              captionLayout="dropdown"
+              startMonth={new Date(1900, 0)}
+              endMonth={new Date(2030, 11)}
               selected={filters.dateTo ? new Date(filters.dateTo) : undefined}
               onSelect={(date) => {
                 setFilters({
