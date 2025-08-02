@@ -67,10 +67,9 @@ export async function deleteAccount(id: number): Promise<void> {
       if (response.status === 409) {
         const errorData = data as { message?: string };
         if (errorData.message?.includes("existing transactions")) {
-          toast.error(
-            "Cannot delete account with existing transactions",
-            { duration: 2000 }
-          );
+          toast.error("Cannot delete account with existing transactions", {
+            duration: 2000,
+          });
           return true;
         }
       }
