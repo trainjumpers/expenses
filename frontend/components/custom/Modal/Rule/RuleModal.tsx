@@ -248,7 +248,8 @@ export function RuleModal({
               onConditionsChange={setConditions}
               conditionLogic={conditionLogic}
               onConditionLogicChange={setConditionLogic}
-              disabled={loading || mode === "edit"}
+              disabled={mode === "edit"}
+              loading={loading}
             />
 
             <RuleActions

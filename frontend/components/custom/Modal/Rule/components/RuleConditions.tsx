@@ -1,6 +1,12 @@
 import { RuleInput } from "@/components/custom/Modal/Rule/components/RuleInput";
 import { Button } from "@/components/ui/button";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   BaseRuleCondition,
   ConditionLogic,
   RULE_FIELD_TYPES,
@@ -8,7 +14,7 @@ import {
   RuleFieldType,
   RuleOperator,
 } from "@/lib/models/rule";
-import { Plus, Trash2 } from "lucide-react";
+import { CheckCircle, Circle, Plus, Trash2 } from "lucide-react";
 
 interface RuleConditionsProps {
   conditions: BaseRuleCondition[];
@@ -16,6 +22,7 @@ interface RuleConditionsProps {
   conditionLogic: ConditionLogic;
   onConditionLogicChange: (logic: ConditionLogic) => void;
   disabled?: boolean;
+  loading?: boolean;
 }
 
 export function RuleConditions({
@@ -24,6 +31,7 @@ export function RuleConditions({
   conditionLogic,
   onConditionLogicChange,
   disabled = false,
+  loading = false,
 }: RuleConditionsProps) {
   const handleAddCondition = () => {
     const newConditions = [
@@ -56,29 +64,39 @@ export function RuleConditions({
       <h3 className="text-lg font-semibold">IF</h3>
       <div className="flex items-center gap-2 text-sm">
         <span>Match</span>
-        <select
-          value={conditionLogic}
-          onChange={(e) =>
-            onConditionLogicChange(e.target.value as ConditionLogic)
-          }
-          disabled={disabled || conditions.length < 2}
-          className="px-2 py-1 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
-        >
-          <option value={ConditionLogic.AND}>All</option>
-          <option value={ConditionLogic.OR}>Any</option>
-        </select>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={loading || conditions.length < 2}
+              className="h-7 px-2 text-sm font-medium bg-background hover:bg-muted border-border"
+            >
+              {conditionLogic === ConditionLogic.AND ? "All" : "Any"}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-24">
+            <DropdownMenuItem
+              onClick={() => onConditionLogicChange(ConditionLogic.AND)}
+              className="justify-start text-sm"
+            >
+              <CheckCircle className="h-4 w-4 mr-2" />
+              All
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => onConditionLogicChange(ConditionLogic.OR)}
+              className="justify-start text-sm"
+            >
+              <Circle className="h-4 w-4 mr-2" />
+              Any
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
         <span>of the following conditions:</span>
       </div>
       <div className="space-y-3 pl-4 border-l-2">
         {conditions.map((condition, idx) => (
           <div key={idx} className="space-y-3">
-            {idx > 0 && (
-              <div className="flex items-center">
-                <span className="text-sm font-medium text-muted-foreground bg-muted px-2 py-1 rounded">
-                  {conditionLogic}
-                </span>
-              </div>
-            )}
             <div className="flex items-center gap-2">
               <select
                 className="px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ring min-w-[140px]"
@@ -86,7 +104,7 @@ export function RuleConditions({
                 onChange={(e) =>
                   handleConditionChange(idx, "condition_type", e.target.value)
                 }
-                disabled={disabled}
+                disabled={disabled || loading}
               >
                 {RULE_FIELD_TYPES.map((ft) => (
                   <option key={ft.value} value={ft.value}>
@@ -104,7 +122,7 @@ export function RuleConditions({
                     e.target.value
                   )
                 }
-                disabled={disabled}
+                disabled={disabled || loading}
               >
                 {RULE_OPERATORS.map((op) => (
                   <option key={op.value} value={op.value}>
@@ -123,13 +141,13 @@ export function RuleConditions({
                     ? "Enter amount"
                     : "Enter a value"
                 }
-                disabled={disabled}
+                disabled={disabled || loading}
               />
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => handleRemoveCondition(idx)}
-                disabled={disabled || conditions.length === 1}
+                disabled={disabled || loading || conditions.length === 1}
                 className="h-8 w-8 text-muted-foreground hover:text-destructive"
               >
                 <Trash2 className="h-4 w-4" />
@@ -142,7 +160,7 @@ export function RuleConditions({
             variant="ghost"
             size="sm"
             onClick={handleAddCondition}
-            disabled={disabled}
+            disabled={disabled || loading}
             className="text-muted-foreground hover:text-foreground"
           >
             <Plus className="h-4 w-4 mr-2" />
