@@ -1,3 +1,8 @@
+export enum ConditionLogic {
+  AND = "AND",
+  OR = "OR",
+}
+
 export type RuleFieldType = "amount" | "name" | "description" | "category";
 export type RuleOperator = "equals" | "contains" | "greater" | "lower";
 
@@ -18,6 +23,7 @@ export const RULE_OPERATORS: { label: string; value: RuleOperator }[] = [
 export interface BaseRule {
   name: string;
   description?: string;
+  condition_logic?: ConditionLogic;
   effective_from: string;
 }
 
@@ -49,6 +55,7 @@ export type UpdateRuleConditionInput = Partial<CreateRuleConditionInput>;
 export interface Rule extends BaseRule {
   id: number;
   created_by: number;
+  condition_logic: ConditionLogic;
 }
 
 export interface RuleAction extends BaseRuleAction {

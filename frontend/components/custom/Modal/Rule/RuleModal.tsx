@@ -13,14 +13,20 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { BaseRule, BaseRuleAction, BaseRuleCondition } from "@/lib/models/rule";
+import {
+  BaseRule,
+  BaseRuleAction,
+  BaseRuleCondition,
+  ConditionLogic,
+  Rule,
+} from "@/lib/models/rule";
 import { getEffectiveScopeAndDate } from "@/lib/utils/rule";
 import { useEffect, useState } from "react";
 
 type RuleModalMode = "add" | "edit";
 
 export interface RuleModalInitialData {
-  rule?: BaseRule;
+  rule?: Rule;
   conditions?: BaseRuleCondition[];
   actions?: BaseRuleAction[];
 }
@@ -59,6 +65,7 @@ export function RuleModal({
     initialData?.rule || {
       name: "",
       description: "",
+      condition_logic: ConditionLogic.AND,
       effective_from: new Date(0).toISOString(),
     }
   );
@@ -78,7 +85,9 @@ export function RuleModal({
       ? initialData.actions
       : [{ action_type: "category", action_value: "" }]
   );
-  // New state for effectiveScope and effectiveFromDate
+  const [conditionLogic, setConditionLogic] = useState<ConditionLogic>(
+    initialData?.rule?.condition_logic || ConditionLogic.AND
+  );
   const [effectiveScope, setEffectiveScope] = useState<"all" | "from">("all");
   const [effectiveFromDate, setEffectiveFromDate] = useState<Date | undefined>(
     undefined
@@ -92,6 +101,7 @@ export function RuleModal({
         initialData.rule || {
           name: "",
           description: "",
+          condition_logic: ConditionLogic.AND,
           effective_from: new Date(0).toISOString(),
         }
       );
@@ -111,7 +121,9 @@ export function RuleModal({
           ? initialData.actions
           : [{ action_type: "category", action_value: "" }]
       );
-      // Use helper for effectiveScope and effectiveFromDate
+      setConditionLogic(
+        initialData.rule?.condition_logic || ConditionLogic.AND
+      );
       const { effectiveScope, effectiveFromDate } = getEffectiveScopeAndDate(
         initialData.rule?.effective_from
       );
@@ -143,7 +155,6 @@ export function RuleModal({
       return;
     }
 
-    // Convert effectiveScope/effectiveFromDate to rule.effective_from
     let effective_from: string;
     if (effectiveScope === "from" && effectiveFromDate) {
       effective_from = effectiveFromDate.toISOString();
@@ -151,11 +162,11 @@ export function RuleModal({
       effective_from = new Date(0).toISOString();
     }
 
-    // Pass form data to parent handler
     await onSubmit({
       rule: {
         ...rule,
         effective_from,
+        condition_logic: conditionLogic,
       },
       conditions,
       actions,
@@ -164,16 +175,16 @@ export function RuleModal({
 
   // Reset form state
   const resetForm = () => {
-    setRule(
-      initialData?.rule || {
-        name: "",
-        description: "",
-        effective_from: new Date(0).toISOString(),
-      }
-    );
+    const defaultRule = {
+      name: "",
+      description: "",
+      condition_logic: ConditionLogic.AND,
+      effective_from: new Date(0).toISOString(),
+    };
+    setRule(initialData?.rule || defaultRule);
     setConditions(
       initialData?.conditions && initialData.conditions.length > 0
-        ? initialData?.conditions
+        ? initialData.conditions
         : [
             {
               condition_type: "name",
@@ -187,7 +198,7 @@ export function RuleModal({
         ? initialData.actions
         : [{ action_type: "category", action_value: "" }]
     );
-    // Use helper for effectiveScope and effectiveFromDate
+    setConditionLogic(initialData?.rule?.condition_logic || ConditionLogic.AND);
     const { effectiveScope, effectiveFromDate } = getEffectiveScopeAndDate(
       initialData?.rule?.effective_from
     );
@@ -224,18 +235,19 @@ export function RuleModal({
               disabled={loading}
             />
 
-            {/* Note: Deleting actions or conditions is not supported in edit mode */}
             {mode === "edit" && (
               <div className="text-xs text-muted-foreground mb-2">
                 <em>
-                  Deleting an action or condition is not supported. If you want
-                  to, then delete the rule and recreate it.
+                  Note: Deleting an action or condition is not supported. If you
+                  want to, please delete the rule and recreate it.
                 </em>
               </div>
             )}
             <RuleConditions
               conditions={conditions}
               onConditionsChange={setConditions}
+              conditionLogic={conditionLogic}
+              onConditionLogicChange={setConditionLogic}
               disabled={loading || mode === "edit"}
             />
 

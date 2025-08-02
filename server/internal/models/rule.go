@@ -6,6 +6,7 @@ import (
 
 type RuleFieldType string
 type RuleOperator string
+type ConditionLogic string
 
 const (
 	RuleFieldAmount      RuleFieldType = "amount"
@@ -21,11 +22,17 @@ const (
 	OperatorLower    RuleOperator = "lower"
 )
 
+const (
+	ConditionLogicAnd ConditionLogic = "AND"
+	ConditionLogicOr  ConditionLogic = "OR"
+)
+
 type CreateBaseRuleRequest struct {
-	Name          string    `json:"name" binding:"required,min=1,max=100"`
-	Description   *string   `json:"description,omitempty" binding:"omitempty,max=255"`
-	EffectiveFrom time.Time `json:"effective_from" binding:"required"`
-	CreatedBy     int64     `json:"created_by"`
+	Name           string          `json:"name" binding:"required,min=1,max=100"`
+	Description    *string         `json:"description,omitempty" binding:"omitempty,max=255"`
+	ConditionLogic *ConditionLogic `json:"condition_logic" binding:"omitempty,oneof=AND OR"`
+	EffectiveFrom  time.Time       `json:"effective_from" binding:"required"`
+	CreatedBy      int64           `json:"created_by"`
 }
 
 type CreateRuleRequest struct {
@@ -35,17 +42,19 @@ type CreateRuleRequest struct {
 }
 
 type UpdateRuleRequest struct {
-	Name          *string    `json:"name,omitempty" binding:"omitempty,max=100"`
-	Description   *string    `json:"description,omitempty" binding:"omitempty,max=255"`
-	EffectiveFrom *time.Time `json:"effective_from,omitempty"`
+	Name           *string         `json:"name,omitempty" binding:"omitempty,max=100"`
+	Description    *string         `json:"description,omitempty" binding:"omitempty,max=255"`
+	ConditionLogic *ConditionLogic `json:"condition_logic" binding:"omitempty,oneof=AND OR"`
+	EffectiveFrom  *time.Time      `json:"effective_from,omitempty"`
 }
 
 type RuleResponse struct {
-	Id            int64     `json:"id"`
-	Name          string    `json:"name"`
-	Description   *string   `json:"description"`
-	EffectiveFrom time.Time `json:"effective_from"`
-	CreatedBy     int64     `json:"created_by"`
+	Id             int64          `json:"id"`
+	Name           string         `json:"name"`
+	Description    *string        `json:"description"`
+	ConditionLogic ConditionLogic `json:"condition_logic"`
+	EffectiveFrom  time.Time      `json:"effective_from"`
+	CreatedBy      int64          `json:"created_by"`
 }
 
 type DescribeRuleResponse struct {

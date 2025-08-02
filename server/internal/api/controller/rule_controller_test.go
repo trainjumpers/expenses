@@ -20,6 +20,9 @@ var _ = Describe("RuleController", func() {
 	ptrToString := func(s string) *string { return &s }
 	now := time.Now()
 
+	conditionLogicAnd := models.ConditionLogicAnd
+	conditionLogicOr := models.ConditionLogicOr
+
 	// Helper to create a new rule and return its ID
 	createTestRule := func() (int64, int64, int64) {
 		input := models.CreateRuleRequest{
@@ -458,6 +461,141 @@ var _ = Describe("RuleController", func() {
 				resp, _ = testUser1.MakeRequest(http.MethodPost, "/rule", input)
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
+
+			It("should create rules with AND condition logic (explicit)", func() {
+				input := models.CreateRuleRequest{
+					Rule: models.CreateBaseRuleRequest{
+						Name:           "AND Logic Rule",
+						Description:    ptrToString("Testing AND logic"),
+						ConditionLogic: &conditionLogicAnd,
+						EffectiveFrom:  now,
+					},
+					Actions: []models.CreateRuleActionRequest{
+						{ActionType: models.RuleFieldCategory, ActionValue: "1"},
+					},
+					Conditions: []models.CreateRuleConditionRequest{
+						{ConditionType: models.RuleFieldName, ConditionValue: "Test", ConditionOperator: models.OperatorEquals},
+						{ConditionType: models.RuleFieldAmount, ConditionValue: "100", ConditionOperator: models.OperatorEquals},
+					},
+				}
+				resp, response := testUser1.MakeRequest(http.MethodPost, "/rule", input)
+				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+
+				rule := response["data"].(map[string]any)["rule"].(map[string]any)
+				Expect(rule["condition_logic"]).To(Equal("AND"))
+				Expect(rule["name"]).To(Equal("AND Logic Rule"))
+			})
+
+			It("should create rules with OR condition logic", func() {
+				input := models.CreateRuleRequest{
+					Rule: models.CreateBaseRuleRequest{
+						Name:           "OR Logic Rule",
+						Description:    ptrToString("Testing OR logic"),
+						ConditionLogic: &conditionLogicOr,
+						EffectiveFrom:  now,
+					},
+					Actions: []models.CreateRuleActionRequest{
+						{ActionType: models.RuleFieldCategory, ActionValue: "1"},
+					},
+					Conditions: []models.CreateRuleConditionRequest{
+						{ConditionType: models.RuleFieldName, ConditionValue: "Test", ConditionOperator: models.OperatorEquals},
+						{ConditionType: models.RuleFieldAmount, ConditionValue: "999", ConditionOperator: models.OperatorEquals},
+					},
+				}
+				resp, response := testUser1.MakeRequest(http.MethodPost, "/rule", input)
+				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+
+				rule := response["data"].(map[string]any)["rule"].(map[string]any)
+				Expect(rule["condition_logic"]).To(Equal("OR"))
+				Expect(rule["name"]).To(Equal("OR Logic Rule"))
+			})
+
+			It("should default to AND logic when condition_logic is not specified", func() {
+				input := models.CreateRuleRequest{
+					Rule: models.CreateBaseRuleRequest{
+						Name:          "Default Logic Rule",
+						Description:   ptrToString("Testing default logic"),
+						EffectiveFrom: now,
+						// ConditionLogic not specified - should default to AND
+					},
+					Actions: []models.CreateRuleActionRequest{
+						{ActionType: models.RuleFieldCategory, ActionValue: "1"},
+					},
+					Conditions: []models.CreateRuleConditionRequest{
+						{ConditionType: models.RuleFieldName, ConditionValue: "Test", ConditionOperator: models.OperatorEquals},
+					},
+				}
+				resp, response := testUser1.MakeRequest(http.MethodPost, "/rule", input)
+				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+
+				rule := response["data"].(map[string]any)["rule"].(map[string]any)
+				Expect(rule["condition_logic"]).To(Equal("AND"))
+			})
+
+			It("should handle single condition with OR logic", func() {
+				input := models.CreateRuleRequest{
+					Rule: models.CreateBaseRuleRequest{
+						Name:           "Single Condition OR Rule",
+						Description:    ptrToString("Single condition with OR logic"),
+						ConditionLogic: &conditionLogicOr,
+						EffectiveFrom:  now,
+					},
+					Actions: []models.CreateRuleActionRequest{
+						{ActionType: models.RuleFieldCategory, ActionValue: "1"},
+					},
+					Conditions: []models.CreateRuleConditionRequest{
+						{ConditionType: models.RuleFieldName, ConditionValue: "Test", ConditionOperator: models.OperatorEquals},
+					},
+				}
+				resp, response := testUser1.MakeRequest(http.MethodPost, "/rule", input)
+				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+
+				rule := response["data"].(map[string]any)["rule"].(map[string]any)
+				Expect(rule["condition_logic"]).To(Equal("OR"))
+			})
+
+			It("should handle multiple conditions with complex OR logic", func() {
+				input := models.CreateRuleRequest{
+					Rule: models.CreateBaseRuleRequest{
+						Name:           "Complex OR Rule",
+						Description:    ptrToString("Multiple conditions with OR logic"),
+						ConditionLogic: &conditionLogicOr,
+						EffectiveFrom:  now,
+					},
+					Actions: []models.CreateRuleActionRequest{
+						{ActionType: models.RuleFieldCategory, ActionValue: "1"},
+					},
+					Conditions: []models.CreateRuleConditionRequest{
+						{ConditionType: models.RuleFieldName, ConditionValue: "NonExistent", ConditionOperator: models.OperatorEquals},
+						{ConditionType: models.RuleFieldAmount, ConditionValue: "999", ConditionOperator: models.OperatorEquals},
+						{ConditionType: models.RuleFieldDescription, ConditionValue: "Test", ConditionOperator: models.OperatorContains},
+					},
+				}
+				resp, response := testUser1.MakeRequest(http.MethodPost, "/rule", input)
+				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+
+				rule := response["data"].(map[string]any)["rule"].(map[string]any)
+				Expect(rule["condition_logic"]).To(Equal("OR"))
+				conditions := response["data"].(map[string]any)["conditions"].([]any)
+				Expect(len(conditions)).To(Equal(3))
+			})
+
+			It("should reject invalid condition_logic values", func() {
+				invalidLogic := "INVALID"
+				jsonBody := fmt.Sprintf(`{
+					"rule": {
+						"name": "Invalid Logic Rule",
+						"description": "Testing invalid logic",
+						"condition_logic": "%s",
+						"effective_from": "%s"
+					},
+					"actions": [{"action_type": "category", "action_value": "1"}],
+					"conditions": [{"condition_type": "name", "condition_value": "Test", "condition_operator": "equals"}]
+				}`, invalidLogic, now.Format(time.RFC3339))
+
+				resp, _ := testUser1.MakeRequest(http.MethodPost, "/rule", jsonBody)
+				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+			})
 		})
 
 		// 3. Authentication edge cases
@@ -698,12 +836,75 @@ var _ = Describe("RuleController", func() {
 				if int64(rule["id"].(float64)) == ruleId1 || int64(rule["id"].(float64)) == ruleId2 {
 					Expect(rule).To(HaveKey("name"))
 					Expect(rule).To(HaveKey("description"))
+					Expect(rule).To(HaveKey("condition_logic"))
 					Expect(rule).To(HaveKey("effective_from"))
 					Expect(rule).To(HaveKey("created_by"))
+					Expect(rule["condition_logic"]).To(Equal("AND"))
 				}
 			}
 			Expect(found1).To(BeTrue())
 			Expect(found2).To(BeTrue())
+		})
+
+		It("should list rules with different condition_logic values", func() {
+			andRuleInput := models.CreateRuleRequest{
+				Rule: models.CreateBaseRuleRequest{
+					Name:           "AND Rule List Test",
+					Description:    ptrToString("Testing AND logic in list"),
+					ConditionLogic: &conditionLogicAnd,
+					EffectiveFrom:  now,
+				},
+				Actions: []models.CreateRuleActionRequest{
+					{ActionType: models.RuleFieldCategory, ActionValue: "1"},
+				},
+				Conditions: []models.CreateRuleConditionRequest{
+					{ConditionType: models.RuleFieldName, ConditionValue: "Test", ConditionOperator: models.OperatorEquals},
+				},
+			}
+			resp, andResponse := testUser1.MakeRequest(http.MethodPost, "/rule", andRuleInput)
+			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+			andRuleId := int64(andResponse["data"].(map[string]any)["rule"].(map[string]any)["id"].(float64))
+
+			orRuleInput := models.CreateRuleRequest{
+				Rule: models.CreateBaseRuleRequest{
+					Name:           "OR Rule List Test",
+					Description:    ptrToString("Testing OR logic in list"),
+					ConditionLogic: &conditionLogicOr,
+					EffectiveFrom:  now,
+				},
+				Actions: []models.CreateRuleActionRequest{
+					{ActionType: models.RuleFieldCategory, ActionValue: "1"},
+				},
+				Conditions: []models.CreateRuleConditionRequest{
+					{ConditionType: models.RuleFieldName, ConditionValue: "Test", ConditionOperator: models.OperatorEquals},
+				},
+			}
+			resp, orResponse := testUser1.MakeRequest(http.MethodPost, "/rule", orRuleInput)
+			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+			orRuleId := int64(orResponse["data"].(map[string]any)["rule"].(map[string]any)["id"].(float64))
+
+			// List all rules and verify condition_logic values
+			resp, response := testUser1.MakeRequest(http.MethodGet, "/rule", nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			data := response["data"].([]any)
+
+			var andRule, orRule map[string]any
+			for _, item := range data {
+				rule := item.(map[string]any)
+				ruleId := int64(rule["id"].(float64))
+				if ruleId == andRuleId {
+					andRule = rule
+				} else if ruleId == orRuleId {
+					orRule = rule
+				}
+			}
+
+			Expect(andRule).NotTo(BeNil())
+			Expect(orRule).NotTo(BeNil())
+			Expect(andRule["condition_logic"]).To(Equal("AND"))
+			Expect(orRule["condition_logic"]).To(Equal("OR"))
+			Expect(andRule["name"]).To(Equal("AND Rule List Test"))
+			Expect(orRule["name"]).To(Equal("OR Rule List Test"))
 		})
 
 		It("should not list rules created by another user", func() {
@@ -734,8 +935,10 @@ var _ = Describe("RuleController", func() {
 			Expect(int64(rule["id"].(float64))).To(Equal(ruleId))
 			Expect(rule).To(HaveKey("name"))
 			Expect(rule).To(HaveKey("description"))
+			Expect(rule).To(HaveKey("condition_logic"))
 			Expect(rule).To(HaveKey("effective_from"))
 			Expect(rule).To(HaveKey("created_by"))
+			Expect(rule["condition_logic"]).To(Equal("AND"))
 			Expect(response["data"]).To(HaveKey("actions"))
 			Expect(response["data"]).To(HaveKey("conditions"))
 			actions := response["data"].(map[string]any)["actions"].([]any)
@@ -747,6 +950,53 @@ var _ = Describe("RuleController", func() {
 			condition := conditions[0].(map[string]any)
 			Expect(int64(action["id"].(float64))).To(Equal(actionId))
 			Expect(int64(condition["id"].(float64))).To(Equal(conditionId))
+		})
+
+		It("should return correct condition_logic for OR rules", func() {
+			input := models.CreateRuleRequest{
+				Rule: models.CreateBaseRuleRequest{
+					Name:           "OR Logic Test Rule",
+					Description:    ptrToString("Testing OR logic retrieval"),
+					ConditionLogic: &conditionLogicOr,
+					EffectiveFrom:  now,
+				},
+				Actions: []models.CreateRuleActionRequest{
+					{ActionType: models.RuleFieldCategory, ActionValue: "1"},
+				},
+				Conditions: []models.CreateRuleConditionRequest{
+					{ConditionType: models.RuleFieldName, ConditionValue: "Test", ConditionOperator: models.OperatorEquals},
+					{ConditionType: models.RuleFieldAmount, ConditionValue: "100", ConditionOperator: models.OperatorEquals},
+				},
+			}
+			resp, response := testUser1.MakeRequest(http.MethodPost, "/rule", input)
+			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+
+			createdRule := response["data"].(map[string]any)["rule"].(map[string]any)
+			ruleId := int64(createdRule["id"].(float64))
+
+			url := "/rule/" + strconv.FormatInt(ruleId, 10)
+			resp, response = testUser1.MakeRequest(http.MethodGet, url, nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+			rule := response["data"].(map[string]any)["rule"].(map[string]any)
+			Expect(rule["condition_logic"]).To(Equal("OR"))
+			Expect(rule["name"]).To(Equal("OR Logic Test Rule"))
+		})
+
+		It("should return correct condition_logic after update", func() {
+			ruleId, _, _ := createTestRule()
+
+			update := models.UpdateRuleRequest{ConditionLogic: &conditionLogicOr}
+			updateUrl := "/rule/" + strconv.FormatInt(ruleId, 10)
+			resp, _ := testUser1.MakeRequest(http.MethodPatch, updateUrl, update)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+			getUrl := "/rule/" + strconv.FormatInt(ruleId, 10)
+			resp, response := testUser1.MakeRequest(http.MethodGet, getUrl, nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+			rule := response["data"].(map[string]any)["rule"].(map[string]any)
+			Expect(rule["condition_logic"]).To(Equal("OR"))
 		})
 
 		It("should return error for invalid rule id format", func() {
@@ -914,6 +1164,63 @@ var _ = Describe("RuleController", func() {
 			resp, response := testUser1.MakeRequest(http.MethodPatch, "/rule/999999", update)
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 			Expect(response["message"]).To(ContainSubstring("not found"))
+		})
+
+		It("should update condition_logic from AND to OR", func() {
+			update := models.UpdateRuleRequest{ConditionLogic: &conditionLogicOr}
+			url := "/rule/" + strconv.FormatInt(ruleId, 10)
+			resp, response := testUser1.MakeRequest(http.MethodPatch, url, update)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			Expect(response["message"]).To(Equal("Rule updated successfully"))
+			rule := response["data"].(map[string]any)
+			Expect(rule["condition_logic"]).To(Equal("OR"))
+		})
+
+		It("should update condition_logic from OR to AND", func() {
+			// First set it to OR
+			update := models.UpdateRuleRequest{ConditionLogic: &conditionLogicOr}
+			url := "/rule/" + strconv.FormatInt(ruleId, 10)
+			resp, _ := testUser1.MakeRequest(http.MethodPatch, url, update)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+			// Then update back to AND
+			update = models.UpdateRuleRequest{ConditionLogic: &conditionLogicAnd}
+			resp, response := testUser1.MakeRequest(http.MethodPatch, url, update)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			Expect(response["message"]).To(Equal("Rule updated successfully"))
+			rule := response["data"].(map[string]any)
+			Expect(rule["condition_logic"]).To(Equal("AND"))
+		})
+
+		It("should update condition_logic along with other fields", func() {
+			newName := "Updated Name and Logic"
+			newDesc := "Updated Description and Logic"
+			update := models.UpdateRuleRequest{
+				Name:           &newName,
+				Description:    &newDesc,
+				ConditionLogic: &conditionLogicOr,
+			}
+			url := "/rule/" + strconv.FormatInt(ruleId, 10)
+			resp, response := testUser1.MakeRequest(http.MethodPatch, url, update)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			Expect(response["message"]).To(Equal("Rule updated successfully"))
+			rule := response["data"].(map[string]any)
+			Expect(rule["name"]).To(Equal("Updated Name and Logic"))
+			Expect(rule["description"]).To(Equal("Updated Description and Logic"))
+			Expect(rule["condition_logic"]).To(Equal("OR"))
+		})
+
+		It("should reject invalid condition_logic values in update", func() {
+			// Test with invalid condition_logic value using raw JSON
+			invalidLogic := "INVALID"
+			jsonBody := fmt.Sprintf(`{
+				"name": "Updated Rule",
+				"condition_logic": "%s"
+			}`, invalidLogic)
+
+			url := "/rule/" + strconv.FormatInt(ruleId, 10)
+			resp, _ := testUser1.MakeRequest(http.MethodPatch, url, jsonBody)
+			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 		})
 
 		It("should return error for invalid JSON", func() {
