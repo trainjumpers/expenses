@@ -4,7 +4,7 @@ on:
     branches:
       - main
     paths:
-      - 'frontend/**'
+      - "frontend/**"
 
 permissions:
   contents: read
@@ -13,7 +13,7 @@ permissions:
 env:
   VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
   VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-  NEXT_PUBLIC_API_BASE_URL: ${{ secrets.BASE_API_URL }}
+  NEXT_PUBLIC_API_BASE_URL: ${{ vars.BASE_API_URL }}
 
 jobs:
   Deploy-Preview:

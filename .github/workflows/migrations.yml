@@ -1,0 +1,43 @@
+name: Run Migrations
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/migrations.yml"
+      - "server/internal/database/migrations/**"
+
+jobs:
+  migrate:
+    name: Run Migrations
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+          cache: true
+
+      - name: Setup just
+        uses: extractions/setup-just@v3
+
+      - name: Install dependencies
+        run: just install
+
+      - name: Run migrations
+        env:
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_NAME: ${{ vars.DB_NAME }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_PORT: ${{ vars.DB_PORT }}
+          DB_SSL_MODE: ${{ vars.DB_SSL_MODE }}
+          DB_SCHEMA: ${{ vars.DB_SCHEMA }}
+        run: just db-upgrade
