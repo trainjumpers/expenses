@@ -48,12 +48,7 @@ export function EditRuleModal({
       .then((data: DescribeRuleResponse) => {
         // Prepare initial data for RuleModal
         setInitialData({
-          rule: {
-            name: data.rule.name || "",
-            description: data.rule.description || "",
-            effective_from:
-              data.rule.effective_from || new Date().toISOString().slice(0, 10),
-          },
+          rule: data.rule,
           conditions: normalizeRuleConditions(
             data.conditions as BaseRuleCondition[],
             []
