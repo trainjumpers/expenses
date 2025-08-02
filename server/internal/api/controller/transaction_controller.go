@@ -24,6 +24,18 @@ func NewTransactionController(cfg *config.Config, transactionService service.Tra
 	}
 }
 
+// CreateTransaction creates a new transaction
+// @Summary Create a new transaction
+// @Description Create a new transaction for the authenticated user
+// @Tags transactions
+// @Accept json
+// @Produce json
+// @Security BasicAuth
+// @Param transaction body models.CreateTransactionInput true "Transaction data"
+// @Success 201 {object} models.TransactionResponse "Transaction created successfully"
+// @Failure 400 {object} map[string]interface{} "Bad request"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Router /transaction [post]
 func (t *TransactionController) CreateTransaction(ctx *gin.Context) {
 	var input models.CreateTransactionInput
 	if err := t.BindJSON(ctx, &input); err != nil {
@@ -42,6 +54,18 @@ func (t *TransactionController) CreateTransaction(ctx *gin.Context) {
 	t.SendSuccess(ctx, http.StatusCreated, "Transaction created successfully", transaction)
 }
 
+// GetTransaction retrieves a specific transaction
+// @Summary Get transaction by ID
+// @Description Get transaction details by transaction ID for the authenticated user
+// @Tags transactions
+// @Produce json
+// @Security BasicAuth
+// @Param transactionId path int true "Transaction ID"
+// @Success 200 {object} models.TransactionResponse "Transaction details"
+// @Failure 400 {object} map[string]interface{} "Bad request"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Failure 404 {object} map[string]interface{} "Transaction not found"
+// @Router /transaction/{transactionId} [get]
 func (t *TransactionController) GetTransaction(ctx *gin.Context) {
 	userId := t.GetAuthenticatedUserId(ctx)
 	logger.Infof("Fetching transaction details for user %d", userId)
@@ -63,6 +87,20 @@ func (t *TransactionController) GetTransaction(ctx *gin.Context) {
 	t.SendSuccess(ctx, http.StatusOK, "Transaction retrieved successfully", transaction)
 }
 
+// UpdateTransaction updates an existing transaction
+// @Summary Update transaction
+// @Description Update transaction details by transaction ID for the authenticated user
+// @Tags transactions
+// @Accept json
+// @Produce json
+// @Security BasicAuth
+// @Param transactionId path int true "Transaction ID"
+// @Param transaction body models.UpdateTransactionInput true "Updated transaction data"
+// @Success 200 {object} models.TransactionResponse "Transaction updated successfully"
+// @Failure 400 {object} map[string]interface{} "Bad request"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Failure 404 {object} map[string]interface{} "Transaction not found"
+// @Router /transaction/{transactionId} [patch]
 func (t *TransactionController) UpdateTransaction(ctx *gin.Context) {
 	userId := t.GetAuthenticatedUserId(ctx)
 	logger.Infof("Starting transaction update for user %d", userId)
@@ -90,6 +128,18 @@ func (t *TransactionController) UpdateTransaction(ctx *gin.Context) {
 	t.SendSuccess(ctx, http.StatusOK, "Transaction updated successfully", transaction)
 }
 
+// DeleteTransaction deletes a transaction
+// @Summary Delete transaction
+// @Description Delete transaction by transaction ID for the authenticated user
+// @Tags transactions
+// @Produce json
+// @Security BasicAuth
+// @Param transactionId path int true "Transaction ID"
+// @Success 204 "Transaction deleted successfully"
+// @Failure 400 {object} map[string]interface{} "Bad request"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Failure 404 {object} map[string]interface{} "Transaction not found"
+// @Router /transaction/{transactionId} [delete]
 func (t *TransactionController) DeleteTransaction(ctx *gin.Context) {
 	userId := t.GetAuthenticatedUserId(ctx)
 	logger.Infof("Starting transaction deletion for user %d", userId)
@@ -189,6 +239,29 @@ func (t *TransactionController) bindTransactionListQuery(ctx *gin.Context) model
 	}
 }
 
+// ListTransactions retrieves all transactions for the user with filtering
+// @Summary List transactions
+// @Description Get all transactions for the authenticated user with optional filtering and pagination
+// @Tags transactions
+// @Produce json
+// @Security BasicAuth
+// @Param page query int false "Page number" default(1)
+// @Param page_size query int false "Page size" default(15)
+// @Param sort_by query string false "Sort by field" default(date)
+// @Param sort_order query string false "Sort order (asc/desc)" default(desc)
+// @Param account_id query int false "Filter by account ID"
+// @Param category_id query int false "Filter by category ID"
+// @Param uncategorized query bool false "Filter uncategorized transactions"
+// @Param min_amount query number false "Minimum amount filter"
+// @Param max_amount query number false "Maximum amount filter"
+// @Param date_from query string false "Date from filter (YYYY-MM-DD)"
+// @Param date_to query string false "Date to filter (YYYY-MM-DD)"
+// @Param statement_id query int false "Filter by statement ID"
+// @Param search query string false "Search in transaction descriptions"
+// @Success 200 {object} models.PaginatedTransactionsResponse "List of transactions"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Router /transaction [get]
 func (t *TransactionController) ListTransactions(ctx *gin.Context) {
 	userId := t.GetAuthenticatedUserId(ctx)
 	logger.Infof("Fetching transactions for user %d", userId)
