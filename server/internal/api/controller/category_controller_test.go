@@ -469,7 +469,7 @@ var _ = Describe("CategoryController", func() {
 			updateInput.CategoryIds = &categoryIds
 
 			url := "/transaction/" + strconv.FormatInt(transactionId, 10)
-			resp, response = testUser1.MakeRequest(http.MethodPatch, url, updateInput)
+			resp, _ = testUser1.MakeRequest(http.MethodPatch, url, updateInput)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
 			// Now delete the category - should succeed despite having transaction mappings
@@ -553,7 +553,7 @@ var _ = Describe("CategoryController", func() {
 
 			// Verify transaction still has the category mapping intact
 			transactionUrl := "/transaction/" + strconv.FormatInt(transactionId, 10)
-			resp, response = testUser1.MakeRequest(http.MethodGet, transactionUrl, nil)
+			resp, _ = testUser1.MakeRequest(http.MethodGet, transactionUrl, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			responseCategoryIds = response["data"].(map[string]any)["category_ids"].([]any)
 			Expect(len(responseCategoryIds)).To(Equal(1))
