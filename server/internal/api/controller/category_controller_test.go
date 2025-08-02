@@ -4,6 +4,7 @@ import (
 	"expenses/internal/models"
 	"net/http"
 	"strconv"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -425,6 +426,138 @@ var _ = Describe("CategoryController", func() {
 			url := "/category/" + strconv.FormatInt(categoryId, 10)
 			resp, _ := testHelperUnauthenticated.MakeRequest(http.MethodDelete, url, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
+		})
+
+		It("should successfully delete category with transaction mappings", func() {
+			// First create an account
+			accountInput := models.CreateAccountInput{
+				Name:     "Account for Category Test",
+				BankType: models.BankTypeAxis,
+				Currency: models.CurrencyINR,
+			}
+			resp, response := testUser2.MakeRequest(http.MethodPost, "/account", accountInput)
+			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+			accountId := int64(response["data"].(map[string]any)["id"].(float64))
+
+			// Create a category
+			categoryInput := models.CreateCategoryInput{
+				Name: "Category with Transactions",
+				Icon: "test-icon",
+			}
+			resp, response = testUser2.MakeRequest(http.MethodPost, "/category", categoryInput)
+			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+			categoryId := int64(response["data"].(map[string]any)["id"].(float64))
+
+			// Create a transaction with this category
+			amount := 100.50
+			transactionDate, _ := time.Parse("2006-01-02", "2024-01-15")
+			transactionInput := models.CreateBaseTransactionInput{
+				Name:      "Test Transaction with Category",
+				Amount:    &amount,
+				Date:      transactionDate,
+				AccountId: accountId,
+			}
+			resp, response = testUser2.MakeRequest(http.MethodPost, "/transaction", transactionInput)
+			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+			transactionId := int64(response["data"].(map[string]any)["id"].(float64))
+
+			// Update the transaction to include the category (this creates the mapping)
+			updateInput := models.UpdateTransactionInput{
+				UpdateBaseTransactionInput: models.UpdateBaseTransactionInput{},
+			}
+			categoryIds := []int64{categoryId}
+			updateInput.CategoryIds = &categoryIds
+
+			url := "/transaction/" + strconv.FormatInt(transactionId, 10)
+			resp, _ = testUser2.MakeRequest(http.MethodPatch, url, updateInput)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+			// Now delete the category - should succeed despite having transaction mappings
+			categoryUrl := "/category/" + strconv.FormatInt(categoryId, 10)
+			resp, _ = testUser2.MakeRequest(http.MethodDelete, categoryUrl, nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
+
+			// Verify category is deleted
+			resp, _ = testUser2.MakeRequest(http.MethodGet, categoryUrl, nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
+
+			// Verify transaction still exists but without the category mapping
+			transactionUrl := "/transaction/" + strconv.FormatInt(transactionId, 10)
+			resp, response = testUser2.MakeRequest(http.MethodGet, transactionUrl, nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			responseCategoryIds := response["data"].(map[string]any)["category_ids"].([]any)
+			Expect(len(responseCategoryIds)).To(Equal(0)) // Should have no categories now
+		})
+
+		It("should not delete category with mappings when accessed by different user", func() {
+			// First create an account for user2
+			accountInput := models.CreateAccountInput{
+				Name:     "User2 Account for Category Test",
+				BankType: models.BankTypeAxis,
+				Currency: models.CurrencyINR,
+			}
+			resp, response := testUser2.MakeRequest(http.MethodPost, "/account", accountInput)
+			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+			accountId := int64(response["data"].(map[string]any)["id"].(float64))
+
+			// Create a category for user2
+			categoryInput := models.CreateCategoryInput{
+				Name: "User2 Category with Transactions",
+				Icon: "user2-icon",
+			}
+			resp, response = testUser2.MakeRequest(http.MethodPost, "/category", categoryInput)
+			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+			categoryId := int64(response["data"].(map[string]any)["id"].(float64))
+
+			// Create a transaction with this category for user2
+			amount := 150.75
+			transactionDate, _ := time.Parse("2006-01-02", "2024-01-20")
+			transactionInput := models.CreateBaseTransactionInput{
+				Name:      "User2 Transaction with Category",
+				Amount:    &amount,
+				Date:      transactionDate,
+				AccountId: accountId,
+			}
+			resp, response = testUser2.MakeRequest(http.MethodPost, "/transaction", transactionInput)
+			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+			transactionId := int64(response["data"].(map[string]any)["id"].(float64))
+
+			// Update the transaction to include the category (this creates the mapping)
+			updateInput := models.UpdateTransactionInput{
+				UpdateBaseTransactionInput: models.UpdateBaseTransactionInput{},
+			}
+			categoryIds := []int64{categoryId}
+			updateInput.CategoryIds = &categoryIds
+
+			url := "/transaction/" + strconv.FormatInt(transactionId, 10)
+			resp, _ = testUser2.MakeRequest(http.MethodPatch, url, updateInput)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+			// Verify the category mapping was created
+			resp, response = testUser2.MakeRequest(http.MethodGet, url, nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			responseCategoryIds := response["data"].(map[string]any)["category_ids"].([]any)
+			Expect(len(responseCategoryIds)).To(Equal(1))
+			Expect(responseCategoryIds[0]).To(Equal(float64(categoryId)))
+
+			// Now try to delete the category as user3 - should fail with 404
+			categoryUrl := "/category/" + strconv.FormatInt(categoryId, 10)
+			resp, response = testUser3.MakeRequest(http.MethodDelete, categoryUrl, nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
+			Expect(response["message"]).To(Equal("category not found"))
+
+			// Verify category still exists for user2
+			resp, response = testUser2.MakeRequest(http.MethodGet, categoryUrl, nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			Expect(response["data"].(map[string]any)["name"]).To(Equal("User2 Category with Transactions"))
+
+			// Verify transaction still has the category mapping intact
+			transactionUrl := "/transaction/" + strconv.FormatInt(transactionId, 10)
+			resp, response = testUser2.MakeRequest(http.MethodGet, transactionUrl, nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			responseCategoryIds = response["data"].(map[string]any)["category_ids"].([]any)
+			Expect(len(responseCategoryIds)).To(Equal(1))
+			Expect(responseCategoryIds[0]).To(Equal(float64(categoryId)))
 		})
 	})
 })
