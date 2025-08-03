@@ -25,6 +25,15 @@ func NewUserController(cfg *config.Config, userService service.UserServiceInterf
 }
 
 // GetUserById returns a user by Id
+// @Summary Get current user
+// @Description Get the authenticated user's profile information
+// @Tags users
+// @Produce json
+// @Security BasicAuth
+// @Success 200 {object} models.UserResponse "User profile"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Failure 404 {object} map[string]interface{} "User not found"
+// @Router /user [get]
 func (u *UserController) GetUserById(ctx *gin.Context) {
 	userId := u.GetAuthenticatedUserId(ctx)
 	logger.Infof("Fetching user details for Id %d", userId)
@@ -41,6 +50,15 @@ func (u *UserController) GetUserById(ctx *gin.Context) {
 }
 
 // DeleteUser deletes a user by Id
+// @Summary Delete current user
+// @Description Delete the authenticated user's account
+// @Tags users
+// @Produce json
+// @Security BasicAuth
+// @Success 204 "User deleted successfully"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Router /user [delete]
 func (u *UserController) DeleteUser(ctx *gin.Context) {
 	userId := u.GetAuthenticatedUserId(ctx)
 	logger.Infof("Starting user deletion for Id %d", userId)
@@ -57,6 +75,18 @@ func (u *UserController) DeleteUser(ctx *gin.Context) {
 }
 
 // UpdateUser updates a user by Id
+// @Summary Update current user
+// @Description Update the authenticated user's profile information
+// @Tags users
+// @Accept json
+// @Produce json
+// @Security BasicAuth
+// @Param user body models.UpdateUserInput true "Updated user data"
+// @Success 200 {object} models.UserResponse "User updated successfully"
+// @Failure 400 {object} map[string]interface{} "Bad request"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Router /user [patch]
 func (u *UserController) UpdateUser(ctx *gin.Context) {
 	userId := u.GetAuthenticatedUserId(ctx)
 	var updatedUser models.UpdateUserInput
@@ -75,7 +105,19 @@ func (u *UserController) UpdateUser(ctx *gin.Context) {
 	u.SendSuccess(ctx, http.StatusOK, "User updated successfully", user)
 }
 
-// Update User Password
+// UpdateUserPassword updates user password
+// @Summary Update user password
+// @Description Update the authenticated user's password
+// @Tags users
+// @Accept json
+// @Produce json
+// @Security BasicAuth
+// @Param password body models.UpdateUserPasswordInput true "Password update data"
+// @Success 200 {object} models.UserResponse "Password updated successfully"
+// @Failure 400 {object} map[string]interface{} "Bad request"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Router /user/password [post]
 func (u *UserController) UpdateUserPassword(ctx *gin.Context) {
 	userId := u.GetAuthenticatedUserId(ctx)
 	var updatedUser models.UpdateUserPasswordInput

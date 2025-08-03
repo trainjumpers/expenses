@@ -23,6 +23,18 @@ func NewAccountController(cfg *config.Config, accountService service.AccountServ
 	}
 }
 
+// CreateAccount creates a new account
+// @Summary Create a new account
+// @Description Create a new bank account for the authenticated user
+// @Tags accounts
+// @Accept json
+// @Produce json
+// @Security BasicAuth
+// @Param account body models.CreateAccountInput true "Account data"
+// @Success 201 {object} models.AccountResponse "Account created successfully"
+// @Failure 400 {object} map[string]interface{} "Bad request"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Router /account [post]
 func (a *AccountController) CreateAccount(ctx *gin.Context) {
 	var input models.CreateAccountInput
 	if err := a.BindJSON(ctx, &input); err != nil {
@@ -40,6 +52,18 @@ func (a *AccountController) CreateAccount(ctx *gin.Context) {
 	a.SendSuccess(ctx, http.StatusCreated, "Account created successfully", account)
 }
 
+// GetAccount retrieves a specific account
+// @Summary Get account by ID
+// @Description Get account details by account ID for the authenticated user
+// @Tags accounts
+// @Produce json
+// @Security BasicAuth
+// @Param accountId path int true "Account ID"
+// @Success 200 {object} models.AccountResponse "Account details"
+// @Failure 400 {object} map[string]interface{} "Bad request"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Failure 404 {object} map[string]interface{} "Account not found"
+// @Router /account/{accountId} [get]
 func (a *AccountController) GetAccount(ctx *gin.Context) {
 	accountId, err := strconv.ParseInt(ctx.Param("accountId"), 10, 64)
 	if err != nil {
@@ -58,6 +82,20 @@ func (a *AccountController) GetAccount(ctx *gin.Context) {
 	a.SendSuccess(ctx, http.StatusOK, "Account retrieved successfully", account)
 }
 
+// UpdateAccount updates an existing account
+// @Summary Update account
+// @Description Update account details by account ID for the authenticated user
+// @Tags accounts
+// @Accept json
+// @Produce json
+// @Security BasicAuth
+// @Param accountId path int true "Account ID"
+// @Param account body models.UpdateAccountInput true "Updated account data"
+// @Success 200 {object} models.AccountResponse "Account updated successfully"
+// @Failure 400 {object} map[string]interface{} "Bad request"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Failure 404 {object} map[string]interface{} "Account not found"
+// @Router /account/{accountId} [patch]
 func (a *AccountController) UpdateAccount(ctx *gin.Context) {
 	logger.Infof("Starting update account for user %d", a.GetAuthenticatedUserId(ctx))
 	accountId, err := strconv.ParseInt(ctx.Param("accountId"), 10, 64)
@@ -81,6 +119,18 @@ func (a *AccountController) UpdateAccount(ctx *gin.Context) {
 	a.SendSuccess(ctx, http.StatusOK, "Account updated successfully", account)
 }
 
+// DeleteAccount deletes an account
+// @Summary Delete account
+// @Description Delete account by account ID for the authenticated user
+// @Tags accounts
+// @Produce json
+// @Security BasicAuth
+// @Param accountId path int true "Account ID"
+// @Success 204 "Account deleted successfully"
+// @Failure 400 {object} map[string]interface{} "Bad request"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Failure 404 {object} map[string]interface{} "Account not found"
+// @Router /account/{accountId} [delete]
 func (a *AccountController) DeleteAccount(ctx *gin.Context) {
 	logger.Infof("Starting delete account for user %d", a.GetAuthenticatedUserId(ctx))
 	accountId, err := strconv.ParseInt(ctx.Param("accountId"), 10, 64)
@@ -99,6 +149,16 @@ func (a *AccountController) DeleteAccount(ctx *gin.Context) {
 	a.SendSuccess(ctx, http.StatusNoContent, "", nil)
 }
 
+// ListAccounts retrieves all accounts for the user
+// @Summary List all accounts
+// @Description Get all accounts for the authenticated user
+// @Tags accounts
+// @Produce json
+// @Security BasicAuth
+// @Success 200 {array} models.AccountResponse "List of accounts"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Router /account [get]
 func (a *AccountController) ListAccounts(ctx *gin.Context) {
 	logger.Infof("Fetching accounts for user %d", a.GetAuthenticatedUserId(ctx))
 	userId := a.GetAuthenticatedUserId(ctx)
