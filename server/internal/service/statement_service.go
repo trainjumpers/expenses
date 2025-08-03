@@ -71,7 +71,7 @@ func (s *StatementService) ParseStatement(ctx context.Context, input models.Pars
 	}
 
 	// Process the statement asynchronously.
-	go s.processStatementAsync(ctx, statement.Id, input, userId)
+	go s.processStatementAsync(context.Background(), statement.Id, input, userId)
 	return statement, nil
 }
 
