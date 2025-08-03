@@ -15,6 +15,9 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+// txIDKey is a private context key type to prevent collisions.
+type txIDKey struct{}
+
 // PostgresDatabaseManager implements the unified DatabaseManager interface
 type PostgresDatabaseManager struct {
 	pool    *pgxpool.Pool
@@ -419,7 +422,7 @@ func (dm *PostgresDatabaseManager) withMonitoredTransaction(ctx context.Context,
 	var committed bool
 	err := dm.withBasicTransaction(ctx, func(txCtx context.Context) error {
 		// Add transaction ID to context for logging
-		enhancedCtx := context.WithValue(txCtx, "transaction_id", txID)
+		enhancedCtx := context.WithValue(txCtx, txIDKey{}, txID)
 
 		err := fn(enhancedCtx)
 		if err == nil {
