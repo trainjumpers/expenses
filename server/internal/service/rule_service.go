@@ -213,10 +213,10 @@ func (s *ruleService) PutRuleConditions(ctx context.Context, ruleId int64, req m
 		return response, err
 	}
 	conditions, err := s.ruleRepo.PutRuleConditions(ctx, ruleId, req.Conditions)
-	response.Conditions = conditions
 	if err != nil {
 		return response, err
 	}
+	response.Conditions = conditions
 
 	logger.Debugf("Rule conditions updated successfully for rule %d", ruleId)
 	return response, nil
