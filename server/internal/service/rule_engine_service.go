@@ -32,7 +32,7 @@ func NewRuleEngineService(
 }
 
 func (s *ruleEngineService) ExecuteRules(ctx context.Context, userId int64, request models.ExecuteRulesRequest) (models.ExecuteRulesResponse, error) {
-	go s.executeRulesInBackground(ctx, userId, request)
+	go s.executeRulesInBackground(context.Background(), userId, request)
 	logger.Infof("Rule execution started in background for user %d", userId)
 	return models.ExecuteRulesResponse{}, nil
 }
