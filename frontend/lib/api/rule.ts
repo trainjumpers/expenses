@@ -102,10 +102,18 @@ export async function listRuleActions(ruleId: number): Promise<RuleAction[]> {
 export async function updateRuleActions(
   ruleId: number,
   actions: BaseRuleAction[]
-): Promise<void> {
-  console.log("Updating rule actions", ruleId, actions);
-  // TODO: Update it to PUT logic
-  return Promise.resolve();
+): Promise<RuleAction[]> {
+  return apiRequest<RuleAction[]>(
+    `${API_BASE_URL}/rule/${ruleId}/actions`,
+    {
+      method: "PUT",
+      credentials: "include",
+      body: JSON.stringify({ actions }),
+    },
+    "actions",
+    [],
+    "Failed to update rule actions"
+  );
 }
 
 // List conditions for a rule
@@ -127,10 +135,18 @@ export async function listRuleConditions(
 export async function updateRuleConditions(
   ruleId: number,
   conditions: BaseRuleCondition[]
-): Promise<void> {
-  console.log("Updating rule conditions", ruleId, conditions);
-  //TODO: Update it to PUT logic
-  return Promise.resolve();
+): Promise<RuleCondition[]> {
+  return apiRequest<RuleCondition[]>(
+    `${API_BASE_URL}/rule/${ruleId}/conditions`,
+    {
+      method: "PUT",
+      credentials: "include",
+      body: JSON.stringify({ conditions }),
+    },
+    "conditions",
+    [],
+    "Failed to update rule conditions"
+  );
 }
 
 // Execute rules (example endpoint, adjust as needed)

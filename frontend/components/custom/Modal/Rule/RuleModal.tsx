@@ -235,27 +235,18 @@ export function RuleModal({
               disabled={loading}
             />
 
-            {mode === "edit" && (
-              <div className="text-xs text-muted-foreground mb-2">
-                <em>
-                  Note: Deleting an action or condition is not supported. If you
-                  want to, please delete the rule and recreate it.
-                </em>
-              </div>
-            )}
             <RuleConditions
               conditions={conditions}
               onConditionsChange={setConditions}
               conditionLogic={conditionLogic}
               onConditionLogicChange={setConditionLogic}
-              disabled={mode === "edit"}
-              loading={loading}
+              disabled={loading}
             />
 
             <RuleActions
               actions={actions}
               onActionsChange={setActions}
-              disabled={loading || mode === "edit"}
+              disabled={loading}
             />
 
             <RuleEffectiveScope
