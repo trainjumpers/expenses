@@ -153,6 +153,81 @@ var _ = Describe("PostgreSQL Database Manager", Ordered, func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 		})
+
+		It("should return transaction info when inside a transaction", func() {
+			err := dbManager.WithTxn(ctx, func(txCtx context.Context) error {
+				info, err := dbManager.GetTransactionInfo(txCtx)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(info).NotTo(BeNil())
+				Expect(info.ID).NotTo(BeEmpty())
+				Expect(info.IsReadOnly).To(BeFalse())
+				Expect(info.IsNested).To(BeFalse())
+				return nil
+			})
+			Expect(err).NotTo(HaveOccurred())
+		})
+	})
+
+	Describe("Batch Operations", func() {
+		BeforeEach(func() {
+			_, err := dbManager.ExecuteQuery(ctx, `CREATE TABLE IF NOT EXISTS test_batch (id SERIAL PRIMARY KEY, name TEXT)`)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		AfterEach(func() {
+			_, _ = dbManager.ExecuteQuery(ctx, `DROP TABLE IF EXISTS test_batch`)
+		})
+
+		It("should execute a batch of operations successfully using the pool", func() {
+			batch := &pgx.Batch{}
+			batch.Queue("INSERT INTO test_batch (name) VALUES ($1)", "batch1")
+			batch.Queue("INSERT INTO test_batch (name) VALUES ($1)", "batch2")
+
+			err := dbManager.ExecuteBatch(ctx, batch)
+			Expect(err).NotTo(HaveOccurred())
+
+			var count int
+			row := dbManager.FetchOne(ctx, `SELECT COUNT(*) FROM test_batch`)
+			Expect(row.Scan(&count)).To(Succeed())
+			Expect(count).To(Equal(2))
+		})
+
+		It("should execute a batch of operations successfully within a transaction", func() {
+			err := dbManager.WithTxn(ctx, func(txCtx context.Context) error {
+				batch := &pgx.Batch{}
+				batch.Queue("INSERT INTO test_batch (name) VALUES ($1)", "txn_batch1")
+				batch.Queue("INSERT INTO test_batch (name) VALUES ($1)", "txn_batch2")
+				return dbManager.ExecuteBatch(txCtx, batch)
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			var count int
+			row := dbManager.FetchOne(ctx, `SELECT COUNT(*) FROM test_batch`)
+			Expect(row.Scan(&count)).To(Succeed())
+			Expect(count).To(Equal(2))
+		})
+
+		It("should return an error if a batch operation fails", func() {
+			// Note: pgx.Batch will not fail on invalid queries during Queue, only on execution.
+			// The entire transaction should be rolled back.
+			err := dbManager.WithTxn(ctx, func(txCtx context.Context) error {
+				batch := &pgx.Batch{}
+				batch.Queue("INSERT INTO test_batch (name) VALUES ($1)", "good_batch")
+				// This one will fail because of a wrong column name
+				batch.Queue("INSERT INTO test_batch (invalid_column) VALUES ($1)", "bad_batch")
+				return dbManager.ExecuteBatch(txCtx, batch)
+			})
+
+			Expect(err).To(HaveOccurred())
+			// Check for a common postgres error message for undefined columns
+			Expect(err.Error()).To(ContainSubstring("column \"invalid_column\" of relation \"test_batch\" does not exist"))
+
+			// Verify that the transaction was rolled back and no data was inserted
+			var count int
+			row := dbManager.FetchOne(ctx, `SELECT COUNT(*) FROM test_batch`)
+			Expect(row.Scan(&count)).To(Succeed())
+			Expect(count).To(Equal(0))
+		})
 	})
 
 	Describe("Lock Operations", func() {
@@ -229,6 +304,91 @@ var _ = Describe("PostgreSQL Database Manager", Ordered, func() {
 
 		It("should support ping", func() {
 			err := dbManager.Ping(ctx)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should successfully execute a retryable transaction", func() {
+			err := dbManager.WithRetryableTxn(ctx, func(txCtx context.Context) error {
+				_, err := dbManager.ExecuteQuery(txCtx, `INSERT INTO test_enhanced (name) VALUES ($1)`, "retryable_test")
+				return err
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Verify data was committed
+			var count int
+			row := dbManager.FetchOne(ctx, `SELECT COUNT(*) FROM test_enhanced WHERE name = $1`, "retryable_test")
+			err = row.Scan(&count)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(count).To(Equal(1))
+		})
+
+		It("should successfully commit a savepoint within a transaction", func() {
+			err := dbManager.WithTxn(ctx, func(txCtx context.Context) error {
+				// Insert initial data in the main transaction
+				_, err := dbManager.ExecuteQuery(txCtx, `INSERT INTO test_enhanced (name) VALUES ($1)`, "before_savepoint")
+				Expect(err).NotTo(HaveOccurred())
+
+				// Create a savepoint
+				err = dbManager.WithSavepoint(txCtx, "sp1", func(spCtx context.Context) error {
+					_, err := dbManager.ExecuteQuery(spCtx, `INSERT INTO test_enhanced (name) VALUES ($1)`, "in_savepoint")
+					return err
+				})
+				Expect(err).NotTo(HaveOccurred())
+				return nil
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Verify both records are there
+			var count int
+			row := dbManager.FetchOne(ctx, `SELECT COUNT(*) FROM test_enhanced`)
+			err = row.Scan(&count)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(count).To(Equal(2))
+		})
+
+		It("should roll back a savepoint without affecting the parent transaction", func() {
+			err := dbManager.WithTxn(ctx, func(txCtx context.Context) error {
+				// Insert initial data
+				_, err := dbManager.ExecuteQuery(txCtx, `INSERT INTO test_enhanced (name) VALUES ($1)`, "before_savepoint")
+				Expect(err).NotTo(HaveOccurred())
+
+				// Create a savepoint that will be rolled back
+				err = dbManager.WithSavepoint(txCtx, "sp1", func(spCtx context.Context) error {
+					_, err := dbManager.ExecuteQuery(spCtx, `INSERT INTO test_enhanced (name) VALUES ($1)`, "in_savepoint")
+					Expect(err).NotTo(HaveOccurred())
+					return errors.New("force rollback") // Force the savepoint to roll back
+				})
+				// This error is expected
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(Equal("force rollback"))
+
+				// The parent transaction should continue
+				return nil
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Verify only the initial data is present
+			var count int
+			row := dbManager.FetchOne(ctx, `SELECT COUNT(*) FROM test_enhanced`)
+			err = row.Scan(&count)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(count).To(Equal(1))
+
+			var name string
+			row = dbManager.FetchOne(ctx, `SELECT name FROM test_enhanced`)
+			err = row.Scan(&name)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(name).To(Equal("before_savepoint"))
+		})
+
+		It("should execute a function with a dedicated connection", func() {
+			err := dbManager.WithConnection(ctx, func(conn *pgx.Conn) error {
+				var result int
+				// Use the connection to perform a simple query
+				err := conn.QueryRow(ctx, "SELECT 1").Scan(&result)
+				Expect(result).To(Equal(1))
+				return err
+			})
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})
