@@ -1,24 +1,23 @@
 package service
 
 import (
+	"context"
 	mock "expenses/internal/mock/repository"
 	"expenses/internal/models"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-
-	"github.com/gin-gonic/gin"
 )
 
 var _ = Describe("AccountService", func() {
 	var (
 		accountService AccountServiceInterface
 		mockRepo       *mock.MockAccountRepository
-		ctx            *gin.Context
+		ctx            context.Context
 	)
 
 	BeforeEach(func() {
-		ctx = &gin.Context{}
+		ctx = context.Background()
 		mockRepo = mock.NewMockAccountRepository()
 		accountService = NewAccountService(mockRepo)
 	})

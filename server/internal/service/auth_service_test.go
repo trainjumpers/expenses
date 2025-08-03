@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"expenses/internal/config"
 	apperrors "expenses/internal/errors"
@@ -10,8 +11,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-
-	"github.com/gin-gonic/gin"
 )
 
 var _ = Describe("AuthService", func() {
@@ -20,7 +19,7 @@ var _ = Describe("AuthService", func() {
 		userService UserServiceInterface
 		mockRepo    *mock.MockUserRepository
 		cfg         *config.Config
-		ctx         *gin.Context
+		ctx         context.Context
 	)
 
 	BeforeEach(func() {
@@ -35,7 +34,7 @@ var _ = Describe("AuthService", func() {
 		defer os.Setenv("JWT_SECRET", origJwt)
 		defer os.Setenv("DB_SCHEMA", origSchema)
 
-		ctx = &gin.Context{}
+		ctx = context.Background()
 		mockRepo = mock.NewMockUserRepository()
 		userService = NewUserService(mockRepo)
 		var err error

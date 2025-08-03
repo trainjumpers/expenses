@@ -1,25 +1,25 @@
 package repository
 
 import (
+	"context"
 	"errors"
 	"expenses/internal/config"
 	"expenses/internal/database/helper"
-	database "expenses/internal/database/manager"
 	customErrors "expenses/internal/errors"
 	"expenses/internal/models"
+	database "expenses/pkg/database/manager"
 	"fmt"
 	"strings"
 
-	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
 )
 
 type AccountRepositoryInterface interface {
-	CreateAccount(c *gin.Context, input models.CreateAccountInput) (models.AccountResponse, error)
-	GetAccountById(c *gin.Context, accountId int64, userId int64) (models.AccountResponse, error)
-	UpdateAccount(c *gin.Context, accountId int64, userId int64, input models.UpdateAccountInput) (models.AccountResponse, error)
-	DeleteAccount(c *gin.Context, accountId int64, userId int64) error
-	ListAccounts(c *gin.Context, userId int64) ([]models.AccountResponse, error)
+	CreateAccount(ctx context.Context, input models.CreateAccountInput) (models.AccountResponse, error)
+	GetAccountById(ctx context.Context, accountId int64, userId int64) (models.AccountResponse, error)
+	UpdateAccount(ctx context.Context, accountId int64, userId int64, input models.UpdateAccountInput) (models.AccountResponse, error)
+	DeleteAccount(ctx context.Context, accountId int64, userId int64) error
+	ListAccounts(ctx context.Context, userId int64) ([]models.AccountResponse, error)
 }
 
 type AccountRepository struct {
@@ -36,20 +36,20 @@ func NewAccountRepository(db database.DatabaseManager, cfg *config.Config) Accou
 	}
 }
 
-func (r *AccountRepository) CreateAccount(c *gin.Context, input models.CreateAccountInput) (models.AccountResponse, error) {
+func (r *AccountRepository) CreateAccount(ctx context.Context, input models.CreateAccountInput) (models.AccountResponse, error) {
 	var account models.AccountResponse
 	query, values, ptrs, err := helper.CreateInsertQuery(&input, &account, r.tableName, r.schema)
 	if err != nil {
 		return account, err
 	}
-	err = r.db.FetchOne(c, query, values...).Scan(ptrs...)
+	err = r.db.FetchOne(ctx, query, values...).Scan(ptrs...)
 	if err != nil {
 		return account, err
 	}
 	return account, nil
 }
 
-func (r *AccountRepository) GetAccountById(c *gin.Context, accountId int64, userId int64) (models.AccountResponse, error) {
+func (r *AccountRepository) GetAccountById(ctx context.Context, accountId int64, userId int64) (models.AccountResponse, error) {
 	var account models.AccountResponse
 	ptrs, dbFields, err := helper.GetDbFieldsFromObject(&account)
 	if err != nil {
@@ -61,7 +61,7 @@ func (r *AccountRepository) GetAccountById(c *gin.Context, accountId int64, user
 		FROM %s.%s
 		WHERE id = $1 AND created_by = $2`,
 		strings.Join(dbFields, ", "), r.schema, r.tableName)
-	err = r.db.FetchOne(c, query, accountId, userId).Scan(ptrs...)
+	err = r.db.FetchOne(ctx, query, accountId, userId).Scan(ptrs...)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return account, customErrors.NewAccountNotFoundError(err)
@@ -71,7 +71,7 @@ func (r *AccountRepository) GetAccountById(c *gin.Context, accountId int64, user
 	return account, nil
 }
 
-func (r *AccountRepository) UpdateAccount(c *gin.Context, accountId int64, userId int64, input models.UpdateAccountInput) (models.AccountResponse, error) {
+func (r *AccountRepository) UpdateAccount(ctx context.Context, accountId int64, userId int64, input models.UpdateAccountInput) (models.AccountResponse, error) {
 	fieldsClause, argValues, argIndex, err := helper.CreateUpdateParams(&input)
 	if err != nil {
 		return models.AccountResponse{}, err
@@ -83,7 +83,7 @@ func (r *AccountRepository) UpdateAccount(c *gin.Context, accountId int64, userI
 	}
 	query := fmt.Sprintf(`UPDATE %s.%s SET %s WHERE id = $%d AND created_by = $%d RETURNING %s;`, r.schema, r.tableName, fieldsClause, argIndex, argIndex+1, strings.Join(dbFields, ", "))
 	argValues = append(argValues, accountId, userId)
-	err = r.db.FetchOne(c, query, argValues...).Scan(ptrs...)
+	err = r.db.FetchOne(ctx, query, argValues...).Scan(ptrs...)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return account, customErrors.NewAccountNotFoundError(err)
@@ -93,12 +93,12 @@ func (r *AccountRepository) UpdateAccount(c *gin.Context, accountId int64, userI
 	return account, nil
 }
 
-func (r *AccountRepository) DeleteAccount(c *gin.Context, accountId int64, userId int64) error {
+func (r *AccountRepository) DeleteAccount(ctx context.Context, accountId int64, userId int64) error {
 	query := fmt.Sprintf(`
 		DELETE FROM %s.%s
 		WHERE id = $1 AND created_by = $2`,
 		r.schema, r.tableName)
-	rowsAffected, err := r.db.ExecuteQuery(c, query, accountId, userId)
+	rowsAffected, err := r.db.ExecuteQuery(ctx, query, accountId, userId)
 	if err != nil {
 		if customErrors.CheckForeignKey(err, "fk_transaction_account_id") {
 			return customErrors.NewAccountHasTransactionsError(err)
@@ -111,7 +111,7 @@ func (r *AccountRepository) DeleteAccount(c *gin.Context, accountId int64, userI
 	return nil
 }
 
-func (r *AccountRepository) ListAccounts(c *gin.Context, userId int64) ([]models.AccountResponse, error) {
+func (r *AccountRepository) ListAccounts(ctx context.Context, userId int64) ([]models.AccountResponse, error) {
 	accounts := make([]models.AccountResponse, 0)
 	var account models.AccountResponse
 	ptrs, dbFields, err := helper.GetDbFieldsFromObject(&account)
@@ -124,7 +124,7 @@ func (r *AccountRepository) ListAccounts(c *gin.Context, userId int64) ([]models
 		WHERE created_by = $1
 		ORDER BY created_at DESC`,
 		strings.Join(dbFields, ", "), r.schema, r.tableName)
-	rows, err := r.db.FetchAll(c, query, userId)
+	rows, err := r.db.FetchAll(ctx, query, userId)
 	if err != nil {
 		return accounts, err
 	}

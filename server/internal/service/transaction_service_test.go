@@ -1,13 +1,13 @@
 package service
 
 import (
+	"context"
 	mockDatabase "expenses/internal/mock/database"
 	repository "expenses/internal/mock/repository"
 	"expenses/internal/models"
 	"strings"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -19,7 +19,7 @@ var _ = Describe("TransactionService", func() {
 		categoryMockRepo   *repository.MockCategoryRepository
 		accountMockRepo    *repository.MockAccountRepository
 		mockDB             *mockDatabase.MockDatabaseManager
-		ctx                *gin.Context
+		ctx                context.Context
 		testDate           time.Time
 		cat1               models.CategoryResponse
 		cat2               models.CategoryResponse
@@ -30,7 +30,7 @@ var _ = Describe("TransactionService", func() {
 	)
 
 	BeforeEach(func() {
-		ctx = &gin.Context{}
+		ctx = context.Background()
 		mockRepo = repository.NewMockTransactionRepository()
 		categoryMockRepo = repository.NewMockCategoryRepository()
 		accountMockRepo = repository.NewMockAccountRepository()
@@ -685,11 +685,9 @@ var _ = Describe("TransactionService", func() {
 			transactionService *TransactionService
 			categoryMockRepo   *repository.MockCategoryRepository
 			accountMockRepo    *repository.MockAccountRepository
-			ctx                *gin.Context
 		)
 
 		BeforeEach(func() {
-			ctx = &gin.Context{}
 			categoryMockRepo = repository.NewMockCategoryRepository()
 			accountMockRepo = repository.NewMockAccountRepository()
 			transactionService = &TransactionService{

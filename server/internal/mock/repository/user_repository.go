@@ -1,11 +1,10 @@
 package mock_repository
 
 import (
+	"context"
 	"expenses/internal/errors"
 	"expenses/internal/models"
 	"sync"
-
-	"github.com/gin-gonic/gin"
 )
 
 type MockUserRepository struct {
@@ -21,7 +20,7 @@ func NewMockUserRepository() *MockUserRepository {
 	}
 }
 
-func (m *MockUserRepository) CreateUser(c *gin.Context, newUser models.CreateUserInput) (models.UserResponse, error) {
+func (m *MockUserRepository) CreateUser(ctx context.Context, newUser models.CreateUserInput) (models.UserResponse, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if _, exists := m.users[newUser.Email]; exists {
@@ -44,7 +43,7 @@ func (m *MockUserRepository) CreateUser(c *gin.Context, newUser models.CreateUse
 	}, nil
 }
 
-func (m *MockUserRepository) GetUserByEmailWithPassword(c *gin.Context, email string) (models.UserWithPassword, error) {
+func (m *MockUserRepository) GetUserByEmailWithPassword(ctx context.Context, email string) (models.UserWithPassword, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	if user, exists := m.users[email]; exists {
@@ -53,7 +52,7 @@ func (m *MockUserRepository) GetUserByEmailWithPassword(c *gin.Context, email st
 	return models.UserWithPassword{}, errors.NewUserNotFoundError(nil)
 }
 
-func (m *MockUserRepository) GetUserByIdWithPassword(c *gin.Context, userId int64) (models.UserWithPassword, error) {
+func (m *MockUserRepository) GetUserByIdWithPassword(ctx context.Context, userId int64) (models.UserWithPassword, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	for _, user := range m.users {
@@ -64,7 +63,7 @@ func (m *MockUserRepository) GetUserByIdWithPassword(c *gin.Context, userId int6
 	return models.UserWithPassword{}, errors.NewUserNotFoundError(nil)
 }
 
-func (m *MockUserRepository) GetUserById(c *gin.Context, userId int64) (models.UserResponse, error) {
+func (m *MockUserRepository) GetUserById(ctx context.Context, userId int64) (models.UserResponse, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	for _, user := range m.users {
@@ -79,7 +78,7 @@ func (m *MockUserRepository) GetUserById(c *gin.Context, userId int64) (models.U
 	return models.UserResponse{}, errors.NewUserNotFoundError(nil)
 }
 
-func (m *MockUserRepository) DeleteUser(c *gin.Context, userId int64) error {
+func (m *MockUserRepository) DeleteUser(ctx context.Context, userId int64) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	for email, user := range m.users {
@@ -91,7 +90,7 @@ func (m *MockUserRepository) DeleteUser(c *gin.Context, userId int64) error {
 	return errors.NewUserNotFoundError(nil)
 }
 
-func (m *MockUserRepository) UpdateUser(c *gin.Context, userId int64, updatedUser models.UpdateUserInput) (models.UserResponse, error) {
+func (m *MockUserRepository) UpdateUser(ctx context.Context, userId int64, updatedUser models.UpdateUserInput) (models.UserResponse, error) {
 	for email, user := range m.users {
 		if user.Id == userId {
 			if updatedUser.Name != "" {
@@ -108,7 +107,7 @@ func (m *MockUserRepository) UpdateUser(c *gin.Context, userId int64, updatedUse
 	return models.UserResponse{}, errors.NewUserNotFoundError(nil)
 }
 
-func (m *MockUserRepository) UpdateUserPassword(c *gin.Context, userId int64, password string) (models.UserResponse, error) {
+func (m *MockUserRepository) UpdateUserPassword(ctx context.Context, userId int64, password string) (models.UserResponse, error) {
 	for email, user := range m.users {
 		if user.Id == userId {
 			user.Password = password

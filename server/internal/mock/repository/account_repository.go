@@ -1,11 +1,10 @@
 package mock_repository
 
 import (
+	"context"
 	customErrors "expenses/internal/errors"
 	"expenses/internal/models"
 	"sync"
-
-	"github.com/gin-gonic/gin"
 )
 
 type MockAccountRepository struct {
@@ -21,7 +20,7 @@ func NewMockAccountRepository() *MockAccountRepository {
 	}
 }
 
-func (m *MockAccountRepository) CreateAccount(c *gin.Context, input models.CreateAccountInput) (models.AccountResponse, error) {
+func (m *MockAccountRepository) CreateAccount(ctx context.Context, input models.CreateAccountInput) (models.AccountResponse, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	acc := models.AccountResponse{
@@ -40,7 +39,7 @@ func (m *MockAccountRepository) CreateAccount(c *gin.Context, input models.Creat
 	return acc, nil
 }
 
-func (m *MockAccountRepository) GetAccountById(c *gin.Context, accountId int64, userId int64) (models.AccountResponse, error) {
+func (m *MockAccountRepository) GetAccountById(ctx context.Context, accountId int64, userId int64) (models.AccountResponse, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	acc, ok := m.accounts[accountId]
@@ -50,7 +49,7 @@ func (m *MockAccountRepository) GetAccountById(c *gin.Context, accountId int64, 
 	return acc, nil
 }
 
-func (m *MockAccountRepository) UpdateAccount(c *gin.Context, accountId int64, userId int64, input models.UpdateAccountInput) (models.AccountResponse, error) {
+func (m *MockAccountRepository) UpdateAccount(ctx context.Context, accountId int64, userId int64, input models.UpdateAccountInput) (models.AccountResponse, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	acc, ok := m.accounts[accountId]
@@ -73,7 +72,7 @@ func (m *MockAccountRepository) UpdateAccount(c *gin.Context, accountId int64, u
 	return acc, nil
 }
 
-func (m *MockAccountRepository) DeleteAccount(c *gin.Context, accountId int64, userId int64) error {
+func (m *MockAccountRepository) DeleteAccount(ctx context.Context, accountId int64, userId int64) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	acc, ok := m.accounts[accountId]
@@ -84,7 +83,7 @@ func (m *MockAccountRepository) DeleteAccount(c *gin.Context, accountId int64, u
 	return nil
 }
 
-func (m *MockAccountRepository) ListAccounts(c *gin.Context, userId int64) ([]models.AccountResponse, error) {
+func (m *MockAccountRepository) ListAccounts(ctx context.Context, userId int64) ([]models.AccountResponse, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	var result []models.AccountResponse

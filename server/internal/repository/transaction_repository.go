@@ -1,26 +1,26 @@
 package repository
 
 import (
+	"context"
 	"errors"
 	"expenses/internal/config"
 	"expenses/internal/database/helper"
-	database "expenses/internal/database/manager"
 	customErrors "expenses/internal/errors"
 	"expenses/internal/models"
+	database "expenses/pkg/database/manager"
 	"fmt"
 	"strings"
 
-	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
 )
 
 type TransactionRepositoryInterface interface {
-	CreateTransaction(c *gin.Context, transaction models.CreateBaseTransactionInput, categoryIds []int64) (models.TransactionResponse, error)
-	GetTransactionById(c *gin.Context, transactionId int64, userId int64) (models.TransactionResponse, error)
-	UpdateTransaction(c *gin.Context, transactionId int64, userId int64, input models.UpdateBaseTransactionInput) error
-	DeleteTransaction(c *gin.Context, transactionId int64, userId int64) error
-	ListTransactions(c *gin.Context, userId int64, query models.TransactionListQuery) (models.PaginatedTransactionsResponse, error)
-	UpdateCategoryMapping(c *gin.Context, transactionId int64, userId int64, categoryIds []int64) error
+	CreateTransaction(ctx context.Context, transaction models.CreateBaseTransactionInput, categoryIds []int64) (models.TransactionResponse, error)
+	GetTransactionById(ctx context.Context, transactionId int64, userId int64) (models.TransactionResponse, error)
+	UpdateTransaction(ctx context.Context, transactionId int64, userId int64, input models.UpdateBaseTransactionInput) error
+	DeleteTransaction(ctx context.Context, transactionId int64, userId int64) error
+	ListTransactions(ctx context.Context, userId int64, query models.TransactionListQuery) (models.PaginatedTransactionsResponse, error)
+	UpdateCategoryMapping(ctx context.Context, transactionId int64, userId int64, categoryIds []int64) error
 }
 
 type TransactionRepository struct {
@@ -46,16 +46,16 @@ var baseTransactionQuery = `
 	LEFT JOIN %s.%s tcm ON t.id = tcm.transaction_id
 `
 
-func (r *TransactionRepository) CreateTransaction(c *gin.Context, transactionInput models.CreateBaseTransactionInput, categoryIds []int64) (models.TransactionResponse, error) {
+func (r *TransactionRepository) CreateTransaction(ctx context.Context, transactionInput models.CreateBaseTransactionInput, categoryIds []int64) (models.TransactionResponse, error) {
 	var transactionResponse models.TransactionResponse
 	var transaction models.TransactionBaseResponse
 
-	err := r.db.WithTxn(c, func(tx pgx.Tx) error {
+	err := r.db.WithTxn(ctx, func(txCtx context.Context) error {
 		query, values, ptrs, err := helper.CreateInsertQuery(&transactionInput, &transaction, r.tableName, r.schema)
 		if err != nil {
 			return err
 		}
-		err = tx.QueryRow(c, query, values...).Scan(ptrs...)
+		err = r.db.FetchOne(txCtx, query, values...).Scan(ptrs...)
 		if err != nil {
 			if customErrors.CheckForeignKey(err, "idx_transaction_unique_composite") {
 				return customErrors.NewTransactionAlreadyExistsError(err)
@@ -63,7 +63,7 @@ func (r *TransactionRepository) CreateTransaction(c *gin.Context, transactionInp
 			return err
 		}
 
-		if err := r.addMappings(c, tx, transaction.Id, categoryIds); err != nil {
+		if err := r.addMappings(txCtx, transaction.Id, categoryIds); err != nil {
 			return err
 		}
 
@@ -81,8 +81,8 @@ func (r *TransactionRepository) CreateTransaction(c *gin.Context, transactionInp
 	return transactionResponse, nil
 }
 
-func (r *TransactionRepository) addMappings(c *gin.Context, tx pgx.Tx, transactionId int64, categoryIds []int64) error {
-	if err := r.updateMapping(c, tx, r.transactionCategoryMappingTable, "transaction_id", "category_id", transactionId, categoryIds); err != nil {
+func (r *TransactionRepository) addMappings(ctx context.Context, transactionId int64, categoryIds []int64) error {
+	if err := r.updateMapping(ctx, r.transactionCategoryMappingTable, "transaction_id", "category_id", transactionId, categoryIds); err != nil {
 		if customErrors.CheckForeignKey(err, "fk_category") {
 			return customErrors.NewCategoryNotFoundError(err)
 		}
@@ -100,10 +100,10 @@ func scanTransaction(row pgx.Row) (models.TransactionResponse, error) {
 	return resp, err
 }
 
-func (r *TransactionRepository) GetTransactionById(c *gin.Context, transactionId int64, userId int64) (models.TransactionResponse, error) {
+func (r *TransactionRepository) GetTransactionById(ctx context.Context, transactionId int64, userId int64) (models.TransactionResponse, error) {
 	baseQuery := fmt.Sprintf(baseTransactionQuery, r.schema, r.tableName, r.schema, r.transactionCategoryMappingTable)
 	query := baseQuery + ` WHERE t.id = $1 AND t.created_by = $2 AND t.deleted_at IS NULL GROUP BY t.id`
-	row := r.db.FetchOne(c, query, transactionId, userId)
+	row := r.db.FetchOne(ctx, query, transactionId, userId)
 	resp, err := scanTransaction(row)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -114,7 +114,7 @@ func (r *TransactionRepository) GetTransactionById(c *gin.Context, transactionId
 	return resp, nil
 }
 
-func (r *TransactionRepository) UpdateTransaction(c *gin.Context, transactionId int64, userId int64, transactionUpdate models.UpdateBaseTransactionInput) error {
+func (r *TransactionRepository) UpdateTransaction(ctx context.Context, transactionId int64, userId int64, transactionUpdate models.UpdateBaseTransactionInput) error {
 	fieldsClause, argValues, argIndex, err := helper.CreateUpdateParams(&transactionUpdate)
 	if err != nil {
 		return err
@@ -133,7 +133,7 @@ func (r *TransactionRepository) UpdateTransaction(c *gin.Context, transactionId 
 		r.schema, r.tableName, fieldsClause, argIndex, argIndex+1, strings.Join(dbFields, ", "))
 
 	argValues = append(argValues, transactionId, userId)
-	err = r.db.FetchOne(c, query, argValues...).Scan(ptrs...)
+	err = r.db.FetchOne(ctx, query, argValues...).Scan(ptrs...)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return customErrors.NewTransactionNotFoundError(err)
@@ -147,9 +147,9 @@ func (r *TransactionRepository) UpdateTransaction(c *gin.Context, transactionId 
 	return nil
 }
 
-func (r *TransactionRepository) DeleteTransaction(c *gin.Context, transactionId int64, userId int64) error {
+func (r *TransactionRepository) DeleteTransaction(ctx context.Context, transactionId int64, userId int64) error {
 	query := fmt.Sprintf(`UPDATE %s.%s SET deleted_at = NOW() WHERE id = $1 AND created_by = $2 AND deleted_at IS NULL;`, r.schema, r.tableName)
-	rowsAffected, err := r.db.ExecuteQuery(c, query, transactionId, userId)
+	rowsAffected, err := r.db.ExecuteQuery(ctx, query, transactionId, userId)
 	if err != nil {
 		return err
 	}
@@ -161,9 +161,9 @@ func (r *TransactionRepository) DeleteTransaction(c *gin.Context, transactionId 
 	return nil
 }
 
-func (r *TransactionRepository) updateMapping(c *gin.Context, tx pgx.Tx, mappingTable, transactionColumn, idColumn string, transactionId int64, ids []int64) error {
+func (r *TransactionRepository) updateMapping(ctx context.Context, mappingTable, transactionColumn, idColumn string, transactionId int64, ids []int64) error {
 	// Clear existing mappings
-	_, err := tx.Exec(c, fmt.Sprintf(`DELETE FROM %s.%s WHERE %s = $1;`, r.schema, mappingTable, transactionColumn), transactionId)
+	_, err := r.db.ExecuteQuery(ctx, fmt.Sprintf(`DELETE FROM %s.%s WHERE %s = $1;`, r.schema, mappingTable, transactionColumn), transactionId)
 	if err != nil {
 		return err
 	}
@@ -172,18 +172,10 @@ func (r *TransactionRepository) updateMapping(c *gin.Context, tx pgx.Tx, mapping
 		return nil
 	}
 
-	// Prepare the insert statement
+	// Insert new mappings one by one (since we can't use batch with the current interface)
 	query := fmt.Sprintf(`INSERT INTO %s.%s (%s, %s) VALUES ($1, $2) ON CONFLICT DO NOTHING;`, r.schema, mappingTable, idColumn, transactionColumn)
-	batch := &pgx.Batch{}
 	for _, id := range ids {
-		batch.Queue(query, id, transactionId)
-	}
-
-	results := tx.SendBatch(c, batch)
-	defer results.Close()
-
-	for i := 0; i < len(ids); i++ {
-		_, err := results.Exec()
+		_, err := r.db.ExecuteQuery(ctx, query, id, transactionId)
 		if err != nil {
 			return err
 		}
@@ -192,9 +184,9 @@ func (r *TransactionRepository) updateMapping(c *gin.Context, tx pgx.Tx, mapping
 	return nil
 }
 
-func (r *TransactionRepository) UpdateCategoryMapping(c *gin.Context, transactionId int64, userId int64, categoryIds []int64) error {
-	err := r.db.WithTxn(c, func(tx pgx.Tx) error {
-		return r.updateMapping(c, tx, r.transactionCategoryMappingTable, "transaction_id", "category_id", transactionId, categoryIds)
+func (r *TransactionRepository) UpdateCategoryMapping(ctx context.Context, transactionId int64, userId int64, categoryIds []int64) error {
+	err := r.db.WithTxn(ctx, func(txCtx context.Context) error {
+		return r.updateMapping(txCtx, r.transactionCategoryMappingTable, "transaction_id", "category_id", transactionId, categoryIds)
 	})
 
 	if err != nil {
@@ -288,7 +280,7 @@ func (r *TransactionRepository) buildTransactionDataQuery(q models.TransactionLi
 }
 
 // ListTransactions returns paginated, sorted, and filtered transactions for a user
-func (r *TransactionRepository) ListTransactions(c *gin.Context, userId int64, q models.TransactionListQuery) (models.PaginatedTransactionsResponse, error) {
+func (r *TransactionRepository) ListTransactions(ctx context.Context, userId int64, q models.TransactionListQuery) (models.PaginatedTransactionsResponse, error) {
 	var resp models.PaginatedTransactionsResponse
 	transactions := make([]models.TransactionResponse, 0)
 
@@ -297,14 +289,14 @@ func (r *TransactionRepository) ListTransactions(c *gin.Context, userId int64, q
 	// Count query
 	countQuery := r.buildTransactionCountQuery(q, whereClause)
 	var total int
-	err := r.db.FetchOne(c, countQuery, args...).Scan(&total)
+	err := r.db.FetchOne(ctx, countQuery, args...).Scan(&total)
 	if err != nil {
 		return resp, err
 	}
 
 	// Data query
 	dataQuery := r.buildTransactionDataQuery(q, whereClause, q.Page, q.PageSize)
-	rows, err := r.db.FetchAll(c, dataQuery, args...)
+	rows, err := r.db.FetchAll(ctx, dataQuery, args...)
 	if err != nil {
 		return resp, err
 	}

@@ -1,24 +1,22 @@
 package service
 
 import (
-	database "expenses/internal/database/manager"
+	"context"
 	customErrors "expenses/internal/errors"
 	"expenses/internal/models"
 	"expenses/internal/repository"
+	database "expenses/pkg/database/manager"
 	"expenses/pkg/utils"
 	"fmt"
 	"time"
-
-	"github.com/gin-gonic/gin"
-	"github.com/jackc/pgx/v5"
 )
 
 type TransactionServiceInterface interface {
-	CreateTransaction(c *gin.Context, input models.CreateTransactionInput) (models.TransactionResponse, error)
-	GetTransactionById(c *gin.Context, transactionId int64, userId int64) (models.TransactionResponse, error)
-	UpdateTransaction(c *gin.Context, transactionId int64, userId int64, input models.UpdateTransactionInput) (models.TransactionResponse, error)
-	DeleteTransaction(c *gin.Context, transactionId int64, userId int64) error
-	ListTransactions(c *gin.Context, userId int64, query models.TransactionListQuery) (models.PaginatedTransactionsResponse, error)
+	CreateTransaction(ctx context.Context, input models.CreateTransactionInput) (models.TransactionResponse, error)
+	GetTransactionById(ctx context.Context, transactionId int64, userId int64) (models.TransactionResponse, error)
+	UpdateTransaction(ctx context.Context, transactionId int64, userId int64, input models.UpdateTransactionInput) (models.TransactionResponse, error)
+	DeleteTransaction(ctx context.Context, transactionId int64, userId int64) error
+	ListTransactions(ctx context.Context, userId int64, query models.TransactionListQuery) (models.PaginatedTransactionsResponse, error)
 }
 
 type TransactionService struct {
@@ -42,31 +40,31 @@ func NewTransactionService(
 	}
 }
 
-func (s *TransactionService) CreateTransaction(c *gin.Context, input models.CreateTransactionInput) (models.TransactionResponse, error) {
-	if err := s.validateCreateTransaction(c, input); err != nil {
+func (s *TransactionService) CreateTransaction(ctx context.Context, input models.CreateTransactionInput) (models.TransactionResponse, error) {
+	if err := s.validateCreateTransaction(ctx, input); err != nil {
 		return models.TransactionResponse{}, err
 	}
 
 	transactionInput := models.CreateBaseTransactionInput{}
 	utils.ConvertStruct(&input, &transactionInput)
-	return s.repo.CreateTransaction(c, transactionInput, input.CategoryIds)
+	return s.repo.CreateTransaction(ctx, transactionInput, input.CategoryIds)
 }
 
-func (s *TransactionService) GetTransactionById(c *gin.Context, transactionId int64, userId int64) (models.TransactionResponse, error) {
-	return s.repo.GetTransactionById(c, transactionId, userId)
+func (s *TransactionService) GetTransactionById(ctx context.Context, transactionId int64, userId int64) (models.TransactionResponse, error) {
+	return s.repo.GetTransactionById(ctx, transactionId, userId)
 }
 
-func (s *TransactionService) UpdateTransaction(c *gin.Context, transactionId int64, userId int64, input models.UpdateTransactionInput) (models.TransactionResponse, error) {
-	if err := s.validateUpdateTransaction(c, input, userId); err != nil {
+func (s *TransactionService) UpdateTransaction(ctx context.Context, transactionId int64, userId int64, input models.UpdateTransactionInput) (models.TransactionResponse, error) {
+	if err := s.validateUpdateTransaction(ctx, input, userId); err != nil {
 		return models.TransactionResponse{}, err
 	}
 
 	var transaction models.TransactionResponse
-	err := s.db.WithTxn(c, func(tx pgx.Tx) error {
+	err := s.db.WithTxn(ctx, func(txCtx context.Context) error {
 		// Update base transaction if there are fields to update
 		var baseInput models.UpdateBaseTransactionInput
 		utils.ConvertStruct(&input, &baseInput)
-		err := s.repo.UpdateTransaction(c, transactionId, userId, baseInput)
+		err := s.repo.UpdateTransaction(txCtx, transactionId, userId, baseInput)
 		if err != nil && (err.Error() != customErrors.NoFieldsToUpdateError().Error() ||
 			(input.CategoryIds == nil && input.AccountId == nil)) {
 			return err
@@ -74,14 +72,14 @@ func (s *TransactionService) UpdateTransaction(c *gin.Context, transactionId int
 
 		// Update category mapping if provided
 		if input.CategoryIds != nil {
-			err = s.repo.UpdateCategoryMapping(c, transactionId, userId, *input.CategoryIds)
+			err = s.repo.UpdateCategoryMapping(txCtx, transactionId, userId, *input.CategoryIds)
 			if err != nil {
 				return err
 			}
 		}
 
 		// Get the updated transaction
-		updatedTransaction, err := s.repo.GetTransactionById(c, transactionId, userId)
+		updatedTransaction, err := s.repo.GetTransactionById(txCtx, transactionId, userId)
 		if err != nil {
 			return err
 		}
@@ -96,12 +94,12 @@ func (s *TransactionService) UpdateTransaction(c *gin.Context, transactionId int
 	return transaction, nil
 }
 
-func (s *TransactionService) DeleteTransaction(c *gin.Context, transactionId int64, userId int64) error {
-	return s.repo.DeleteTransaction(c, transactionId, userId)
+func (s *TransactionService) DeleteTransaction(ctx context.Context, transactionId int64, userId int64) error {
+	return s.repo.DeleteTransaction(ctx, transactionId, userId)
 }
 
 // ListTransactions returns paginated, sorted, and filtered transactions for a user
-func (s *TransactionService) ListTransactions(c *gin.Context, userId int64, query models.TransactionListQuery) (models.PaginatedTransactionsResponse, error) {
+func (s *TransactionService) ListTransactions(ctx context.Context, userId int64, query models.TransactionListQuery) (models.PaginatedTransactionsResponse, error) {
 	if query.Page < 1 {
 		query.Page = 1
 	}
@@ -109,35 +107,35 @@ func (s *TransactionService) ListTransactions(c *gin.Context, userId int64, quer
 		query.PageSize = 15
 	}
 
-	return s.repo.ListTransactions(c, userId, query)
+	return s.repo.ListTransactions(ctx, userId, query)
 }
 
 // validateCreateTransaction performs business rule validation for create operations
-func (s *TransactionService) validateCreateTransaction(c *gin.Context, input models.CreateTransactionInput) error {
+func (s *TransactionService) validateCreateTransaction(ctx context.Context, input models.CreateTransactionInput) error {
 	if err := s.validateDateNotInFuture(input.Date); err != nil {
 		return err
 	}
-	if err := s.validateAccountExists(c, input.AccountId, input.CreatedBy); err != nil {
+	if err := s.validateAccountExists(ctx, input.AccountId, input.CreatedBy); err != nil {
 		return err
 	}
-	if err := s.validateCategoryExists(c, input.CategoryIds, input.CreatedBy); err != nil {
+	if err := s.validateCategoryExists(ctx, input.CategoryIds, input.CreatedBy); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (s *TransactionService) validateUpdateTransaction(c *gin.Context, input models.UpdateTransactionInput, userId int64) error {
+func (s *TransactionService) validateUpdateTransaction(ctx context.Context, input models.UpdateTransactionInput, userId int64) error {
 	if err := s.validateDateNotInFuture(input.Date); err != nil {
 		return err
 	}
 	if id := input.AccountId; id != nil {
-		if err := s.validateAccountExists(c, *id, userId); err != nil {
+		if err := s.validateAccountExists(ctx, *id, userId); err != nil {
 			return err
 		}
 	}
 
 	if ids := input.CategoryIds; ids != nil {
-		if err := s.validateCategoryExists(c, *ids, userId); err != nil {
+		if err := s.validateCategoryExists(ctx, *ids, userId); err != nil {
 			return err
 		}
 	}
@@ -155,16 +153,16 @@ func (s *TransactionService) validateDateNotInFuture(date time.Time) error {
 	return nil
 }
 
-func (s *TransactionService) validateAccountExists(c *gin.Context, accountId int64, userId int64) error {
-	_, err := s.accountRepo.GetAccountById(c, accountId, userId)
+func (s *TransactionService) validateAccountExists(ctx context.Context, accountId int64, userId int64) error {
+	_, err := s.accountRepo.GetAccountById(ctx, accountId, userId)
 	return err
 }
 
-func (s *TransactionService) validateCategoryExists(c *gin.Context, categoryIds []int64, userId int64) error {
+func (s *TransactionService) validateCategoryExists(ctx context.Context, categoryIds []int64, userId int64) error {
 	if len(categoryIds) == 0 {
 		return nil
 	}
-	categories, err := s.categoryRepo.ListCategories(c, userId)
+	categories, err := s.categoryRepo.ListCategories(ctx, userId)
 	if err != nil {
 		return err
 	}

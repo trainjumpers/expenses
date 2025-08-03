@@ -7,10 +7,10 @@ import (
 	"expenses/internal/api"
 	"expenses/internal/api/controller"
 	"expenses/internal/config"
-	database "expenses/internal/database/manager"
 	"expenses/internal/repository"
 	"expenses/internal/service"
 	"expenses/internal/validator"
+	"expenses/pkg/database/manager"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/wire"
@@ -18,7 +18,7 @@ import (
 
 type Provider struct {
 	Handler   *gin.Engine
-	dbManager database.DatabaseManager
+	dbManager manager.DatabaseManager
 }
 
 // Close all connections app makes in various places
@@ -26,7 +26,7 @@ func (p *Provider) Close() error {
 	return p.dbManager.Close()
 }
 
-func NewProvider(handler *gin.Engine, dbManager database.DatabaseManager) *Provider {
+func NewProvider(handler *gin.Engine, dbManager manager.DatabaseManager) *Provider {
 	return &Provider{
 		Handler:   handler,
 		dbManager: dbManager,
@@ -40,7 +40,7 @@ func InitializeApplication() (*Provider, error) {
 
 var ProviderSet = wire.NewSet(
 	NewProvider,
-	database.NewDatabaseManager,
+	manager.NewDatabaseManager,
 	config.NewConfig,
 	api.Init,
 	controllerSet,
@@ -50,28 +50,32 @@ var ProviderSet = wire.NewSet(
 )
 
 var controllerSet = wire.NewSet(
+	controller.NewAccountController,
 	controller.NewAuthController,
+	controller.NewCategoryController,
+	controller.NewRuleController,
 	controller.NewStatementController,
+	controller.NewTransactionController,
 )
 
 var repositorySet = wire.NewSet(
-	repository.NewUserRepository,
 	repository.NewAccountRepository,
 	repository.NewCategoryRepository,
-	repository.NewTransactionRepository,
 	repository.NewRuleRepository,
 	repository.NewStatementRepository,
+	repository.NewTransactionRepository,
+	repository.NewUserRepository,
 )
 
 var serviceSet = wire.NewSet(
-	service.NewUserService,
-	service.NewAuthService,
 	service.NewAccountService,
+	service.NewAuthService,
 	service.NewCategoryService,
-	service.NewTransactionService,
-	service.NewRuleService,
 	service.NewRuleEngineService,
+	service.NewRuleService,
 	service.NewStatementService,
+	service.NewTransactionService,
+	service.NewUserService,
 )
 
 var validatorSet = wire.NewSet(

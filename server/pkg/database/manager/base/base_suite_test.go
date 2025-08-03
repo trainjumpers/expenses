@@ -1,4 +1,4 @@
-package database_test
+package base_test
 
 import (
 	"testing"
@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestManagerIntegration(t *testing.T) {
+func TestBase(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "DatabaseManager Suite")
+	RunSpecs(t, "Database Manager Base Suite")
 }

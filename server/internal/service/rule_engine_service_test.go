@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	repository "expenses/internal/mock/repository"
 	"expenses/internal/models"
 	"fmt"
@@ -8,8 +9,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-
-	"github.com/gin-gonic/gin"
 )
 
 var _ = Describe("RuleEngineService", func() {
@@ -18,12 +17,12 @@ var _ = Describe("RuleEngineService", func() {
 		mockRuleRepo     *repository.MockRuleRepository
 		mockTxnRepo      *repository.MockTransactionRepository
 		mockCategoryRepo *repository.MockCategoryRepository
-		ctx              *gin.Context
+		ctx              context.Context
 		userId           int64
 	)
 
 	BeforeEach(func() {
-		ctx = &gin.Context{}
+		ctx = context.Background()
 		userId = 1
 
 		// Setup mocks

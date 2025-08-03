@@ -1,11 +1,10 @@
 package mock_repository
 
 import (
+	"context"
 	customErrors "expenses/internal/errors"
 	"expenses/internal/models"
 	"sync"
-
-	"github.com/gin-gonic/gin"
 )
 
 type MockCategoryRepository struct {
@@ -21,7 +20,7 @@ func NewMockCategoryRepository() *MockCategoryRepository {
 	}
 }
 
-func (m *MockCategoryRepository) CreateCategory(c *gin.Context, input models.CreateCategoryInput) (models.CategoryResponse, error) {
+func (m *MockCategoryRepository) CreateCategory(ctx context.Context, input models.CreateCategoryInput) (models.CategoryResponse, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	for _, cat := range m.categories {
@@ -47,7 +46,7 @@ func (m *MockCategoryRepository) CreateCategory(c *gin.Context, input models.Cre
 	return category, nil
 }
 
-func (m *MockCategoryRepository) GetCategoryById(c *gin.Context, categoryId int64, userId int64) (models.CategoryResponse, error) {
+func (m *MockCategoryRepository) GetCategoryById(ctx context.Context, categoryId int64, userId int64) (models.CategoryResponse, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	cat, ok := m.categories[categoryId]
@@ -57,7 +56,7 @@ func (m *MockCategoryRepository) GetCategoryById(c *gin.Context, categoryId int6
 	return cat, nil
 }
 
-func (m *MockCategoryRepository) ListCategories(c *gin.Context, userId int64) ([]models.CategoryResponse, error) {
+func (m *MockCategoryRepository) ListCategories(ctx context.Context, userId int64) ([]models.CategoryResponse, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	var result []models.CategoryResponse
@@ -69,7 +68,7 @@ func (m *MockCategoryRepository) ListCategories(c *gin.Context, userId int64) ([
 	return result, nil
 }
 
-func (m *MockCategoryRepository) UpdateCategory(c *gin.Context, categoryId int64, userId int64, input models.UpdateCategoryInput) (models.CategoryResponse, error) {
+func (m *MockCategoryRepository) UpdateCategory(ctx context.Context, categoryId int64, userId int64, input models.UpdateCategoryInput) (models.CategoryResponse, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	cat, ok := m.categories[categoryId]
@@ -95,7 +94,7 @@ func (m *MockCategoryRepository) UpdateCategory(c *gin.Context, categoryId int64
 	return cat, nil
 }
 
-func (m *MockCategoryRepository) DeleteCategory(c *gin.Context, categoryId int64, userId int64) error {
+func (m *MockCategoryRepository) DeleteCategory(ctx context.Context, categoryId int64, userId int64) error {
 	cat, ok := m.categories[categoryId]
 	if !ok || cat.CreatedBy != userId {
 		return customErrors.NewCategoryNotFoundError(nil)

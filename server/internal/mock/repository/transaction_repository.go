@@ -1,13 +1,12 @@
 package mock_repository
 
 import (
+	"context"
 	customErrors "expenses/internal/errors"
 	"expenses/internal/models"
 	"sort"
 	"strings"
 	"sync"
-
-	"github.com/gin-gonic/gin"
 )
 
 type statementTxnMapping struct {
@@ -32,7 +31,7 @@ func NewMockTransactionRepository() *MockTransactionRepository {
 	}
 }
 
-func (m *MockTransactionRepository) CreateTransaction(c *gin.Context, input models.CreateBaseTransactionInput, categoryIds []int64) (models.TransactionResponse, error) {
+func (m *MockTransactionRepository) CreateTransaction(ctx context.Context, input models.CreateBaseTransactionInput, categoryIds []int64) (models.TransactionResponse, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	// Check for duplicate transaction based on composite uniqueness: created_by + date + name + description + amount
@@ -77,7 +76,7 @@ func (m *MockTransactionRepository) CreateTransaction(c *gin.Context, input mode
 	return tx, nil
 }
 
-func (m *MockTransactionRepository) UpdateCategoryMapping(c *gin.Context, transactionId int64, userId int64, categoryIds []int64) error {
+func (m *MockTransactionRepository) UpdateCategoryMapping(ctx context.Context, transactionId int64, userId int64, categoryIds []int64) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	tx, ok := m.transactions[transactionId]
@@ -90,7 +89,7 @@ func (m *MockTransactionRepository) UpdateCategoryMapping(c *gin.Context, transa
 	return nil
 }
 
-func (m *MockTransactionRepository) GetTransactionById(c *gin.Context, transactionId int64, userId int64) (models.TransactionResponse, error) {
+func (m *MockTransactionRepository) GetTransactionById(ctx context.Context, transactionId int64, userId int64) (models.TransactionResponse, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	tx, ok := m.transactions[transactionId]
@@ -100,7 +99,7 @@ func (m *MockTransactionRepository) GetTransactionById(c *gin.Context, transacti
 	return tx, nil
 }
 
-func (m *MockTransactionRepository) UpdateTransaction(c *gin.Context, transactionId int64, userId int64, input models.UpdateBaseTransactionInput) error {
+func (m *MockTransactionRepository) UpdateTransaction(ctx context.Context, transactionId int64, userId int64, input models.UpdateBaseTransactionInput) error {
 	tx, ok := m.transactions[transactionId]
 	if !ok || tx.CreatedBy != userId {
 		return customErrors.NewTransactionNotFoundError(nil)
@@ -168,7 +167,7 @@ func (m *MockTransactionRepository) UpdateTransaction(c *gin.Context, transactio
 	return nil
 }
 
-func (m *MockTransactionRepository) DeleteTransaction(c *gin.Context, transactionId int64, userId int64) error {
+func (m *MockTransactionRepository) DeleteTransaction(ctx context.Context, transactionId int64, userId int64) error {
 	tx, ok := m.transactions[transactionId]
 	if !ok || tx.CreatedBy != userId {
 		return customErrors.NewTransactionNotFoundError(nil)
@@ -177,7 +176,7 @@ func (m *MockTransactionRepository) DeleteTransaction(c *gin.Context, transactio
 	return nil
 }
 
-func (m *MockTransactionRepository) ListTransactions(c *gin.Context, userId int64, query models.TransactionListQuery) (models.PaginatedTransactionsResponse, error) {
+func (m *MockTransactionRepository) ListTransactions(ctx context.Context, userId int64, query models.TransactionListQuery) (models.PaginatedTransactionsResponse, error) {
 	var result []models.TransactionResponse
 
 	// Filter transactions by user Id and apply other filters
