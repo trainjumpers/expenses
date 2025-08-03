@@ -2,6 +2,7 @@ import {
   RuleModal,
   RuleModalInitialData,
 } from "@/components/custom/Modal/Rule/RuleModal";
+import { useCategories } from "@/components/hooks/useCategories";
 import {
   getRule,
   updateRule,
@@ -32,6 +33,7 @@ export function EditRuleModal({
   onOpenChange,
   ruleId,
 }: EditRuleModalProps) {
+  const { data: categories = [] } = useCategories();
   const [initialData, setInitialData] = useState<
     RuleModalInitialData | undefined
   >(undefined);
@@ -51,16 +53,16 @@ export function EditRuleModal({
           rule: data.rule,
           conditions: normalizeRuleConditions(
             data.conditions as BaseRuleCondition[],
-            []
+            categories
           ),
-          actions: normalizeRuleActions(data.actions as BaseRuleAction[], []),
+          actions: normalizeRuleActions(data.actions as BaseRuleAction[], categories),
         });
       })
       .catch((e) => {
         setError(e?.message || "Failed to fetch rule details");
       })
       .finally(() => setFetching(false));
-  }, [isOpen, ruleId]);
+  }, [isOpen, ruleId, categories]);
 
   // Handler for RuleModal submit
   const handleSubmit = async ({
@@ -79,9 +81,13 @@ export function EditRuleModal({
       const ruleUpdate: UpdateRuleInput = {
         ...rule,
       };
-      await updateRule(ruleId, ruleUpdate);
-      await updateRuleActions(ruleId, actions);
-      await updateRuleConditions(ruleId, conditions);
+      
+      // Execute all updates in parallel
+      await Promise.all([
+        updateRule(ruleId, ruleUpdate),
+        updateRuleActions(ruleId, normalizeRuleActions(actions, categories)),
+        updateRuleConditions(ruleId, normalizeRuleConditions(conditions, categories)),
+      ]);
 
       toast.success("Rule updated successfully!");
       onOpenChange(false);
