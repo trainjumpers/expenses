@@ -18,7 +18,7 @@ type LockFunc func(ctx context.Context) error
 // This interface combines basic, enhanced, and monitoring features
 type DatabaseManager interface {
 	// === CORE OPERATIONS (always available) ===
-	
+
 	// ExecuteQuery executes a query that doesn't return rows (INSERT, UPDATE, DELETE)
 	// Returns the number of rows affected and any error
 	// If called within a transaction context, uses the transaction; otherwise uses the pool
@@ -47,15 +47,15 @@ type DatabaseManager interface {
 	Close() error
 
 	// === ENHANCED OPERATIONS (configurable) ===
-	
+
 	// WithTxnOptions executes a transaction with specific options
 	// Available if EnableRetry is true in config
 	WithTxnOptions(ctx context.Context, opts *TransactionOptions, fn TransactionFunc) error
-	
+
 	// WithReadOnlyTxn executes a read-only transaction
 	// Available if EnableRetry is true in config
 	WithReadOnlyTxn(ctx context.Context, fn TransactionFunc) error
-	
+
 	// WithRetryableTxn executes a transaction with aggressive retry policy
 	// Available if EnableRetry is true in config
 	WithRetryableTxn(ctx context.Context, fn TransactionFunc) error
@@ -73,10 +73,10 @@ type DatabaseManager interface {
 	WithConnection(ctx context.Context, fn func(conn *pgx.Conn) error) error
 
 	// === HEALTH & INTROSPECTION (always available) ===
-	
+
 	// Ping checks database connectivity
 	Ping(ctx context.Context) error
-	
+
 	// Stats returns database connection pool statistics
 	Stats() DatabaseStats
 
@@ -84,20 +84,20 @@ type DatabaseManager interface {
 	GetTransactionInfo(ctx context.Context) (*TransactionInfo, error)
 
 	// === MONITORING (configurable) ===
-	
+
 	// GetMonitoringMetrics returns current monitoring metrics
 	// Available if EnableMonitoring is true in config
 	GetMonitoringMetrics() TransactionMetrics
-	
+
 	// ResetMetrics clears all monitoring metrics
 	// Available if EnableMonitoring is true in config
 	ResetMetrics()
 
 	// === CONFIGURATION ===
-	
+
 	// GetConfig returns the current configuration
 	GetConfig() *DatabaseManagerConfig
-	
+
 	// IsFeatureEnabled checks if a specific feature is enabled
 	IsFeatureEnabled(feature string) bool
 }

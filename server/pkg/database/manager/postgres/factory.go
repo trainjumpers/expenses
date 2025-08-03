@@ -19,6 +19,6 @@ func (f *PostgreSQLFactory) CreateDatabaseManager(cfg *config.Config, managerCon
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return NewPostgresDatabaseManager(pool, managerConfig), nil
 }

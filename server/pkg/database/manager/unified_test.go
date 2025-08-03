@@ -29,12 +29,12 @@ var _ = Describe("Unified Database Manager", func() {
 			dbManager, err := manager.NewDatabaseManager(cfg)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(dbManager).NotTo(BeNil())
-			
+
 			// Check that it has all features
 			config := dbManager.GetConfig()
 			Expect(config.EnableTransactions).To(BeTrue())
 			Expect(config.EnableLocks).To(BeTrue())
-			
+
 			dbManager.Close()
 		})
 
@@ -42,14 +42,14 @@ var _ = Describe("Unified Database Manager", func() {
 			dbManager, err := manager.NewBasicDatabaseManager(cfg)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(dbManager).NotTo(BeNil())
-			
+
 			// Check that advanced features are disabled
 			config := dbManager.GetConfig()
 			Expect(config.EnableTransactions).To(BeTrue())
 			Expect(config.EnableLocks).To(BeTrue())
 			Expect(config.EnableRetry).To(BeFalse())
 			Expect(config.EnableMonitoring).To(BeFalse())
-			
+
 			dbManager.Close()
 		})
 
@@ -57,7 +57,7 @@ var _ = Describe("Unified Database Manager", func() {
 			dbManager, err := manager.NewProductionDatabaseManager(cfg)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(dbManager).NotTo(BeNil())
-			
+
 			// Check that all features are enabled
 			config := dbManager.GetConfig()
 			Expect(config.EnableTransactions).To(BeTrue())
@@ -66,7 +66,7 @@ var _ = Describe("Unified Database Manager", func() {
 			Expect(config.EnableSavepoints).To(BeTrue())
 			Expect(config.EnableBatch).To(BeTrue())
 			Expect(config.EnableMonitoring).To(BeTrue())
-			
+
 			dbManager.Close()
 		})
 
@@ -83,13 +83,13 @@ var _ = Describe("Unified Database Manager", func() {
 			dbManager, err := manager.NewDatabaseManagerWithConfig(cfg, customConfig)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(dbManager).NotTo(BeNil())
-			
+
 			// Check custom configuration
 			config := dbManager.GetConfig()
 			Expect(config.EnableRetry).To(BeTrue())
 			Expect(config.EnableSavepoints).To(BeFalse())
 			Expect(config.EnableMonitoring).To(BeFalse())
-			
+
 			dbManager.Close()
 		})
 	})
@@ -99,7 +99,7 @@ var _ = Describe("Unified Database Manager", func() {
 			dbManager, err := manager.NewProductionDatabaseManager(cfg)
 			Expect(err).NotTo(HaveOccurred())
 			defer dbManager.Close()
-			
+
 			// Check feature detection
 			Expect(dbManager.IsFeatureEnabled(manager.FeatureRetry)).To(BeTrue())
 			Expect(dbManager.IsFeatureEnabled(manager.FeatureSavepoints)).To(BeTrue())
@@ -111,7 +111,7 @@ var _ = Describe("Unified Database Manager", func() {
 			dbManager, err := manager.NewBasicDatabaseManager(cfg)
 			Expect(err).NotTo(HaveOccurred())
 			defer dbManager.Close()
-			
+
 			// Check feature detection
 			Expect(dbManager.IsFeatureEnabled(manager.FeatureRetry)).To(BeFalse())
 			Expect(dbManager.IsFeatureEnabled(manager.FeatureSavepoints)).To(BeFalse())

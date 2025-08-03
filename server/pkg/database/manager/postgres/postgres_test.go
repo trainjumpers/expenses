@@ -24,13 +24,13 @@ var _ = Describe("PostgreSQL Database Manager", Ordered, func() {
 		cfg = &config.Config{
 			DBSchema: "public",
 		}
-		
+
 		var err error
 		factory := postgres.NewPostgreSQLFactory()
 		dbManager, err = factory.CreateDatabaseManager(cfg, base.DefaultConfig())
 		Expect(err).NotTo(HaveOccurred())
 		Expect(dbManager).NotTo(BeNil())
-		
+
 		ctx = context.Background()
 	})
 
@@ -234,7 +234,7 @@ var _ = Describe("PostgreSQL Database Manager", Ordered, func() {
 		BeforeEach(func() {
 			_, err := dbManager.ExecuteQuery(ctx, `CREATE TABLE IF NOT EXISTS test_monitored (id SERIAL PRIMARY KEY, name TEXT)`)
 			Expect(err).NotTo(HaveOccurred())
-			
+
 			// Reset metrics before each test
 			dbManager.ResetMetrics()
 		})

@@ -15,12 +15,12 @@ import (
 type MockDatabaseManager struct {
 	// Configuration
 	config *base.DatabaseManagerConfig
-	
+
 	// Test control flags
 	ShouldFailWithTxn bool
 	ExecuteQueryError error
 	FetchAllError     error
-	
+
 	// Mock data
 	mockMetrics base.TransactionMetrics
 }
@@ -69,13 +69,13 @@ func (m *MockDatabaseManager) WithTxn(ctx context.Context, fn base.TransactionFu
 	if m.ShouldFailWithTxn {
 		return fmt.Errorf("mock transaction error")
 	}
-	
+
 	// Update metrics if monitoring is enabled
 	if m.config.EnableMonitoring {
 		m.mockMetrics.TotalTransactions++
 		m.mockMetrics.CommittedTransactions++
 	}
-	
+
 	// Execute the function with a context
 	return fn(ctx)
 }
