@@ -9,6 +9,7 @@ import (
 
 	"expenses/internal/config"
 	"expenses/pkg/logger"
+
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
