@@ -892,9 +892,10 @@ var _ = Describe("RuleController", func() {
 			for _, item := range data {
 				rule := item.(map[string]any)
 				ruleId := int64(rule["id"].(float64))
-				if ruleId == andRuleId {
+				switch ruleId {
+				case andRuleId:
 					andRule = rule
-				} else if ruleId == orRuleId {
+				case orRuleId:
 					orRule = rule
 				}
 			}
@@ -1938,6 +1939,7 @@ var _ = Describe("RuleController", func() {
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 		})
 	})
+
 	Describe("ExecuteRules", func() {
 		// Helper to get a transaction by ID for verification
 		getTestTransaction := func(id int64, user *TestHelper) map[string]any {
@@ -2065,6 +2067,1148 @@ var _ = Describe("RuleController", func() {
 					resp, _ := testUser1.MakeRequest(http.MethodPost, "/rule/execute", invalidBody)
 					Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 				})
+			})
+		})
+	})
+
+	Describe("PutRuleActions", func() {
+		var testRuleId int64
+
+		BeforeEach(func() {
+			// Create a test rule for each test
+			testRuleId, _, _ = createTestRule()
+		})
+
+		Context("Authentication and Authorization", func() {
+			It("should return unauthorized for missing authentication", func() {
+				input := models.PutRuleActionsRequest{
+					Actions: []models.CreateRuleActionRequest{
+						{ActionType: models.RuleFieldAmount, ActionValue: "200"},
+					},
+				}
+				url := "/rule/" + strconv.FormatInt(testRuleId, 10) + "/actions"
+				resp, _ := testHelperUnauthenticated.MakeRequest(http.MethodPut, url, input)
+				Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
+			})
+
+			It("should return unauthorized for malformed tokens", func() {
+				input := models.PutRuleActionsRequest{
+					Actions: []models.CreateRuleActionRequest{
+						{ActionType: models.RuleFieldAmount, ActionValue: "200"},
+					},
+				}
+				url := "/rule/" + strconv.FormatInt(testRuleId, 10) + "/actions"
+				checkMalformedTokens(testUser1, http.MethodPut, url, input)
+			})
+
+			It("should return not found for rule belonging to another user", func() {
+				input := models.PutRuleActionsRequest{
+					Actions: []models.CreateRuleActionRequest{
+						{ActionType: models.RuleFieldAmount, ActionValue: "200"},
+					},
+				}
+				url := "/rule/" + strconv.FormatInt(testRuleId, 10) + "/actions"
+				resp, response := testUser2.MakeRequest(http.MethodPut, url, input)
+				Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
+				Expect(response["message"]).To(ContainSubstring("not found"))
+			})
+
+			It("should return not found for non-existent rule", func() {
+				input := models.PutRuleActionsRequest{
+					Actions: []models.CreateRuleActionRequest{
+						{ActionType: models.RuleFieldAmount, ActionValue: "200"},
+					},
+				}
+				resp, response := testUser1.MakeRequest(http.MethodPut, "/rule/999999/actions", input)
+				Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
+				Expect(response["message"]).To(ContainSubstring("not found"))
+			})
+		})
+
+		Context("Input Validation and JSON Binding", func() {
+			It("should return bad request for invalid JSON", func() {
+				url := "/rule/" + strconv.FormatInt(testRuleId, 10) + "/actions"
+				resp, response := testUser1.MakeRequest(http.MethodPut, url, "{ invalid json }")
+				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+				Expect(response["message"]).To(ContainSubstring("invalid"))
+			})
+
+			It("should return bad request for empty actions array", func() {
+				input := models.PutRuleActionsRequest{
+					Actions: []models.CreateRuleActionRequest{},
+				}
+				url := "/rule/" + strconv.FormatInt(testRuleId, 10) + "/actions"
+				resp, response := testUser1.MakeRequest(http.MethodPut, url, input)
+				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+				Expect(response["message"]).To(ContainSubstring("min"))
+			})
+
+			It("should return bad request for missing actions field", func() {
+				input := map[string]any{}
+				url := "/rule/" + strconv.FormatInt(testRuleId, 10) + "/actions"
+				resp, response := testUser1.MakeRequest(http.MethodPut, url, input)
+				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+				Expect(response["message"]).To(ContainSubstring("required"))
+			})
+
+			It("should return bad request for invalid rule ID format", func() {
+				input := models.PutRuleActionsRequest{
+					Actions: []models.CreateRuleActionRequest{
+						{ActionType: models.RuleFieldAmount, ActionValue: "200"},
+					},
+				}
+				resp, response := testUser1.MakeRequest(http.MethodPut, "/rule/invalid_id/actions", input)
+				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+				Expect(response["message"]).To(Equal("invalid ruleId"))
+			})
+
+			It("should validate action types and values", func() {
+				testCases := []struct {
+					actionType  models.RuleFieldType
+					actionValue string
+					shouldPass  bool
+					description string
+				}{
+					{models.RuleFieldAmount, "100.50", true, "valid amount"},
+					{models.RuleFieldAmount, "invalid", false, "invalid amount"},
+					{models.RuleFieldName, "Valid Name", true, "valid name"},
+					{models.RuleFieldDescription, "Valid Description", true, "valid description"},
+					{models.RuleFieldCategory, "1", true, "valid category ID"},
+					{models.RuleFieldCategory, "invalid", false, "invalid category ID"},
+				}
+
+				for _, tc := range testCases {
+					input := models.PutRuleActionsRequest{
+						Actions: []models.CreateRuleActionRequest{
+							{ActionType: tc.actionType, ActionValue: tc.actionValue},
+						},
+					}
+					url := "/rule/" + strconv.FormatInt(testRuleId, 10) + "/actions"
+					resp, _ := testUser1.MakeRequest(http.MethodPut, url, input)
+
+					if tc.shouldPass {
+						Expect(resp.StatusCode).To(Equal(http.StatusOK), "Should pass for "+tc.description)
+					} else {
+						Expect(resp.StatusCode).To(Equal(http.StatusBadRequest), "Should fail for "+tc.description)
+					}
+				}
+			})
+
+			It("should enforce maximum actions limit", func() {
+				// Create 51 actions (exceeds max of 50)
+				actions := make([]models.CreateRuleActionRequest, 51)
+				for i := 0; i < 51; i++ {
+					actions[i] = models.CreateRuleActionRequest{
+						ActionType:  models.RuleFieldAmount,
+						ActionValue: fmt.Sprintf("%d", i+100),
+					}
+				}
+				input := models.PutRuleActionsRequest{Actions: actions}
+				url := "/rule/" + strconv.FormatInt(testRuleId, 10) + "/actions"
+				resp, response := testUser1.MakeRequest(http.MethodPut, url, input)
+				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+				Expect(response["message"]).To(ContainSubstring("max"))
+			})
+		})
+
+		Context("HTTP Status Code Responses", func() {
+			It("should return 200 OK for successful PUT operation", func() {
+				input := models.PutRuleActionsRequest{
+					Actions: []models.CreateRuleActionRequest{
+						{ActionType: models.RuleFieldAmount, ActionValue: "200"},
+						{ActionType: models.RuleFieldName, ActionValue: "Updated Name"},
+					},
+				}
+				url := "/rule/" + strconv.FormatInt(testRuleId, 10) + "/actions"
+				resp, response := testUser1.MakeRequest(http.MethodPut, url, input)
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				Expect(response["message"]).To(Equal("Rule actions updated successfully"))
+			})
+
+			It("should return 400 Bad Request for validation errors", func() {
+				input := models.PutRuleActionsRequest{
+					Actions: []models.CreateRuleActionRequest{
+						{ActionType: models.RuleFieldAmount, ActionValue: "invalid_amount"},
+					},
+				}
+				url := "/rule/" + strconv.FormatInt(testRuleId, 10) + "/actions"
+				resp, _ := testUser1.MakeRequest(http.MethodPut, url, input)
+				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+			})
+
+			It("should return 404 Not Found for non-existent rule", func() {
+				input := models.PutRuleActionsRequest{
+					Actions: []models.CreateRuleActionRequest{
+						{ActionType: models.RuleFieldAmount, ActionValue: "200"},
+					},
+				}
+				resp, _ := testUser1.MakeRequest(http.MethodPut, "/rule/999999/actions", input)
+				Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
+			})
+
+			It("should return 401 Unauthorized for missing authentication", func() {
+				input := models.PutRuleActionsRequest{
+					Actions: []models.CreateRuleActionRequest{
+						{ActionType: models.RuleFieldAmount, ActionValue: "200"},
+					},
+				}
+				url := "/rule/" + strconv.FormatInt(testRuleId, 10) + "/actions"
+				resp, _ := testHelperUnauthenticated.MakeRequest(http.MethodPut, url, input)
+				Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
+			})
+		})
+
+		Context("Error Response Formatting", func() {
+			It("should return properly formatted error response for validation failures", func() {
+				input := models.PutRuleActionsRequest{
+					Actions: []models.CreateRuleActionRequest{
+						{ActionType: models.RuleFieldAmount, ActionValue: "invalid_amount"},
+					},
+				}
+				url := "/rule/" + strconv.FormatInt(testRuleId, 10) + "/actions"
+				resp, response := testUser1.MakeRequest(http.MethodPut, url, input)
+				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+				Expect(response).To(HaveKey("message"))
+				Expect(response["message"]).To(BeAssignableToTypeOf(""))
+			})
+
+			It("should return properly formatted error response for not found", func() {
+				input := models.PutRuleActionsRequest{
+					Actions: []models.CreateRuleActionRequest{
+						{ActionType: models.RuleFieldAmount, ActionValue: "200"},
+					},
+				}
+				resp, response := testUser1.MakeRequest(http.MethodPut, "/rule/999999/actions", input)
+				Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
+				Expect(response).To(HaveKey("message"))
+				Expect(response["message"]).To(ContainSubstring("not found"))
+			})
+
+			It("should return properly formatted error response for unauthorized", func() {
+				input := models.PutRuleActionsRequest{
+					Actions: []models.CreateRuleActionRequest{
+						{ActionType: models.RuleFieldAmount, ActionValue: "200"},
+					},
+				}
+				url := "/rule/" + strconv.FormatInt(testRuleId, 10) + "/actions"
+				resp, response := testHelperUnauthenticated.MakeRequest(http.MethodPut, url, input)
+				Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
+				Expect(response).To(HaveKey("message"))
+			})
+		})
+
+		Context("Successful PUT Operations", func() {
+			It("should successfully replace all actions with new ones", func() {
+				input := models.PutRuleActionsRequest{
+					Actions: []models.CreateRuleActionRequest{
+						{ActionType: models.RuleFieldAmount, ActionValue: "300"},
+						{ActionType: models.RuleFieldName, ActionValue: "New Transaction Name"},
+						{ActionType: models.RuleFieldDescription, ActionValue: "New Description"},
+					},
+				}
+				url := "/rule/" + strconv.FormatInt(testRuleId, 10) + "/actions"
+				resp, response := testUser1.MakeRequest(http.MethodPut, url, input)
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				Expect(response["message"]).To(Equal("Rule actions updated successfully"))
+				Expect(response["data"]).To(HaveKey("actions"))
+
+				actions := response["data"].(map[string]any)["actions"].([]any)
+				Expect(len(actions)).To(Equal(3))
+
+				// Verify the actions were created correctly
+				actionTypes := make(map[string]string)
+				for _, action := range actions {
+					actionMap := action.(map[string]any)
+					actionTypes[actionMap["action_type"].(string)] = actionMap["action_value"].(string)
+				}
+				Expect(actionTypes["amount"]).To(Equal("300"))
+				Expect(actionTypes["name"]).To(Equal("New Transaction Name"))
+				Expect(actionTypes["description"]).To(Equal("New Description"))
+			})
+
+			It("should handle single action replacement", func() {
+				input := models.PutRuleActionsRequest{
+					Actions: []models.CreateRuleActionRequest{
+						{ActionType: models.RuleFieldAmount, ActionValue: "500"},
+					},
+				}
+				url := "/rule/" + strconv.FormatInt(testRuleId, 10) + "/actions"
+				resp, response := testUser1.MakeRequest(http.MethodPut, url, input)
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+				actions := response["data"].(map[string]any)["actions"].([]any)
+				Expect(len(actions)).To(Equal(1))
+
+				action := actions[0].(map[string]any)
+				Expect(action["action_type"]).To(Equal("amount"))
+				Expect(action["action_value"]).To(Equal("500"))
+			})
+
+			It("should handle multiple actions of the same type", func() {
+				input := models.PutRuleActionsRequest{
+					Actions: []models.CreateRuleActionRequest{
+						{ActionType: models.RuleFieldAmount, ActionValue: "100"},
+						{ActionType: models.RuleFieldAmount, ActionValue: "200"},
+					},
+				}
+				url := "/rule/" + strconv.FormatInt(testRuleId, 10) + "/actions"
+				resp, response := testUser1.MakeRequest(http.MethodPut, url, input)
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+				actions := response["data"].(map[string]any)["actions"].([]any)
+				Expect(len(actions)).To(Equal(2))
+
+				// Both should be amount type
+				for _, action := range actions {
+					actionMap := action.(map[string]any)
+					Expect(actionMap["action_type"]).To(Equal("amount"))
+				}
+			})
+		})
+
+		Context("End-to-End PUT Actions Workflow", func() {
+			It("should completely replace existing actions and verify persistence", func() {
+				// First, verify the initial state
+				getRuleUrl := "/rule/" + strconv.FormatInt(testRuleId, 10)
+				resp, response := testUser1.MakeRequest(http.MethodGet, getRuleUrl, nil)
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				initialActions := response["data"].(map[string]any)["actions"].([]any)
+				Expect(len(initialActions)).To(Equal(1)) // From createTestRule
+
+				// Replace with new actions
+				input := models.PutRuleActionsRequest{
+					Actions: []models.CreateRuleActionRequest{
+						{ActionType: models.RuleFieldAmount, ActionValue: "999"},
+						{ActionType: models.RuleFieldName, ActionValue: "Completely New Name"},
+					},
+				}
+				putUrl := "/rule/" + strconv.FormatInt(testRuleId, 10) + "/actions"
+				resp, _ = testUser1.MakeRequest(http.MethodPut, putUrl, input)
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+				// Verify the replacement was successful
+				resp, response = testUser1.MakeRequest(http.MethodGet, getRuleUrl, nil)
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				updatedActions := response["data"].(map[string]any)["actions"].([]any)
+				Expect(len(updatedActions)).To(Equal(2))
+
+				// Verify old actions are gone and new ones exist
+				actionTypes := make(map[string]string)
+				for _, action := range updatedActions {
+					actionMap := action.(map[string]any)
+					actionTypes[actionMap["action_type"].(string)] = actionMap["action_value"].(string)
+				}
+				Expect(actionTypes["amount"]).To(Equal("999"))
+				Expect(actionTypes["name"]).To(Equal("Completely New Name"))
+			})
+
+			It("should handle transactional integrity on validation failure", func() {
+				// Get initial state
+				getRuleUrl := "/rule/" + strconv.FormatInt(testRuleId, 10)
+				resp, response := testUser1.MakeRequest(http.MethodGet, getRuleUrl, nil)
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				initialActions := response["data"].(map[string]any)["actions"].([]any)
+
+				// Try to update with invalid data
+				input := models.PutRuleActionsRequest{
+					Actions: []models.CreateRuleActionRequest{
+						{ActionType: models.RuleFieldAmount, ActionValue: "valid_amount_200"},
+						{ActionType: models.RuleFieldAmount, ActionValue: "invalid_amount"},
+					},
+				}
+				putUrl := "/rule/" + strconv.FormatInt(testRuleId, 10) + "/actions"
+				resp, _ = testUser1.MakeRequest(http.MethodPut, putUrl, input)
+				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+
+				// Verify original actions are still intact
+				resp, response = testUser1.MakeRequest(http.MethodGet, getRuleUrl, nil)
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				currentActions := response["data"].(map[string]any)["actions"].([]any)
+				Expect(len(currentActions)).To(Equal(len(initialActions)))
+			})
+		})
+
+		Context("Concurrent Access Scenarios", func() {
+			It("should handle concurrent PUT requests to the same rule", func() {
+				done := make(chan bool, 2)
+
+				// First concurrent request
+				go func() {
+					defer GinkgoRecover()
+					input := models.PutRuleActionsRequest{
+						Actions: []models.CreateRuleActionRequest{
+							{ActionType: models.RuleFieldAmount, ActionValue: "100"},
+						},
+					}
+					url := "/rule/" + strconv.FormatInt(testRuleId, 10) + "/actions"
+					resp, _ := testUser1.MakeRequest(http.MethodPut, url, input)
+					Expect(resp.StatusCode).To(Equal(http.StatusOK))
+					done <- true
+				}()
+
+				// Second concurrent request
+				go func() {
+					defer GinkgoRecover()
+					input := models.PutRuleActionsRequest{
+						Actions: []models.CreateRuleActionRequest{
+							{ActionType: models.RuleFieldAmount, ActionValue: "200"},
+						},
+					}
+					url := "/rule/" + strconv.FormatInt(testRuleId, 10) + "/actions"
+					resp, _ := testUser1.MakeRequest(http.MethodPut, url, input)
+					Expect(resp.StatusCode).To(Equal(http.StatusOK))
+					done <- true
+				}()
+
+				// Wait for both requests to complete
+				Eventually(done, "5s").Should(Receive())
+				Eventually(done, "5s").Should(Receive())
+
+				// Verify the rule still has valid actions (one of the two requests succeeded)
+				getRuleUrl := "/rule/" + strconv.FormatInt(testRuleId, 10)
+				resp, response := testUser1.MakeRequest(http.MethodGet, getRuleUrl, nil)
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				actions := response["data"].(map[string]any)["actions"].([]any)
+				Expect(len(actions)).To(Equal(1))
+
+				action := actions[0].(map[string]any)
+				actionValue := action["action_value"].(string)
+				Expect(actionValue).To(SatisfyAny(Equal("100"), Equal("200")))
+			})
+
+			It("should handle concurrent requests from different users to different rules", func() {
+				// Create a second rule for testUser2
+				secondRuleId, _, _ := func() (int64, int64, int64) {
+					input := models.CreateRuleRequest{
+						Rule: models.CreateBaseRuleRequest{
+							Name:          "Second Test Rule",
+							Description:   ptrToString("A second rule for testing"),
+							EffectiveFrom: now,
+						},
+						Actions: []models.CreateRuleActionRequest{
+							{ActionType: models.RuleFieldAmount, ActionValue: "100"},
+						},
+						Conditions: []models.CreateRuleConditionRequest{
+							{ConditionType: models.RuleFieldAmount, ConditionValue: "100", ConditionOperator: models.OperatorEquals},
+						},
+					}
+					resp, response := testUser2.MakeRequest(http.MethodPost, "/rule", input)
+					Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+					rule := response["data"].(map[string]any)["rule"].(map[string]any)
+					action := response["data"].(map[string]any)["actions"].([]any)[0].(map[string]any)
+					condition := response["data"].(map[string]any)["conditions"].([]any)[0].(map[string]any)
+					return int64(rule["id"].(float64)), int64(action["id"].(float64)), int64(condition["id"].(float64))
+				}()
+
+				done := make(chan bool, 2)
+
+				// User1 updates their rule
+				go func() {
+					defer GinkgoRecover()
+					input := models.PutRuleActionsRequest{
+						Actions: []models.CreateRuleActionRequest{
+							{ActionType: models.RuleFieldAmount, ActionValue: "300"},
+						},
+					}
+					url := "/rule/" + strconv.FormatInt(testRuleId, 10) + "/actions"
+					resp, _ := testUser1.MakeRequest(http.MethodPut, url, input)
+					Expect(resp.StatusCode).To(Equal(http.StatusOK))
+					done <- true
+				}()
+
+				// User2 updates their rule
+				go func() {
+					defer GinkgoRecover()
+					input := models.PutRuleActionsRequest{
+						Actions: []models.CreateRuleActionRequest{
+							{ActionType: models.RuleFieldAmount, ActionValue: "400"},
+						},
+					}
+					url := "/rule/" + strconv.FormatInt(secondRuleId, 10) + "/actions"
+					resp, _ := testUser2.MakeRequest(http.MethodPut, url, input)
+					Expect(resp.StatusCode).To(Equal(http.StatusOK))
+					done <- true
+				}()
+
+				// Wait for both requests to complete
+				Eventually(done, "5s").Should(Receive())
+				Eventually(done, "5s").Should(Receive())
+
+				// Verify both rules were updated correctly
+				getRuleUrl1 := "/rule/" + strconv.FormatInt(testRuleId, 10)
+				resp, response := testUser1.MakeRequest(http.MethodGet, getRuleUrl1, nil)
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				actions1 := response["data"].(map[string]any)["actions"].([]any)
+				Expect(actions1[0].(map[string]any)["action_value"]).To(Equal("300"))
+
+				getRuleUrl2 := "/rule/" + strconv.FormatInt(secondRuleId, 10)
+				resp, response = testUser2.MakeRequest(http.MethodGet, getRuleUrl2, nil)
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				actions2 := response["data"].(map[string]any)["actions"].([]any)
+				Expect(actions2[0].(map[string]any)["action_value"]).To(Equal("400"))
+			})
+		})
+
+		Context("Data Consistency After Operations", func() {
+			It("should maintain referential integrity after PUT operation", func() {
+				input := models.PutRuleActionsRequest{
+					Actions: []models.CreateRuleActionRequest{
+						{ActionType: models.RuleFieldAmount, ActionValue: "150"},
+						{ActionType: models.RuleFieldName, ActionValue: "Integrity Test"},
+					},
+				}
+				url := "/rule/" + strconv.FormatInt(testRuleId, 10) + "/actions"
+				resp, response := testUser1.MakeRequest(http.MethodPut, url, input)
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+				// Verify all returned actions have the correct rule_id
+				actions := response["data"].(map[string]any)["actions"].([]any)
+				for _, action := range actions {
+					actionMap := action.(map[string]any)
+					Expect(int64(actionMap["rule_id"].(float64))).To(Equal(testRuleId))
+				}
+
+				// Verify by fetching the rule again
+				getRuleUrl := "/rule/" + strconv.FormatInt(testRuleId, 10)
+				resp, response = testUser1.MakeRequest(http.MethodGet, getRuleUrl, nil)
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+				fetchedActions := response["data"].(map[string]any)["actions"].([]any)
+				Expect(len(fetchedActions)).To(Equal(2))
+				for _, action := range fetchedActions {
+					actionMap := action.(map[string]any)
+					Expect(int64(actionMap["rule_id"].(float64))).To(Equal(testRuleId))
+				}
+			})
+
+			It("should ensure no orphaned actions remain after replacement", func() {
+				// Get initial action count for the rule
+				getRuleUrl := "/rule/" + strconv.FormatInt(testRuleId, 10)
+				resp, response := testUser1.MakeRequest(http.MethodGet, getRuleUrl, nil)
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				initialActions := response["data"].(map[string]any)["actions"].([]any)
+
+				// Replace with different number of actions
+				input := models.PutRuleActionsRequest{
+					Actions: []models.CreateRuleActionRequest{
+						{ActionType: models.RuleFieldAmount, ActionValue: "100"},
+						{ActionType: models.RuleFieldName, ActionValue: "Name 1"},
+						{ActionType: models.RuleFieldDescription, ActionValue: "Desc 1"},
+					},
+				}
+				url := "/rule/" + strconv.FormatInt(testRuleId, 10) + "/actions"
+				resp, _ = testUser1.MakeRequest(http.MethodPut, url, input)
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+				// Verify exact count matches what we sent
+				resp, response = testUser1.MakeRequest(http.MethodGet, getRuleUrl, nil)
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				finalActions := response["data"].(map[string]any)["actions"].([]any)
+				Expect(len(finalActions)).To(Equal(3))
+
+				// Verify no old actions remain by checking IDs
+				initialActionIds := make(map[int64]bool)
+				for _, action := range initialActions {
+					actionMap := action.(map[string]any)
+					initialActionIds[int64(actionMap["id"].(float64))] = true
+				}
+
+				for _, action := range finalActions {
+					actionMap := action.(map[string]any)
+					actionId := int64(actionMap["id"].(float64))
+					Expect(initialActionIds[actionId]).To(BeFalse(), "Old action ID should not exist in new actions")
+				}
+			})
+		})
+	})
+
+	Describe("PutRuleConditions", func() {
+		var testRuleId int64
+
+		BeforeEach(func() {
+			// Create a test rule for each test
+			testRuleId, _, _ = createTestRule()
+		})
+
+		Context("Authentication and Authorization", func() {
+			It("should return unauthorized for missing authentication", func() {
+				input := models.PutRuleConditionsRequest{
+					Conditions: []models.CreateRuleConditionRequest{
+						{ConditionType: models.RuleFieldAmount, ConditionValue: "200", ConditionOperator: models.OperatorEquals},
+					},
+				}
+				url := "/rule/" + strconv.FormatInt(testRuleId, 10) + "/conditions"
+				resp, _ := testHelperUnauthenticated.MakeRequest(http.MethodPut, url, input)
+				Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
+			})
+
+			It("should return unauthorized for malformed tokens", func() {
+				input := models.PutRuleConditionsRequest{
+					Conditions: []models.CreateRuleConditionRequest{
+						{ConditionType: models.RuleFieldAmount, ConditionValue: "200", ConditionOperator: models.OperatorEquals},
+					},
+				}
+				url := "/rule/" + strconv.FormatInt(testRuleId, 10) + "/conditions"
+				checkMalformedTokens(testUser1, http.MethodPut, url, input)
+			})
+
+			It("should return not found for rule belonging to another user", func() {
+				input := models.PutRuleConditionsRequest{
+					Conditions: []models.CreateRuleConditionRequest{
+						{ConditionType: models.RuleFieldAmount, ConditionValue: "200", ConditionOperator: models.OperatorEquals},
+					},
+				}
+				url := "/rule/" + strconv.FormatInt(testRuleId, 10) + "/conditions"
+				resp, response := testUser2.MakeRequest(http.MethodPut, url, input)
+				Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
+				Expect(response["message"]).To(ContainSubstring("not found"))
+			})
+
+			It("should return not found for non-existent rule", func() {
+				input := models.PutRuleConditionsRequest{
+					Conditions: []models.CreateRuleConditionRequest{
+						{ConditionType: models.RuleFieldAmount, ConditionValue: "200", ConditionOperator: models.OperatorEquals},
+					},
+				}
+				resp, response := testUser1.MakeRequest(http.MethodPut, "/rule/999999/conditions", input)
+				Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
+				Expect(response["message"]).To(ContainSubstring("not found"))
+			})
+		})
+
+		Context("Input Validation and JSON Binding", func() {
+			It("should return bad request for invalid JSON", func() {
+				url := "/rule/" + strconv.FormatInt(testRuleId, 10) + "/conditions"
+				resp, response := testUser1.MakeRequest(http.MethodPut, url, "{ invalid json }")
+				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+				Expect(response["message"]).To(ContainSubstring("invalid"))
+			})
+
+			It("should return bad request for empty conditions array", func() {
+				input := models.PutRuleConditionsRequest{
+					Conditions: []models.CreateRuleConditionRequest{},
+				}
+				url := "/rule/" + strconv.FormatInt(testRuleId, 10) + "/conditions"
+				resp, response := testUser1.MakeRequest(http.MethodPut, url, input)
+				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+				Expect(response["message"]).To(ContainSubstring("min"))
+			})
+
+			It("should return bad request for missing conditions field", func() {
+				input := map[string]any{}
+				url := "/rule/" + strconv.FormatInt(testRuleId, 10) + "/conditions"
+				resp, response := testUser1.MakeRequest(http.MethodPut, url, input)
+				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+				Expect(response["message"]).To(ContainSubstring("required"))
+			})
+
+			It("should return bad request for invalid rule ID format", func() {
+				input := models.PutRuleConditionsRequest{
+					Conditions: []models.CreateRuleConditionRequest{
+						{ConditionType: models.RuleFieldAmount, ConditionValue: "200", ConditionOperator: models.OperatorEquals},
+					},
+				}
+				resp, response := testUser1.MakeRequest(http.MethodPut, "/rule/invalid_id/conditions", input)
+				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+				Expect(response["message"]).To(Equal("invalid ruleId"))
+			})
+
+			It("should validate condition types, operators, and values", func() {
+				testCases := []struct {
+					conditionType     models.RuleFieldType
+					conditionOperator models.RuleOperator
+					conditionValue    string
+					shouldPass        bool
+					description       string
+				}{
+					// Valid combinations
+					{models.RuleFieldAmount, models.OperatorEquals, "100.50", true, "valid amount equals"},
+					{models.RuleFieldAmount, models.OperatorGreater, "50", true, "valid amount greater"},
+					{models.RuleFieldAmount, models.OperatorLower, "200", true, "valid amount lower"},
+					{models.RuleFieldName, models.OperatorEquals, "Test Name", true, "valid name equals"},
+					{models.RuleFieldName, models.OperatorContains, "Test", true, "valid name contains"},
+					{models.RuleFieldDescription, models.OperatorEquals, "Description", true, "valid description equals"},
+					{models.RuleFieldDescription, models.OperatorContains, "Desc", true, "valid description contains"},
+					{models.RuleFieldCategory, models.OperatorEquals, "1", true, "valid category equals"},
+					// Invalid combinations
+					{models.RuleFieldAmount, models.OperatorContains, "100", false, "invalid amount contains"},
+					{models.RuleFieldName, models.OperatorGreater, "Test", false, "invalid name greater"},
+					{models.RuleFieldName, models.OperatorLower, "Test", false, "invalid name lower"},
+					{models.RuleFieldDescription, models.OperatorGreater, "Desc", false, "invalid description greater"},
+					{models.RuleFieldDescription, models.OperatorLower, "Desc", false, "invalid description lower"},
+					{models.RuleFieldCategory, models.OperatorContains, "1", false, "invalid category contains"},
+					{models.RuleFieldCategory, models.OperatorGreater, "1", false, "invalid category greater"},
+					{models.RuleFieldCategory, models.OperatorLower, "1", false, "invalid category lower"},
+					// Invalid values
+					{models.RuleFieldAmount, models.OperatorEquals, "invalid", false, "invalid amount value"},
+					{models.RuleFieldCategory, models.OperatorEquals, "invalid", false, "invalid category value"},
+				}
+
+				for _, tc := range testCases {
+					input := models.PutRuleConditionsRequest{
+						Conditions: []models.CreateRuleConditionRequest{
+							{ConditionType: tc.conditionType, ConditionValue: tc.conditionValue, ConditionOperator: tc.conditionOperator},
+						},
+					}
+					url := "/rule/" + strconv.FormatInt(testRuleId, 10) + "/conditions"
+					resp, _ := testUser1.MakeRequest(http.MethodPut, url, input)
+
+					if tc.shouldPass {
+						Expect(resp.StatusCode).To(Equal(http.StatusOK), "Should pass for "+tc.description)
+					} else {
+						Expect(resp.StatusCode).To(Equal(http.StatusBadRequest), "Should fail for "+tc.description)
+					}
+				}
+			})
+
+			It("should enforce maximum conditions limit", func() {
+				// Create 51 conditions (exceeds max of 50)
+				conditions := make([]models.CreateRuleConditionRequest, 51)
+				for i := 0; i < 51; i++ {
+					conditions[i] = models.CreateRuleConditionRequest{
+						ConditionType:     models.RuleFieldAmount,
+						ConditionValue:    fmt.Sprintf("%d", i+100),
+						ConditionOperator: models.OperatorEquals,
+					}
+				}
+				input := models.PutRuleConditionsRequest{Conditions: conditions}
+				url := "/rule/" + strconv.FormatInt(testRuleId, 10) + "/conditions"
+				resp, response := testUser1.MakeRequest(http.MethodPut, url, input)
+				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+				Expect(response["message"]).To(ContainSubstring("max"))
+			})
+		})
+
+		Context("HTTP Status Code Responses", func() {
+			It("should return 200 OK for successful PUT operation", func() {
+				input := models.PutRuleConditionsRequest{
+					Conditions: []models.CreateRuleConditionRequest{
+						{ConditionType: models.RuleFieldAmount, ConditionValue: "200", ConditionOperator: models.OperatorEquals},
+						{ConditionType: models.RuleFieldName, ConditionValue: "Test", ConditionOperator: models.OperatorContains},
+					},
+				}
+				url := "/rule/" + strconv.FormatInt(testRuleId, 10) + "/conditions"
+				resp, response := testUser1.MakeRequest(http.MethodPut, url, input)
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				Expect(response["message"]).To(Equal("Rule conditions updated successfully"))
+			})
+
+			It("should return 400 Bad Request for validation errors", func() {
+				input := models.PutRuleConditionsRequest{
+					Conditions: []models.CreateRuleConditionRequest{
+						{ConditionType: models.RuleFieldAmount, ConditionValue: "invalid_amount", ConditionOperator: models.OperatorEquals},
+					},
+				}
+				url := "/rule/" + strconv.FormatInt(testRuleId, 10) + "/conditions"
+				resp, _ := testUser1.MakeRequest(http.MethodPut, url, input)
+				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+			})
+
+			It("should return 404 Not Found for non-existent rule", func() {
+				input := models.PutRuleConditionsRequest{
+					Conditions: []models.CreateRuleConditionRequest{
+						{ConditionType: models.RuleFieldAmount, ConditionValue: "200", ConditionOperator: models.OperatorEquals},
+					},
+				}
+				resp, _ := testUser1.MakeRequest(http.MethodPut, "/rule/999999/conditions", input)
+				Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
+			})
+
+			It("should return 401 Unauthorized for missing authentication", func() {
+				input := models.PutRuleConditionsRequest{
+					Conditions: []models.CreateRuleConditionRequest{
+						{ConditionType: models.RuleFieldAmount, ConditionValue: "200", ConditionOperator: models.OperatorEquals},
+					},
+				}
+				url := "/rule/" + strconv.FormatInt(testRuleId, 10) + "/conditions"
+				resp, _ := testHelperUnauthenticated.MakeRequest(http.MethodPut, url, input)
+				Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
+			})
+		})
+
+		Context("Error Response Formatting", func() {
+			It("should return properly formatted error response for validation failures", func() {
+				input := models.PutRuleConditionsRequest{
+					Conditions: []models.CreateRuleConditionRequest{
+						{ConditionType: models.RuleFieldAmount, ConditionValue: "invalid_amount", ConditionOperator: models.OperatorEquals},
+					},
+				}
+				url := "/rule/" + strconv.FormatInt(testRuleId, 10) + "/conditions"
+				resp, response := testUser1.MakeRequest(http.MethodPut, url, input)
+				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+				Expect(response).To(HaveKey("message"))
+				Expect(response["message"]).To(BeAssignableToTypeOf(""))
+			})
+
+			It("should return properly formatted error response for not found", func() {
+				input := models.PutRuleConditionsRequest{
+					Conditions: []models.CreateRuleConditionRequest{
+						{ConditionType: models.RuleFieldAmount, ConditionValue: "200", ConditionOperator: models.OperatorEquals},
+					},
+				}
+				resp, response := testUser1.MakeRequest(http.MethodPut, "/rule/999999/conditions", input)
+				Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
+				Expect(response).To(HaveKey("message"))
+				Expect(response["message"]).To(ContainSubstring("not found"))
+			})
+
+			It("should return properly formatted error response for unauthorized", func() {
+				input := models.PutRuleConditionsRequest{
+					Conditions: []models.CreateRuleConditionRequest{
+						{ConditionType: models.RuleFieldAmount, ConditionValue: "200", ConditionOperator: models.OperatorEquals},
+					},
+				}
+				url := "/rule/" + strconv.FormatInt(testRuleId, 10) + "/conditions"
+				resp, response := testHelperUnauthenticated.MakeRequest(http.MethodPut, url, input)
+				Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
+				Expect(response).To(HaveKey("message"))
+			})
+		})
+
+		Context("Successful PUT Operations", func() {
+			It("should successfully replace all conditions with new ones", func() {
+				input := models.PutRuleConditionsRequest{
+					Conditions: []models.CreateRuleConditionRequest{
+						{ConditionType: models.RuleFieldAmount, ConditionValue: "300", ConditionOperator: models.OperatorGreater},
+						{ConditionType: models.RuleFieldName, ConditionValue: "Coffee", ConditionOperator: models.OperatorContains},
+						{ConditionType: models.RuleFieldDescription, ConditionValue: "Purchase", ConditionOperator: models.OperatorEquals},
+					},
+				}
+				url := "/rule/" + strconv.FormatInt(testRuleId, 10) + "/conditions"
+				resp, response := testUser1.MakeRequest(http.MethodPut, url, input)
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				Expect(response["message"]).To(Equal("Rule conditions updated successfully"))
+				Expect(response["data"]).To(HaveKey("conditions"))
+
+				conditions := response["data"].(map[string]any)["conditions"].([]any)
+				Expect(len(conditions)).To(Equal(3))
+
+				// Verify the conditions were created correctly
+				conditionMap := make(map[string]map[string]string)
+				for _, condition := range conditions {
+					condMap := condition.(map[string]any)
+					condType := condMap["condition_type"].(string)
+					conditionMap[condType] = map[string]string{
+						"value":    condMap["condition_value"].(string),
+						"operator": condMap["condition_operator"].(string),
+					}
+				}
+				Expect(conditionMap["amount"]["value"]).To(Equal("300"))
+				Expect(conditionMap["amount"]["operator"]).To(Equal("greater"))
+				Expect(conditionMap["name"]["value"]).To(Equal("Coffee"))
+				Expect(conditionMap["name"]["operator"]).To(Equal("contains"))
+				Expect(conditionMap["description"]["value"]).To(Equal("Purchase"))
+				Expect(conditionMap["description"]["operator"]).To(Equal("equals"))
+			})
+
+			It("should handle single condition replacement", func() {
+				input := models.PutRuleConditionsRequest{
+					Conditions: []models.CreateRuleConditionRequest{
+						{ConditionType: models.RuleFieldAmount, ConditionValue: "500", ConditionOperator: models.OperatorLower},
+					},
+				}
+				url := "/rule/" + strconv.FormatInt(testRuleId, 10) + "/conditions"
+				resp, response := testUser1.MakeRequest(http.MethodPut, url, input)
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+				conditions := response["data"].(map[string]any)["conditions"].([]any)
+				Expect(len(conditions)).To(Equal(1))
+
+				condition := conditions[0].(map[string]any)
+				Expect(condition["condition_type"]).To(Equal("amount"))
+				Expect(condition["condition_value"]).To(Equal("500"))
+				Expect(condition["condition_operator"]).To(Equal("lower"))
+			})
+
+			It("should handle multiple conditions of the same type with different operators", func() {
+				input := models.PutRuleConditionsRequest{
+					Conditions: []models.CreateRuleConditionRequest{
+						{ConditionType: models.RuleFieldAmount, ConditionValue: "100", ConditionOperator: models.OperatorGreater},
+						{ConditionType: models.RuleFieldAmount, ConditionValue: "500", ConditionOperator: models.OperatorLower},
+					},
+				}
+				url := "/rule/" + strconv.FormatInt(testRuleId, 10) + "/conditions"
+				resp, response := testUser1.MakeRequest(http.MethodPut, url, input)
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+				conditions := response["data"].(map[string]any)["conditions"].([]any)
+				Expect(len(conditions)).To(Equal(2))
+
+				// Both should be amount type but with different operators
+				operators := make([]string, 0)
+				for _, condition := range conditions {
+					condMap := condition.(map[string]any)
+					Expect(condMap["condition_type"]).To(Equal("amount"))
+					operators = append(operators, condMap["condition_operator"].(string))
+				}
+				Expect(operators).To(ContainElements("greater", "lower"))
+			})
+		})
+
+		Context("End-to-End PUT Conditions Workflow", func() {
+			It("should completely replace existing conditions and verify persistence", func() {
+				// First, verify the initial state
+				getRuleUrl := "/rule/" + strconv.FormatInt(testRuleId, 10)
+				resp, response := testUser1.MakeRequest(http.MethodGet, getRuleUrl, nil)
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				initialConditions := response["data"].(map[string]any)["conditions"].([]any)
+				Expect(len(initialConditions)).To(Equal(1)) // From createTestRule
+
+				// Replace with new conditions
+				input := models.PutRuleConditionsRequest{
+					Conditions: []models.CreateRuleConditionRequest{
+						{ConditionType: models.RuleFieldAmount, ConditionValue: "999", ConditionOperator: models.OperatorEquals},
+						{ConditionType: models.RuleFieldName, ConditionValue: "Completely New Pattern", ConditionOperator: models.OperatorContains},
+					},
+				}
+				putUrl := "/rule/" + strconv.FormatInt(testRuleId, 10) + "/conditions"
+				resp, _ = testUser1.MakeRequest(http.MethodPut, putUrl, input)
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+				// Verify the replacement was successful
+				resp, response = testUser1.MakeRequest(http.MethodGet, getRuleUrl, nil)
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				updatedConditions := response["data"].(map[string]any)["conditions"].([]any)
+				Expect(len(updatedConditions)).To(Equal(2))
+
+				// Verify old conditions are gone and new ones exist
+				conditionMap := make(map[string]map[string]string)
+				for _, condition := range updatedConditions {
+					condMap := condition.(map[string]any)
+					condType := condMap["condition_type"].(string)
+					conditionMap[condType] = map[string]string{
+						"value":    condMap["condition_value"].(string),
+						"operator": condMap["condition_operator"].(string),
+					}
+				}
+				Expect(conditionMap["amount"]["value"]).To(Equal("999"))
+				Expect(conditionMap["amount"]["operator"]).To(Equal("equals"))
+				Expect(conditionMap["name"]["value"]).To(Equal("Completely New Pattern"))
+				Expect(conditionMap["name"]["operator"]).To(Equal("contains"))
+			})
+
+			It("should handle transactional integrity on validation failure", func() {
+				// Get initial state
+				getRuleUrl := "/rule/" + strconv.FormatInt(testRuleId, 10)
+				resp, response := testUser1.MakeRequest(http.MethodGet, getRuleUrl, nil)
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				initialConditions := response["data"].(map[string]any)["conditions"].([]any)
+
+				// Try to update with invalid data
+				input := models.PutRuleConditionsRequest{
+					Conditions: []models.CreateRuleConditionRequest{
+						{ConditionType: models.RuleFieldAmount, ConditionValue: "200", ConditionOperator: models.OperatorEquals},
+						{ConditionType: models.RuleFieldAmount, ConditionValue: "invalid_amount", ConditionOperator: models.OperatorEquals},
+					},
+				}
+				putUrl := "/rule/" + strconv.FormatInt(testRuleId, 10) + "/conditions"
+				resp, _ = testUser1.MakeRequest(http.MethodPut, putUrl, input)
+				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+
+				// Verify original conditions are still intact
+				resp, response = testUser1.MakeRequest(http.MethodGet, getRuleUrl, nil)
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				currentConditions := response["data"].(map[string]any)["conditions"].([]any)
+				Expect(len(currentConditions)).To(Equal(len(initialConditions)))
+			})
+		})
+
+		Context("Concurrent Access Scenarios", func() {
+			It("should handle concurrent PUT requests to the same rule", func() {
+				done := make(chan bool, 2)
+
+				// First concurrent request
+				go func() {
+					defer GinkgoRecover()
+					input := models.PutRuleConditionsRequest{
+						Conditions: []models.CreateRuleConditionRequest{
+							{ConditionType: models.RuleFieldAmount, ConditionValue: "100", ConditionOperator: models.OperatorEquals},
+						},
+					}
+					url := "/rule/" + strconv.FormatInt(testRuleId, 10) + "/conditions"
+					resp, _ := testUser1.MakeRequest(http.MethodPut, url, input)
+					Expect(resp.StatusCode).To(Equal(http.StatusOK))
+					done <- true
+				}()
+
+				// Second concurrent request
+				go func() {
+					defer GinkgoRecover()
+					input := models.PutRuleConditionsRequest{
+						Conditions: []models.CreateRuleConditionRequest{
+							{ConditionType: models.RuleFieldAmount, ConditionValue: "200", ConditionOperator: models.OperatorGreater},
+						},
+					}
+					url := "/rule/" + strconv.FormatInt(testRuleId, 10) + "/conditions"
+					resp, _ := testUser1.MakeRequest(http.MethodPut, url, input)
+					Expect(resp.StatusCode).To(Equal(http.StatusOK))
+					done <- true
+				}()
+
+				// Wait for both requests to complete
+				Eventually(done, "5s").Should(Receive())
+				Eventually(done, "5s").Should(Receive())
+
+				// Verify the rule still has valid conditions (one of the two requests succeeded)
+				getRuleUrl := "/rule/" + strconv.FormatInt(testRuleId, 10)
+				resp, response := testUser1.MakeRequest(http.MethodGet, getRuleUrl, nil)
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				conditions := response["data"].(map[string]any)["conditions"].([]any)
+				Expect(len(conditions)).To(Equal(1))
+
+				condition := conditions[0].(map[string]any)
+				conditionValue := condition["condition_value"].(string)
+				conditionOperator := condition["condition_operator"].(string)
+				Expect(conditionValue).To(SatisfyAny(Equal("100"), Equal("200")))
+				Expect(conditionOperator).To(SatisfyAny(Equal("equals"), Equal("greater")))
+			})
+
+			It("should handle concurrent requests from different users to different rules", func() {
+				// Create a second rule for testUser2
+				secondRuleId, _, _ := func() (int64, int64, int64) {
+					input := models.CreateRuleRequest{
+						Rule: models.CreateBaseRuleRequest{
+							Name:          "Second Test Rule",
+							Description:   ptrToString("A second rule for testing"),
+							EffectiveFrom: now,
+						},
+						Actions: []models.CreateRuleActionRequest{
+							{ActionType: models.RuleFieldAmount, ActionValue: "100"},
+						},
+						Conditions: []models.CreateRuleConditionRequest{
+							{ConditionType: models.RuleFieldAmount, ConditionValue: "100", ConditionOperator: models.OperatorEquals},
+						},
+					}
+					resp, response := testUser2.MakeRequest(http.MethodPost, "/rule", input)
+					Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+					rule := response["data"].(map[string]any)["rule"].(map[string]any)
+					action := response["data"].(map[string]any)["actions"].([]any)[0].(map[string]any)
+					condition := response["data"].(map[string]any)["conditions"].([]any)[0].(map[string]any)
+					return int64(rule["id"].(float64)), int64(action["id"].(float64)), int64(condition["id"].(float64))
+				}()
+
+				done := make(chan bool, 2)
+
+				// User1 updates their rule
+				go func() {
+					defer GinkgoRecover()
+					input := models.PutRuleConditionsRequest{
+						Conditions: []models.CreateRuleConditionRequest{
+							{ConditionType: models.RuleFieldAmount, ConditionValue: "300", ConditionOperator: models.OperatorGreater},
+						},
+					}
+					url := "/rule/" + strconv.FormatInt(testRuleId, 10) + "/conditions"
+					resp, _ := testUser1.MakeRequest(http.MethodPut, url, input)
+					Expect(resp.StatusCode).To(Equal(http.StatusOK))
+					done <- true
+				}()
+
+				// User2 updates their rule
+				go func() {
+					defer GinkgoRecover()
+					input := models.PutRuleConditionsRequest{
+						Conditions: []models.CreateRuleConditionRequest{
+							{ConditionType: models.RuleFieldAmount, ConditionValue: "400", ConditionOperator: models.OperatorLower},
+						},
+					}
+					url := "/rule/" + strconv.FormatInt(secondRuleId, 10) + "/conditions"
+					resp, _ := testUser2.MakeRequest(http.MethodPut, url, input)
+					Expect(resp.StatusCode).To(Equal(http.StatusOK))
+					done <- true
+				}()
+
+				// Wait for both requests to complete
+				Eventually(done, "5s").Should(Receive())
+				Eventually(done, "5s").Should(Receive())
+
+				// Verify both rules were updated correctly
+				getRuleUrl1 := "/rule/" + strconv.FormatInt(testRuleId, 10)
+				resp, response := testUser1.MakeRequest(http.MethodGet, getRuleUrl1, nil)
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				conditions1 := response["data"].(map[string]any)["conditions"].([]any)
+				condition1 := conditions1[0].(map[string]any)
+				Expect(condition1["condition_value"]).To(Equal("300"))
+				Expect(condition1["condition_operator"]).To(Equal("greater"))
+
+				getRuleUrl2 := "/rule/" + strconv.FormatInt(secondRuleId, 10)
+				resp, response = testUser2.MakeRequest(http.MethodGet, getRuleUrl2, nil)
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				conditions2 := response["data"].(map[string]any)["conditions"].([]any)
+				condition2 := conditions2[0].(map[string]any)
+				Expect(condition2["condition_value"]).To(Equal("400"))
+				Expect(condition2["condition_operator"]).To(Equal("lower"))
+			})
+		})
+
+		Context("Data Consistency After Operations", func() {
+			It("should maintain referential integrity after PUT operation", func() {
+				input := models.PutRuleConditionsRequest{
+					Conditions: []models.CreateRuleConditionRequest{
+						{ConditionType: models.RuleFieldAmount, ConditionValue: "150", ConditionOperator: models.OperatorEquals},
+						{ConditionType: models.RuleFieldName, ConditionValue: "Integrity Test", ConditionOperator: models.OperatorContains},
+					},
+				}
+				url := "/rule/" + strconv.FormatInt(testRuleId, 10) + "/conditions"
+				resp, response := testUser1.MakeRequest(http.MethodPut, url, input)
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+				// Verify all returned conditions have the correct rule_id
+				conditions := response["data"].(map[string]any)["conditions"].([]any)
+				for _, condition := range conditions {
+					conditionMap := condition.(map[string]any)
+					Expect(int64(conditionMap["rule_id"].(float64))).To(Equal(testRuleId))
+				}
+
+				// Verify by fetching the rule again
+				getRuleUrl := "/rule/" + strconv.FormatInt(testRuleId, 10)
+				resp, response = testUser1.MakeRequest(http.MethodGet, getRuleUrl, nil)
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+				fetchedConditions := response["data"].(map[string]any)["conditions"].([]any)
+				Expect(len(fetchedConditions)).To(Equal(2))
+				for _, condition := range fetchedConditions {
+					conditionMap := condition.(map[string]any)
+					Expect(int64(conditionMap["rule_id"].(float64))).To(Equal(testRuleId))
+				}
+			})
+
+			It("should ensure no orphaned conditions remain after replacement", func() {
+				// Get initial condition count for the rule
+				getRuleUrl := "/rule/" + strconv.FormatInt(testRuleId, 10)
+				resp, response := testUser1.MakeRequest(http.MethodGet, getRuleUrl, nil)
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				initialConditions := response["data"].(map[string]any)["conditions"].([]any)
+
+				// Replace with different number of conditions
+				input := models.PutRuleConditionsRequest{
+					Conditions: []models.CreateRuleConditionRequest{
+						{ConditionType: models.RuleFieldAmount, ConditionValue: "100", ConditionOperator: models.OperatorEquals},
+						{ConditionType: models.RuleFieldName, ConditionValue: "Name 1", ConditionOperator: models.OperatorContains},
+						{ConditionType: models.RuleFieldDescription, ConditionValue: "Desc 1", ConditionOperator: models.OperatorEquals},
+					},
+				}
+				url := "/rule/" + strconv.FormatInt(testRuleId, 10) + "/conditions"
+				resp, _ = testUser1.MakeRequest(http.MethodPut, url, input)
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+				// Verify exact count matches what we sent
+				resp, response = testUser1.MakeRequest(http.MethodGet, getRuleUrl, nil)
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				finalConditions := response["data"].(map[string]any)["conditions"].([]any)
+				Expect(len(finalConditions)).To(Equal(3))
+
+				// Verify no old conditions remain by checking IDs
+				initialConditionIds := make(map[int64]bool)
+				for _, condition := range initialConditions {
+					conditionMap := condition.(map[string]any)
+					initialConditionIds[int64(conditionMap["id"].(float64))] = true
+				}
+
+				for _, condition := range finalConditions {
+					conditionMap := condition.(map[string]any)
+					conditionId := int64(conditionMap["id"].(float64))
+					Expect(initialConditionIds[conditionId]).To(BeFalse(), "Old condition ID should not exist in new conditions")
+				}
 			})
 		})
 	})

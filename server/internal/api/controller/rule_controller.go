@@ -185,6 +185,58 @@ func (rc *RuleController) DeleteRule(c *gin.Context) {
 	rc.SendSuccess(c, http.StatusNoContent, "Rule deleted successfully", nil)
 }
 
+func (rc *RuleController) PutRuleActions(c *gin.Context) {
+	userId := rc.GetAuthenticatedUserId(c)
+	logger.Infof("Starting rule actions update for user %d", userId)
+
+	ruleId, ok := rc.parseIdFromParam(c, "ruleId")
+	if !ok {
+		return
+	}
+
+	var req models.PutRuleActionsRequest
+	if err := rc.BindJSON(c, &req); err != nil {
+		logger.Errorf("Failed to bind JSON: %v", err)
+		return
+	}
+
+	response, err := rc.ruleService.PutRuleActions(c, ruleId, req, userId)
+	if err != nil {
+		logger.Errorf("Error updating rule actions: %v", err)
+		rc.HandleError(c, err)
+		return
+	}
+
+	logger.Infof("Rule actions updated successfully for rule %d by user %d", ruleId, userId)
+	rc.SendSuccess(c, http.StatusOK, "Rule actions updated successfully", response)
+}
+
+func (rc *RuleController) PutRuleConditions(c *gin.Context) {
+	userId := rc.GetAuthenticatedUserId(c)
+	logger.Infof("Starting rule conditions update for user %d", userId)
+
+	ruleId, ok := rc.parseIdFromParam(c, "ruleId")
+	if !ok {
+		return
+	}
+
+	var req models.PutRuleConditionsRequest
+	if err := rc.BindJSON(c, &req); err != nil {
+		logger.Errorf("Failed to bind JSON: %v", err)
+		return
+	}
+
+	response, err := rc.ruleService.PutRuleConditions(c, ruleId, req, userId)
+	if err != nil {
+		logger.Errorf("Error updating rule conditions: %v", err)
+		rc.HandleError(c, err)
+		return
+	}
+
+	logger.Infof("Rule conditions updated successfully for rule %d by user %d", ruleId, userId)
+	rc.SendSuccess(c, http.StatusOK, "Rule conditions updated successfully", response)
+}
+
 func (rc *RuleController) ExecuteRules(c *gin.Context) {
 	userId := rc.GetAuthenticatedUserId(c)
 	logger.Infof("Starting rule execution for user %d", userId)

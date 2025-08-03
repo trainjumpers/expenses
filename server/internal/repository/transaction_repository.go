@@ -254,7 +254,7 @@ func (r *TransactionRepository) buildTransactionWhereClause(userId int64, q mode
 }
 
 // Helper to build the count query for transactions
-func (r *TransactionRepository) buildTransactionCountQuery(q models.TransactionListQuery, whereClause string) string {
+func (r *TransactionRepository) buildTransactionCountQuery(whereClause string) string {
 	countQuery := fmt.Sprintf("SELECT COUNT(DISTINCT t.id) FROM %s.%s t ", r.schema, r.tableName)
 	countQuery += whereClause
 	return countQuery
@@ -287,7 +287,7 @@ func (r *TransactionRepository) ListTransactions(ctx context.Context, userId int
 	// Build WHERE clause and args
 	whereClause, args := r.buildTransactionWhereClause(userId, q)
 	// Count query
-	countQuery := r.buildTransactionCountQuery(q, whereClause)
+	countQuery := r.buildTransactionCountQuery(whereClause)
 	var total int
 	err := r.db.FetchOne(ctx, countQuery, args...).Scan(&total)
 	if err != nil {

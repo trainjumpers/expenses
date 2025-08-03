@@ -172,3 +172,29 @@ func (v *RuleValidator) validateEffectiveDate(effectiveFrom time.Time) error {
 	}
 	return nil
 }
+
+// ValidatePutActions validates a PutRuleActionsRequest.
+func (v *RuleValidator) ValidatePutActions(req models.PutRuleActionsRequest) error {
+	if len(req.Actions) == 0 {
+		return errors.NewRuleNoActionsError(fmt.Errorf("at least one action is required"))
+	}
+	for _, action := range req.Actions {
+		if err := v.validateAction(action); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// ValidatePutConditions validates a PutRuleConditionsRequest.
+func (v *RuleValidator) ValidatePutConditions(req models.PutRuleConditionsRequest) error {
+	if len(req.Conditions) == 0 {
+		return errors.NewRuleNoConditionsError(fmt.Errorf("at least one condition is required"))
+	}
+	for _, condition := range req.Conditions {
+		if err := v.validateCondition(condition); err != nil {
+			return err
+		}
+	}
+	return nil
+}

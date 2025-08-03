@@ -16,6 +16,8 @@ type RuleServiceInterface interface {
 	UpdateRule(ctx context.Context, id int64, ruleReq models.UpdateRuleRequest, userId int64) (models.RuleResponse, error)
 	UpdateRuleAction(ctx context.Context, id int64, ruleId int64, ruleReq models.UpdateRuleActionRequest, userId int64) (models.RuleActionResponse, error)
 	UpdateRuleCondition(ctx context.Context, id int64, ruleId int64, ruleReq models.UpdateRuleConditionRequest, userId int64) (models.RuleConditionResponse, error)
+	PutRuleActions(ctx context.Context, ruleId int64, req models.PutRuleActionsRequest, userId int64) (models.PutRuleActionsResponse, error)
+	PutRuleConditions(ctx context.Context, ruleId int64, req models.PutRuleConditionsRequest, userId int64) (models.PutRuleConditionsResponse, error)
 	DeleteRule(ctx context.Context, id int64, userId int64) error
 }
 
@@ -179,4 +181,43 @@ func (s *ruleService) DeleteRule(ctx context.Context, id int64, userId int64) er
 	}
 	logger.Debugf("Rule %d deleted successfully", id)
 	return nil
+}
+
+func (s *ruleService) PutRuleActions(ctx context.Context, ruleId int64, req models.PutRuleActionsRequest, userId int64) (models.PutRuleActionsResponse, error) {
+	logger.Debugf("Updating rule actions for rule %d by user %d", ruleId, userId)
+	var response models.PutRuleActionsResponse
+	if err := s.validator.ValidatePutActions(req); err != nil {
+		return response, err
+	}
+	_, err := s.ruleRepo.GetRule(ctx, ruleId, userId)
+	if err != nil {
+		return response, err
+	}
+	actions, err := s.ruleRepo.PutRuleActions(ctx, ruleId, req.Actions)
+	if err != nil {
+		return response, err
+	}
+	response.Actions = actions
+	logger.Debugf("Rule actions updated successfully for rule %d", ruleId)
+	return response, nil
+}
+
+func (s *ruleService) PutRuleConditions(ctx context.Context, ruleId int64, req models.PutRuleConditionsRequest, userId int64) (models.PutRuleConditionsResponse, error) {
+	logger.Debugf("Updating rule conditions for rule %d by user %d", ruleId, userId)
+	var response models.PutRuleConditionsResponse
+	if err := s.validator.ValidatePutConditions(req); err != nil {
+		return response, err
+	}
+	_, err := s.ruleRepo.GetRule(ctx, ruleId, userId)
+	if err != nil {
+		return response, err
+	}
+	conditions, err := s.ruleRepo.PutRuleConditions(ctx, ruleId, req.Conditions)
+	response.Conditions = conditions
+	if err != nil {
+		return response, err
+	}
+
+	logger.Debugf("Rule conditions updated successfully for rule %d", ruleId)
+	return response, nil
 }
