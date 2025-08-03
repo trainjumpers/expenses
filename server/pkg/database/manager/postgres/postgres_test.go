@@ -9,6 +9,7 @@ import (
 	"expenses/pkg/database/manager/base"
 	"expenses/pkg/database/manager/postgres"
 
+	"github.com/jackc/pgx/v5"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -289,6 +290,83 @@ var _ = Describe("PostgreSQL Database Manager", Ordered, func() {
 			Expect(config).NotTo(BeNil())
 			Expect(config.EnableTransactions).To(BeTrue())
 			Expect(config.EnableLocks).To(BeTrue())
+		})
+	})
+
+	Describe("Error Paths and Disabled Features", func() {
+		var (
+			basicDbManager base.DatabaseManager
+		)
+
+		BeforeAll(func() {
+			// Create a manager with most features disabled
+			factory := postgres.NewPostgreSQLFactory()
+			var err error
+			basicDbManager, err = factory.CreateDatabaseManager(cfg, base.BasicConfig())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(basicDbManager).NotTo(BeNil())
+		})
+
+		AfterAll(func() {
+			if basicDbManager != nil {
+				basicDbManager.Close()
+			}
+		})
+
+		It("should return an error when using WithTxnOptions if retry is disabled", func() {
+			err := basicDbManager.WithTxnOptions(ctx, nil, func(txCtx context.Context) error {
+				return nil
+			})
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("retry feature is disabled"))
+		})
+
+		It("should return an error when using WithReadOnlyTxn if retry is disabled", func() {
+			err := basicDbManager.WithReadOnlyTxn(ctx, func(txCtx context.Context) error {
+				return nil
+			})
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("retry feature is disabled"))
+		})
+
+		It("should return an error when using WithRetryableTxn if retry is disabled", func() {
+			err := basicDbManager.WithRetryableTxn(ctx, func(txCtx context.Context) error {
+				return nil
+			})
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("retry feature is disabled"))
+		})
+
+		It("should return an error when using WithSavepoint if savepoints are disabled", func() {
+			// Need to be in a transaction to even attempt a savepoint
+			err := basicDbManager.WithTxn(ctx, func(txCtx context.Context) error {
+				return basicDbManager.WithSavepoint(txCtx, "sp1", func(spCtx context.Context) error {
+					return nil
+				})
+			})
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("savepoints feature is disabled"))
+		})
+
+		It("should return an error when using ExecuteBatch if batch is disabled", func() {
+			batch := &pgx.Batch{}
+			err := basicDbManager.ExecuteBatch(ctx, batch)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("batch feature is disabled"))
+		})
+
+		It("should return an error when using WithSavepoint outside of a transaction", func() {
+			err := dbManager.WithSavepoint(ctx, "sp1", func(spCtx context.Context) error {
+				return nil
+			})
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("savepoints can only be used within an existing transaction"))
+		})
+
+		It("should return an error when getting transaction info outside of a transaction", func() {
+			_, err := dbManager.GetTransactionInfo(ctx)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(Equal("not in a transaction"))
 		})
 	})
 })

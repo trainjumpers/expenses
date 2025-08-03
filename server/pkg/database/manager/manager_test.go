@@ -1,6 +1,7 @@
 package manager_test
 
 import (
+	"os"
 	"testing"
 
 	"expenses/internal/config"
@@ -10,12 +11,12 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestUnifiedManager(t *testing.T) {
+func TestManager(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Unified Database Manager Suite")
+	RunSpecs(t, "Database Manager Suite")
 }
 
-var _ = Describe("Unified Database Manager", func() {
+var _ = Describe("Database Manager", func() {
 	var cfg *config.Config
 
 	BeforeEach(func() {
@@ -70,6 +71,20 @@ var _ = Describe("Unified Database Manager", func() {
 			dbManager.Close()
 		})
 
+		It("should create manager with development config", func() {
+			dbManager, err := manager.NewDevelopmentDatabaseManager(cfg)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(dbManager).NotTo(BeNil())
+
+			// Check that development features are enabled correctly
+			config := dbManager.GetConfig()
+			Expect(config.EnableRetry).To(BeFalse()) // Retries are noisy in dev
+			Expect(config.EnableSavepoints).To(BeTrue())
+			Expect(config.EnableMonitoring).To(BeTrue())
+
+			dbManager.Close()
+		})
+
 		It("should create manager with custom config", func() {
 			customConfig := &manager.DatabaseManagerConfig{
 				EnableTransactions: true,
@@ -117,6 +132,27 @@ var _ = Describe("Unified Database Manager", func() {
 			Expect(dbManager.IsFeatureEnabled(manager.FeatureSavepoints)).To(BeFalse())
 			Expect(dbManager.IsFeatureEnabled(manager.FeatureBatch)).To(BeFalse())
 			Expect(dbManager.IsFeatureEnabled(manager.FeatureMonitoring)).To(BeFalse())
+		})
+	})
+
+	Describe("Factory Errors", func() {
+		var originalDBType string
+
+		BeforeEach(func() {
+			originalDBType = os.Getenv("DB_TYPE")
+		})
+
+		AfterEach(func() {
+			os.Setenv("DB_TYPE", originalDBType)
+		})
+
+		It("should return an error for an unsupported database type", func() {
+			// Set an unsupported DB_TYPE for this test
+			os.Setenv("DB_TYPE", "unsupported_db")
+			dbManager, err := manager.NewDatabaseManager(cfg)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("unsupported database type: unsupported_db"))
+			Expect(dbManager).To(BeNil())
 		})
 	})
 })
