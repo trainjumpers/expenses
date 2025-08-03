@@ -55,7 +55,10 @@ export function EditRuleModal({
             data.conditions as BaseRuleCondition[],
             categories
           ),
-          actions: normalizeRuleActions(data.actions as BaseRuleAction[], categories),
+          actions: normalizeRuleActions(
+            data.actions as BaseRuleAction[],
+            categories
+          ),
         });
       })
       .catch((e) => {
@@ -81,12 +84,15 @@ export function EditRuleModal({
       const ruleUpdate: UpdateRuleInput = {
         ...rule,
       };
-      
+
       // Execute all updates in parallel
       await Promise.all([
         updateRule(ruleId, ruleUpdate),
         updateRuleActions(ruleId, normalizeRuleActions(actions, categories)),
-        updateRuleConditions(ruleId, normalizeRuleConditions(conditions, categories)),
+        updateRuleConditions(
+          ruleId,
+          normalizeRuleConditions(conditions, categories)
+        ),
       ]);
 
       toast.success("Rule updated successfully!");
