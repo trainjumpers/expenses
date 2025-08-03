@@ -26,6 +26,8 @@ type RuleRepositoryInterface interface {
 	UpdateRule(ctx context.Context, id int64, userId int64, rule models.UpdateRuleRequest) (models.RuleResponse, error)
 	UpdateRuleAction(ctx context.Context, id int64, ruleId int64, action models.UpdateRuleActionRequest) (models.RuleActionResponse, error)
 	UpdateRuleCondition(ctx context.Context, id int64, ruleId int64, condition models.UpdateRuleConditionRequest) (models.RuleConditionResponse, error)
+	PutRuleActions(ctx context.Context, ruleId int64, actions []models.CreateRuleActionRequest) ([]models.RuleActionResponse, error)
+	PutRuleConditions(ctx context.Context, ruleId int64, conditions []models.CreateRuleConditionRequest) ([]models.RuleConditionResponse, error)
 	DeleteRuleActionsByRuleId(ctx context.Context, ruleId int64) error
 	DeleteRuleConditionsByRuleId(ctx context.Context, ruleId int64) error
 	DeleteRule(ctx context.Context, id int64, userId int64) error
@@ -308,6 +310,57 @@ func (r *RuleRepository) DeleteRule(ctx context.Context, id int64, userId int64)
 		return errorsPkg.NewRuleNotFoundError(fmt.Errorf("rule with id %d not found", id))
 	}
 	return nil
+}
+
+func (r *RuleRepository) PutRuleActions(ctx context.Context, ruleId int64, actions []models.CreateRuleActionRequest) ([]models.RuleActionResponse, error) {
+	var result []models.RuleActionResponse
+	err := r.db.WithLock(ctx, ruleId, func(ctx context.Context) error {
+		deleteQuery := fmt.Sprintf(`DELETE FROM %s.%s WHERE rule_id = $1`, r.schema, r.ruleActionTable)
+		_, err := r.db.ExecuteQuery(ctx, deleteQuery, ruleId)
+		if err != nil {
+			return errorsPkg.NewRuleRepositoryError("failed to delete existing rule actions", err)
+		}
+		result = make([]models.RuleActionResponse, 0, len(actions))
+		for _, action := range actions {
+			action.RuleId = ruleId
+			ruleAction, err := r.createRuleAction(ctx, &action)
+			if err != nil {
+				return err
+			}
+			result = append(result, ruleAction)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+func (r *RuleRepository) PutRuleConditions(ctx context.Context, ruleId int64, conditions []models.CreateRuleConditionRequest) ([]models.RuleConditionResponse, error) {
+	var result []models.RuleConditionResponse
+	err := r.db.WithLock(ctx, ruleId, func(ctx context.Context) error {
+		deleteQuery := fmt.Sprintf(`DELETE FROM %s.%s WHERE rule_id = $1`, r.schema, r.ruleConditionTable)
+		_, err := r.db.ExecuteQuery(ctx, deleteQuery, ruleId)
+		if err != nil {
+			return errorsPkg.NewRuleRepositoryError("failed to delete existing rule conditions", err)
+		}
+
+		result = make([]models.RuleConditionResponse, 0, len(conditions))
+		for _, condition := range conditions {
+			condition.RuleId = ruleId
+			ruleCondition, err := r.createRuleCondition(ctx, &condition)
+			if err != nil {
+				return err
+			}
+			result = append(result, ruleCondition)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
 }
 
 func (r *RuleRepository) CreateRuleTransactionMapping(ctx context.Context, ruleId int64, transactionId int64) error {

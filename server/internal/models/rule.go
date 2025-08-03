@@ -102,6 +102,22 @@ type RuleConditionResponse struct {
 	ConditionOperator RuleOperator  `json:"condition_operator"`
 }
 
+type PutRuleActionsRequest struct {
+	Actions []CreateRuleActionRequest `json:"actions" binding:"required,min=1,max=50"`
+}
+
+type PutRuleConditionsRequest struct {
+	Conditions []CreateRuleConditionRequest `json:"conditions" binding:"required,min=1,max=50"`
+}
+
+type PutRuleActionsResponse struct {
+	Actions []RuleActionResponse `json:"actions"`
+}
+
+type PutRuleConditionsResponse struct {
+	Conditions []RuleConditionResponse `json:"conditions"`
+}
+
 type ExecuteRulesRequest struct {
 	RuleIds        *[]int64 `json:"rule_ids,omitempty"`
 	TransactionIds *[]int64 `json:"transaction_ids,omitempty"`

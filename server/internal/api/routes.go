@@ -125,6 +125,8 @@ func Init(
 			rule.DELETE("/:ruleId", ruleController.DeleteRule)
 			rule.PATCH("/:ruleId/action/:id", ruleController.UpdateRuleAction)
 			rule.PATCH("/:ruleId/condition/:id", ruleController.UpdateRuleCondition)
+			rule.PUT("/:ruleId/actions", ruleController.PutRuleActions)
+			rule.PUT("/:ruleId/conditions", ruleController.PutRuleConditions)
 		}
 	}
 

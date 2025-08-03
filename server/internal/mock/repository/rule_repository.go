@@ -238,3 +238,58 @@ func (m *MockRuleRepository) CreateRuleTransactionMapping(ctx context.Context, r
 	m.mappings[key] = true
 	return nil
 }
+
+func (m *MockRuleRepository) PutRuleActions(ctx context.Context, ruleId int64, actions []models.CreateRuleActionRequest) ([]models.RuleActionResponse, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	// Delete existing actions for this rule
+	for id, action := range m.actions {
+		if action.RuleId == ruleId {
+			delete(m.actions, id)
+		}
+	}
+
+	// Create new actions
+	var result []models.RuleActionResponse
+	for _, a := range actions {
+		action := models.RuleActionResponse{
+			Id:          m.nextActionId,
+			RuleId:      ruleId,
+			ActionType:  a.ActionType,
+			ActionValue: a.ActionValue,
+		}
+		m.actions[m.nextActionId] = action
+		result = append(result, action)
+		m.nextActionId++
+	}
+	return result, nil
+}
+
+func (m *MockRuleRepository) PutRuleConditions(ctx context.Context, ruleId int64, conditions []models.CreateRuleConditionRequest) ([]models.RuleConditionResponse, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	// Delete existing conditions for this rule
+	for id, cond := range m.conditions {
+		if cond.RuleId == ruleId {
+			delete(m.conditions, id)
+		}
+	}
+
+	// Create new conditions
+	var result []models.RuleConditionResponse
+	for _, c := range conditions {
+		condition := models.RuleConditionResponse{
+			Id:                m.nextConditionId,
+			RuleId:            ruleId,
+			ConditionType:     c.ConditionType,
+			ConditionValue:    c.ConditionValue,
+			ConditionOperator: c.ConditionOperator,
+		}
+		m.conditions[m.nextConditionId] = condition
+		result = append(result, condition)
+		m.nextConditionId++
+	}
+	return result, nil
+}
