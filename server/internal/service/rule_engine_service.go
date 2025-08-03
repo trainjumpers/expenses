@@ -1,17 +1,16 @@
 package service
 
 import (
+	"context"
 	"expenses/internal/models"
 	"expenses/internal/repository"
 	"expenses/pkg/logger"
 	"fmt"
 	"time"
-
-	"github.com/gin-gonic/gin"
 )
 
 type RuleEngineServiceInterface interface {
-	ExecuteRules(c *gin.Context, userId int64, request models.ExecuteRulesRequest) (models.ExecuteRulesResponse, error)
+	ExecuteRules(ctx context.Context, userId int64, request models.ExecuteRulesRequest) (models.ExecuteRulesResponse, error)
 }
 
 type ruleEngineService struct {
@@ -32,17 +31,17 @@ func NewRuleEngineService(
 	}
 }
 
-func (s *ruleEngineService) ExecuteRules(c *gin.Context, userId int64, request models.ExecuteRulesRequest) (models.ExecuteRulesResponse, error) {
-	go s.executeRulesInBackground(c.Copy(), userId, request)
+func (s *ruleEngineService) ExecuteRules(ctx context.Context, userId int64, request models.ExecuteRulesRequest) (models.ExecuteRulesResponse, error) {
+	go s.executeRulesInBackground(ctx, userId, request)
 	logger.Infof("Rule execution started in background for user %d", userId)
 	return models.ExecuteRulesResponse{}, nil
 }
 
-func (s *ruleEngineService) executeRulesInBackground(c *gin.Context, userId int64, request models.ExecuteRulesRequest) {
+func (s *ruleEngineService) executeRulesInBackground(ctx context.Context, userId int64, request models.ExecuteRulesRequest) {
 	logger.Infof("Executing rules for user %d", userId)
 
 	// Step 1: Fetch all categories
-	categories, err := s.categoryRepo.ListCategories(c, userId)
+	categories, err := s.categoryRepo.ListCategories(ctx, userId)
 	if err != nil {
 		logger.Errorf("Rule execution for user %d failed to fetch categories: %v", userId, err)
 		return
@@ -51,9 +50,9 @@ func (s *ruleEngineService) executeRulesInBackground(c *gin.Context, userId int6
 	// Step 2: Fetch rules - use specific rules if provided, otherwise fetch all
 	var rules []models.DescribeRuleResponse
 	if request.RuleIds != nil && len(*request.RuleIds) > 0 {
-		rules, err = s.fetchSpecificRules(c, userId, *request.RuleIds)
+		rules, err = s.fetchSpecificRules(ctx, userId, *request.RuleIds)
 	} else {
-		rules, err = s.fetchAllUserRules(c, userId)
+		rules, err = s.fetchAllUserRules(ctx, userId)
 	}
 	if err != nil {
 		logger.Errorf("Rule execution for user %d failed to fetch rules: %v", userId, err)
@@ -78,7 +77,7 @@ func (s *ruleEngineService) executeRulesInBackground(c *gin.Context, userId int6
 
 	// Step 3: Process transactions - use specific transactions if provided, otherwise fetch all in pages
 	if request.TransactionIds != nil && len(*request.TransactionIds) > 0 {
-		transactions, err := s.fetchSpecificTransactions(c, userId, *request.TransactionIds)
+		transactions, err := s.fetchSpecificTransactions(ctx, userId, *request.TransactionIds)
 		if err != nil {
 			logger.Errorf("Rule execution for user %d failed to fetch specific transactions: %v", userId, err)
 			return
@@ -90,7 +89,7 @@ func (s *ruleEngineService) executeRulesInBackground(c *gin.Context, userId int6
 	} else {
 		page := 1
 		for {
-			transactions, err := s.fetchTransactionPage(c, userId, page, pageSize)
+			transactions, err := s.fetchTransactionPage(ctx, userId, page, pageSize)
 			if err != nil {
 				logger.Errorf("Rule execution for user %d failed to fetch transactions page %d: %v", userId, page, err)
 				return
@@ -112,7 +111,7 @@ func (s *ruleEngineService) executeRulesInBackground(c *gin.Context, userId int6
 	}
 
 	// Step 4: Apply changesets
-	modified, err := s.applyChangesets(c, userId, allChangesets)
+	modified, err := s.applyChangesets(ctx, userId, allChangesets)
 	if err != nil {
 		logger.Errorf("Rule execution for user %d failed to apply changesets: %v", userId, err)
 		return
@@ -122,13 +121,13 @@ func (s *ruleEngineService) executeRulesInBackground(c *gin.Context, userId int6
 		userId, len(modified), totalProcessed)
 }
 
-func (s *ruleEngineService) buildRuleResponse(c *gin.Context, rule models.RuleResponse) (*models.DescribeRuleResponse, error) {
-	actions, err := s.ruleRepo.ListRuleActionsByRuleId(c, rule.Id)
+func (s *ruleEngineService) buildRuleResponse(ctx context.Context, rule models.RuleResponse) (*models.DescribeRuleResponse, error) {
+	actions, err := s.ruleRepo.ListRuleActionsByRuleId(ctx, rule.Id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get actions for rule %d: %w", rule.Id, err)
 	}
 
-	conditions, err := s.ruleRepo.ListRuleConditionsByRuleId(c, rule.Id)
+	conditions, err := s.ruleRepo.ListRuleConditionsByRuleId(ctx, rule.Id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get conditions for rule %d: %w", rule.Id, err)
 	}
@@ -140,16 +139,16 @@ func (s *ruleEngineService) buildRuleResponse(c *gin.Context, rule models.RuleRe
 	}, nil
 }
 
-func (s *ruleEngineService) fetchSpecificRules(c *gin.Context, userId int64, ruleIds []int64) ([]models.DescribeRuleResponse, error) {
+func (s *ruleEngineService) fetchSpecificRules(ctx context.Context, userId int64, ruleIds []int64) ([]models.DescribeRuleResponse, error) {
 	var rules []models.DescribeRuleResponse
 	for _, ruleId := range ruleIds {
-		rule, err := s.ruleRepo.GetRule(c, ruleId, userId)
+		rule, err := s.ruleRepo.GetRule(ctx, ruleId, userId)
 		if err != nil {
 			logger.Warnf("Rule %d not found for user %d: %v", ruleId, userId, err)
 			continue
 		}
 
-		ruleResponse, err := s.buildRuleResponse(c, rule)
+		ruleResponse, err := s.buildRuleResponse(ctx, rule)
 		if err != nil {
 			logger.Warnf("Failed to build rule response for rule %d: %v", rule.Id, err)
 			continue
@@ -160,8 +159,8 @@ func (s *ruleEngineService) fetchSpecificRules(c *gin.Context, userId int64, rul
 	return rules, nil
 }
 
-func (s *ruleEngineService) fetchAllUserRules(c *gin.Context, userId int64) ([]models.DescribeRuleResponse, error) {
-	allRules, err := s.ruleRepo.ListRules(c, userId)
+func (s *ruleEngineService) fetchAllUserRules(ctx context.Context, userId int64) ([]models.DescribeRuleResponse, error) {
+	allRules, err := s.ruleRepo.ListRules(ctx, userId)
 	if err != nil {
 		return nil, err
 	}
@@ -172,7 +171,7 @@ func (s *ruleEngineService) fetchAllUserRules(c *gin.Context, userId int64) ([]m
 			continue
 		}
 
-		ruleResponse, err := s.buildRuleResponse(c, rule)
+		ruleResponse, err := s.buildRuleResponse(ctx, rule)
 		if err != nil {
 			logger.Warnf("Failed to build rule response for rule %d: %v", rule.Id, err)
 			continue
@@ -184,10 +183,10 @@ func (s *ruleEngineService) fetchAllUserRules(c *gin.Context, userId int64) ([]m
 	return rules, nil
 }
 
-func (s *ruleEngineService) fetchSpecificTransactions(c *gin.Context, userId int64, transactionIds []int64) ([]models.TransactionResponse, error) {
+func (s *ruleEngineService) fetchSpecificTransactions(ctx context.Context, userId int64, transactionIds []int64) ([]models.TransactionResponse, error) {
 	var transactions []models.TransactionResponse
 	for _, txnId := range transactionIds {
-		txn, err := s.transactionRepo.GetTransactionById(c, txnId, userId)
+		txn, err := s.transactionRepo.GetTransactionById(ctx, txnId, userId)
 		if err != nil {
 			logger.Warnf("Transaction %d not found for user %d: %v", txnId, userId, err)
 			continue
@@ -197,7 +196,7 @@ func (s *ruleEngineService) fetchSpecificTransactions(c *gin.Context, userId int
 	return transactions, nil
 }
 
-func (s *ruleEngineService) fetchTransactionPage(c *gin.Context, userId int64, page, pageSize int) ([]models.TransactionResponse, error) {
+func (s *ruleEngineService) fetchTransactionPage(ctx context.Context, userId int64, page, pageSize int) ([]models.TransactionResponse, error) {
 	query := models.TransactionListQuery{
 		Page:      page,
 		PageSize:  pageSize,
@@ -205,7 +204,7 @@ func (s *ruleEngineService) fetchTransactionPage(c *gin.Context, userId int64, p
 		SortOrder: "desc",
 	}
 
-	result, err := s.transactionRepo.ListTransactions(c, userId, query)
+	result, err := s.transactionRepo.ListTransactions(ctx, userId, query)
 	if err != nil {
 		return nil, err
 	}
@@ -223,18 +222,18 @@ func (s *ruleEngineService) processTransactions(engine *RuleEngine, transactions
 	return changesets
 }
 
-func (s *ruleEngineService) applyChangesets(c *gin.Context, userId int64, changesets []*Changeset) ([]models.ModifiedResult, error) {
+func (s *ruleEngineService) applyChangesets(ctx context.Context, userId int64, changesets []*Changeset) ([]models.ModifiedResult, error) {
 	var modified []models.ModifiedResult
 
 	for _, changeset := range changesets {
-		err := s.applyChangeset(c, userId, changeset)
+		err := s.applyChangeset(ctx, userId, changeset)
 		if err != nil {
 			logger.Errorf("Failed to apply changeset to transaction %d: %v", changeset.TransactionId, err)
 			continue
 		}
 
 		// map rule transaction in mapping table
-		s.mapRuleTransaction(c, changeset)
+		s.mapRuleTransaction(ctx, changeset)
 
 		modified = append(modified, models.ModifiedResult{
 			TransactionId: changeset.TransactionId,
@@ -246,8 +245,8 @@ func (s *ruleEngineService) applyChangesets(c *gin.Context, userId int64, change
 	return modified, nil
 }
 
-func (s *ruleEngineService) applyChangeset(c *gin.Context, userId int64, changeset *Changeset) error {
-	transaction, err := s.transactionRepo.GetTransactionById(c, changeset.TransactionId, userId)
+func (s *ruleEngineService) applyChangeset(ctx context.Context, userId int64, changeset *Changeset) error {
+	transaction, err := s.transactionRepo.GetTransactionById(ctx, changeset.TransactionId, userId)
 	if err != nil {
 		return fmt.Errorf("failed to get transaction: %w", err)
 	}
@@ -262,7 +261,7 @@ func (s *ruleEngineService) applyChangeset(c *gin.Context, userId int64, changes
 			updateInput.Description = changeset.DescUpdate
 		}
 
-		err = s.transactionRepo.UpdateTransaction(c, changeset.TransactionId, transaction.CreatedBy, updateInput)
+		err = s.transactionRepo.UpdateTransaction(ctx, changeset.TransactionId, transaction.CreatedBy, updateInput)
 		if err != nil {
 			return fmt.Errorf("failed to update transaction: %w", err)
 		}
@@ -271,7 +270,7 @@ func (s *ruleEngineService) applyChangeset(c *gin.Context, userId int64, changes
 	// Apply category updates
 	if len(changeset.CategoryAdds) > 0 {
 		newCategoryIds := append(transaction.CategoryIds, changeset.CategoryAdds...)
-		err = s.transactionRepo.UpdateCategoryMapping(c, changeset.TransactionId, transaction.CreatedBy, newCategoryIds)
+		err = s.transactionRepo.UpdateCategoryMapping(ctx, changeset.TransactionId, transaction.CreatedBy, newCategoryIds)
 		if err != nil {
 			return fmt.Errorf("failed to update category mapping: %w", err)
 		}
@@ -280,9 +279,9 @@ func (s *ruleEngineService) applyChangeset(c *gin.Context, userId int64, changes
 	return nil
 }
 
-func (s *ruleEngineService) mapRuleTransaction(c *gin.Context, changeset *Changeset) {
+func (s *ruleEngineService) mapRuleTransaction(ctx context.Context, changeset *Changeset) {
 	for _, ruleId := range changeset.AppliedRules {
-		err := s.ruleRepo.CreateRuleTransactionMapping(c, ruleId, changeset.TransactionId)
+		err := s.ruleRepo.CreateRuleTransactionMapping(ctx, ruleId, changeset.TransactionId)
 		if err != nil {
 			logger.Errorf("Failed to map rule application for rule %d and transaction %d: %v",
 				ruleId, changeset.TransactionId, err)

@@ -1,18 +1,17 @@
 package service
 
 import (
+	"context"
 	"expenses/internal/models"
 	"expenses/internal/repository"
-
-	"github.com/gin-gonic/gin"
 )
 
 type CategoryServiceInterface interface {
-	CreateCategory(c *gin.Context, input models.CreateCategoryInput) (models.CategoryResponse, error)
-	GetCategoryById(c *gin.Context, categoryId int64, userId int64) (models.CategoryResponse, error)
-	ListCategories(c *gin.Context, userId int64) ([]models.CategoryResponse, error)
-	UpdateCategory(c *gin.Context, categoryId int64, userId int64, input models.UpdateCategoryInput) (models.CategoryResponse, error)
-	DeleteCategory(c *gin.Context, categoryId int64, userId int64) error
+	CreateCategory(ctx context.Context, input models.CreateCategoryInput) (models.CategoryResponse, error)
+	GetCategoryById(ctx context.Context, categoryId int64, userId int64) (models.CategoryResponse, error)
+	ListCategories(ctx context.Context, userId int64) ([]models.CategoryResponse, error)
+	UpdateCategory(ctx context.Context, categoryId int64, userId int64, input models.UpdateCategoryInput) (models.CategoryResponse, error)
+	DeleteCategory(ctx context.Context, categoryId int64, userId int64) error
 }
 
 type CategoryService struct {
@@ -23,22 +22,22 @@ func NewCategoryService(repo repository.CategoryRepositoryInterface) CategorySer
 	return &CategoryService{repo: repo}
 }
 
-func (s *CategoryService) CreateCategory(c *gin.Context, input models.CreateCategoryInput) (models.CategoryResponse, error) {
-	return s.repo.CreateCategory(c, input)
+func (s *CategoryService) CreateCategory(ctx context.Context, input models.CreateCategoryInput) (models.CategoryResponse, error) {
+	return s.repo.CreateCategory(ctx, input)
 }
 
-func (s *CategoryService) GetCategoryById(c *gin.Context, categoryId int64, userId int64) (models.CategoryResponse, error) {
-	return s.repo.GetCategoryById(c, categoryId, userId)
+func (s *CategoryService) GetCategoryById(ctx context.Context, categoryId int64, userId int64) (models.CategoryResponse, error) {
+	return s.repo.GetCategoryById(ctx, categoryId, userId)
 }
 
-func (s *CategoryService) ListCategories(c *gin.Context, userId int64) ([]models.CategoryResponse, error) {
-	return s.repo.ListCategories(c, userId)
+func (s *CategoryService) ListCategories(ctx context.Context, userId int64) ([]models.CategoryResponse, error) {
+	return s.repo.ListCategories(ctx, userId)
 }
 
-func (s *CategoryService) UpdateCategory(c *gin.Context, categoryId int64, userId int64, input models.UpdateCategoryInput) (models.CategoryResponse, error) {
-	return s.repo.UpdateCategory(c, categoryId, userId, input)
+func (s *CategoryService) UpdateCategory(ctx context.Context, categoryId int64, userId int64, input models.UpdateCategoryInput) (models.CategoryResponse, error) {
+	return s.repo.UpdateCategory(ctx, categoryId, userId, input)
 }
 
-func (s *CategoryService) DeleteCategory(c *gin.Context, categoryId int64, userId int64) error {
-	return s.repo.DeleteCategory(c, categoryId, userId)
+func (s *CategoryService) DeleteCategory(ctx context.Context, categoryId int64, userId int64) error {
+	return s.repo.DeleteCategory(ctx, categoryId, userId)
 }

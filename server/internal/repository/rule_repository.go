@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"errors"
 	"expenses/internal/config"
 	"expenses/internal/database/helper"
@@ -10,25 +11,24 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
 )
 
 type RuleRepositoryInterface interface {
-	CreateRule(c *gin.Context, rule models.CreateBaseRuleRequest) (models.RuleResponse, error)
-	CreateRuleActions(c *gin.Context, actions []models.CreateRuleActionRequest) ([]models.RuleActionResponse, error)
-	CreateRuleConditions(c *gin.Context, conditions []models.CreateRuleConditionRequest) ([]models.RuleConditionResponse, error)
-	CreateRuleTransactionMapping(c *gin.Context, ruleId int64, transactionId int64) error
-	GetRule(c *gin.Context, id int64, userId int64) (models.RuleResponse, error)
-	ListRules(c *gin.Context, userId int64) ([]models.RuleResponse, error)
-	ListRuleActionsByRuleId(c *gin.Context, ruleId int64) ([]models.RuleActionResponse, error)
-	ListRuleConditionsByRuleId(c *gin.Context, ruleId int64) ([]models.RuleConditionResponse, error)
-	UpdateRule(c *gin.Context, id int64, userId int64, rule models.UpdateRuleRequest) (models.RuleResponse, error)
-	UpdateRuleAction(c *gin.Context, id int64, ruleId int64, action models.UpdateRuleActionRequest) (models.RuleActionResponse, error)
-	UpdateRuleCondition(c *gin.Context, id int64, ruleId int64, condition models.UpdateRuleConditionRequest) (models.RuleConditionResponse, error)
-	DeleteRuleActionsByRuleId(c *gin.Context, ruleId int64) error
-	DeleteRuleConditionsByRuleId(c *gin.Context, ruleId int64) error
-	DeleteRule(c *gin.Context, id int64, userId int64) error
+	CreateRule(ctx context.Context, rule models.CreateBaseRuleRequest) (models.RuleResponse, error)
+	CreateRuleActions(ctx context.Context, actions []models.CreateRuleActionRequest) ([]models.RuleActionResponse, error)
+	CreateRuleConditions(ctx context.Context, conditions []models.CreateRuleConditionRequest) ([]models.RuleConditionResponse, error)
+	CreateRuleTransactionMapping(ctx context.Context, ruleId int64, transactionId int64) error
+	GetRule(ctx context.Context, id int64, userId int64) (models.RuleResponse, error)
+	ListRules(ctx context.Context, userId int64) ([]models.RuleResponse, error)
+	ListRuleActionsByRuleId(ctx context.Context, ruleId int64) ([]models.RuleActionResponse, error)
+	ListRuleConditionsByRuleId(ctx context.Context, ruleId int64) ([]models.RuleConditionResponse, error)
+	UpdateRule(ctx context.Context, id int64, userId int64, rule models.UpdateRuleRequest) (models.RuleResponse, error)
+	UpdateRuleAction(ctx context.Context, id int64, ruleId int64, action models.UpdateRuleActionRequest) (models.RuleActionResponse, error)
+	UpdateRuleCondition(ctx context.Context, id int64, ruleId int64, condition models.UpdateRuleConditionRequest) (models.RuleConditionResponse, error)
+	DeleteRuleActionsByRuleId(ctx context.Context, ruleId int64) error
+	DeleteRuleConditionsByRuleId(ctx context.Context, ruleId int64) error
+	DeleteRule(ctx context.Context, id int64, userId int64) error
 }
 
 type RuleRepository struct {
@@ -51,37 +51,37 @@ func NewRuleRepository(db database.DatabaseManager, cfg *config.Config) RuleRepo
 	}
 }
 
-func (r *RuleRepository) CreateRule(c *gin.Context, req models.CreateBaseRuleRequest) (models.RuleResponse, error) {
+func (r *RuleRepository) CreateRule(ctx context.Context, req models.CreateBaseRuleRequest) (models.RuleResponse, error) {
 	var rule models.RuleResponse
 	query, values, ptrs, err := helper.CreateInsertQuery(&req, &rule, r.ruleTable, r.schema)
 	if err != nil {
 		return rule, err
 	}
-	err = r.db.FetchOne(c, query, values...).Scan(ptrs...)
+	err = r.db.FetchOne(ctx, query, values...).Scan(ptrs...)
 	if err != nil {
 		return rule, errorsPkg.NewRuleRepositoryError("failed to create rule", err)
 	}
 	return rule, nil
 }
 
-func (r *RuleRepository) createRuleAction(c *gin.Context, req *models.CreateRuleActionRequest) (models.RuleActionResponse, error) {
+func (r *RuleRepository) createRuleAction(ctx context.Context, req *models.CreateRuleActionRequest) (models.RuleActionResponse, error) {
 	var ruleAction models.RuleActionResponse
 	query, values, ptrs, err := helper.CreateInsertQuery(req, &ruleAction, r.ruleActionTable, r.schema)
 	if err != nil {
 		return ruleAction, err
 	}
-	err = r.db.FetchOne(c, query, values...).Scan(ptrs...)
+	err = r.db.FetchOne(ctx, query, values...).Scan(ptrs...)
 	if err != nil {
 		return ruleAction, errorsPkg.NewRuleActionInsertError(err)
 	}
 	return ruleAction, nil
 }
 
-func (r *RuleRepository) CreateRuleActions(c *gin.Context, actions []models.CreateRuleActionRequest) ([]models.RuleActionResponse, error) {
+func (r *RuleRepository) CreateRuleActions(ctx context.Context, actions []models.CreateRuleActionRequest) ([]models.RuleActionResponse, error) {
 	ruleActions := make([]models.RuleActionResponse, 0)
 	for _, action := range actions {
 		newAction := action
-		ruleAction, err := r.createRuleAction(c, &newAction)
+		ruleAction, err := r.createRuleAction(ctx, &newAction)
 		if err != nil {
 			return ruleActions, err
 		}
@@ -90,24 +90,24 @@ func (r *RuleRepository) CreateRuleActions(c *gin.Context, actions []models.Crea
 	return ruleActions, nil
 }
 
-func (r *RuleRepository) createRuleCondition(c *gin.Context, req *models.CreateRuleConditionRequest) (models.RuleConditionResponse, error) {
+func (r *RuleRepository) createRuleCondition(ctx context.Context, req *models.CreateRuleConditionRequest) (models.RuleConditionResponse, error) {
 	var ruleCondition models.RuleConditionResponse
 	query, values, ptrs, err := helper.CreateInsertQuery(req, &ruleCondition, r.ruleConditionTable, r.schema)
 	if err != nil {
 		return ruleCondition, err
 	}
-	err = r.db.FetchOne(c, query, values...).Scan(ptrs...)
+	err = r.db.FetchOne(ctx, query, values...).Scan(ptrs...)
 	if err != nil {
 		return ruleCondition, errorsPkg.NewRuleConditionInsertError(err)
 	}
 	return ruleCondition, nil
 }
 
-func (r *RuleRepository) CreateRuleConditions(c *gin.Context, conditions []models.CreateRuleConditionRequest) ([]models.RuleConditionResponse, error) {
+func (r *RuleRepository) CreateRuleConditions(ctx context.Context, conditions []models.CreateRuleConditionRequest) ([]models.RuleConditionResponse, error) {
 	ruleConditions := make([]models.RuleConditionResponse, 0)
 	for _, cond := range conditions {
 		newCond := cond
-		ruleCondition, err := r.createRuleCondition(c, &newCond)
+		ruleCondition, err := r.createRuleCondition(ctx, &newCond)
 		if err != nil {
 			return ruleConditions, err
 		}
@@ -116,14 +116,14 @@ func (r *RuleRepository) CreateRuleConditions(c *gin.Context, conditions []model
 	return ruleConditions, nil
 }
 
-func (r *RuleRepository) GetRule(c *gin.Context, id int64, userId int64) (models.RuleResponse, error) {
+func (r *RuleRepository) GetRule(ctx context.Context, id int64, userId int64) (models.RuleResponse, error) {
 	var rule models.RuleResponse
 	ptrs, dbFields, err := helper.GetDbFieldsFromObject(&rule)
 	if err != nil {
 		return rule, err
 	}
 	query := fmt.Sprintf(`SELECT %s FROM %s.%s WHERE id = $1 AND created_by = $2`, strings.Join(dbFields, ", "), r.schema, r.ruleTable)
-	err = r.db.FetchOne(c, query, id, userId).Scan(ptrs...)
+	err = r.db.FetchOne(ctx, query, id, userId).Scan(ptrs...)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return rule, errorsPkg.NewRuleNotFoundError(err)
@@ -133,7 +133,7 @@ func (r *RuleRepository) GetRule(c *gin.Context, id int64, userId int64) (models
 	return rule, nil
 }
 
-func (r *RuleRepository) ListRules(c *gin.Context, userId int64) ([]models.RuleResponse, error) {
+func (r *RuleRepository) ListRules(ctx context.Context, userId int64) ([]models.RuleResponse, error) {
 	rules := make([]models.RuleResponse, 0)
 	var rule models.RuleResponse
 	ptrs, dbFields, err := helper.GetDbFieldsFromObject(&rule)
@@ -141,7 +141,7 @@ func (r *RuleRepository) ListRules(c *gin.Context, userId int64) ([]models.RuleR
 		return rules, err
 	}
 	query := fmt.Sprintf(`SELECT %s FROM %s.%s WHERE created_by = $1`, strings.Join(dbFields, ", "), r.schema, r.ruleTable)
-	rows, err := r.db.FetchAll(c, query, userId)
+	rows, err := r.db.FetchAll(ctx, query, userId)
 	if err != nil {
 		return rules, errorsPkg.NewRuleRepositoryError("failed to list rules", err)
 	}
@@ -156,7 +156,7 @@ func (r *RuleRepository) ListRules(c *gin.Context, userId int64) ([]models.RuleR
 	return rules, nil
 }
 
-func (r *RuleRepository) ListRuleActionsByRuleId(c *gin.Context, ruleId int64) ([]models.RuleActionResponse, error) {
+func (r *RuleRepository) ListRuleActionsByRuleId(ctx context.Context, ruleId int64) ([]models.RuleActionResponse, error) {
 	var actions []models.RuleActionResponse
 	var action models.RuleActionResponse
 	ptrs, dbFields, err := helper.GetDbFieldsFromObject(&action)
@@ -164,7 +164,7 @@ func (r *RuleRepository) ListRuleActionsByRuleId(c *gin.Context, ruleId int64) (
 		return actions, err
 	}
 	query := fmt.Sprintf(`SELECT %s FROM %s.%s WHERE rule_id = $1`, strings.Join(dbFields, ", "), r.schema, r.ruleActionTable)
-	rows, err := r.db.FetchAll(c, query, ruleId)
+	rows, err := r.db.FetchAll(ctx, query, ruleId)
 	if err != nil {
 		return actions, errorsPkg.NewRuleRepositoryError("failed to list rule actions", err)
 	}
@@ -179,7 +179,7 @@ func (r *RuleRepository) ListRuleActionsByRuleId(c *gin.Context, ruleId int64) (
 	return actions, nil
 }
 
-func (r *RuleRepository) ListRuleConditionsByRuleId(c *gin.Context, ruleId int64) ([]models.RuleConditionResponse, error) {
+func (r *RuleRepository) ListRuleConditionsByRuleId(ctx context.Context, ruleId int64) ([]models.RuleConditionResponse, error) {
 	var conditions []models.RuleConditionResponse
 	var condition models.RuleConditionResponse
 	ptrs, dbFields, err := helper.GetDbFieldsFromObject(&condition)
@@ -187,7 +187,7 @@ func (r *RuleRepository) ListRuleConditionsByRuleId(c *gin.Context, ruleId int64
 		return conditions, err
 	}
 	query := fmt.Sprintf(`SELECT %s FROM %s.%s WHERE rule_id = $1`, strings.Join(dbFields, ", "), r.schema, r.ruleConditionTable)
-	rows, err := r.db.FetchAll(c, query, ruleId)
+	rows, err := r.db.FetchAll(ctx, query, ruleId)
 	if err != nil {
 		return conditions, errorsPkg.NewRuleRepositoryError("failed to list rule conditions", err)
 	}
@@ -202,7 +202,7 @@ func (r *RuleRepository) ListRuleConditionsByRuleId(c *gin.Context, ruleId int64
 	return conditions, nil
 }
 
-func (r *RuleRepository) UpdateRule(c *gin.Context, id int64, userId int64, rule models.UpdateRuleRequest) (models.RuleResponse, error) {
+func (r *RuleRepository) UpdateRule(ctx context.Context, id int64, userId int64, rule models.UpdateRuleRequest) (models.RuleResponse, error) {
 	var ruleResponse models.RuleResponse
 	fieldsClause, argValues, argIndex, err := helper.CreateUpdateParams(&rule)
 	if err != nil {
@@ -214,7 +214,7 @@ func (r *RuleRepository) UpdateRule(c *gin.Context, id int64, userId int64, rule
 	}
 	argValues = append(argValues, id, userId)
 	query := fmt.Sprintf(`UPDATE %s.%s SET %s WHERE id = $%d AND created_by = $%d RETURNING %s;`, r.schema, r.ruleTable, fieldsClause, argIndex, argIndex+1, strings.Join(dbFields, ", "))
-	err = r.db.FetchOne(c, query, argValues...).Scan(ptrs...)
+	err = r.db.FetchOne(ctx, query, argValues...).Scan(ptrs...)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ruleResponse, errorsPkg.NewRuleNotFoundError(err)
@@ -224,7 +224,7 @@ func (r *RuleRepository) UpdateRule(c *gin.Context, id int64, userId int64, rule
 	return ruleResponse, nil
 }
 
-func (r *RuleRepository) UpdateRuleAction(c *gin.Context, id int64, ruleId int64, action models.UpdateRuleActionRequest) (models.RuleActionResponse, error) {
+func (r *RuleRepository) UpdateRuleAction(ctx context.Context, id int64, ruleId int64, action models.UpdateRuleActionRequest) (models.RuleActionResponse, error) {
 	var ruleAction models.RuleActionResponse
 	fieldsClause, argValues, argIndex, err := helper.CreateUpdateParams(&action)
 	if err != nil {
@@ -239,7 +239,7 @@ func (r *RuleRepository) UpdateRuleAction(c *gin.Context, id int64, ruleId int64
 		UPDATE %s.%s SET %s WHERE id = $%d AND rule_id = $%d RETURNING %s;
     `, r.schema, r.ruleActionTable, fieldsClause, argIndex, argIndex+1, strings.Join(dbFields, ", "))
 
-	err = r.db.FetchOne(c, query, argValues...).Scan(ptrs...)
+	err = r.db.FetchOne(ctx, query, argValues...).Scan(ptrs...)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ruleAction, errorsPkg.NewRuleActionNotFoundError(err)
@@ -249,7 +249,7 @@ func (r *RuleRepository) UpdateRuleAction(c *gin.Context, id int64, ruleId int64
 	return ruleAction, nil
 }
 
-func (r *RuleRepository) UpdateRuleCondition(c *gin.Context, id int64, ruleId int64, condition models.UpdateRuleConditionRequest) (models.RuleConditionResponse, error) {
+func (r *RuleRepository) UpdateRuleCondition(ctx context.Context, id int64, ruleId int64, condition models.UpdateRuleConditionRequest) (models.RuleConditionResponse, error) {
 	var ruleCondition models.RuleConditionResponse
 	fieldsClause, argValues, argIndex, err := helper.CreateUpdateParams(&condition)
 	if err != nil {
@@ -264,7 +264,7 @@ func (r *RuleRepository) UpdateRuleCondition(c *gin.Context, id int64, ruleId in
 		UPDATE %s.%s SET %s WHERE id = $%d AND rule_id = $%d RETURNING %s;
     `, r.schema, r.ruleConditionTable, fieldsClause, argIndex, argIndex+1, strings.Join(dbFields, ", "))
 
-	err = r.db.FetchOne(c, query, argValues...).Scan(ptrs...)
+	err = r.db.FetchOne(ctx, query, argValues...).Scan(ptrs...)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ruleCondition, errorsPkg.NewRuleConditionNotFoundError(err)
@@ -274,9 +274,9 @@ func (r *RuleRepository) UpdateRuleCondition(c *gin.Context, id int64, ruleId in
 	return ruleCondition, nil
 }
 
-func (r *RuleRepository) DeleteRuleActionsByRuleId(c *gin.Context, ruleId int64) error {
+func (r *RuleRepository) DeleteRuleActionsByRuleId(ctx context.Context, ruleId int64) error {
 	query := fmt.Sprintf(`DELETE FROM %s.%s WHERE rule_id = $1`, r.schema, r.ruleActionTable)
-	rowsAffected, err := r.db.ExecuteQuery(c, query, ruleId)
+	rowsAffected, err := r.db.ExecuteQuery(ctx, query, ruleId)
 	if err != nil {
 		return errorsPkg.NewRuleRepositoryError("failed to delete rule actions", err)
 	}
@@ -286,9 +286,9 @@ func (r *RuleRepository) DeleteRuleActionsByRuleId(c *gin.Context, ruleId int64)
 	return nil
 }
 
-func (r *RuleRepository) DeleteRuleConditionsByRuleId(c *gin.Context, ruleId int64) error {
+func (r *RuleRepository) DeleteRuleConditionsByRuleId(ctx context.Context, ruleId int64) error {
 	query := fmt.Sprintf(`DELETE FROM %s.%s WHERE rule_id = $1`, r.schema, r.ruleConditionTable)
-	rowsAffected, err := r.db.ExecuteQuery(c, query, ruleId)
+	rowsAffected, err := r.db.ExecuteQuery(ctx, query, ruleId)
 	if err != nil {
 		return errorsPkg.NewRuleRepositoryError("failed to delete rule conditions", err)
 	}
@@ -298,9 +298,9 @@ func (r *RuleRepository) DeleteRuleConditionsByRuleId(c *gin.Context, ruleId int
 	return nil
 }
 
-func (r *RuleRepository) DeleteRule(c *gin.Context, id int64, userId int64) error {
+func (r *RuleRepository) DeleteRule(ctx context.Context, id int64, userId int64) error {
 	query := fmt.Sprintf(`DELETE FROM %s.%s WHERE id = $1 AND created_by = $2`, r.schema, r.ruleTable)
-	rowsAffected, err := r.db.ExecuteQuery(c, query, id, userId)
+	rowsAffected, err := r.db.ExecuteQuery(ctx, query, id, userId)
 	if err != nil {
 		return errorsPkg.NewRuleRepositoryError("failed to delete rule", err)
 	}
@@ -310,14 +310,14 @@ func (r *RuleRepository) DeleteRule(c *gin.Context, id int64, userId int64) erro
 	return nil
 }
 
-func (r *RuleRepository) CreateRuleTransactionMapping(c *gin.Context, ruleId int64, transactionId int64) error {
+func (r *RuleRepository) CreateRuleTransactionMapping(ctx context.Context, ruleId int64, transactionId int64) error {
 	query := fmt.Sprintf(`
 		INSERT INTO %s.%s (rule_id, transaction_id)
 		VALUES ($1, $2)
 		ON CONFLICT (rule_id, transaction_id) DO NOTHING
 	`, r.schema, r.ruleTransactionMappingTable)
 
-	_, err := r.db.ExecuteQuery(c, query, ruleId, transactionId)
+	_, err := r.db.ExecuteQuery(ctx, query, ruleId, transactionId)
 	if err != nil {
 		return errorsPkg.NewRuleRepositoryError("failed to create rule transaction mapping", err)
 	}

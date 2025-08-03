@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"errors"
 	"expenses/internal/config"
 	"expenses/internal/database/helper"
@@ -11,17 +12,16 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
 )
 
 type StatementRepositoryInterface interface {
-	CreateStatement(c *gin.Context, input models.CreateStatementInput) (models.StatementResponse, error)
-	CreateStatementTxn(c *gin.Context, statementId int64, transactionId int64) error
-	UpdateStatementStatus(c *gin.Context, statementId int64, input models.UpdateStatementStatusInput) (models.StatementResponse, error)
-	GetStatementByID(c *gin.Context, statementId int64, userId int64) (models.StatementResponse, error)
-	ListStatementByUserId(c *gin.Context, userId int64, limit, offset int) ([]models.StatementResponse, error)
-	CountStatementsByUserId(c *gin.Context, userId int64) (int, error)
+	CreateStatement(ctx context.Context, input models.CreateStatementInput) (models.StatementResponse, error)
+	CreateStatementTxn(ctx context.Context, statementId int64, transactionId int64) error
+	UpdateStatementStatus(ctx context.Context, statementId int64, input models.UpdateStatementStatusInput) (models.StatementResponse, error)
+	GetStatementByID(ctx context.Context, statementId int64, userId int64) (models.StatementResponse, error)
+	ListStatementByUserId(ctx context.Context, userId int64, limit, offset int) ([]models.StatementResponse, error)
+	CountStatementsByUserId(ctx context.Context, userId int64) (int, error)
 }
 
 type StatementRepository struct {
@@ -40,13 +40,13 @@ func NewStatementRepository(db database.DatabaseManager, cfg *config.Config) Sta
 	}
 }
 
-func (r *StatementRepository) CreateStatement(c *gin.Context, input models.CreateStatementInput) (models.StatementResponse, error) {
+func (r *StatementRepository) CreateStatement(ctx context.Context, input models.CreateStatementInput) (models.StatementResponse, error) {
 	var statement models.StatementResponse
 	query, values, ptrs, err := helper.CreateInsertQuery(&input, &statement, r.tableName, r.schema)
 	if err != nil {
 		return statement, statementErrors.NewStatementCreateError(err)
 	}
-	err = r.db.FetchOne(c, query, values...).Scan(ptrs...)
+	err = r.db.FetchOne(ctx, query, values...).Scan(ptrs...)
 	if err != nil {
 		if statementErrors.CheckForeignKey(err, "statement_account_id_fkey") {
 			return statement, statementErrors.NewAccountNotFoundError(errors.New("account not found"))
@@ -56,16 +56,16 @@ func (r *StatementRepository) CreateStatement(c *gin.Context, input models.Creat
 	return statement, nil
 }
 
-func (r *StatementRepository) CreateStatementTxn(c *gin.Context, statementId int64, transactionId int64) error {
+func (r *StatementRepository) CreateStatementTxn(ctx context.Context, statementId int64, transactionId int64) error {
 	query := fmt.Sprintf(`INSERT INTO %s.%s (statement_id, transaction_id) VALUES ($1, $2)`, r.schema, r.mappingTableName)
-	_, err := r.db.ExecuteQuery(c, query, statementId, transactionId)
+	_, err := r.db.ExecuteQuery(ctx, query, statementId, transactionId)
 	if err != nil {
 		return statementErrors.NewStatementCreateError(err)
 	}
 	return nil
 }
 
-func (r *StatementRepository) UpdateStatementStatus(c *gin.Context, statementId int64, input models.UpdateStatementStatusInput) (models.StatementResponse, error) {
+func (r *StatementRepository) UpdateStatementStatus(ctx context.Context, statementId int64, input models.UpdateStatementStatusInput) (models.StatementResponse, error) {
 	logger.Debugf("Updating statement %d with status %s", statementId, input.Status)
 	fieldsClause, argValues, argIndex, err := helper.CreateUpdateParams(&input)
 	if err != nil {
@@ -78,7 +78,7 @@ func (r *StatementRepository) UpdateStatementStatus(c *gin.Context, statementId 
 	}
 	query := fmt.Sprintf(`UPDATE %s.%s SET %s WHERE id = $%d RETURNING %s;`, r.schema, r.tableName, fieldsClause, argIndex, strings.Join(dbFields, ", "))
 	argValues = append(argValues, statementId)
-	err = r.db.FetchOne(c, query, argValues...).Scan(ptrs...)
+	err = r.db.FetchOne(ctx, query, argValues...).Scan(ptrs...)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return statement, statementErrors.NewStatementNotFoundError(err)
@@ -88,7 +88,7 @@ func (r *StatementRepository) UpdateStatementStatus(c *gin.Context, statementId 
 	return statement, nil
 }
 
-func (r *StatementRepository) GetStatementByID(c *gin.Context, statementId int64, userId int64) (models.StatementResponse, error) {
+func (r *StatementRepository) GetStatementByID(ctx context.Context, statementId int64, userId int64) (models.StatementResponse, error) {
 	var statement models.StatementResponse
 	ptrs, dbFields, err := helper.GetDbFieldsFromObject(&statement)
 	if err != nil {
@@ -100,7 +100,7 @@ func (r *StatementRepository) GetStatementByID(c *gin.Context, statementId int64
 		FROM %s.%s
 		WHERE id = $1 AND created_by = $2 AND deleted_at IS NULL`,
 		strings.Join(dbFields, ", "), r.schema, r.tableName)
-	err = r.db.FetchOne(c, query, statementId, userId).Scan(ptrs...)
+	err = r.db.FetchOne(ctx, query, statementId, userId).Scan(ptrs...)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return statement, statementErrors.NewStatementNotFoundError(err)
@@ -110,7 +110,7 @@ func (r *StatementRepository) GetStatementByID(c *gin.Context, statementId int64
 	return statement, nil
 }
 
-func (r *StatementRepository) ListStatementByUserId(c *gin.Context, userId int64, limit, offset int) ([]models.StatementResponse, error) {
+func (r *StatementRepository) ListStatementByUserId(ctx context.Context, userId int64, limit, offset int) ([]models.StatementResponse, error) {
 	statements := make([]models.StatementResponse, 0)
 	var statement models.StatementResponse
 	ptrs, dbFields, err := helper.GetDbFieldsFromObject(&statement)
@@ -124,7 +124,7 @@ func (r *StatementRepository) ListStatementByUserId(c *gin.Context, userId int64
 		ORDER BY created_at DESC
 		LIMIT $2 OFFSET $3`,
 		strings.Join(dbFields, ", "), r.schema, r.tableName)
-	rows, err := r.db.FetchAll(c, query, userId, limit, offset)
+	rows, err := r.db.FetchAll(ctx, query, userId, limit, offset)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return statements, nil
@@ -142,10 +142,10 @@ func (r *StatementRepository) ListStatementByUserId(c *gin.Context, userId int64
 	return statements, nil
 }
 
-func (r *StatementRepository) CountStatementsByUserId(c *gin.Context, userId int64) (int, error) {
+func (r *StatementRepository) CountStatementsByUserId(ctx context.Context, userId int64) (int, error) {
 	query := fmt.Sprintf(`SELECT COUNT(*) FROM %s.%s WHERE created_by = $1 AND deleted_at IS NULL`, r.schema, r.tableName)
 	var count int
-	err := r.db.FetchOne(c, query, userId).Scan(&count)
+	err := r.db.FetchOne(ctx, query, userId).Scan(&count)
 	if err != nil {
 		return 0, err
 	}

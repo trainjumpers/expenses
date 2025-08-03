@@ -7,18 +7,16 @@ import (
 	"expenses/internal/validator"
 	database "expenses/pkg/database/manager"
 	"expenses/pkg/logger"
-
-	"github.com/gin-gonic/gin"
 )
 
 type RuleServiceInterface interface {
-	CreateRule(c *gin.Context, ruleReq models.CreateRuleRequest) (models.DescribeRuleResponse, error)
-	GetRuleById(c *gin.Context, id int64, userId int64) (models.DescribeRuleResponse, error)
-	ListRules(c *gin.Context, userId int64) ([]models.RuleResponse, error)
-	UpdateRule(c *gin.Context, id int64, ruleReq models.UpdateRuleRequest, userId int64) (models.RuleResponse, error)
-	UpdateRuleAction(c *gin.Context, id int64, ruleId int64, ruleReq models.UpdateRuleActionRequest, userId int64) (models.RuleActionResponse, error)
-	UpdateRuleCondition(c *gin.Context, id int64, ruleId int64, ruleReq models.UpdateRuleConditionRequest, userId int64) (models.RuleConditionResponse, error)
-	DeleteRule(c *gin.Context, id int64, userId int64) error
+	CreateRule(ctx context.Context, ruleReq models.CreateRuleRequest) (models.DescribeRuleResponse, error)
+	GetRuleById(ctx context.Context, id int64, userId int64) (models.DescribeRuleResponse, error)
+	ListRules(ctx context.Context, userId int64) ([]models.RuleResponse, error)
+	UpdateRule(ctx context.Context, id int64, ruleReq models.UpdateRuleRequest, userId int64) (models.RuleResponse, error)
+	UpdateRuleAction(ctx context.Context, id int64, ruleId int64, ruleReq models.UpdateRuleActionRequest, userId int64) (models.RuleActionResponse, error)
+	UpdateRuleCondition(ctx context.Context, id int64, ruleId int64, ruleReq models.UpdateRuleConditionRequest, userId int64) (models.RuleConditionResponse, error)
+	DeleteRule(ctx context.Context, id int64, userId int64) error
 }
 
 type ruleService struct {
@@ -37,15 +35,15 @@ func NewRuleService(ruleRepo repository.RuleRepositoryInterface, transactionRepo
 	}
 }
 
-func (s *ruleService) CreateRule(c *gin.Context, ruleReq models.CreateRuleRequest) (models.DescribeRuleResponse, error) {
+func (s *ruleService) CreateRule(ctx context.Context, ruleReq models.CreateRuleRequest) (models.DescribeRuleResponse, error) {
 	logger.Debugf("Creating rule for user %d", ruleReq.Rule.CreatedBy)
 	var ruleResponse models.DescribeRuleResponse
 	if err := s.validator.Validate(ruleReq); err != nil {
 		return ruleResponse, err
 	}
 
-	err := s.db.WithTxn(c, func(ctx context.Context) error {
-		rule, err := s.ruleRepo.CreateRule(c, ruleReq.Rule)
+	err := s.db.WithTxn(ctx, func(txCtx context.Context) error {
+		rule, err := s.ruleRepo.CreateRule(txCtx, ruleReq.Rule)
 		if err != nil {
 			return err
 		}
@@ -57,12 +55,12 @@ func (s *ruleService) CreateRule(c *gin.Context, ruleReq models.CreateRuleReques
 			ruleReq.Conditions[i].RuleId = rule.Id
 		}
 
-		actions, err := s.ruleRepo.CreateRuleActions(c, ruleReq.Actions)
+		actions, err := s.ruleRepo.CreateRuleActions(txCtx, ruleReq.Actions)
 		if err != nil {
 			return err
 		}
 
-		conditions, err := s.ruleRepo.CreateRuleConditions(c, ruleReq.Conditions)
+		conditions, err := s.ruleRepo.CreateRuleConditions(txCtx, ruleReq.Conditions)
 		if err != nil {
 			return err
 		}
@@ -80,22 +78,22 @@ func (s *ruleService) CreateRule(c *gin.Context, ruleReq models.CreateRuleReques
 	return ruleResponse, nil
 }
 
-func (s *ruleService) GetRuleById(c *gin.Context, id int64, userId int64) (models.DescribeRuleResponse, error) {
+func (s *ruleService) GetRuleById(ctx context.Context, id int64, userId int64) (models.DescribeRuleResponse, error) {
 	logger.Debugf("Fetching rule %d for user %d", id, userId)
 	var ruleResponse models.DescribeRuleResponse
-	rule, err := s.ruleRepo.GetRule(c, id, userId)
+	rule, err := s.ruleRepo.GetRule(ctx, id, userId)
 	if err != nil {
 		return ruleResponse, err
 	}
 	ruleResponse.Rule = rule
 
-	actions, err := s.ruleRepo.ListRuleActionsByRuleId(c, id)
+	actions, err := s.ruleRepo.ListRuleActionsByRuleId(ctx, id)
 	if err != nil {
 		return ruleResponse, err
 	}
 	ruleResponse.Actions = actions
 
-	conditions, err := s.ruleRepo.ListRuleConditionsByRuleId(c, id)
+	conditions, err := s.ruleRepo.ListRuleConditionsByRuleId(ctx, id)
 	if err != nil {
 		return ruleResponse, err
 	}
@@ -105,9 +103,9 @@ func (s *ruleService) GetRuleById(c *gin.Context, id int64, userId int64) (model
 	return ruleResponse, nil
 }
 
-func (s *ruleService) ListRules(c *gin.Context, userId int64) ([]models.RuleResponse, error) {
+func (s *ruleService) ListRules(ctx context.Context, userId int64) ([]models.RuleResponse, error) {
 	logger.Debugf("Fetching all rules for user %d", userId)
-	rules, err := s.ruleRepo.ListRules(c, userId)
+	rules, err := s.ruleRepo.ListRules(ctx, userId)
 	if err != nil {
 		return nil, err
 	}
@@ -115,62 +113,62 @@ func (s *ruleService) ListRules(c *gin.Context, userId int64) ([]models.RuleResp
 	return rules, nil
 }
 
-func (s *ruleService) UpdateRule(c *gin.Context, id int64, ruleReq models.UpdateRuleRequest, userId int64) (models.RuleResponse, error) {
+func (s *ruleService) UpdateRule(ctx context.Context, id int64, ruleReq models.UpdateRuleRequest, userId int64) (models.RuleResponse, error) {
 	logger.Debugf("Updating rule %d for user %d", id, userId)
 	if err := s.validator.ValidateUpdate(ruleReq); err != nil {
 		return models.RuleResponse{}, err
 	}
-	rule, err := s.ruleRepo.UpdateRule(c, id, userId, ruleReq)
+	rule, err := s.ruleRepo.UpdateRule(ctx, id, userId, ruleReq)
 	if err != nil {
 		return models.RuleResponse{}, err
 	}
 	return rule, nil
 }
 
-func (s *ruleService) UpdateRuleAction(c *gin.Context, id int64, ruleId int64, ruleReq models.UpdateRuleActionRequest, userId int64) (models.RuleActionResponse, error) {
+func (s *ruleService) UpdateRuleAction(ctx context.Context, id int64, ruleId int64, ruleReq models.UpdateRuleActionRequest, userId int64) (models.RuleActionResponse, error) {
 	logger.Debugf("Updating rule action %d for user %d", id, userId)
 	if err := s.validator.ValidateUpdateAction(ruleReq); err != nil {
 		return models.RuleActionResponse{}, err
 	}
-	rule, err := s.ruleRepo.GetRule(c, ruleId, userId)
+	rule, err := s.ruleRepo.GetRule(ctx, ruleId, userId)
 	if err != nil {
 		return models.RuleActionResponse{}, err
 	}
-	ruleAction, err := s.ruleRepo.UpdateRuleAction(c, id, rule.Id, ruleReq)
+	ruleAction, err := s.ruleRepo.UpdateRuleAction(ctx, id, rule.Id, ruleReq)
 	if err != nil {
 		return models.RuleActionResponse{}, err
 	}
 	return ruleAction, nil
 }
 
-func (s *ruleService) UpdateRuleCondition(c *gin.Context, id int64, ruleId int64, ruleReq models.UpdateRuleConditionRequest, userId int64) (models.RuleConditionResponse, error) {
+func (s *ruleService) UpdateRuleCondition(ctx context.Context, id int64, ruleId int64, ruleReq models.UpdateRuleConditionRequest, userId int64) (models.RuleConditionResponse, error) {
 	logger.Debugf("Updating rule condition %d for user %d", id, userId)
 	if err := s.validator.ValidateUpdateCondition(ruleReq); err != nil {
 		return models.RuleConditionResponse{}, err
 	}
-	rule, err := s.ruleRepo.GetRule(c, ruleId, userId)
+	rule, err := s.ruleRepo.GetRule(ctx, ruleId, userId)
 	if err != nil {
 		return models.RuleConditionResponse{}, err
 	}
-	ruleCondition, err := s.ruleRepo.UpdateRuleCondition(c, id, rule.Id, ruleReq)
+	ruleCondition, err := s.ruleRepo.UpdateRuleCondition(ctx, id, rule.Id, ruleReq)
 	if err != nil {
 		return models.RuleConditionResponse{}, err
 	}
 	return ruleCondition, nil
 }
 
-func (s *ruleService) DeleteRule(c *gin.Context, id int64, userId int64) error {
+func (s *ruleService) DeleteRule(ctx context.Context, id int64, userId int64) error {
 	logger.Debugf("Deleting rule %d for user %d", id, userId)
-	err := s.db.WithTxn(c, func(ctx context.Context) error {
-		err := s.ruleRepo.DeleteRuleActionsByRuleId(c, id)
+	err := s.db.WithTxn(ctx, func(txCtx context.Context) error {
+		err := s.ruleRepo.DeleteRuleActionsByRuleId(txCtx, id)
 		if err != nil {
 			return err
 		}
-		err = s.ruleRepo.DeleteRuleConditionsByRuleId(c, id)
+		err = s.ruleRepo.DeleteRuleConditionsByRuleId(txCtx, id)
 		if err != nil {
 			return err
 		}
-		err = s.ruleRepo.DeleteRule(c, id, userId)
+		err = s.ruleRepo.DeleteRule(txCtx, id, userId)
 		if err != nil {
 			return err
 		}

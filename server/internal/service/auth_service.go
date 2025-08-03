@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/base64"
 	"expenses/internal/config"
@@ -10,17 +11,16 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 )
 
 // AuthServiceInterface defines the contract for authentication service operations
 type AuthServiceInterface interface {
-	Signup(ctx *gin.Context, newUser models.CreateUserInput) (models.AuthResponse, error)
-	Login(ctx *gin.Context, loginInput models.LoginInput) (models.AuthResponse, error)
-	RefreshToken(ctx *gin.Context, refreshToken string) (models.AuthResponse, error)
-	UpdateUserPassword(ctx *gin.Context, userId int64, updatedUser models.UpdateUserPasswordInput) (models.UserResponse, error)
+	Signup(ctx context.Context, newUser models.CreateUserInput) (models.AuthResponse, error)
+	Login(ctx context.Context, loginInput models.LoginInput) (models.AuthResponse, error)
+	RefreshToken(ctx context.Context, refreshToken string) (models.AuthResponse, error)
+	UpdateUserPassword(ctx context.Context, userId int64, updatedUser models.UpdateUserPasswordInput) (models.UserResponse, error)
 	// ExpireRefreshToken is a helper method for testing purposes only.
 	// DO NOT USE IN PRODUCTION.
 	ExpireRefreshToken(refreshToken string) error
@@ -51,7 +51,7 @@ func NewAuthService(userService UserServiceInterface, cfg *config.Config) AuthSe
 }
 
 // Signup handles user registration and returns auth tokens
-func (a *AuthService) Signup(ctx *gin.Context, newUser models.CreateUserInput) (models.AuthResponse, error) {
+func (a *AuthService) Signup(ctx context.Context, newUser models.CreateUserInput) (models.AuthResponse, error) {
 	hashedPassword, err := a.hashPassword(newUser.Password)
 	if err != nil {
 		return models.AuthResponse{}, err
@@ -86,7 +86,7 @@ func (a *AuthService) Signup(ctx *gin.Context, newUser models.CreateUserInput) (
 }
 
 // Login handles user authentication and returns auth tokens
-func (a *AuthService) Login(ctx *gin.Context, loginInput models.LoginInput) (models.AuthResponse, error) {
+func (a *AuthService) Login(ctx context.Context, loginInput models.LoginInput) (models.AuthResponse, error) {
 	user, err := a.userService.GetUserByEmailWithPassword(ctx, loginInput.Email)
 	if err != nil {
 		return models.AuthResponse{}, errors.NewInvalidCredentialsError(err)
@@ -124,7 +124,7 @@ func (a *AuthService) Login(ctx *gin.Context, loginInput models.LoginInput) (mod
 }
 
 // RefreshToken issues new auth tokens using a valid refresh token
-func (a *AuthService) RefreshToken(ctx *gin.Context, refreshToken string) (models.AuthResponse, error) {
+func (a *AuthService) RefreshToken(ctx context.Context, refreshToken string) (models.AuthResponse, error) {
 	data, ok := a.getRefreshTokenData(refreshToken)
 	if !ok {
 		return models.AuthResponse{}, errors.NewInvalidTokenError(fmt.Errorf("refresh token not found or expired"))
@@ -159,7 +159,7 @@ func (a *AuthService) RefreshToken(ctx *gin.Context, refreshToken string) (model
 	}, nil
 }
 
-func (a *AuthService) UpdateUserPassword(ctx *gin.Context, userId int64, updatedUser models.UpdateUserPasswordInput) (models.UserResponse, error) {
+func (a *AuthService) UpdateUserPassword(ctx context.Context, userId int64, updatedUser models.UpdateUserPasswordInput) (models.UserResponse, error) {
 	userWithPassword, err := a.userService.GetUserByIdWithPassword(ctx, userId)
 	if err != nil {
 		return models.UserResponse{}, err

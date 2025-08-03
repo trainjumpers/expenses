@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"errors"
 	mockDatabase "expenses/internal/mock/database"
 	repository "expenses/internal/mock/repository"
@@ -19,9 +20,11 @@ var _ = Describe("StatementService", func() {
 		txnService     TransactionServiceInterface
 		accountService AccountServiceInterface
 		userId         int64
+		ctx            context.Context
 	)
 
 	BeforeEach(func() {
+		ctx = context.Background()
 		mockRepo = repository.NewMockStatementRepository()
 		mockTxnRepo := repository.NewMockTransactionRepository()
 		mockCategoryRepo := repository.NewMockCategoryRepository()
@@ -52,12 +55,12 @@ var _ = Describe("StatementService", func() {
 					FileType:         "csv",
 					Status:           models.StatementStatusPending,
 				}
-				_, err := mockRepo.CreateStatement(nil, input)
+				_, err := mockRepo.CreateStatement(ctx, input)
 				Expect(err).NotTo(HaveOccurred())
 			}
 
 			// List page 1, page_size 5
-			resp, err := service.ListStatements(nil, userId, 1, 5)
+			resp, err := service.ListStatements(ctx, userId, 1, 5)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(resp.Statements).To(HaveLen(5))
 			Expect(resp.Total).To(Equal(7))
@@ -65,7 +68,7 @@ var _ = Describe("StatementService", func() {
 			Expect(resp.PageSize).To(Equal(5))
 
 			// List page 2, page_size 5
-			resp2, err := service.ListStatements(nil, userId, 2, 5)
+			resp2, err := service.ListStatements(ctx, userId, 2, 5)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(resp2.Statements).To(HaveLen(2))
 			Expect(resp2.Total).To(Equal(7))
@@ -83,9 +86,9 @@ var _ = Describe("StatementService", func() {
 				FileType:         "csv",
 				Status:           models.StatementStatusPending,
 			}
-			created, err := mockRepo.CreateStatement(nil, input)
+			created, err := mockRepo.CreateStatement(ctx, input)
 			Expect(err).NotTo(HaveOccurred())
-			result, err := service.GetStatementStatus(nil, created.Id, userId)
+			result, err := service.GetStatementStatus(ctx, created.Id, userId)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result.Id).To(Equal(created.Id))
 		})
@@ -100,15 +103,15 @@ var _ = Describe("StatementService", func() {
 				FileType:         "csv",
 				Status:           models.StatementStatusPending,
 			}
-			created, err := mockRepo.CreateStatement(nil, input)
+			created, err := mockRepo.CreateStatement(ctx, input)
 			Expect(err).NotTo(HaveOccurred())
 			update := models.UpdateStatementStatusInput{
 				Status:  models.StatementStatusDone,
 				Message: nil,
 			}
-			_, err = mockRepo.UpdateStatementStatus(nil, created.Id, update)
+			_, err = mockRepo.UpdateStatementStatus(ctx, created.Id, update)
 			Expect(err).NotTo(HaveOccurred())
-			result, err := service.GetStatementStatus(nil, created.Id, userId)
+			result, err := service.GetStatementStatus(ctx, created.Id, userId)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result.Status).To(Equal(models.StatementStatusDone))
 		})
@@ -124,10 +127,10 @@ var _ = Describe("StatementService", func() {
 					FileType:         "csv",
 					Status:           models.StatementStatusPending,
 				}
-				_, err := mockRepo.CreateStatement(nil, input)
+				_, err := mockRepo.CreateStatement(ctx, input)
 				Expect(err).NotTo(HaveOccurred())
 			}
-			count, err := mockRepo.CountStatementsByUserId(nil, userId)
+			count, err := mockRepo.CountStatementsByUserId(ctx, userId)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(count).To(Equal(3))
 		})
@@ -135,25 +138,25 @@ var _ = Describe("StatementService", func() {
 
 	Describe("Error Handling", func() {
 		It("should return empty list and total 0 for user with no statements", func() {
-			resp, err := service.ListStatements(nil, 999, 1, 5)
+			resp, err := service.ListStatements(ctx, 999, 1, 5)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(resp.Statements).To(HaveLen(0))
 			Expect(resp.Total).To(Equal(0))
 		})
 
 		It("should return error for getting statement with invalid ID", func() {
-			_, err := service.GetStatementStatus(nil, 9999, userId)
+			_, err := service.GetStatementStatus(ctx, 9999, userId)
 			Expect(err).To(HaveOccurred())
 		})
 
 		It("should return error for updating status of non-existent statement", func() {
 			update := models.UpdateStatementStatusInput{Status: models.StatementStatusDone, Message: nil}
-			_, err := mockRepo.UpdateStatementStatus(nil, 9999, update)
+			_, err := mockRepo.UpdateStatementStatus(ctx, 9999, update)
 			Expect(err).To(HaveOccurred())
 		})
 
 		It("should return 0 for counting statements for user with no statements", func() {
-			count, err := mockRepo.CountStatementsByUserId(nil, 8888)
+			count, err := mockRepo.CountStatementsByUserId(ctx, 8888)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(count).To(Equal(0))
 		})
@@ -168,7 +171,7 @@ var _ = Describe("StatementService", func() {
 				FileType:         "csv",
 				Status:           models.StatementStatusPending,
 			}
-			_, err := mockRepo.CreateStatement(nil, input)
+			_, err := mockRepo.CreateStatement(ctx, input)
 			Expect(err).To(HaveOccurred())
 		})
 
@@ -180,7 +183,7 @@ var _ = Describe("StatementService", func() {
 				FileType:         "csv",
 				Status:           models.StatementStatusPending,
 			}
-			_, err := mockRepo.CreateStatement(nil, input)
+			_, err := mockRepo.CreateStatement(ctx, input)
 			Expect(err).To(HaveOccurred())
 		})
 
@@ -192,7 +195,7 @@ var _ = Describe("StatementService", func() {
 				FileType:         "exe",
 				Status:           models.StatementStatusPending,
 			}
-			_, err := mockRepo.CreateStatement(nil, input)
+			_, err := mockRepo.CreateStatement(ctx, input)
 			Expect(err).To(HaveOccurred())
 		})
 	})
@@ -206,9 +209,9 @@ var _ = Describe("StatementService", func() {
 				FileType:         "csv",
 				Status:           models.StatementStatusPending,
 			}
-			created, err := mockRepo.CreateStatement(nil, input)
+			created, err := mockRepo.CreateStatement(ctx, input)
 			Expect(err).NotTo(HaveOccurred())
-			_, err = service.GetStatementStatus(nil, created.Id, userId)
+			_, err = service.GetStatementStatus(ctx, created.Id, userId)
 			Expect(err).To(HaveOccurred())
 		})
 
@@ -220,12 +223,12 @@ var _ = Describe("StatementService", func() {
 				FileType:         "csv",
 				Status:           models.StatementStatusPending,
 			}
-			created, err := mockRepo.CreateStatement(nil, input)
+			created, err := mockRepo.CreateStatement(ctx, input)
 			Expect(err).NotTo(HaveOccurred())
 			update := models.UpdateStatementStatusInput{Status: models.StatementStatusDone, Message: nil}
-			_, err = mockRepo.UpdateStatementStatus(nil, created.Id, update)
+			_, err = mockRepo.UpdateStatementStatus(ctx, created.Id, update)
 			Expect(err).NotTo(HaveOccurred())
-			_, err = service.GetStatementStatus(nil, created.Id, userId)
+			_, err = service.GetStatementStatus(ctx, created.Id, userId)
 			Expect(err).To(HaveOccurred())
 		})
 	})
@@ -241,10 +244,10 @@ var _ = Describe("StatementService", func() {
 					FileType:         "csv",
 					Status:           models.StatementStatusPending,
 				}
-				_, err := mockRepo.CreateStatement(nil, input)
+				_, err := mockRepo.CreateStatement(ctx, input)
 				Expect(err).NotTo(HaveOccurred())
 			}
-			resp, err := service.ListStatements(nil, userId, 10, 5)
+			resp, err := service.ListStatements(ctx, userId, 10, 5)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(resp.Statements).To(HaveLen(0))
 		})
@@ -258,9 +261,9 @@ var _ = Describe("StatementService", func() {
 				FileType:         "csv",
 				Status:           models.StatementStatusPending,
 			}
-			_, err := mockRepo.CreateStatement(nil, input)
+			_, err := mockRepo.CreateStatement(ctx, input)
 			Expect(err).NotTo(HaveOccurred())
-			resp, err := service.ListStatements(nil, userId, 1, 200)
+			resp, err := service.ListStatements(ctx, userId, 1, 200)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(resp.PageSize).To(Equal(10))
 		})
@@ -273,7 +276,7 @@ var _ = Describe("StatementService", func() {
 				FileType:         "csv",
 				Status:           models.StatementStatusPending,
 			}
-			_, err := mockRepo.CreateStatement(nil, input)
+			_, err := mockRepo.CreateStatement(ctx, input)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -285,7 +288,7 @@ var _ = Describe("StatementService", func() {
 				FileType:         "csv",
 				Status:           models.StatementStatusPending,
 			}
-			_, err := mockRepo.CreateStatement(nil, input)
+			_, err := mockRepo.CreateStatement(ctx, input)
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})
@@ -293,7 +296,7 @@ var _ = Describe("StatementService", func() {
 	Describe("ParseStatement for Valid statement", func() {
 		It("should parse a valid statement and update status to Done or Error", func() {
 			balance := 1000.0
-			created, err := accountService.CreateAccount(nil, models.CreateAccountInput{
+			created, err := accountService.CreateAccount(ctx, models.CreateAccountInput{
 				Name:      "Test",
 				BankType:  models.BankTypeAxis,
 				Currency:  models.CurrencyINR,
@@ -308,14 +311,14 @@ var _ = Describe("StatementService", func() {
 				AccountId:        created.Id,
 				OriginalFilename: "statement.csv",
 			}
-			createdStatement, _ := service.ParseStatement(nil, input, userId)
+			createdStatement, _ := service.ParseStatement(ctx, input, userId)
 			Eventually(func() models.StatementStatus {
-				result, _ := service.GetStatementStatus(nil, createdStatement.Id, userId)
+				result, _ := service.GetStatementStatus(ctx, createdStatement.Id, userId)
 				return result.Status
 			}, "2s", "100ms").Should(BeElementOf(models.StatementStatusDone, models.StatementStatusError))
-			result, _ := service.GetStatementStatus(nil, createdStatement.Id, userId)
+			result, _ := service.GetStatementStatus(ctx, createdStatement.Id, userId)
 			if result.Status == models.StatementStatusDone {
-				txns, err := txnService.ListTransactions(nil, userId, models.TransactionListQuery{})
+				txns, err := txnService.ListTransactions(ctx, userId, models.TransactionListQuery{})
 				Expect(err).NotTo(HaveOccurred())
 				Expect(txns).NotTo(BeEmpty())
 			}
@@ -328,7 +331,7 @@ var _ = Describe("StatementService", func() {
 	Describe("ParseStatement for invalid case", func() {
 		It("should throw Error on parse error", func() {
 			balance := 1000.0
-			created, err := accountService.CreateAccount(nil, models.CreateAccountInput{
+			created, err := accountService.CreateAccount(ctx, models.CreateAccountInput{
 				Name:      "Test",
 				BankType:  models.BankTypeSBI,
 				Currency:  models.CurrencyINR,
@@ -344,7 +347,7 @@ var _ = Describe("StatementService", func() {
 				AccountId:        created.Id,
 				OriginalFilename: "statement.csv",
 			}
-			_, err = service.ParseStatement(nil, input, userId)
+			_, err = service.ParseStatement(ctx, input, userId)
 			Expect(err).NotTo(BeNil())
 
 		})
@@ -359,13 +362,13 @@ var _ = Describe("StatementService", func() {
 				FileType:         "csv",
 				Status:           models.StatementStatusPending,
 			}
-			created, err := mockRepo.CreateStatement(nil, input)
+			created, err := mockRepo.CreateStatement(ctx, input)
 			Expect(err).NotTo(HaveOccurred())
 			msg := "Processed successfully"
 			update := models.UpdateStatementStatusInput{Status: models.StatementStatusDone, Message: &msg}
-			_, err = mockRepo.UpdateStatementStatus(nil, created.Id, update)
+			_, err = mockRepo.UpdateStatementStatus(ctx, created.Id, update)
 			Expect(err).NotTo(HaveOccurred())
-			result, err := service.GetStatementStatus(nil, created.Id, userId)
+			result, err := service.GetStatementStatus(ctx, created.Id, userId)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result.Status).To(Equal(models.StatementStatusDone))
 			Expect(result.Message).To(Equal(&msg))
@@ -382,7 +385,7 @@ var _ = Describe("StatementService", func() {
 				AccountId:        9999,
 				OriginalFilename: "statement.csv",
 			}
-			_, err := service.ParseStatement(nil, input, userId)
+			_, err := service.ParseStatement(ctx, input, userId)
 			Expect(err).To(HaveOccurred())
 		})
 
@@ -394,7 +397,7 @@ var _ = Describe("StatementService", func() {
 				Currency:  models.CurrencyINR,
 				CreatedBy: userId,
 			}
-			acc, err := accountService.CreateAccount(nil, accInput)
+			acc, err := accountService.CreateAccount(ctx, accInput)
 			Expect(err).NotTo(HaveOccurred())
 			fileBytes := []byte("Txn Date	Value Date	Description	Ref No.	Debit	Credit	Balance\n1 Aug 2022	1 Aug 2022	Desc	123	100.00		1000.00\nComputer Generated Statement")
 			input := models.ParseStatementInput{
@@ -403,13 +406,13 @@ var _ = Describe("StatementService", func() {
 				AccountId:        acc.Id,
 				OriginalFilename: "statement.csv",
 			}
-			resp, err := service.ParseStatement(nil, input, userId)
+			resp, err := service.ParseStatement(ctx, input, userId)
 			Expect(err).NotTo(HaveOccurred())
 			Eventually(func() models.StatementStatus {
-				result, _ := service.GetStatementStatus(nil, resp.Id, userId)
+				result, _ := service.GetStatementStatus(ctx, resp.Id, userId)
 				return result.Status
 			}, "2s", "100ms").Should(Equal(models.StatementStatusError))
-			result, _ := service.GetStatementStatus(nil, resp.Id, userId)
+			result, _ := service.GetStatementStatus(ctx, resp.Id, userId)
 			Expect(result.Message).NotTo(BeNil())
 			Expect(*result.Message).To(ContainSubstring("No parser available for bank type"))
 		})
@@ -422,7 +425,7 @@ var _ = Describe("StatementService", func() {
 				Currency:  models.CurrencyINR,
 				CreatedBy: userId,
 			}
-			acc, err := accountService.CreateAccount(nil, accInput)
+			acc, err := accountService.CreateAccount(ctx, accInput)
 			Expect(err).NotTo(HaveOccurred())
 			// Complex input with multiple transactions
 			fileBytes := []byte(
@@ -437,17 +440,17 @@ var _ = Describe("StatementService", func() {
 				AccountId:        acc.Id,
 				OriginalFilename: "statement.csv",
 			}
-			resp, err := service.ParseStatement(nil, input, userId)
+			resp, err := service.ParseStatement(ctx, input, userId)
 			Expect(err).NotTo(HaveOccurred())
 			Eventually(func() models.StatementStatus {
-				result, _ := service.GetStatementStatus(nil, resp.Id, userId)
+				result, _ := service.GetStatementStatus(ctx, resp.Id, userId)
 				return result.Status
 			}, "2s", "100ms").Should(Equal(models.StatementStatusDone))
-			result, _ := service.GetStatementStatus(nil, resp.Id, userId)
+			result, _ := service.GetStatementStatus(ctx, resp.Id, userId)
 			Expect(result.Message).NotTo(BeNil())
 			Expect(*result.Message).To(ContainSubstring("Processed"))
 			// Check that transactions were created
-			txns, err := service.txService.ListTransactions(nil, userId, models.TransactionListQuery{})
+			txns, err := service.txService.ListTransactions(ctx, userId, models.TransactionListQuery{})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(txns.Transactions).To(HaveLen(3))
 			Expect(txns.Transactions[0].Name).To(ContainSubstring("UPI to RITIK S"))
@@ -462,7 +465,7 @@ var _ = Describe("StatementService", func() {
 				Currency:  models.CurrencyINR,
 				CreatedBy: userId,
 			}
-			acc, err := accountService.CreateAccount(nil, accInput)
+			acc, err := accountService.CreateAccount(ctx, accInput)
 			Expect(err).NotTo(HaveOccurred())
 			fileBytes := []byte(
 				"Txn Date	Value Date	Description	Ref No.	Debit	Credit	Balance\n" +
@@ -476,16 +479,16 @@ var _ = Describe("StatementService", func() {
 				AccountId:        acc.Id,
 				OriginalFilename: "statement.csv",
 			}
-			resp, _ := service.ParseStatement(nil, input, userId)
+			resp, _ := service.ParseStatement(ctx, input, userId)
 			Expect(err).NotTo(HaveOccurred())
 			Eventually(func() models.StatementStatus {
-				result, _ := service.GetStatementStatus(nil, resp.Id, userId)
+				result, _ := service.GetStatementStatus(ctx, resp.Id, userId)
 				return result.Status
 			}, "2s", "100ms").Should(Equal(models.StatementStatusDone))
-			result, _ := service.GetStatementStatus(nil, resp.Id, userId)
+			result, _ := service.GetStatementStatus(ctx, resp.Id, userId)
 			Expect(result.Message).NotTo(BeNil())
 			Expect(*result.Message).To(ContainSubstring("Processed"))
-			txns, err := service.txService.ListTransactions(nil, userId, models.TransactionListQuery{})
+			txns, err := service.txService.ListTransactions(ctx, userId, models.TransactionListQuery{})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(txns.Transactions).To(HaveLen(2))
 		})
@@ -497,7 +500,7 @@ var _ = Describe("StatementService", func() {
 				Currency:  models.CurrencyINR,
 				CreatedBy: userId,
 			}
-			acc, err := accountService.CreateAccount(nil, accInput)
+			acc, err := accountService.CreateAccount(ctx, accInput)
 			Expect(err).NotTo(HaveOccurred())
 
 			// Use malformed CSV that will cause parser to fail
@@ -508,15 +511,15 @@ var _ = Describe("StatementService", func() {
 				AccountId:        acc.Id,
 				OriginalFilename: "statement.csv",
 			}
-			resp, err := service.ParseStatement(nil, input, userId)
+			resp, err := service.ParseStatement(ctx, input, userId)
 			Expect(err).NotTo(HaveOccurred())
 
 			Eventually(func() models.StatementStatus {
-				result, _ := service.GetStatementStatus(nil, resp.Id, userId)
+				result, _ := service.GetStatementStatus(ctx, resp.Id, userId)
 				return result.Status
 			}, "2s", "100ms").Should(Equal(models.StatementStatusError))
 
-			result, _ := service.GetStatementStatus(nil, resp.Id, userId)
+			result, _ := service.GetStatementStatus(ctx, resp.Id, userId)
 			Expect(result.Message).NotTo(BeNil())
 			Expect(*result.Message).To(ContainSubstring("Failed to parse statement"))
 		})
@@ -528,7 +531,7 @@ var _ = Describe("StatementService", func() {
 				Currency:  models.CurrencyINR,
 				CreatedBy: userId,
 			}
-			acc, err := accountService.CreateAccount(nil, accInput)
+			acc, err := accountService.CreateAccount(ctx, accInput)
 			Expect(err).NotTo(HaveOccurred())
 
 			// Create a transaction first to simulate duplicate
@@ -545,7 +548,7 @@ var _ = Describe("StatementService", func() {
 				},
 				CategoryIds: []int64{},
 			}
-			_, err = txnService.CreateTransaction(nil, existingTx)
+			_, err = txnService.CreateTransaction(ctx, existingTx)
 			Expect(err).NotTo(HaveOccurred())
 
 			// Now try to parse a statement with the same transaction
@@ -560,15 +563,15 @@ var _ = Describe("StatementService", func() {
 				AccountId:        acc.Id,
 				OriginalFilename: "statement.csv",
 			}
-			resp, err := service.ParseStatement(nil, input, userId)
+			resp, err := service.ParseStatement(ctx, input, userId)
 			Expect(err).NotTo(HaveOccurred())
 
 			Eventually(func() models.StatementStatus {
-				result, _ := service.GetStatementStatus(nil, resp.Id, userId)
+				result, _ := service.GetStatementStatus(ctx, resp.Id, userId)
 				return result.Status
 			}, "2s", "100ms").Should(Equal(models.StatementStatusDone))
 
-			result, _ := service.GetStatementStatus(nil, resp.Id, userId)
+			result, _ := service.GetStatementStatus(ctx, resp.Id, userId)
 			Expect(result.Message).NotTo(BeNil())
 			// Should show some failures due to duplicates
 			Expect(*result.Message).To(ContainSubstring("failed"))
@@ -581,7 +584,7 @@ var _ = Describe("StatementService", func() {
 				Currency:  models.CurrencyINR,
 				CreatedBy: userId,
 			}
-			acc, err := accountService.CreateAccount(nil, accInput)
+			acc, err := accountService.CreateAccount(ctx, accInput)
 			Expect(err).NotTo(HaveOccurred())
 
 			// Create transactions that will likely fail (e.g., with invalid data)
@@ -600,7 +603,7 @@ var _ = Describe("StatementService", func() {
 					},
 					CategoryIds: []int64{},
 				}
-				_, _ = txnService.CreateTransaction(nil, existingTx)
+				_, _ = txnService.CreateTransaction(ctx, existingTx)
 			}
 
 			// Now parse a statement with transactions that will all fail
@@ -615,15 +618,15 @@ var _ = Describe("StatementService", func() {
 				AccountId:        acc.Id,
 				OriginalFilename: "statement.csv",
 			}
-			resp, err := service.ParseStatement(nil, input, userId)
+			resp, err := service.ParseStatement(ctx, input, userId)
 			Expect(err).NotTo(HaveOccurred())
 
 			Eventually(func() models.StatementStatus {
-				result, _ := service.GetStatementStatus(nil, resp.Id, userId)
+				result, _ := service.GetStatementStatus(ctx, resp.Id, userId)
 				return result.Status
 			}, "2s", "100ms").Should(BeElementOf(models.StatementStatusError, models.StatementStatusDone))
 
-			result, _ := service.GetStatementStatus(nil, resp.Id, userId)
+			result, _ := service.GetStatementStatus(ctx, resp.Id, userId)
 			Expect(result.Message).NotTo(BeNil())
 			Expect(*result.Message).To(ContainSubstring("failed"))
 		})
@@ -635,7 +638,7 @@ var _ = Describe("StatementService", func() {
 				Currency:  models.CurrencyINR,
 				CreatedBy: userId,
 			}
-			acc, err := accountService.CreateAccount(nil, accInput)
+			acc, err := accountService.CreateAccount(ctx, accInput)
 			Expect(err).NotTo(HaveOccurred())
 
 			// Empty file content - this should fail validation
@@ -646,7 +649,7 @@ var _ = Describe("StatementService", func() {
 				AccountId:        acc.Id,
 				OriginalFilename: "statement.csv",
 			}
-			_, err = service.ParseStatement(nil, input, userId)
+			_, err = service.ParseStatement(ctx, input, userId)
 			Expect(err).To(HaveOccurred())
 			Expect(errors.Unwrap(err).Error()).To(ContainSubstring("file is required"))
 		})
@@ -658,7 +661,7 @@ var _ = Describe("StatementService", func() {
 				Currency:  models.CurrencyINR,
 				CreatedBy: userId,
 			}
-			acc, err := accountService.CreateAccount(nil, accInput)
+			acc, err := accountService.CreateAccount(ctx, accInput)
 			Expect(err).NotTo(HaveOccurred())
 
 			// Only headers, no data rows
@@ -669,15 +672,15 @@ var _ = Describe("StatementService", func() {
 				AccountId:        acc.Id,
 				OriginalFilename: "statement.csv",
 			}
-			resp, err := service.ParseStatement(nil, input, userId)
+			resp, err := service.ParseStatement(ctx, input, userId)
 			Expect(err).NotTo(HaveOccurred())
 
 			Eventually(func() models.StatementStatus {
-				result, _ := service.GetStatementStatus(nil, resp.Id, userId)
+				result, _ := service.GetStatementStatus(ctx, resp.Id, userId)
 				return result.Status
 			}, "2s", "100ms").Should(BeElementOf(models.StatementStatusDone, models.StatementStatusError))
 
-			result, _ := service.GetStatementStatus(nil, resp.Id, userId)
+			result, _ := service.GetStatementStatus(ctx, resp.Id, userId)
 			Expect(result.Message).NotTo(BeNil())
 			// Should either process 0 transactions or fail parsing
 			Expect(*result.Message).To(SatisfyAny(
@@ -693,7 +696,7 @@ var _ = Describe("StatementService", func() {
 				Currency:  models.CurrencyINR,
 				CreatedBy: userId,
 			}
-			acc, err := accountService.CreateAccount(nil, accInput)
+			acc, err := accountService.CreateAccount(ctx, accInput)
 			Expect(err).NotTo(HaveOccurred())
 
 			fileBytes := []byte(
@@ -707,15 +710,15 @@ var _ = Describe("StatementService", func() {
 				OriginalFilename: "statement.csv",
 				BankType:         string(models.BankTypeSBI), // Override with SBI parser
 			}
-			resp, err := service.ParseStatement(nil, input, userId)
+			resp, err := service.ParseStatement(ctx, input, userId)
 			Expect(err).NotTo(HaveOccurred())
 
 			Eventually(func() models.StatementStatus {
-				result, _ := service.GetStatementStatus(nil, resp.Id, userId)
+				result, _ := service.GetStatementStatus(ctx, resp.Id, userId)
 				return result.Status
 			}, "2s", "100ms").Should(Equal(models.StatementStatusDone))
 
-			result, _ := service.GetStatementStatus(nil, resp.Id, userId)
+			result, _ := service.GetStatementStatus(ctx, resp.Id, userId)
 			Expect(result.Message).NotTo(BeNil())
 			Expect(*result.Message).To(ContainSubstring("Processed"))
 		})
@@ -727,7 +730,7 @@ var _ = Describe("StatementService", func() {
 				Currency:  models.CurrencyINR,
 				CreatedBy: userId,
 			}
-			acc, err := accountService.CreateAccount(nil, accInput)
+			acc, err := accountService.CreateAccount(ctx, accInput)
 			Expect(err).NotTo(HaveOccurred())
 
 			fileBytes := []byte(
@@ -741,15 +744,15 @@ var _ = Describe("StatementService", func() {
 				OriginalFilename: "statement.csv",
 				Metadata:         `{"skipRows": 0, "customField": "value"}`,
 			}
-			resp, err := service.ParseStatement(nil, input, userId)
+			resp, err := service.ParseStatement(ctx, input, userId)
 			Expect(err).NotTo(HaveOccurred())
 
 			Eventually(func() models.StatementStatus {
-				result, _ := service.GetStatementStatus(nil, resp.Id, userId)
+				result, _ := service.GetStatementStatus(ctx, resp.Id, userId)
 				return result.Status
 			}, "2s", "100ms").Should(Equal(models.StatementStatusDone))
 
-			result, _ := service.GetStatementStatus(nil, resp.Id, userId)
+			result, _ := service.GetStatementStatus(ctx, resp.Id, userId)
 			Expect(result.Message).NotTo(BeNil())
 			Expect(*result.Message).To(ContainSubstring("Processed"))
 		})
@@ -757,12 +760,12 @@ var _ = Describe("StatementService", func() {
 
 	Describe("Input Validation Edge Cases", func() {
 		It("should error when getting statement with negative ID", func() {
-			_, err := service.GetStatementStatus(nil, -1, userId)
+			_, err := service.GetStatementStatus(ctx, -1, userId)
 			Expect(err).To(HaveOccurred())
 		})
 
 		It("should return empty list for negative page number", func() {
-			resp, err := service.ListStatements(nil, userId, -5, 5)
+			resp, err := service.ListStatements(ctx, userId, -5, 5)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(resp.Statements).To(HaveLen(0))
 			Expect(resp.Total).To(Equal(0))
@@ -777,9 +780,9 @@ var _ = Describe("StatementService", func() {
 				FileType:         "csv",
 				Status:           models.StatementStatusPending,
 			}
-			_, err := mockRepo.CreateStatement(nil, input)
+			_, err := mockRepo.CreateStatement(ctx, input)
 			Expect(err).NotTo(HaveOccurred())
-			resp, err := service.ListStatements(nil, userId, 1, -10)
+			resp, err := service.ListStatements(ctx, userId, 1, -10)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(resp.PageSize).To(Equal(10))
 		})
@@ -793,9 +796,9 @@ var _ = Describe("StatementService", func() {
 				FileType:         "csv",
 				Status:           models.StatementStatusPending,
 			}
-			_, err := mockRepo.CreateStatement(nil, input)
+			_, err := mockRepo.CreateStatement(ctx, input)
 			Expect(err).NotTo(HaveOccurred())
-			resp, err := service.ListStatements(nil, userId, 1, 101)
+			resp, err := service.ListStatements(ctx, userId, 1, 101)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(resp.PageSize).To(Equal(10)) // Assuming 10 is the max allowed
 		})
@@ -809,7 +812,7 @@ var _ = Describe("StatementService", func() {
 				skipRows := 0
 				rowSize := 10
 
-				preview, err := service.PreviewStatement(nil, fileBytes, fileName, skipRows, rowSize)
+				preview, err := service.PreviewStatement(ctx, fileBytes, fileName, skipRows, rowSize)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(preview).NotTo(BeNil())
 				Expect(preview.Headers).To(Equal([]string{"Date", "Description", "Amount"}))
@@ -824,7 +827,7 @@ var _ = Describe("StatementService", func() {
 				skipRows := 2
 				rowSize := 10
 
-				preview, err := service.PreviewStatement(nil, fileBytes, fileName, skipRows, rowSize)
+				preview, err := service.PreviewStatement(ctx, fileBytes, fileName, skipRows, rowSize)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(preview).NotTo(BeNil())
 				Expect(preview.Headers).To(Equal([]string{"Date", "Description", "Amount"}))
@@ -839,7 +842,7 @@ var _ = Describe("StatementService", func() {
 				skipRows := 0
 				rowSize := 2
 
-				preview, err := service.PreviewStatement(nil, fileBytes, fileName, skipRows, rowSize)
+				preview, err := service.PreviewStatement(ctx, fileBytes, fileName, skipRows, rowSize)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(preview).NotTo(BeNil())
 				Expect(preview.Headers).To(Equal([]string{"Date", "Description", "Amount"}))
@@ -854,7 +857,7 @@ var _ = Describe("StatementService", func() {
 				skipRows := 0
 				rowSize := 1 // Use 1 instead of 0 since validator requires positive rowSize
 
-				preview, err := service.PreviewStatement(nil, fileBytes, fileName, skipRows, rowSize)
+				preview, err := service.PreviewStatement(ctx, fileBytes, fileName, skipRows, rowSize)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(preview).NotTo(BeNil())
 				Expect(preview.Headers).To(Equal([]string{"Date", "Description", "Amount"}))
@@ -867,7 +870,7 @@ var _ = Describe("StatementService", func() {
 				skipRows := 0
 				rowSize := 10
 
-				preview, err := service.PreviewStatement(nil, fileBytes, fileName, skipRows, rowSize)
+				preview, err := service.PreviewStatement(ctx, fileBytes, fileName, skipRows, rowSize)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(preview).NotTo(BeNil())
 				Expect(preview.Headers).To(Equal([]string{"Date", "Description", "Amount"}))
@@ -885,7 +888,7 @@ var _ = Describe("StatementService", func() {
 				rowSize := 10
 
 				// Note: This test might fail with actual XLS parsing, but validates the flow
-				_, err := service.PreviewStatement(nil, fileBytes, fileName, skipRows, rowSize)
+				_, err := service.PreviewStatement(ctx, fileBytes, fileName, skipRows, rowSize)
 				// We expect this to either succeed or fail with a parsing error, not a validation error
 				if err != nil {
 					Expect(err.Error()).NotTo(ContainSubstring("file is required"))
@@ -901,7 +904,7 @@ var _ = Describe("StatementService", func() {
 				rowSize := 10
 
 				// Note: This test might fail with actual XLSX parsing, but validates the flow
-				_, err := service.PreviewStatement(nil, fileBytes, fileName, skipRows, rowSize)
+				_, err := service.PreviewStatement(ctx, fileBytes, fileName, skipRows, rowSize)
 				// We expect this to either succeed or fail with a parsing error, not a validation error
 				if err != nil {
 					Expect(err.Error()).NotTo(ContainSubstring("file is required"))
@@ -917,7 +920,7 @@ var _ = Describe("StatementService", func() {
 				skipRows := 10
 				rowSize := 10
 
-				preview, err := service.PreviewStatement(nil, fileBytes, fileName, skipRows, rowSize)
+				preview, err := service.PreviewStatement(ctx, fileBytes, fileName, skipRows, rowSize)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(preview).NotTo(BeNil())
 				Expect(preview.Headers).To(HaveLen(0))
@@ -930,7 +933,7 @@ var _ = Describe("StatementService", func() {
 				skipRows := 0
 				rowSize := 10
 
-				preview, err := service.PreviewStatement(nil, fileBytes, fileName, skipRows, rowSize)
+				preview, err := service.PreviewStatement(ctx, fileBytes, fileName, skipRows, rowSize)
 				Expect(err).To(HaveOccurred())
 				Expect(preview).To(BeNil())
 			})
@@ -941,7 +944,7 @@ var _ = Describe("StatementService", func() {
 				skipRows := 0
 				rowSize := 10
 
-				preview, err := service.PreviewStatement(nil, fileBytes, fileName, skipRows, rowSize)
+				preview, err := service.PreviewStatement(ctx, fileBytes, fileName, skipRows, rowSize)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(preview).NotTo(BeNil())
 				Expect(preview.Headers).To(Equal([]string{"Date", "Description", "Amount"}))
@@ -954,7 +957,7 @@ var _ = Describe("StatementService", func() {
 				skipRows := 0
 				rowSize := 10
 
-				preview, err := service.PreviewStatement(nil, fileBytes, fileName, skipRows, rowSize)
+				preview, err := service.PreviewStatement(ctx, fileBytes, fileName, skipRows, rowSize)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(preview).NotTo(BeNil())
 				Expect(preview.Headers).To(Equal([]string{"Date", "Description", "Amount"}))
@@ -967,7 +970,7 @@ var _ = Describe("StatementService", func() {
 				skipRows := 0
 				rowSize := 10
 
-				preview, err := service.PreviewStatement(nil, fileBytes, fileName, skipRows, rowSize)
+				preview, err := service.PreviewStatement(ctx, fileBytes, fileName, skipRows, rowSize)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(preview).NotTo(BeNil())
 				Expect(preview.Headers).To(Equal([]string{"Date", "Description", "Amount"}))
@@ -982,7 +985,7 @@ var _ = Describe("StatementService", func() {
 				skipRows := 0
 				rowSize := 10
 
-				_, err := service.PreviewStatement(nil, fileBytes, fileName, skipRows, rowSize)
+				_, err := service.PreviewStatement(ctx, fileBytes, fileName, skipRows, rowSize)
 				Expect(err).To(HaveOccurred())
 				Expect(errors.Unwrap(err).Error()).To(ContainSubstring("file is required"))
 			})
@@ -993,7 +996,7 @@ var _ = Describe("StatementService", func() {
 				skipRows := 0
 				rowSize := 10
 
-				_, err := service.PreviewStatement(nil, fileBytes, fileName, skipRows, rowSize)
+				_, err := service.PreviewStatement(ctx, fileBytes, fileName, skipRows, rowSize)
 				Expect(err).To(HaveOccurred())
 				Expect(errors.Unwrap(err).Error()).To(ContainSubstring("filename cannot be empty"))
 			})
@@ -1004,7 +1007,7 @@ var _ = Describe("StatementService", func() {
 				skipRows := 0
 				rowSize := 10
 
-				_, err := service.PreviewStatement(nil, fileBytes, fileName, skipRows, rowSize)
+				_, err := service.PreviewStatement(ctx, fileBytes, fileName, skipRows, rowSize)
 				Expect(err).To(HaveOccurred())
 				Expect(errors.Unwrap(err).Error()).To(ContainSubstring("filename cannot be empty"))
 			})
@@ -1019,7 +1022,7 @@ var _ = Describe("StatementService", func() {
 				skipRows := 0
 				rowSize := 10
 
-				_, err := service.PreviewStatement(nil, largeContent, fileName, skipRows, rowSize)
+				_, err := service.PreviewStatement(ctx, largeContent, fileName, skipRows, rowSize)
 				Expect(err).To(HaveOccurred())
 				Expect(errors.Unwrap(err).Error()).To(ContainSubstring("file size must be less than 256KB"))
 			})
@@ -1030,7 +1033,7 @@ var _ = Describe("StatementService", func() {
 				skipRows := 0
 				rowSize := 10
 
-				_, err := service.PreviewStatement(nil, fileBytes, fileName, skipRows, rowSize)
+				_, err := service.PreviewStatement(ctx, fileBytes, fileName, skipRows, rowSize)
 				Expect(err).To(HaveOccurred())
 				Expect(errors.Unwrap(err).Error()).To(ContainSubstring("file must be CSV or Excel format"))
 			})
@@ -1041,7 +1044,7 @@ var _ = Describe("StatementService", func() {
 				skipRows := -1
 				rowSize := 10
 
-				_, err := service.PreviewStatement(nil, fileBytes, fileName, skipRows, rowSize)
+				_, err := service.PreviewStatement(ctx, fileBytes, fileName, skipRows, rowSize)
 				Expect(err).To(HaveOccurred())
 				Expect(errors.Unwrap(err).Error()).To(ContainSubstring("skipRows cannot be negative"))
 			})
@@ -1052,7 +1055,7 @@ var _ = Describe("StatementService", func() {
 				skipRows := 0
 				rowSize := -5
 
-				_, err := service.PreviewStatement(nil, fileBytes, fileName, skipRows, rowSize)
+				_, err := service.PreviewStatement(ctx, fileBytes, fileName, skipRows, rowSize)
 				Expect(err).To(HaveOccurred())
 				Expect(errors.Unwrap(err).Error()).To(ContainSubstring("rowSize must be positive"))
 			})
@@ -1063,7 +1066,7 @@ var _ = Describe("StatementService", func() {
 				skipRows := 0
 				rowSize := 0
 
-				preview, err := service.PreviewStatement(nil, fileBytes, fileName, skipRows, rowSize)
+				preview, err := service.PreviewStatement(ctx, fileBytes, fileName, skipRows, rowSize)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(preview).ToNot(BeNil())
 			})
@@ -1074,16 +1077,16 @@ var _ = Describe("StatementService", func() {
 				rowSize := 10
 
 				// Test CSV
-				_, err := service.PreviewStatement(nil, fileBytes, "test.csv", skipRows, rowSize)
+				_, err := service.PreviewStatement(ctx, fileBytes, "test.csv", skipRows, rowSize)
 				Expect(err).NotTo(HaveOccurred())
 
 				// Test CSV with uppercase
-				_, err = service.PreviewStatement(nil, fileBytes, "test.CSV", skipRows, rowSize)
+				_, err = service.PreviewStatement(ctx, fileBytes, "test.CSV", skipRows, rowSize)
 				Expect(err).NotTo(HaveOccurred())
 
 				// Test XLS (will likely fail parsing but should pass validation)
 				xlsBytes := []byte{0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1}
-				_, err = service.PreviewStatement(nil, xlsBytes, "test.xls", skipRows, rowSize)
+				_, err = service.PreviewStatement(ctx, xlsBytes, "test.xls", skipRows, rowSize)
 				// Should not fail with validation error
 				if err != nil {
 					underlyingErr := errors.Unwrap(err)
@@ -1094,7 +1097,7 @@ var _ = Describe("StatementService", func() {
 
 				// Test XLSX (will likely fail parsing but should pass validation)
 				xlsxBytes := []byte{0x50, 0x4B, 0x03, 0x04}
-				_, err = service.PreviewStatement(nil, xlsxBytes, "test.xlsx", skipRows, rowSize)
+				_, err = service.PreviewStatement(ctx, xlsxBytes, "test.xlsx", skipRows, rowSize)
 				// Should not fail with validation error
 				if err != nil {
 					underlyingErr := errors.Unwrap(err)
@@ -1112,7 +1115,7 @@ var _ = Describe("StatementService", func() {
 				skipRows := 0
 				rowSize := 10
 
-				preview, err := service.PreviewStatement(nil, fileBytes, fileName, skipRows, rowSize)
+				preview, err := service.PreviewStatement(ctx, fileBytes, fileName, skipRows, rowSize)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(preview).NotTo(BeNil())
 				Expect(preview.Headers).To(Equal([]string{"Date", "Description", "Amount"}))
@@ -1125,7 +1128,7 @@ var _ = Describe("StatementService", func() {
 				skipRows := 0
 				rowSize := 1000
 
-				preview, err := service.PreviewStatement(nil, fileBytes, fileName, skipRows, rowSize)
+				preview, err := service.PreviewStatement(ctx, fileBytes, fileName, skipRows, rowSize)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(preview).NotTo(BeNil())
 				Expect(preview.Headers).To(Equal([]string{"Date", "Description", "Amount"}))
@@ -1139,7 +1142,7 @@ var _ = Describe("StatementService", func() {
 
 				testCases := []string{"test.Csv", "test.CSV", "test.cSv", "TEST.CSV"}
 				for _, fileName := range testCases {
-					_, err := service.PreviewStatement(nil, fileBytes, fileName, skipRows, rowSize)
+					_, err := service.PreviewStatement(ctx, fileBytes, fileName, skipRows, rowSize)
 					Expect(err).NotTo(HaveOccurred())
 				}
 			})

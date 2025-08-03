@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	mock_database "expenses/internal/mock/database"
 	mock "expenses/internal/mock/repository"
 	"expenses/internal/models"
@@ -9,15 +10,13 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-
-	"github.com/gin-gonic/gin"
 )
 
 var _ = Describe("RuleService", func() {
 	var (
 		ruleService RuleServiceInterface
 		mockRepo    *mock.MockRuleRepository
-		ctx         *gin.Context
+		ctx         context.Context
 		now         time.Time
 		user1       int64
 		user2       int64
@@ -26,7 +25,7 @@ var _ = Describe("RuleService", func() {
 	)
 
 	BeforeEach(func() {
-		ctx = &gin.Context{}
+		ctx = context.Background()
 		mockRepo = mock.NewMockRuleRepository()
 		mockTxnRepo = mock.NewMockTransactionRepository()
 		mockDB = mock_database.NewMockDatabaseManager()

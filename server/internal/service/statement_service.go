@@ -10,14 +10,14 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/gin-gonic/gin"
+	"context"
 )
 
 type StatementServiceInterface interface {
-	ParseStatement(c *gin.Context, input models.ParseStatementInput, userId int64) (models.StatementResponse, error)
-	GetStatementStatus(c *gin.Context, statementId int64, userId int64) (models.StatementResponse, error)
-	ListStatements(c *gin.Context, userId int64, page int, pageSize int) (models.PaginatedStatementResponse, error)
-	PreviewStatement(c *gin.Context, fileBytes []byte, fileName string, skipRows int, rowSize int) (*models.StatementPreview, error)
+	ParseStatement(ctx context.Context, input models.ParseStatementInput, userId int64) (models.StatementResponse, error)
+	GetStatementStatus(ctx context.Context, statementId int64, userId int64) (models.StatementResponse, error)
+	ListStatements(ctx context.Context, userId int64, page int, pageSize int) (models.PaginatedStatementResponse, error)
+	PreviewStatement(ctx context.Context, fileBytes []byte, fileName string, skipRows int, rowSize int) (*models.StatementPreview, error)
 }
 
 type StatementService struct {
@@ -41,7 +41,7 @@ func NewStatementService(
 	}
 }
 
-func (s *StatementService) ParseStatement(c *gin.Context, input models.ParseStatementInput, userId int64) (models.StatementResponse, error) {
+func (s *StatementService) ParseStatement(ctx context.Context, input models.ParseStatementInput, userId int64) (models.StatementResponse, error) {
 	if err := s.statementValidator.ValidateStatementUpload(input.AccountId, input.FileBytes, input.OriginalFilename); err != nil {
 		return models.StatementResponse{}, err
 	}
@@ -51,7 +51,7 @@ func (s *StatementService) ParseStatement(c *gin.Context, input models.ParseStat
 		fileType = "excel"
 	}
 
-	account, err := s.accountService.GetAccountById(c, input.AccountId, userId)
+	account, err := s.accountService.GetAccountById(ctx, input.AccountId, userId)
 	if err != nil {
 		return models.StatementResponse{}, err
 	}
@@ -65,30 +65,30 @@ func (s *StatementService) ParseStatement(c *gin.Context, input models.ParseStat
 		Status:           models.StatementStatusPending,
 	}
 
-	statement, err := s.repo.CreateStatement(c, createStatement)
+	statement, err := s.repo.CreateStatement(ctx, createStatement)
 	if err != nil {
 		return models.StatementResponse{}, err
 	}
 
 	// Process the statement asynchronously.
-	go s.processStatementAsync(c, statement.Id, input, userId)
+	go s.processStatementAsync(ctx, statement.Id, input, userId)
 	return statement, nil
 }
 
 // processStatementAsync processes the statement in a separate goroutine.
-func (s *StatementService) processStatementAsync(c *gin.Context, statementId int64, input models.ParseStatementInput, userId int64) {
+func (s *StatementService) processStatementAsync(ctx context.Context, statementId int64, input models.ParseStatementInput, userId int64) {
 	logger.Debugf("Processing statement ID %d for account ID %d by user ID %d", statementId, input.AccountId, userId)
-	_, _ = s.repo.UpdateStatementStatus(c, statementId, models.UpdateStatementStatusInput{
+	_, _ = s.repo.UpdateStatementStatus(ctx, statementId, models.UpdateStatementStatusInput{
 		Status: models.StatementStatusProcessing,
 	})
 
 	parserType := input.BankType
 	if parserType == "" {
 		logger.Debugf("No bank type provided, fetching account details for account ID %d", input.AccountId)
-		account, err := s.accountService.GetAccountById(c, input.AccountId, userId)
+		account, err := s.accountService.GetAccountById(ctx, input.AccountId, userId)
 		if err != nil {
 			errMsg := fmt.Sprintf("Failed to fetch account: %v", err)
-			_, _ = s.repo.UpdateStatementStatus(c, statementId, models.UpdateStatementStatusInput{
+			_, _ = s.repo.UpdateStatementStatus(ctx, statementId, models.UpdateStatementStatusInput{
 				Status:  models.StatementStatusError,
 				Message: &errMsg,
 			})
@@ -101,7 +101,7 @@ func (s *StatementService) processStatementAsync(c *gin.Context, statementId int
 	parserImpl, ok := parser.GetParser(models.BankType(parserType))
 	if !ok {
 		errMsg := fmt.Sprintf("No parser available for bank type: %s", parserType)
-		_, _ = s.repo.UpdateStatementStatus(c, statementId, models.UpdateStatementStatusInput{
+		_, _ = s.repo.UpdateStatementStatus(ctx, statementId, models.UpdateStatementStatusInput{
 			Status:  models.StatementStatusError,
 			Message: &errMsg,
 		})
@@ -112,7 +112,7 @@ func (s *StatementService) processStatementAsync(c *gin.Context, statementId int
 	parsedTxs, err := parserImpl.Parse(input.FileBytes, input.Metadata, input.OriginalFilename)
 	if err != nil {
 		errMsg := fmt.Sprintf("Failed to parse statement: %v", err)
-		_, _ = s.repo.UpdateStatementStatus(c, statementId, models.UpdateStatementStatusInput{
+		_, _ = s.repo.UpdateStatementStatus(ctx, statementId, models.UpdateStatementStatusInput{
 			Status:  models.StatementStatusError,
 			Message: &errMsg,
 		})
@@ -124,12 +124,12 @@ func (s *StatementService) processStatementAsync(c *gin.Context, statementId int
 	for _, tx := range parsedTxs {
 		tx.AccountId = input.AccountId
 		tx.CreatedBy = userId
-		transaction, err := s.txService.CreateTransaction(c, tx)
+		transaction, err := s.txService.CreateTransaction(ctx, tx)
 		if err != nil {
 			failCount++
 			continue
 		}
-		err = s.repo.CreateStatementTxn(c, statementId, transaction.Id)
+		err = s.repo.CreateStatementTxn(ctx, statementId, transaction.Id)
 		if err != nil {
 			logger.Errorf("Failed to link transaction %d to statement %d: %v", transaction.Id, statementId, err)
 			failCount++
@@ -143,31 +143,31 @@ func (s *StatementService) processStatementAsync(c *gin.Context, statementId int
 	if failCount == len(parsedTxs) {
 		status = models.StatementStatusError
 	}
-	_, _ = s.repo.UpdateStatementStatus(c, statementId, models.UpdateStatementStatusInput{
+	_, _ = s.repo.UpdateStatementStatus(ctx, statementId, models.UpdateStatementStatusInput{
 		Status:  status,
 		Message: &msg,
 	})
 }
 
-func (s *StatementService) GetStatementStatus(c *gin.Context, statementId int64, userId int64) (models.StatementResponse, error) {
+func (s *StatementService) GetStatementStatus(ctx context.Context, statementId int64, userId int64) (models.StatementResponse, error) {
 	if statementId <= 0 {
 		return models.StatementResponse{}, errors.New("invalid statement id")
 	}
-	return s.repo.GetStatementByID(c, statementId, userId)
+	return s.repo.GetStatementByID(ctx, statementId, userId)
 }
 
-func (s *StatementService) ListStatements(c *gin.Context, userId int64, page int, pageSize int) (models.PaginatedStatementResponse, error) {
+func (s *StatementService) ListStatements(ctx context.Context, userId int64, page int, pageSize int) (models.PaginatedStatementResponse, error) {
 	if page < 1 {
 		page = 1
 	}
 	if pageSize < 1 || pageSize > 100 {
 		pageSize = 10
 	}
-	statements, err := s.repo.ListStatementByUserId(c, userId, pageSize, (page-1)*pageSize)
+	statements, err := s.repo.ListStatementByUserId(ctx, userId, pageSize, (page-1)*pageSize)
 	if err != nil {
 		return models.PaginatedStatementResponse{}, err
 	}
-	total, err := s.repo.CountStatementsByUserId(c, userId)
+	total, err := s.repo.CountStatementsByUserId(ctx, userId)
 	if err != nil {
 		return models.PaginatedStatementResponse{}, err
 	}
@@ -180,7 +180,7 @@ func (s *StatementService) ListStatements(c *gin.Context, userId int64, page int
 	}, nil
 }
 
-func (s *StatementService) PreviewStatement(c *gin.Context, fileBytes []byte, fileName string, skipRows int, rowSize int) (*models.StatementPreview, error) {
+func (s *StatementService) PreviewStatement(ctx context.Context, fileBytes []byte, fileName string, skipRows int, rowSize int) (*models.StatementPreview, error) {
 	if rowSize == 0 {
 		rowSize = 10
 	}

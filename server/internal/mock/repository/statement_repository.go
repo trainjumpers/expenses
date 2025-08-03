@@ -1,11 +1,10 @@
 package mock_repository
 
 import (
+	"context"
 	"errors"
 	"expenses/internal/models"
 	"sync"
-
-	"github.com/gin-gonic/gin"
 )
 
 type MockStatementRepository struct {
@@ -23,7 +22,7 @@ func NewMockStatementRepository() *MockStatementRepository {
 	}
 }
 
-func (m *MockStatementRepository) CreateStatement(c *gin.Context, input models.CreateStatementInput) (models.StatementResponse, error) {
+func (m *MockStatementRepository) CreateStatement(ctx context.Context, input models.CreateStatementInput) (models.StatementResponse, error) {
 	if input.AccountId <= 0 {
 		return models.StatementResponse{}, errors.New("invalid account id")
 	}
@@ -52,7 +51,7 @@ func (m *MockStatementRepository) CreateStatement(c *gin.Context, input models.C
 }
 
 // CreateStatementTxn adds a mapping between statement and transaction for testing
-func (m *MockStatementRepository) CreateStatementTxn(c *gin.Context, statementId int64, transactionId int64) error {
+func (m *MockStatementRepository) CreateStatementTxn(ctx context.Context, statementId int64, transactionId int64) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.statementTxnMappings = append(m.statementTxnMappings, statementTxnMapping{
@@ -62,7 +61,7 @@ func (m *MockStatementRepository) CreateStatementTxn(c *gin.Context, statementId
 	return nil
 }
 
-func (m *MockStatementRepository) UpdateStatementStatus(c *gin.Context, statementId int64, input models.UpdateStatementStatusInput) (models.StatementResponse, error) {
+func (m *MockStatementRepository) UpdateStatementStatus(ctx context.Context, statementId int64, input models.UpdateStatementStatusInput) (models.StatementResponse, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	statement, ok := m.statements[statementId]
@@ -75,7 +74,7 @@ func (m *MockStatementRepository) UpdateStatementStatus(c *gin.Context, statemen
 	return statement, nil
 }
 
-func (m *MockStatementRepository) GetStatementByID(c *gin.Context, statementId int64, userId int64) (models.StatementResponse, error) {
+func (m *MockStatementRepository) GetStatementByID(ctx context.Context, statementId int64, userId int64) (models.StatementResponse, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	statement, ok := m.statements[statementId]
@@ -88,7 +87,7 @@ func (m *MockStatementRepository) GetStatementByID(c *gin.Context, statementId i
 	return statement, nil
 }
 
-func (m *MockStatementRepository) ListStatementByUserId(c *gin.Context, userId int64, limit, offset int) ([]models.StatementResponse, error) {
+func (m *MockStatementRepository) ListStatementByUserId(ctx context.Context, userId int64, limit, offset int) ([]models.StatementResponse, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	var result []models.StatementResponse
@@ -116,7 +115,7 @@ func (m *MockStatementRepository) ListStatementByUserId(c *gin.Context, userId i
 	return result[start:end], nil
 }
 
-func (m *MockStatementRepository) CountStatementsByUserId(c *gin.Context, userId int64) (int, error) {
+func (m *MockStatementRepository) CountStatementsByUserId(ctx context.Context, userId int64) (int, error) {
 	count := 0
 	for _, s := range m.statements {
 		if s.CreatedBy == userId {

@@ -1,13 +1,12 @@
 package mock_repository
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"sync"
 
 	"expenses/internal/models"
-
-	"github.com/gin-gonic/gin"
 )
 
 type MockRuleRepository struct {
@@ -33,7 +32,7 @@ func NewMockRuleRepository() *MockRuleRepository {
 	}
 }
 
-func (m *MockRuleRepository) CreateRule(c *gin.Context, req models.CreateBaseRuleRequest) (models.RuleResponse, error) {
+func (m *MockRuleRepository) CreateRule(ctx context.Context, req models.CreateBaseRuleRequest) (models.RuleResponse, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	rule := models.RuleResponse{
@@ -48,7 +47,7 @@ func (m *MockRuleRepository) CreateRule(c *gin.Context, req models.CreateBaseRul
 	return rule, nil
 }
 
-func (m *MockRuleRepository) CreateRuleActions(c *gin.Context, actions []models.CreateRuleActionRequest) ([]models.RuleActionResponse, error) {
+func (m *MockRuleRepository) CreateRuleActions(ctx context.Context, actions []models.CreateRuleActionRequest) ([]models.RuleActionResponse, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	var result []models.RuleActionResponse
@@ -66,7 +65,7 @@ func (m *MockRuleRepository) CreateRuleActions(c *gin.Context, actions []models.
 	return result, nil
 }
 
-func (m *MockRuleRepository) CreateRuleConditions(c *gin.Context, conditions []models.CreateRuleConditionRequest) ([]models.RuleConditionResponse, error) {
+func (m *MockRuleRepository) CreateRuleConditions(ctx context.Context, conditions []models.CreateRuleConditionRequest) ([]models.RuleConditionResponse, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	var result []models.RuleConditionResponse
@@ -85,7 +84,7 @@ func (m *MockRuleRepository) CreateRuleConditions(c *gin.Context, conditions []m
 	return result, nil
 }
 
-func (m *MockRuleRepository) GetRule(c *gin.Context, id int64, userId int64) (models.RuleResponse, error) {
+func (m *MockRuleRepository) GetRule(ctx context.Context, id int64, userId int64) (models.RuleResponse, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	rule, ok := m.rules[id]
@@ -95,7 +94,7 @@ func (m *MockRuleRepository) GetRule(c *gin.Context, id int64, userId int64) (mo
 	return rule, nil
 }
 
-func (m *MockRuleRepository) ListRules(c *gin.Context, userId int64) ([]models.RuleResponse, error) {
+func (m *MockRuleRepository) ListRules(ctx context.Context, userId int64) ([]models.RuleResponse, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	var result []models.RuleResponse
@@ -107,7 +106,7 @@ func (m *MockRuleRepository) ListRules(c *gin.Context, userId int64) ([]models.R
 	return result, nil
 }
 
-func (m *MockRuleRepository) ListRuleActionsByRuleId(c *gin.Context, ruleId int64) ([]models.RuleActionResponse, error) {
+func (m *MockRuleRepository) ListRuleActionsByRuleId(ctx context.Context, ruleId int64) ([]models.RuleActionResponse, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	var result []models.RuleActionResponse
@@ -119,7 +118,7 @@ func (m *MockRuleRepository) ListRuleActionsByRuleId(c *gin.Context, ruleId int6
 	return result, nil
 }
 
-func (m *MockRuleRepository) ListRuleConditionsByRuleId(c *gin.Context, ruleId int64) ([]models.RuleConditionResponse, error) {
+func (m *MockRuleRepository) ListRuleConditionsByRuleId(ctx context.Context, ruleId int64) ([]models.RuleConditionResponse, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	var result []models.RuleConditionResponse
@@ -131,7 +130,7 @@ func (m *MockRuleRepository) ListRuleConditionsByRuleId(c *gin.Context, ruleId i
 	return result, nil
 }
 
-func (m *MockRuleRepository) UpdateRule(c *gin.Context, id int64, userId int64, req models.UpdateRuleRequest) (models.RuleResponse, error) {
+func (m *MockRuleRepository) UpdateRule(ctx context.Context, id int64, userId int64, req models.UpdateRuleRequest) (models.RuleResponse, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	rule, ok := m.rules[id]
@@ -151,7 +150,7 @@ func (m *MockRuleRepository) UpdateRule(c *gin.Context, id int64, userId int64, 
 	return rule, nil
 }
 
-func (m *MockRuleRepository) UpdateRuleAction(c *gin.Context, id int64, ruleId int64, req models.UpdateRuleActionRequest) (models.RuleActionResponse, error) {
+func (m *MockRuleRepository) UpdateRuleAction(ctx context.Context, id int64, ruleId int64, req models.UpdateRuleActionRequest) (models.RuleActionResponse, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	action, ok := m.actions[id]
@@ -168,7 +167,7 @@ func (m *MockRuleRepository) UpdateRuleAction(c *gin.Context, id int64, ruleId i
 	return action, nil
 }
 
-func (m *MockRuleRepository) UpdateRuleCondition(c *gin.Context, id int64, ruleId int64, req models.UpdateRuleConditionRequest) (models.RuleConditionResponse, error) {
+func (m *MockRuleRepository) UpdateRuleCondition(ctx context.Context, id int64, ruleId int64, req models.UpdateRuleConditionRequest) (models.RuleConditionResponse, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	cond, ok := m.conditions[id]
@@ -188,7 +187,7 @@ func (m *MockRuleRepository) UpdateRuleCondition(c *gin.Context, id int64, ruleI
 	return cond, nil
 }
 
-func (m *MockRuleRepository) DeleteRuleActionsByRuleId(c *gin.Context, ruleId int64) error {
+func (m *MockRuleRepository) DeleteRuleActionsByRuleId(ctx context.Context, ruleId int64) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	for id, action := range m.actions {
@@ -199,7 +198,7 @@ func (m *MockRuleRepository) DeleteRuleActionsByRuleId(c *gin.Context, ruleId in
 	return nil
 }
 
-func (m *MockRuleRepository) DeleteRuleConditionsByRuleId(c *gin.Context, ruleId int64) error {
+func (m *MockRuleRepository) DeleteRuleConditionsByRuleId(ctx context.Context, ruleId int64) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	for id, cond := range m.conditions {
@@ -210,7 +209,7 @@ func (m *MockRuleRepository) DeleteRuleConditionsByRuleId(c *gin.Context, ruleId
 	return nil
 }
 
-func (m *MockRuleRepository) DeleteRule(c *gin.Context, id int64, userId int64) error {
+func (m *MockRuleRepository) DeleteRule(ctx context.Context, id int64, userId int64) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	rule, ok := m.rules[id]
@@ -232,7 +231,7 @@ func (m *MockRuleRepository) DeleteRule(c *gin.Context, id int64, userId int64) 
 	return nil
 }
 
-func (m *MockRuleRepository) CreateRuleTransactionMapping(c *gin.Context, ruleId int64, transactionId int64) error {
+func (m *MockRuleRepository) CreateRuleTransactionMapping(ctx context.Context, ruleId int64, transactionId int64) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	key := fmt.Sprintf("%d:%d", ruleId, transactionId)
