@@ -207,11 +207,46 @@ var _ = Describe("AnalyticsService", func() {
 					CreatedBy: userId,
 				}
 				mockAccountRepo.CreateAccount(ctx, accountInput)
+
+				// Configure mock to return error on GetBalance
+				mockAnalyticsRepo.SetShouldErrorOnBalance(true)
 			})
 
-			It("should return the error", func() {
-				// We can't easily simulate repository errors with the current mock
-				// but we can test the happy path and ensure error handling exists
+			AfterEach(func() {
+				// Reset error simulation
+				mockAnalyticsRepo.SetShouldErrorOnBalance(false)
+			})
+
+			It("should return the repository error", func() {
+				result, err := analyticsService.GetAccountAnalytics(ctx, userId)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(Equal("simulated GetBalance error"))
+				Expect(result).To(Equal(models.AccountAnalyticsListResponse{}))
+			})
+		})
+
+		Context("when analytics repository returns error for historical balances", func() {
+			BeforeEach(func() {
+				// Create test account
+				accountInput := models.CreateAccountInput{
+					Name:      "Test Account",
+					BankType:  models.BankTypeAxis,
+					Currency:  models.CurrencyINR,
+					CreatedBy: userId,
+				}
+				mockAccountRepo.CreateAccount(ctx, accountInput)
+
+				// Set up current balances to succeed
+				currentBalances := map[int64]float64{1: 1000.0}
+				mockAnalyticsRepo.SetBalance(userId, nil, nil, currentBalances)
+			})
+
+			It("should handle the case where current balances succeed but historical fail", func() {
+				// This is a complex scenario - the service calls GetBalance twice
+				// Once for current (nil, nil) and once for historical (nil, &oneMonthAgo)
+				// Our current mock doesn't distinguish between these calls
+				// In a real implementation, you might want more sophisticated error simulation
+
 				result, err := analyticsService.GetAccountAnalytics(ctx, userId)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result.AccountAnalytics).To(HaveLen(1))
@@ -492,13 +527,21 @@ var _ = Describe("AnalyticsService", func() {
 		})
 
 		Context("when repository returns error", func() {
-			// Note: With the current mock implementation, we can't easily simulate errors
-			// In a real scenario, you might want to add error simulation capabilities to the mock
-			It("should handle repository errors gracefully", func() {
-				// This test would be more meaningful with error simulation in the mock
+			BeforeEach(func() {
+				// Configure mock to return error
+				mockAnalyticsRepo.SetShouldErrorOnNetworth(true)
+			})
+
+			AfterEach(func() {
+				// Reset error simulation
+				mockAnalyticsRepo.SetShouldErrorOnNetworth(false)
+			})
+
+			It("should return the repository error", func() {
 				result, err := analyticsService.GetNetworthTimeSeries(ctx, userId, startDate, endDate)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(result.TimeSeries).NotTo(BeNil())
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(Equal("simulated GetNetworthTimeSeries error"))
+				Expect(result).To(Equal(models.NetworthTimeSeriesResponse{}))
 			})
 		})
 
@@ -535,6 +578,228 @@ var _ = Describe("AnalyticsService", func() {
 
 				// Day 3: Same as day 2 (no transaction)
 				Expect(result.TimeSeries[2].Networth).To(Equal(-1050.0))
+			})
+		})
+
+		Context("when testing edge cases and boundary conditions", func() {
+			BeforeEach(func() {
+				startDate, _ = time.Parse("2006-01-02", "2023-01-01")
+				endDate = startDate // Same day
+			})
+
+			It("should handle same start and end date correctly", func() {
+				initialBalance := 1000.0
+				timeSeries := []map[string]interface{}{
+					{
+						"date":         "2023-01-01",
+						"daily_change": 100.0,
+					},
+				}
+				mockAnalyticsRepo.SetNetworthTimeSeries(userId, startDate, endDate, initialBalance, timeSeries)
+
+				result, err := analyticsService.GetNetworthTimeSeries(ctx, userId, startDate, endDate)
+				Expect(err).NotTo(HaveOccurred())
+
+				// Should have exactly one data point
+				Expect(result.TimeSeries).To(HaveLen(1))
+				Expect(result.TimeSeries[0].Date).To(Equal("2023-01-01"))
+				Expect(result.TimeSeries[0].Networth).To(Equal(-1100.0)) // -1000 + (-100)
+			})
+
+			It("should handle very large date ranges", func() {
+				startDate, _ = time.Parse("2006-01-02", "2023-01-01")
+				endDate, _ = time.Parse("2006-01-02", "2023-12-31")
+
+				initialBalance := 1000.0
+				timeSeries := []map[string]interface{}{} // No daily changes
+				mockAnalyticsRepo.SetNetworthTimeSeries(userId, startDate, endDate, initialBalance, timeSeries)
+
+				result, err := analyticsService.GetNetworthTimeSeries(ctx, userId, startDate, endDate)
+				Expect(err).NotTo(HaveOccurred())
+
+				// Should have 365 data points for 2023 (not a leap year)
+				Expect(result.TimeSeries).To(HaveLen(365))
+
+				// All should have the same networth (no changes)
+				for _, point := range result.TimeSeries {
+					Expect(point.Networth).To(Equal(-1000.0))
+				}
+			})
+
+			It("should handle leap year correctly", func() {
+				startDate, _ = time.Parse("2006-01-02", "2024-02-28")
+				endDate, _ = time.Parse("2006-01-02", "2024-03-01")
+
+				initialBalance := 500.0
+				timeSeries := []map[string]interface{}{} // No daily changes
+				mockAnalyticsRepo.SetNetworthTimeSeries(userId, startDate, endDate, initialBalance, timeSeries)
+
+				result, err := analyticsService.GetNetworthTimeSeries(ctx, userId, startDate, endDate)
+				Expect(err).NotTo(HaveOccurred())
+
+				// Should have 3 data points: Feb 28, Feb 29, Mar 1
+				Expect(result.TimeSeries).To(HaveLen(3))
+				Expect(result.TimeSeries[0].Date).To(Equal("2024-02-28"))
+				Expect(result.TimeSeries[1].Date).To(Equal("2024-02-29"))
+				Expect(result.TimeSeries[2].Date).To(Equal("2024-03-01"))
+			})
+
+			It("should handle cross-year date ranges", func() {
+				startDate, _ = time.Parse("2006-01-02", "2023-12-30")
+				endDate, _ = time.Parse("2006-01-02", "2024-01-02")
+
+				initialBalance := 2000.0
+				timeSeries := []map[string]interface{}{
+					{
+						"date":         "2023-12-31",
+						"daily_change": 100.0,
+					},
+					{
+						"date":         "2024-01-01",
+						"daily_change": -50.0,
+					},
+				}
+				mockAnalyticsRepo.SetNetworthTimeSeries(userId, startDate, endDate, initialBalance, timeSeries)
+
+				result, err := analyticsService.GetNetworthTimeSeries(ctx, userId, startDate, endDate)
+				Expect(err).NotTo(HaveOccurred())
+
+				// Should have 4 data points
+				Expect(result.TimeSeries).To(HaveLen(4))
+
+				// Verify year boundary crossing
+				Expect(result.TimeSeries[0].Date).To(Equal("2023-12-30"))
+				Expect(result.TimeSeries[0].Networth).To(Equal(-2000.0)) // No change
+
+				Expect(result.TimeSeries[1].Date).To(Equal("2023-12-31"))
+				Expect(result.TimeSeries[1].Networth).To(Equal(-2100.0)) // -2000 + (-100)
+
+				Expect(result.TimeSeries[2].Date).To(Equal("2024-01-01"))
+				Expect(result.TimeSeries[2].Networth).To(Equal(-2050.0)) // -2100 + 50
+
+				Expect(result.TimeSeries[3].Date).To(Equal("2024-01-02"))
+				Expect(result.TimeSeries[3].Networth).To(Equal(-2050.0)) // No change
+			})
+
+			It("should handle very large transaction amounts", func() {
+				initialBalance := 999999999.99
+				timeSeries := []map[string]interface{}{
+					{
+						"date":         "2023-01-01",
+						"daily_change": 888888888.88,
+					},
+				}
+				mockAnalyticsRepo.SetNetworthTimeSeries(userId, startDate, endDate, initialBalance, timeSeries)
+
+				result, err := analyticsService.GetNetworthTimeSeries(ctx, userId, startDate, endDate)
+				Expect(err).NotTo(HaveOccurred())
+
+				// Should handle large numbers correctly
+				Expect(result.InitialBalance).To(Equal(-999999999.99))
+				Expect(result.TimeSeries[0].Networth).To(BeNumerically("~", -1888888888.87, 0.01))
+			})
+
+			It("should handle negative initial balance", func() {
+				initialBalance := -500.0 // Negative initial balance
+				timeSeries := []map[string]interface{}{
+					{
+						"date":         "2023-01-01",
+						"daily_change": 100.0,
+					},
+				}
+				mockAnalyticsRepo.SetNetworthTimeSeries(userId, startDate, endDate, initialBalance, timeSeries)
+
+				result, err := analyticsService.GetNetworthTimeSeries(ctx, userId, startDate, endDate)
+				Expect(err).NotTo(HaveOccurred())
+
+				// Negative initial balance should become positive for frontend
+				Expect(result.InitialBalance).To(Equal(500.0))
+				Expect(result.TimeSeries[0].Networth).To(Equal(400.0)) // 500 + (-100)
+			})
+
+			It("should handle empty daily data gracefully", func() {
+				initialBalance := 1000.0
+				timeSeries := []map[string]interface{}{} // Empty
+				mockAnalyticsRepo.SetNetworthTimeSeries(userId, startDate, endDate, initialBalance, timeSeries)
+
+				result, err := analyticsService.GetNetworthTimeSeries(ctx, userId, startDate, endDate)
+				Expect(err).NotTo(HaveOccurred())
+
+				// Should still generate time series with flat values
+				Expect(result.TimeSeries).To(HaveLen(1))
+				Expect(result.TimeSeries[0].Networth).To(Equal(-1000.0))
+			})
+
+			It("should handle malformed daily data gracefully", func() {
+				initialBalance := 1000.0
+				timeSeries := []map[string]interface{}{
+					{
+						"date":         "2023-01-01",
+						"daily_change": "invalid", // Invalid type
+					},
+				}
+				mockAnalyticsRepo.SetNetworthTimeSeries(userId, startDate, endDate, initialBalance, timeSeries)
+
+				// This should panic or error in the current implementation
+				// Testing the current behavior
+				Expect(func() {
+					analyticsService.GetNetworthTimeSeries(ctx, userId, startDate, endDate)
+				}).To(Panic())
+			})
+		})
+
+		Context("when testing data consistency and edge cases", func() {
+			It("should handle duplicate dates in daily data", func() {
+				startDate, _ = time.Parse("2006-01-02", "2023-01-01")
+				endDate, _ = time.Parse("2006-01-02", "2023-01-02")
+
+				initialBalance := 1000.0
+				timeSeries := []map[string]interface{}{
+					{
+						"date":         "2023-01-01",
+						"daily_change": 100.0,
+					},
+					{
+						"date":         "2023-01-01", // Duplicate date
+						"daily_change": 50.0,
+					},
+				}
+				mockAnalyticsRepo.SetNetworthTimeSeries(userId, startDate, endDate, initialBalance, timeSeries)
+
+				result, err := analyticsService.GetNetworthTimeSeries(ctx, userId, startDate, endDate)
+				Expect(err).NotTo(HaveOccurred())
+
+				// The service uses a map, so the last value should win
+				Expect(result.TimeSeries[0].Networth).To(Equal(-1050.0)) // -1000 + (-50)
+			})
+
+			It("should handle dates outside the requested range", func() {
+				startDate, _ = time.Parse("2006-01-02", "2023-01-01")
+				endDate, _ = time.Parse("2006-01-02", "2023-01-02")
+
+				initialBalance := 1000.0
+				timeSeries := []map[string]interface{}{
+					{
+						"date":         "2022-12-31", // Before range
+						"daily_change": 100.0,
+					},
+					{
+						"date":         "2023-01-01", // In range
+						"daily_change": 50.0,
+					},
+					{
+						"date":         "2023-01-03", // After range
+						"daily_change": 25.0,
+					},
+				}
+				mockAnalyticsRepo.SetNetworthTimeSeries(userId, startDate, endDate, initialBalance, timeSeries)
+
+				result, err := analyticsService.GetNetworthTimeSeries(ctx, userId, startDate, endDate)
+				Expect(err).NotTo(HaveOccurred())
+
+				// Should only use the date within range
+				Expect(result.TimeSeries[0].Networth).To(Equal(-1050.0)) // -1000 + (-50)
+				Expect(result.TimeSeries[1].Networth).To(Equal(-1050.0)) // No change for Jan 2
 			})
 		})
 	})

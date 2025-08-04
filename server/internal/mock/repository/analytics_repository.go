@@ -9,10 +9,12 @@ import (
 )
 
 type MockAnalyticsRepository struct {
-	balances     map[string]map[int64]float64               // key: userId_startDate_endDate, value: accountId -> balance
-	analytics    map[int64][]models.AccountBalanceAnalytics // key: userId, value: analytics
-	networthData map[string]networthMockData                // key: userId_startDate_endDate, value: networth data
-	mu           sync.RWMutex
+	balances              map[string]map[int64]float64               // key: userId_startDate_endDate, value: accountId -> balance
+	analytics             map[int64][]models.AccountBalanceAnalytics // key: userId, value: analytics
+	networthData          map[string]networthMockData                // key: userId_startDate_endDate, value: networth data
+	shouldErrorOnBalance  bool                                       // simulate GetBalance errors
+	shouldErrorOnNetworth bool                                       // simulate GetNetworthTimeSeries errors
+	mu                    sync.RWMutex
 }
 
 type networthMockData struct {
@@ -22,15 +24,22 @@ type networthMockData struct {
 
 func NewMockAnalyticsRepository() *MockAnalyticsRepository {
 	return &MockAnalyticsRepository{
-		balances:     make(map[string]map[int64]float64),
-		analytics:    make(map[int64][]models.AccountBalanceAnalytics),
-		networthData: make(map[string]networthMockData),
+		balances:              make(map[string]map[int64]float64),
+		analytics:             make(map[int64][]models.AccountBalanceAnalytics),
+		networthData:          make(map[string]networthMockData),
+		shouldErrorOnBalance:  false,
+		shouldErrorOnNetworth: false,
 	}
 }
 
 func (m *MockAnalyticsRepository) GetBalance(ctx context.Context, userId int64, startDate *time.Time, endDate *time.Time) (map[int64]float64, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
+
+	// Simulate error if configured
+	if m.shouldErrorOnBalance {
+		return nil, fmt.Errorf("simulated GetBalance error")
+	}
 
 	// Create a key based on parameters
 	key := m.createBalanceKey(userId, startDate, endDate)
@@ -46,6 +55,11 @@ func (m *MockAnalyticsRepository) GetBalance(ctx context.Context, userId int64, 
 func (m *MockAnalyticsRepository) GetNetworthTimeSeries(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) (float64, []map[string]interface{}, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
+
+	// Simulate error if configured
+	if m.shouldErrorOnNetworth {
+		return 0, nil, fmt.Errorf("simulated GetNetworthTimeSeries error")
+	}
 
 	// Create a key based on parameters
 	key := m.createNetworthKey(userId, startDate, endDate)
@@ -107,6 +121,18 @@ func (m *MockAnalyticsRepository) SetNetworthTimeSeries(userId int64, startDate 
 		initialBalance: initialBalance,
 		timeSeries:     timeSeries,
 	}
+}
+
+func (m *MockAnalyticsRepository) SetShouldErrorOnBalance(shouldError bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.shouldErrorOnBalance = shouldError
+}
+
+func (m *MockAnalyticsRepository) SetShouldErrorOnNetworth(shouldError bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.shouldErrorOnNetworth = shouldError
 }
 
 func (m *MockAnalyticsRepository) createBalanceKey(userId int64, startDate *time.Time, endDate *time.Time) string {

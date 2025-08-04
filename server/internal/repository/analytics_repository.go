@@ -71,7 +71,7 @@ func (r *AnalyticsRepository) GetBalance(ctx context.Context, userId int64, star
 func (r *AnalyticsRepository) GetNetworthTimeSeries(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) (float64, []map[string]interface{}, error) {
 	// First, get the initial balance (sum of all transactions before startDate)
 	initialBalanceQuery := fmt.Sprintf(`
-		SELECT COALESCE(SUM(amount), 0) as initial_balance
+		SELECT COALESCE(SUM(amount), 0) * -1 as initial_balance
 		FROM %s.%s
 		WHERE created_by = $1 
 			AND deleted_at IS NULL
@@ -89,7 +89,7 @@ func (r *AnalyticsRepository) GetNetworthTimeSeries(ctx context.Context, userId 
 	timeSeriesQuery := fmt.Sprintf(`
 		SELECT 
 			date,
-			COALESCE(SUM(amount), 0) as daily_change
+			COALESCE(SUM(amount), 0) * -1 as daily_change
 		FROM %s.%s
 		WHERE created_by = $1 
 			AND deleted_at IS NULL
