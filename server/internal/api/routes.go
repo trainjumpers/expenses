@@ -21,6 +21,7 @@ func Init(
 	ruleService service.RuleServiceInterface,
 	ruleEngineService service.RuleEngineServiceInterface,
 	statementService service.StatementServiceInterface,
+	analyticsService service.AnalyticsServiceInterface,
 ) *gin.Engine {
 	router := gin.New()
 	if !cfg.IsTest() || cfg.LoggingLevel != "" {
@@ -56,6 +57,7 @@ func Init(
 	transactionController := controller.NewTransactionController(cfg, transactionService)
 	ruleController := controller.NewRuleController(cfg, ruleService, ruleEngineService)
 	statementController := controller.NewStatementController(cfg, statementService)
+	analyticsController := controller.NewAnalyticsController(cfg, analyticsService)
 
 	api := router.Group("/api/v1")
 	{
@@ -127,6 +129,12 @@ func Init(
 			rule.PATCH("/:ruleId/condition/:id", ruleController.UpdateRuleCondition)
 			rule.PUT("/:ruleId/actions", ruleController.PutRuleActions)
 			rule.PUT("/:ruleId/conditions", ruleController.PutRuleConditions)
+		}
+
+		// Analytics routes
+		analytics := base.Group("/analytics", middleware.ProtectedWithCreatedBy(cfg)...)
+		{
+			analytics.GET("/account", analyticsController.GetAccountAnalytics)
 		}
 	}
 
