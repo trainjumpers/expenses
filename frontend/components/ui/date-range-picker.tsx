@@ -80,6 +80,7 @@ const PRESETS: Preset[] = [
   { name: "lastWeek", label: "Last Week" },
   { name: "thisMonth", label: "This Month" },
   { name: "lastMonth", label: "Last Month" },
+  { name: "allTime", label: "All Time" },
 ];
 
 /** The DateRangePicker component allows a user to select a range of dates */
@@ -194,6 +195,12 @@ export const DateRangePicker: FC<DateRangePickerProps> & {
         from.setHours(0, 0, 0, 0);
         to.setDate(0);
         to.setHours(23, 59, 59, 999);
+        break;
+      case "allTime":
+        from.setFullYear(1970, 0, 1);
+        from.setHours(0, 0, 0, 0);
+        to.setHours(23, 59, 59, 999);
+        to.setDate(0);
         break;
     }
 
