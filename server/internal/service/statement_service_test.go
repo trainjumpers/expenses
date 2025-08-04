@@ -15,13 +15,13 @@ import (
 
 var _ = Describe("StatementService", func() {
 	var (
-		mockRepo       *repository.MockStatementRepository
-		service        StatementService
-		txnService     TransactionServiceInterface
-		accountService AccountServiceInterface
+		mockRepo          *repository.MockStatementRepository
+		service           StatementService
+		txnService        TransactionServiceInterface
+		accountService    AccountServiceInterface
 		ruleEngineService RuleEngineServiceInterface
-		userId         int64
-		ctx            context.Context
+		userId            int64
+		ctx               context.Context
 	)
 
 	BeforeEach(func() {
