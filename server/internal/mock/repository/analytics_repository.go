@@ -22,8 +22,9 @@ type networthMockData struct {
 
 func NewMockAnalyticsRepository() *MockAnalyticsRepository {
 	return &MockAnalyticsRepository{
-		balances:  make(map[string]map[int64]float64),
-		analytics: make(map[int64][]models.AccountBalanceAnalytics),
+		balances:     make(map[string]map[int64]float64),
+		analytics:    make(map[int64][]models.AccountBalanceAnalytics),
+		networthData: make(map[string]networthMockData),
 	}
 }
 
@@ -46,7 +47,14 @@ func (m *MockAnalyticsRepository) GetNetworthTimeSeries(ctx context.Context, use
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	// For mock, return some sample data
+	// Create a key based on parameters
+	key := m.createNetworthKey(userId, startDate, endDate)
+
+	if data, exists := m.networthData[key]; exists {
+		return data.initialBalance, data.timeSeries, nil
+	}
+
+	// Return default sample data if no specific data set
 	initialBalance := 1000.0
 	timeSeries := []map[string]interface{}{
 		{
@@ -90,6 +98,17 @@ func (m *MockAnalyticsRepository) SetAnalytics(userId int64, analytics []models.
 	m.analytics[userId] = analytics
 }
 
+func (m *MockAnalyticsRepository) SetNetworthTimeSeries(userId int64, startDate time.Time, endDate time.Time, initialBalance float64, timeSeries []map[string]interface{}) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	key := m.createNetworthKey(userId, startDate, endDate)
+	m.networthData[key] = networthMockData{
+		initialBalance: initialBalance,
+		timeSeries:     timeSeries,
+	}
+}
+
 func (m *MockAnalyticsRepository) createBalanceKey(userId int64, startDate *time.Time, endDate *time.Time) string {
 	key := fmt.Sprintf("%d_", userId)
 	if startDate != nil {
@@ -104,4 +123,8 @@ func (m *MockAnalyticsRepository) createBalanceKey(userId int64, startDate *time
 		key += "nil"
 	}
 	return key
+}
+
+func (m *MockAnalyticsRepository) createNetworthKey(userId int64, startDate time.Time, endDate time.Time) string {
+	return fmt.Sprintf("%d_%s_%s", userId, startDate.Format("2006-01-02"), endDate.Format("2006-01-02"))
 }
