@@ -171,6 +171,7 @@ export function RuleModal({
       conditions,
       actions,
     });
+    resetForm();
   };
 
   // Reset form state
