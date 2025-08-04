@@ -15,12 +15,13 @@ import (
 
 var _ = Describe("StatementService", func() {
 	var (
-		mockRepo       *repository.MockStatementRepository
-		service        StatementService
-		txnService     TransactionServiceInterface
-		accountService AccountServiceInterface
-		userId         int64
-		ctx            context.Context
+		mockRepo          *repository.MockStatementRepository
+		service           StatementService
+		txnService        TransactionServiceInterface
+		accountService    AccountServiceInterface
+		ruleEngineService RuleEngineServiceInterface
+		userId            int64
+		ctx               context.Context
 	)
 
 	BeforeEach(func() {
@@ -30,14 +31,17 @@ var _ = Describe("StatementService", func() {
 		mockCategoryRepo := repository.NewMockCategoryRepository()
 		mockAccountRepo := repository.NewMockAccountRepository()
 		mockDbManager := mockDatabase.NewMockDatabaseManager()
+		mockRuleRepo := repository.NewMockRuleRepository()
 		txnService = NewTransactionService(mockTxnRepo, mockCategoryRepo, mockAccountRepo, mockDbManager)
 		accountService = NewAccountService(mockAccountRepo)
+		ruleEngineService = NewRuleEngineService(mockRuleRepo, mockTxnRepo, mockCategoryRepo)
 
 		service = StatementService{
 			repo:               mockRepo,
 			statementValidator: validator.NewStatementValidator(),
 			txService:          txnService,
 			accountService:     accountService,
+			ruleEngineService:  ruleEngineService,
 		}
 		userId = 42
 	})
