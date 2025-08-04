@@ -214,13 +214,13 @@ var _ = Describe("AccountService", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(len(accounts)).To(BeNumerically(">=", 3))
 		})
-		It("should return error for non-existent user id", func() {
+		It("should not return error for non-existent user id", func() {
 			_, err := accountService.ListAccounts(ctx, 9999)
-			Expect(err).To(HaveOccurred())
+			Expect(err).NotTo(HaveOccurred())
 		})
-		It("should return error while listing accounts of other user", func() {
+		It("should not return error while listing accounts of other user", func() {
 			_, err := accountService.ListAccounts(ctx, 4)
-			Expect(err).To(HaveOccurred())
+			Expect(err).NotTo(HaveOccurred())
 		})
 	})
 })

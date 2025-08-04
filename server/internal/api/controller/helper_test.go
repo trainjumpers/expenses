@@ -160,3 +160,13 @@ func checkMalformedTokens(helper *TestHelper, method, path string, body any) {
 		Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized), "Should fail for malformed token: "+token)
 	}
 }
+
+// checkNetworthValidation tests validation for networth endpoint
+func checkNetworthValidation(helper *TestHelper, testCases []map[string]any) {
+	for _, tc := range testCases {
+		url := fmt.Sprintf("/analytics/networth?start_date=%s&end_date=%s", tc["startDate"], tc["endDate"])
+		resp, response := helper.MakeRequest(http.MethodGet, url, nil)
+		Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+		Expect(response["message"]).To(Equal(tc["expectedMessage"]))
+	}
+}

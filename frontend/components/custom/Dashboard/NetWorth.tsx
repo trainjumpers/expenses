@@ -8,8 +8,16 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  formatCurrency,
+  formatPercentage,
+  transformToChartData,
+} from "@/lib/utils";
 import { format, subDays } from "date-fns";
+import { useState } from "react";
 import { Line, LineChart, XAxis, YAxis } from "recharts";
+
+import { DateRangePicker } from "./DateRangePicker";
 
 interface ChartDataPoint {
   date: string;
@@ -17,38 +25,15 @@ interface ChartDataPoint {
   formattedDate: string;
 }
 
-const formatCurrency = (amount: number): string => {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "INR",
-    minimumFractionDigits: 2,
-  }).format(amount);
-};
-
-const formatPercentage = (percentage: number): string => {
-  const sign = percentage > 0 ? "+" : "";
-  return `${sign}${percentage.toFixed(1)}%`;
-};
-
-// Transform API data to chart format
-const transformToChartData = (
-  timeSeries: Array<{ date: string; networth: number }>
-): ChartDataPoint[] => {
-  return timeSeries.map((point) => ({
-    date: format(new Date(point.date), "MMM dd"),
-    value: point.networth,
-    formattedDate: format(new Date(point.date), "MMM dd, yyyy"),
-  }));
-};
-
 export function NetWorth() {
-  // Calculate date range for the last 30 days
-  const endDate = format(new Date(), "yyyy-MM-dd");
-  const startDate = format(subDays(new Date(), 29), "yyyy-MM-dd");
+  const [dateRange, setDateRange] = useState({
+    from: subDays(new Date(), 29),
+    to: new Date(),
+  });
 
   const { data: networthData, isLoading } = useNetworthTimeSeries(
-    startDate,
-    endDate
+    format(dateRange.from, "yyyy-MM-dd"),
+    format(dateRange.to, "yyyy-MM-dd")
   );
 
   // Transform data for chart
@@ -62,7 +47,9 @@ export function NetWorth() {
 
   // Calculate percentage change over the period
   const percentageChange =
-    initialNetWorth === 0 ? 0 : ((currentNetWorth - initialNetWorth) / Math.abs(initialNetWorth)) * 100;
+    initialNetWorth === 0
+      ? 0
+      : ((currentNetWorth - initialNetWorth) / Math.abs(initialNetWorth)) * 100;
 
   const absoluteChange = currentNetWorth - initialNetWorth;
 
@@ -102,9 +89,7 @@ export function NetWorth() {
           <CardTitle className="text-lg font-semibold text-muted-foreground">
             Net Worth
           </CardTitle>
-          <span className="text-sm text-muted-foreground bg-muted px-2 py-1 rounded">
-            30D
-          </span>
+          <DateRangePicker onDateChange={setDateRange} />
         </div>
       </CardHeader>
       <CardContent>
@@ -146,7 +131,7 @@ export function NetWorth() {
                     <ChartTooltipContent
                       formatter={(value) => [
                         formatCurrency(value as number),
-                        "Net Worth",
+                        " Net Worth",
                       ]}
                       labelFormatter={(label, payload) => {
                         const data = payload?.[0]?.payload as ChartDataPoint;

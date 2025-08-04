@@ -10,7 +10,7 @@ import (
 
 type AnalyticsRepositoryInterface interface {
 	GetBalance(ctx context.Context, userId int64, startDate *time.Time, endDate *time.Time) (map[int64]float64, error)
-	GetNetworthTimeSeries(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) (float64, []map[string]interface{}, error)
+	GetNetworthTimeSeries(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) (float64, []map[string]any, error)
 }
 
 type AnalyticsRepository struct {
@@ -68,7 +68,7 @@ func (r *AnalyticsRepository) GetBalance(ctx context.Context, userId int64, star
 
 // GetNetworthTimeSeries calculates the initial balance and daily networth changes
 // Returns initial balance (sum of all transactions before startDate) and daily aggregated data
-func (r *AnalyticsRepository) GetNetworthTimeSeries(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) (float64, []map[string]interface{}, error) {
+func (r *AnalyticsRepository) GetNetworthTimeSeries(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) (float64, []map[string]any, error) {
 	// First, get the initial balance (sum of all transactions before startDate)
 	initialBalanceQuery := fmt.Sprintf(`
 		SELECT COALESCE(SUM(amount), 0) * -1 as initial_balance
@@ -105,7 +105,7 @@ func (r *AnalyticsRepository) GetNetworthTimeSeries(ctx context.Context, userId 
 	}
 	defer rows.Close()
 
-	var timeSeries []map[string]interface{}
+	var timeSeries []map[string]any
 	for rows.Next() {
 		var date time.Time
 		var dailyChange float64
@@ -114,7 +114,7 @@ func (r *AnalyticsRepository) GetNetworthTimeSeries(ctx context.Context, userId 
 			return initialBalance, nil, err
 		}
 
-		timeSeries = append(timeSeries, map[string]interface{}{
+		timeSeries = append(timeSeries, map[string]any{
 			"date":         date.Format("2006-01-02"),
 			"daily_change": dailyChange,
 		})

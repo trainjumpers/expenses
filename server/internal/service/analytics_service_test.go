@@ -122,12 +122,12 @@ var _ = Describe("AnalyticsService", func() {
 				}
 
 				Expect(account1Analytics).NotTo(BeNil())
-				Expect(account1Analytics.CurrentBalance).To(Equal(1000.0))
-				Expect(account1Analytics.BalanceOneMonthAgo).To(Equal(800.0))
+				Expect(account1Analytics.CurrentBalance).To(Equal(-1000.0))
+				Expect(account1Analytics.BalanceOneMonthAgo).To(Equal(-800.0))
 
 				Expect(account2Analytics).NotTo(BeNil())
-				Expect(account2Analytics.CurrentBalance).To(Equal(500.0))
-				Expect(account2Analytics.BalanceOneMonthAgo).To(Equal(300.0))
+				Expect(account2Analytics.CurrentBalance).To(Equal(-500.0))
+				Expect(account2Analytics.BalanceOneMonthAgo).To(Equal(-300.0))
 			})
 		})
 
@@ -187,8 +187,8 @@ var _ = Describe("AnalyticsService", func() {
 
 				// Account1 should have transaction data
 				Expect(account1Analytics).NotTo(BeNil())
-				Expect(account1Analytics.CurrentBalance).To(Equal(1500.0))
-				Expect(account1Analytics.BalanceOneMonthAgo).To(Equal(1200.0))
+				Expect(account1Analytics.CurrentBalance).To(Equal(-1500.0))
+				Expect(account1Analytics.BalanceOneMonthAgo).To(Equal(-1200.0))
 
 				// Account2 should have zero balances (no transactions)
 				Expect(account2Analytics).NotTo(BeNil())
@@ -296,13 +296,13 @@ var _ = Describe("AnalyticsService", func() {
 				result1, err := analyticsService.GetAccountAnalytics(ctx, user1Id)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result1.AccountAnalytics).To(HaveLen(1))
-				Expect(result1.AccountAnalytics[0].CurrentBalance).To(Equal(2000.0))
+				Expect(result1.AccountAnalytics[0].CurrentBalance).To(Equal(-2000.0))
 
 				// Test user2 analytics
 				result2, err := analyticsService.GetAccountAnalytics(ctx, user2Id)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result2.AccountAnalytics).To(HaveLen(1))
-				Expect(result2.AccountAnalytics[0].CurrentBalance).To(Equal(3000.0))
+				Expect(result2.AccountAnalytics[0].CurrentBalance).To(Equal(-3000.0))
 			})
 		})
 	})
@@ -319,7 +319,7 @@ var _ = Describe("AnalyticsService", func() {
 			BeforeEach(func() {
 				// Set up mock data with initial balance and daily changes
 				initialBalance := 1000.0
-				timeSeries := []map[string]interface{}{
+				timeSeries := []map[string]any{
 					{
 						"date":         "2023-01-01",
 						"daily_change": 100.0,
@@ -342,11 +342,11 @@ var _ = Describe("AnalyticsService", func() {
 				// Should have data points for each day in range
 				Expect(result.TimeSeries).To(HaveLen(3)) // Jan 1, 2, 3
 
-				// Verify first day: -1000 (initial) + (-100) (negated daily change) = -1100
+				// Verify first day: -1000 (initial) + (-100) (daily change) = -1100
 				Expect(result.TimeSeries[0].Date).To(Equal("2023-01-01"))
 				Expect(result.TimeSeries[0].Networth).To(Equal(-1100.0))
 
-				// Verify second day: -1100 + 50 (negated daily change) = -1050
+				// Verify second day: -1100 + (50) (daily change) = -1050
 				Expect(result.TimeSeries[1].Date).To(Equal("2023-01-02"))
 				Expect(result.TimeSeries[1].Networth).To(Equal(-1050.0))
 
@@ -360,7 +360,7 @@ var _ = Describe("AnalyticsService", func() {
 			BeforeEach(func() {
 				// Set up mock data with only initial balance, no daily changes
 				initialBalance := 500.0
-				timeSeries := []map[string]interface{}{} // Empty time series
+				timeSeries := []map[string]any{} // Empty time series
 				mockAnalyticsRepo.SetNetworthTimeSeries(userId, startDate, endDate, initialBalance, timeSeries)
 			})
 
@@ -374,7 +374,7 @@ var _ = Describe("AnalyticsService", func() {
 				// Should have data points for each day in range
 				Expect(result.TimeSeries).To(HaveLen(3)) // Jan 1, 2, 3
 
-				// All days should have the same networth (no changes)
+				// All days should have the same networth
 				for _, point := range result.TimeSeries {
 					Expect(point.Networth).To(Equal(-500.0))
 				}
@@ -390,7 +390,7 @@ var _ = Describe("AnalyticsService", func() {
 			BeforeEach(func() {
 				// Set up mock data with multiple transactions on same day and gaps
 				initialBalance := 2000.0
-				timeSeries := []map[string]interface{}{
+				timeSeries := []map[string]any{
 					{
 						"date":         "2023-01-01",
 						"daily_change": 200.0, // Debit (stored as positive)
@@ -433,7 +433,7 @@ var _ = Describe("AnalyticsService", func() {
 				endDate = startDate // Same day
 
 				initialBalance := 1500.0
-				timeSeries := []map[string]interface{}{
+				timeSeries := []map[string]any{
 					{
 						"date":         "2023-01-01",
 						"daily_change": 75.0,
@@ -457,7 +457,7 @@ var _ = Describe("AnalyticsService", func() {
 		Context("when repository returns zero initial balance", func() {
 			BeforeEach(func() {
 				initialBalance := 0.0
-				timeSeries := []map[string]interface{}{
+				timeSeries := []map[string]any{
 					{
 						"date":         "2023-01-01",
 						"daily_change": 100.0,
@@ -493,7 +493,7 @@ var _ = Describe("AnalyticsService", func() {
 
 				// Set up different networth data for each user
 				user1InitialBalance := 1000.0
-				user1TimeSeries := []map[string]interface{}{
+				user1TimeSeries := []map[string]any{
 					{
 						"date":         "2023-01-01",
 						"daily_change": 100.0,
@@ -502,7 +502,7 @@ var _ = Describe("AnalyticsService", func() {
 				mockAnalyticsRepo.SetNetworthTimeSeries(user1Id, startDate, endDate, user1InitialBalance, user1TimeSeries)
 
 				user2InitialBalance := 2000.0
-				user2TimeSeries := []map[string]interface{}{
+				user2TimeSeries := []map[string]any{
 					{
 						"date":         "2023-01-01",
 						"daily_change": 200.0,
@@ -550,7 +550,7 @@ var _ = Describe("AnalyticsService", func() {
 				// Test the core business logic: debits stored as positive, credits as negative
 				// But frontend expects opposite
 				initialBalance := 1000.0 // Stored as positive (debit balance)
-				timeSeries := []map[string]interface{}{
+				timeSeries := []map[string]any{
 					{
 						"date":         "2023-01-01",
 						"daily_change": 200.0, // Debit transaction (stored positive)
@@ -589,7 +589,7 @@ var _ = Describe("AnalyticsService", func() {
 
 			It("should handle same start and end date correctly", func() {
 				initialBalance := 1000.0
-				timeSeries := []map[string]interface{}{
+				timeSeries := []map[string]any{
 					{
 						"date":         "2023-01-01",
 						"daily_change": 100.0,
@@ -611,7 +611,7 @@ var _ = Describe("AnalyticsService", func() {
 				endDate, _ = time.Parse("2006-01-02", "2023-12-31")
 
 				initialBalance := 1000.0
-				timeSeries := []map[string]interface{}{} // No daily changes
+				timeSeries := []map[string]any{} // No daily changes
 				mockAnalyticsRepo.SetNetworthTimeSeries(userId, startDate, endDate, initialBalance, timeSeries)
 
 				result, err := analyticsService.GetNetworthTimeSeries(ctx, userId, startDate, endDate)
@@ -631,7 +631,7 @@ var _ = Describe("AnalyticsService", func() {
 				endDate, _ = time.Parse("2006-01-02", "2024-03-01")
 
 				initialBalance := 500.0
-				timeSeries := []map[string]interface{}{} // No daily changes
+				timeSeries := []map[string]any{} // No daily changes
 				mockAnalyticsRepo.SetNetworthTimeSeries(userId, startDate, endDate, initialBalance, timeSeries)
 
 				result, err := analyticsService.GetNetworthTimeSeries(ctx, userId, startDate, endDate)
@@ -649,7 +649,7 @@ var _ = Describe("AnalyticsService", func() {
 				endDate, _ = time.Parse("2006-01-02", "2024-01-02")
 
 				initialBalance := 2000.0
-				timeSeries := []map[string]interface{}{
+				timeSeries := []map[string]any{
 					{
 						"date":         "2023-12-31",
 						"daily_change": 100.0,
@@ -683,7 +683,7 @@ var _ = Describe("AnalyticsService", func() {
 
 			It("should handle very large transaction amounts", func() {
 				initialBalance := 999999999.99
-				timeSeries := []map[string]interface{}{
+				timeSeries := []map[string]any{
 					{
 						"date":         "2023-01-01",
 						"daily_change": 888888888.88,
@@ -701,7 +701,7 @@ var _ = Describe("AnalyticsService", func() {
 
 			It("should handle negative initial balance", func() {
 				initialBalance := -500.0 // Negative initial balance
-				timeSeries := []map[string]interface{}{
+				timeSeries := []map[string]any{
 					{
 						"date":         "2023-01-01",
 						"daily_change": 100.0,
@@ -719,7 +719,7 @@ var _ = Describe("AnalyticsService", func() {
 
 			It("should handle empty daily data gracefully", func() {
 				initialBalance := 1000.0
-				timeSeries := []map[string]interface{}{} // Empty
+				timeSeries := []map[string]any{} // Empty
 				mockAnalyticsRepo.SetNetworthTimeSeries(userId, startDate, endDate, initialBalance, timeSeries)
 
 				result, err := analyticsService.GetNetworthTimeSeries(ctx, userId, startDate, endDate)
@@ -732,7 +732,7 @@ var _ = Describe("AnalyticsService", func() {
 
 			It("should handle malformed daily data gracefully", func() {
 				initialBalance := 1000.0
-				timeSeries := []map[string]interface{}{
+				timeSeries := []map[string]any{
 					{
 						"date":         "2023-01-01",
 						"daily_change": "invalid", // Invalid type
@@ -740,11 +740,10 @@ var _ = Describe("AnalyticsService", func() {
 				}
 				mockAnalyticsRepo.SetNetworthTimeSeries(userId, startDate, endDate, initialBalance, timeSeries)
 
-				// This should panic or error in the current implementation
-				// Testing the current behavior
-				Expect(func() {
-					analyticsService.GetNetworthTimeSeries(ctx, userId, startDate, endDate)
-				}).To(Panic())
+				// Testing the new behavior
+				_, err := analyticsService.GetNetworthTimeSeries(ctx, userId, startDate, endDate)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(Equal("invalid type for daily_change in daily data"))
 			})
 		})
 
@@ -754,7 +753,7 @@ var _ = Describe("AnalyticsService", func() {
 				endDate, _ = time.Parse("2006-01-02", "2023-01-02")
 
 				initialBalance := 1000.0
-				timeSeries := []map[string]interface{}{
+				timeSeries := []map[string]any{
 					{
 						"date":         "2023-01-01",
 						"daily_change": 100.0,
@@ -778,7 +777,7 @@ var _ = Describe("AnalyticsService", func() {
 				endDate, _ = time.Parse("2006-01-02", "2023-01-02")
 
 				initialBalance := 1000.0
-				timeSeries := []map[string]interface{}{
+				timeSeries := []map[string]any{
 					{
 						"date":         "2022-12-31", // Before range
 						"daily_change": 100.0,

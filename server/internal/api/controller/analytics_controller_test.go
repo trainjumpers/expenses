@@ -342,39 +342,21 @@ var _ = Describe("AnalyticsController", func() {
 			}
 		})
 
-		It("should return error for missing start_date parameter", func() {
-			url := "/analytics/networth?end_date=2023-01-31"
-			resp, response := testUser1.MakeRequest(http.MethodGet, url, nil)
-			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
-			Expect(response["message"]).To(Equal("start_date and end_date query parameters are required"))
-		})
-
-		It("should return error for missing end_date parameter", func() {
-			url := "/analytics/networth?start_date=2023-01-01"
-			resp, response := testUser1.MakeRequest(http.MethodGet, url, nil)
-			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
-			Expect(response["message"]).To(Equal("start_date and end_date query parameters are required"))
-		})
-
-		It("should return error for invalid start_date format", func() {
-			url := "/analytics/networth?start_date=invalid&end_date=2023-01-31"
-			resp, response := testUser1.MakeRequest(http.MethodGet, url, nil)
-			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
-			Expect(response["message"]).To(Equal("invalid start_date format, expected YYYY-MM-DD"))
-		})
-
-		It("should return error for invalid end_date format", func() {
-			url := "/analytics/networth?start_date=2023-01-01&end_date=invalid"
-			resp, response := testUser1.MakeRequest(http.MethodGet, url, nil)
-			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
-			Expect(response["message"]).To(Equal("invalid end_date format, expected YYYY-MM-DD"))
-		})
-
-		It("should return error when start_date is after end_date", func() {
-			url := "/analytics/networth?start_date=2023-01-31&end_date=2023-01-01"
-			resp, response := testUser1.MakeRequest(http.MethodGet, url, nil)
-			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
-			Expect(response["message"]).To(Equal("start_date cannot be after end_date"))
+		Context("with invalid parameters", func() {
+			It("should return validation errors", func() {
+				testCases := []map[string]any{
+					{"startDate": "", "endDate": "2023-01-31", "expectedMessage": "start_date and end_date query parameters are required"},
+					{"startDate": "2023-01-01", "endDate": "", "expectedMessage": "start_date and end_date query parameters are required"},
+					{"startDate": "invalid", "endDate": "2023-01-31", "expectedMessage": "invalid start_date format, expected YYYY-MM-DD"},
+					{"startDate": "2023-01-01", "endDate": "invalid", "expectedMessage": "invalid end_date format, expected YYYY-MM-DD"},
+					{"startDate": "2023-01-31", "endDate": "2023-01-01", "expectedMessage": "start_date cannot be after end_date"},
+					{"startDate": "2023-01-01T00:00:00", "endDate": "2023-01-31", "expectedMessage": "invalid start_date format, expected YYYY-MM-DD"},
+					{"startDate": "2023/01/01", "endDate": "2023-01-31", "expectedMessage": "invalid start_date format, expected YYYY-MM-DD"},
+					{"startDate": "2023-13-01", "endDate": "2023-01-31", "expectedMessage": "invalid start_date format, expected YYYY-MM-DD"},
+					{"startDate": "2023-01-32", "endDate": "2023-01-31", "expectedMessage": "invalid start_date format, expected YYYY-MM-DD"},
+				}
+				checkNetworthValidation(testUser1, testCases)
+			})
 		})
 
 		It("should return error for unauthenticated user", func() {
@@ -447,34 +429,6 @@ var _ = Describe("AnalyticsController", func() {
 			url := "/analytics/networth?start_date=1900-01-01&end_date=1900-01-02"
 			resp, _ := testUser1.MakeRequest(http.MethodGet, url, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
-		})
-
-		It("should return error for malformed date with extra characters", func() {
-			url := "/analytics/networth?start_date=2023-01-01T00:00:00&end_date=2023-01-31"
-			resp, response := testUser1.MakeRequest(http.MethodGet, url, nil)
-			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
-			Expect(response["message"]).To(Equal("invalid start_date format, expected YYYY-MM-DD"))
-		})
-
-		It("should return error for date with wrong separators", func() {
-			url := "/analytics/networth?start_date=2023/01/01&end_date=2023-01-31"
-			resp, response := testUser1.MakeRequest(http.MethodGet, url, nil)
-			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
-			Expect(response["message"]).To(Equal("invalid start_date format, expected YYYY-MM-DD"))
-		})
-
-		It("should return error for invalid month", func() {
-			url := "/analytics/networth?start_date=2023-13-01&end_date=2023-01-31"
-			resp, response := testUser1.MakeRequest(http.MethodGet, url, nil)
-			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
-			Expect(response["message"]).To(Equal("invalid start_date format, expected YYYY-MM-DD"))
-		})
-
-		It("should return error for invalid day", func() {
-			url := "/analytics/networth?start_date=2023-01-32&end_date=2023-01-31"
-			resp, response := testUser1.MakeRequest(http.MethodGet, url, nil)
-			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
-			Expect(response["message"]).To(Equal("invalid start_date format, expected YYYY-MM-DD"))
 		})
 
 		It("should handle URL encoded query parameters", func() {

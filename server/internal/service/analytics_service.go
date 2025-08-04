@@ -4,6 +4,7 @@ import (
 	"context"
 	"expenses/internal/models"
 	"expenses/internal/repository"
+	"fmt"
 	"time"
 )
 
@@ -76,12 +77,14 @@ func (s *AnalyticsService) GetNetworthTimeSeries(ctx context.Context, userId int
 
 	// Get initial balance and daily changes from repository
 	initialBalance, dailyData, err := s.analyticsRepo.GetNetworthTimeSeries(ctx, userId, startDate, endDate)
+	totalAccountBalance := 0.0
 	if err != nil {
 		return models.NetworthTimeSeriesResponse{}, err
 	}
 
 	for _, account := range accounts {
 		initialBalance += account.Balance
+		totalAccountBalance += account.Balance
 	}
 
 	var timeSeries []models.NetworthDataPoint
@@ -90,8 +93,14 @@ func (s *AnalyticsService) GetNetworthTimeSeries(ctx context.Context, userId int
 	// Create a map of dates with daily changes for easy lookup
 	dailyChanges := make(map[string]float64)
 	for _, data := range dailyData {
-		date := data["date"].(string)
-		dailyChange := data["daily_change"].(float64)
+		date, ok := data["date"].(string)
+		if !ok {
+			return models.NetworthTimeSeriesResponse{}, fmt.Errorf("invalid type for date in daily data")
+		}
+		dailyChange, ok := data["daily_change"].(float64)
+		if !ok {
+			return models.NetworthTimeSeriesResponse{}, fmt.Errorf("invalid type for daily_change in daily data")
+		}
 		dailyChanges[date] = dailyChange
 	}
 
@@ -104,7 +113,13 @@ func (s *AnalyticsService) GetNetworthTimeSeries(ctx context.Context, userId int
 		if dailyChange, exists := dailyChanges[dateStr]; exists {
 			runningBalance += dailyChange
 		}
-
+		
+		if runningBalance == totalAccountBalance {
+			// Txn has not changed yet, so we can skip adding this point
+			currentDate = currentDate.AddDate(0, 0, 1)
+			continue
+		}
+		
 		timeSeries = append(timeSeries, models.NetworthDataPoint{
 			Date:     dateStr,
 			Networth: runningBalance,
