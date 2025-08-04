@@ -7,6 +7,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   formatCurrency,
@@ -16,8 +17,6 @@ import {
 import { format, subDays } from "date-fns";
 import { useState } from "react";
 import { Line, LineChart, XAxis, YAxis } from "recharts";
-
-import { DateRangePicker } from "./DateRangePicker";
 
 interface ChartDataPoint {
   date: string;
@@ -89,7 +88,19 @@ export function NetWorth() {
           <CardTitle className="text-lg font-semibold text-muted-foreground">
             Net Worth
           </CardTitle>
-          <DateRangePicker onDateChange={setDateRange} />
+          <DateRangePicker
+            onUpdate={(values) =>
+              setDateRange({
+                from: values.range.from || dateRange.from,
+                to: values.range.to || dateRange.to,
+              })
+            }
+            initialDateFrom={format(dateRange.from, "yyyy-MM-dd")}
+            initialDateTo={format(dateRange.to, "yyyy-MM-dd")}
+            align="start"
+            locale="en-GB"
+            showCompare={false}
+          />
         </div>
       </CardHeader>
       <CardContent>
