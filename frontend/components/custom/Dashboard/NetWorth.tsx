@@ -62,7 +62,7 @@ export function NetWorth() {
 
   // Calculate percentage change over the period
   const percentageChange =
-    ((currentNetWorth - initialNetWorth) / Math.abs(initialNetWorth)) * 100;
+    initialNetWorth === 0 ? 0 : ((currentNetWorth - initialNetWorth) / Math.abs(initialNetWorth)) * 100;
 
   const absoluteChange = currentNetWorth - initialNetWorth;
 
