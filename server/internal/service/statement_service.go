@@ -25,11 +25,13 @@ type StatementService struct {
 	accountService     AccountServiceInterface
 	txService          TransactionServiceInterface
 	statementValidator *validator.StatementValidator
+	ruleEngineService  RuleEngineServiceInterface
 }
 
 func NewStatementService(
 	repo repository.StatementRepositoryInterface,
 	accountService AccountServiceInterface,
+	ruleEngineService RuleEngineServiceInterface,
 	statementValidator *validator.StatementValidator,
 	txService TransactionServiceInterface,
 ) StatementServiceInterface {
@@ -38,6 +40,7 @@ func NewStatementService(
 		accountService:     accountService,
 		txService:          txService,
 		statementValidator: statementValidator,
+		ruleEngineService:  ruleEngineService,
 	}
 }
 
@@ -121,6 +124,7 @@ func (s *StatementService) processStatementAsync(ctx context.Context, statementI
 
 	logger.Debugf("Parsed %d transactions from statement ID %d", len(parsedTxs), statementId)
 	var successCount, failCount int
+	txnIds := make([]int64, 0, len(parsedTxs))
 	for _, tx := range parsedTxs {
 		tx.AccountId = input.AccountId
 		tx.CreatedBy = userId
@@ -135,6 +139,7 @@ func (s *StatementService) processStatementAsync(ctx context.Context, statementI
 			failCount++
 			continue
 		}
+		txnIds = append(txnIds, transaction.Id)
 		successCount++
 	}
 
@@ -146,6 +151,9 @@ func (s *StatementService) processStatementAsync(ctx context.Context, statementI
 	_, _ = s.repo.UpdateStatementStatus(ctx, statementId, models.UpdateStatementStatusInput{
 		Status:  status,
 		Message: &msg,
+	})
+	_, err = s.ruleEngineService.ExecuteRules(ctx, userId, models.ExecuteRulesRequest{
+		TransactionIds: &txnIds,
 	})
 }
 
