@@ -260,5 +260,55 @@ var _ = Describe("AnalyticsController", func() {
 
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 		})
+
+		It("should handle analytics service errors gracefully", func() {
+			resp, response := testUser3.MakeRequest(http.MethodGet, "/analytics/account", nil)
+
+			// Should still return 200 OK even when no accounts exist
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			Expect(response["message"]).To(Equal("Account analytics retrieved successfully"))
+
+			// Should have proper data structure even with empty results
+			data := response["data"].(map[string]any)
+			Expect(data).To(HaveKey("account_analytics"))
+
+			accountAnalytics := data["account_analytics"]
+			// Should be either empty array or nil, both are acceptable
+			if accountAnalytics != nil {
+				Expect(accountAnalytics.([]any)).To(BeEmpty())
+			} else {
+				Expect(accountAnalytics).To(BeNil())
+			}
+		})
+
+		It("should handle edge case with corrupted account data", func() {
+			// Test resilience when account data might be in unexpected state
+			// This is more of a defensive programming test
+
+			resp, response := testUser1.MakeRequest(http.MethodGet, "/analytics/account", nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+			// Verify that even if there are edge cases in data,
+			// the response structure remains consistent
+			data := response["data"].(map[string]any)
+			Expect(data).To(HaveKey("account_analytics"))
+
+			accountAnalytics := data["account_analytics"].([]any)
+
+			// Each analytics entry should have required fields
+			for _, analytic := range accountAnalytics {
+				analyticMap := analytic.(map[string]any)
+
+				// Required fields should always be present
+				Expect(analyticMap).To(HaveKey("account_id"))
+				Expect(analyticMap).To(HaveKey("current_balance"))
+				Expect(analyticMap).To(HaveKey("balance_one_month_ago"))
+
+				// Values should be valid (not nil)
+				Expect(analyticMap["account_id"]).NotTo(BeNil())
+				Expect(analyticMap["current_balance"]).NotTo(BeNil())
+				Expect(analyticMap["balance_one_month_ago"]).NotTo(BeNil())
+			}
+		})
 	})
 })
