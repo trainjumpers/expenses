@@ -153,7 +153,7 @@ func (s *StatementService) processStatementAsync(ctx context.Context, statementI
 		Message: &msg,
 	})
 	if err != nil {
-		logger.Errorf("Failed to update statement status for ID %d: %v", statementId)
+		logger.Errorf("Failed to update statement status for ID %d: %v", statementId, err)
 	}
 	_, err = s.ruleEngineService.ExecuteRules(ctx, userId, models.ExecuteRulesRequest{
 		TransactionIds: &txnIds,
