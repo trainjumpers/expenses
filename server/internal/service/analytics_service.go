@@ -114,7 +114,7 @@ func (s *AnalyticsService) GetNetworthTimeSeries(ctx context.Context, userId int
 	}
 
 	return models.NetworthTimeSeriesResponse{
-		InitialBalance: initialBalance, // Negate for frontend
+		InitialBalance: initialBalance, // Initial balance for frontend
 		TimeSeries:     timeSeries,
 	}, nil
 }
