@@ -51,5 +51,7 @@ export const queryKeys = {
   session: ["session"] as const,
   analytics: {
     accountAnalytics: ["analytics", "account"] as const,
+    networthTimeSeries: (startDate: string, endDate: string) =>
+      ["analytics", "networth", startDate, endDate] as const,
   },
 } as const;

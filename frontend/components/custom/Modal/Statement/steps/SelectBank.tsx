@@ -29,7 +29,7 @@ export function SelectBank({ onStepChange }: SelectBankProps) {
         onClick={() => onStepChange(3)}
       >
         <div className="bg-green-100 dark:bg-green-900/50 p-3 rounded-lg">
-          <FileCog className="h-6 w-6 text-green-600 dark:text-green-400" />
+          <FileCog className="h-6 w-6 text-green-600 dark:text-green-300 dark:text-green-400" />
         </div>
         <div className="text-left">
           <p className="font-semibold">Custom Parsing</p>

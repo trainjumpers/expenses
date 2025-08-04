@@ -9,3 +9,15 @@ export interface AccountBalanceAnalytics {
 export interface AccountAnalyticsListResponse {
   account_analytics: AccountBalanceAnalytics[];
 }
+
+// NetworthDataPoint represents a single point in the networth time series
+export interface NetworthDataPoint {
+  date: string;
+  networth: number;
+}
+
+// NetworthTimeSeriesResponse represents the networth over time response
+export interface NetworthTimeSeriesResponse {
+  initial_balance: number;
+  time_series: NetworthDataPoint[];
+}

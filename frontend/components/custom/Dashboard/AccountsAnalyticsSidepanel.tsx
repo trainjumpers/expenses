@@ -67,7 +67,7 @@ export function AccountsAnalyticsSidepanel({
         id: analytics.account_id,
         name: account?.name || `Account ${analytics.account_id}`,
         currency: account?.currency || "INR",
-        balance: analytics.current_balance,
+        balance: analytics.current_balance + (account?.balance || 0),
         percentageChange,
       };
     }) || [];
@@ -141,9 +141,9 @@ export function AccountsAnalyticsSidepanel({
                 <div
                   className={`text-xs ${
                     account.percentageChange > 0
-                      ? "text-green-600"
+                      ? "text-green-600 dark:text-green-300"
                       : account.percentageChange < 0
-                        ? "text-red-600"
+                        ? "text-red-600 dark:text-red-300"
                         : "text-muted-foreground"
                   }`}
                 >
