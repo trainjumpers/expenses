@@ -49,4 +49,7 @@ export const queryKeys = {
   rules: ["rules"] as const,
   rule: (id: number) => ["rules", id] as const,
   session: ["session"] as const,
+  analytics: {
+    accountAnalytics: ["analytics", "account"] as const,
+  },
 } as const;
