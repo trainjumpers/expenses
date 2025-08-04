@@ -171,7 +171,6 @@ export function RuleModal({
       conditions,
       actions,
     });
-    resetForm();
   };
 
   // Reset form state
@@ -207,6 +206,14 @@ export function RuleModal({
     setEffectiveFromDate(effectiveFromDate);
     setLocalError(null);
   };
+  
+  useEffect(() => {
+    if (isOpen) {
+      // Reset form when modal opens
+      resetForm();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen])
 
   return (
     <Dialog
