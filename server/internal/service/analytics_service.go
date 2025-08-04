@@ -113,13 +113,13 @@ func (s *AnalyticsService) GetNetworthTimeSeries(ctx context.Context, userId int
 		if dailyChange, exists := dailyChanges[dateStr]; exists {
 			runningBalance += dailyChange
 		}
-		
+
 		if runningBalance == totalAccountBalance {
 			// Txn has not changed yet, so we can skip adding this point
 			currentDate = currentDate.AddDate(0, 0, 1)
 			continue
 		}
-		
+
 		timeSeries = append(timeSeries, models.NetworthDataPoint{
 			Date:     dateStr,
 			Networth: runningBalance,
