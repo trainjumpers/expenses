@@ -1,4 +1,5 @@
 import { Skeleton } from "@/components/ui/skeleton";
+
 import { AccountsAnalyticsSidepanelSkeleton } from "./AccountsAnalyticsSidepanelSkeleton";
 
 export default function DashboardSkeleton() {

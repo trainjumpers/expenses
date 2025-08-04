@@ -13,7 +13,10 @@ export function AccountsAnalyticsSidepanelSkeleton() {
       </CardHeader>
       <CardContent className="space-y-1">
         {Array.from({ length: 6 }).map((_, index) => (
-          <div key={index} className="flex items-center justify-between py-3 px-2">
+          <div
+            key={index}
+            className="flex items-center justify-between py-3 px-2"
+          >
             <div className="flex items-center space-x-3">
               <Skeleton className="h-4 w-4" />
               <Skeleton className="h-4 w-20" />

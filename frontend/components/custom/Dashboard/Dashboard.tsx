@@ -1,4 +1,5 @@
 import { Navbar } from "@/components/custom/Navbar/Navbar";
+
 import { AccountsAnalyticsSidepanel } from "./AccountsAnalyticsSidepanel";
 
 export default function Dashboard({ children }: { children: React.ReactNode }) {

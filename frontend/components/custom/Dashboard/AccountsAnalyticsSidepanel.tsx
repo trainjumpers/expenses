@@ -1,12 +1,12 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { useAccountAnalytics } from "@/components/hooks/useAnalytics";
-import { useAccounts } from "@/components/hooks/useAccounts";
-import { Skeleton } from "@/components/ui/skeleton";
 import { AddAccountModal } from "@/components/custom/Modal/Accounts/AddAccountModal";
+import { useAccounts } from "@/components/hooks/useAccounts";
+import { useAccountAnalytics } from "@/components/hooks/useAnalytics";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Plus } from "lucide-react";
 import { useState } from "react";
 
 interface AccountData {
@@ -34,7 +34,10 @@ const formatPercentage = (percentage: number): string => {
   return `${sign}${percentage.toFixed(1)}%`;
 };
 
-const calculatePercentageChange = (current: number, previous: number): number => {
+const calculatePercentageChange = (
+  current: number,
+  previous: number
+): number => {
   if (previous === 0) return 0;
   return ((current - previous) / previous) * 100;
 };
@@ -42,29 +45,32 @@ const calculatePercentageChange = (current: number, previous: number): number =>
 export function AccountsAnalyticsSidepanel({
   className,
 }: AccountsAnalyticsSidepanelProps) {
-  const { data: analyticsData, isLoading: analyticsLoading } = useAccountAnalytics();
+  const { data: analyticsData, isLoading: analyticsLoading } =
+    useAccountAnalytics();
   const { data: accountsData, isLoading: accountsLoading } = useAccounts();
   const [isAddAccountModalOpen, setIsAddAccountModalOpen] = useState(false);
 
   const isLoading = analyticsLoading || accountsLoading;
 
   // Combine analytics data with account names
-  const accounts: AccountData[] = analyticsData?.account_analytics?.map((analytics) => {
-    const account = accountsData?.find((acc) => acc.id === analytics.account_id);
-    const percentageChange = calculatePercentageChange(
-      analytics.current_balance,
-      analytics.balance_one_month_ago
-    );
+  const accounts: AccountData[] =
+    analyticsData?.account_analytics?.map((analytics) => {
+      const account = accountsData?.find(
+        (acc) => acc.id === analytics.account_id
+      );
+      const percentageChange = calculatePercentageChange(
+        analytics.current_balance,
+        analytics.balance_one_month_ago
+      );
 
-    return {
-      id: analytics.account_id,
-      name: account?.name || `Account ${analytics.account_id}`,
-      currency: account?.currency || "INR",
-      balance: analytics.current_balance,
-      percentageChange,
-    };
-  }) || [];
-
+      return {
+        id: analytics.account_id,
+        name: account?.name || `Account ${analytics.account_id}`,
+        currency: account?.currency || "INR",
+        balance: analytics.current_balance,
+        percentageChange,
+      };
+    }) || [];
 
   if (isLoading) {
     return (
@@ -78,7 +84,10 @@ export function AccountsAnalyticsSidepanel({
         </CardHeader>
         <CardContent className="space-y-1">
           {Array.from({ length: 6 }).map((_, index) => (
-            <div key={index} className="flex items-center justify-between py-3 px-2">
+            <div
+              key={index}
+              className="flex items-center justify-between py-3 px-2"
+            >
               <div className="flex items-center space-x-3">
                 <Skeleton className="h-4 w-4" />
                 <Skeleton className="h-4 w-20" />
@@ -130,12 +139,13 @@ export function AccountsAnalyticsSidepanel({
                   {formatCurrency(account.balance, account.currency)}
                 </div>
                 <div
-                  className={`text-xs ${account.percentageChange > 0
-                    ? "text-green-600"
-                    : account.percentageChange < 0
-                      ? "text-red-600"
-                      : "text-muted-foreground"
-                    }`}
+                  className={`text-xs ${
+                    account.percentageChange > 0
+                      ? "text-green-600"
+                      : account.percentageChange < 0
+                        ? "text-red-600"
+                        : "text-muted-foreground"
+                  }`}
                 >
                   {formatPercentage(account.percentageChange)}
                 </div>
