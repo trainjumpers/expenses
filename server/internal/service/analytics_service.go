@@ -4,11 +4,13 @@ import (
 	"context"
 	"expenses/internal/models"
 	"expenses/internal/repository"
+	"fmt"
 	"time"
 )
 
 type AnalyticsServiceInterface interface {
 	GetAccountAnalytics(ctx context.Context, userId int64) (models.AccountAnalyticsListResponse, error)
+	GetNetworthTimeSeries(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) (models.NetworthTimeSeriesResponse, error)
 }
 
 type AnalyticsService struct {
@@ -63,5 +65,71 @@ func (s *AnalyticsService) GetAccountAnalytics(ctx context.Context, userId int64
 
 	return models.AccountAnalyticsListResponse{
 		AccountAnalytics: accountAnalytics,
+	}, nil
+}
+
+func (s *AnalyticsService) GetNetworthTimeSeries(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) (models.NetworthTimeSeriesResponse, error) {
+	accounts, err := s.accountRepo.ListAccounts(ctx, userId)
+
+	if err != nil {
+		return models.NetworthTimeSeriesResponse{}, err
+	}
+
+	// Get initial balance and daily changes from repository
+	initialBalance, dailyData, err := s.analyticsRepo.GetNetworthTimeSeries(ctx, userId, startDate, endDate)
+	totalAccountBalance := 0.0
+	if err != nil {
+		return models.NetworthTimeSeriesResponse{}, err
+	}
+
+	for _, account := range accounts {
+		initialBalance += account.Balance
+		totalAccountBalance += account.Balance
+	}
+
+	var timeSeries []models.NetworthDataPoint
+	runningBalance := initialBalance
+
+	// Create a map of dates with daily changes for easy lookup
+	dailyChanges := make(map[string]float64)
+	for _, data := range dailyData {
+		date, ok := data["date"].(string)
+		if !ok {
+			return models.NetworthTimeSeriesResponse{}, fmt.Errorf("invalid type for date in daily data")
+		}
+		dailyChange, ok := data["daily_change"].(float64)
+		if !ok {
+			return models.NetworthTimeSeriesResponse{}, fmt.Errorf("invalid type for daily_change in daily data")
+		}
+		dailyChanges[date] = dailyChange
+	}
+
+	// Generate time series for each day in the range
+	currentDate := startDate
+	for currentDate.Before(endDate.AddDate(0, 0, 1)) { // Include end date
+		dateStr := currentDate.Format("2006-01-02")
+
+		// Add daily change if it exists
+		if dailyChange, exists := dailyChanges[dateStr]; exists {
+			runningBalance += dailyChange
+		}
+
+		if runningBalance == totalAccountBalance {
+			// Txn has not changed yet, so we can skip adding this point
+			currentDate = currentDate.AddDate(0, 0, 1)
+			continue
+		}
+
+		timeSeries = append(timeSeries, models.NetworthDataPoint{
+			Date:     dateStr,
+			Networth: runningBalance,
+		})
+
+		currentDate = currentDate.AddDate(0, 0, 1)
+	}
+
+	return models.NetworthTimeSeriesResponse{
+		InitialBalance: initialBalance, // Initial balance for frontend
+		TimeSeries:     timeSeries,
 	}, nil
 }

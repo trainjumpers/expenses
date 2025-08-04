@@ -6,6 +6,7 @@ import { useAccountAnalytics } from "@/components/hooks/useAnalytics";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatCurrency, formatPercentage } from "@/lib/utils";
 import { Plus } from "lucide-react";
 import { useState } from "react";
 
@@ -20,19 +21,6 @@ interface AccountData {
 interface AccountsAnalyticsSidepanelProps {
   className?: string;
 }
-
-const formatCurrency = (amount: number, currency: string): string => {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: currency,
-    minimumFractionDigits: 2,
-  }).format(amount);
-};
-
-const formatPercentage = (percentage: number): string => {
-  const sign = percentage > 0 ? "+" : "";
-  return `${sign}${percentage.toFixed(1)}%`;
-};
 
 const calculatePercentageChange = (
   current: number,
@@ -67,7 +55,7 @@ export function AccountsAnalyticsSidepanel({
         id: analytics.account_id,
         name: account?.name || `Account ${analytics.account_id}`,
         currency: account?.currency || "INR",
-        balance: analytics.current_balance,
+        balance: analytics.current_balance + (account?.balance || 0),
         percentageChange,
       };
     }) || [];
@@ -141,9 +129,9 @@ export function AccountsAnalyticsSidepanel({
                 <div
                   className={`text-xs ${
                     account.percentageChange > 0
-                      ? "text-green-600"
+                      ? "text-green-600 dark:text-green-300"
                       : account.percentageChange < 0
-                        ? "text-red-600"
+                        ? "text-red-600 dark:text-red-300"
                         : "text-muted-foreground"
                   }`}
                 >

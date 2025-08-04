@@ -92,8 +92,5 @@ func (m *MockAccountRepository) ListAccounts(ctx context.Context, userId int64) 
 			result = append(result, acc)
 		}
 	}
-	if len(result) == 0 {
-		return nil, customErrors.NewAccountNotFoundError(nil)
-	}
 	return result, nil
 }

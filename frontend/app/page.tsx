@@ -1,6 +1,7 @@
 "use client";
 
 import Dashboard from "@/components/custom/Dashboard/Dashboard";
+import { NetWorth } from "@/components/custom/Dashboard/NetWorth";
 import { CommandCenterModal } from "@/components/custom/Modal/CommandCenterModal";
 import { InfoCenterModal } from "@/components/custom/Modal/InfoCenterModal";
 import { useUser } from "@/components/hooks/useUser";
@@ -32,6 +33,11 @@ export default function Page() {
             <Plus className="h-4 w-4 mr-2" /> New
           </Button>
         </div>
+      </div>
+
+      {/* Net Worth Chart */}
+      <div className="mb-8">
+        <NetWorth />
       </div>
 
       <CommandCenterModal

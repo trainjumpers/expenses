@@ -1,0 +1,163 @@
+"use client";
+
+import { useNetworthTimeSeries } from "@/components/hooks/useAnalytics";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  formatCurrency,
+  formatPercentage,
+  transformToChartData,
+} from "@/lib/utils";
+import { format, subDays } from "date-fns";
+import { useState } from "react";
+import { Line, LineChart, XAxis, YAxis } from "recharts";
+
+import { DateRangePicker } from "./DateRangePicker";
+
+interface ChartDataPoint {
+  date: string;
+  value: number;
+  formattedDate: string;
+}
+
+export function NetWorth() {
+  const [dateRange, setDateRange] = useState({
+    from: subDays(new Date(), 29),
+    to: new Date(),
+  });
+
+  const { data: networthData, isLoading } = useNetworthTimeSeries(
+    format(dateRange.from, "yyyy-MM-dd"),
+    format(dateRange.to, "yyyy-MM-dd")
+  );
+
+  // Transform data for chart
+  const chartData = networthData?.time_series
+    ? transformToChartData(networthData.time_series)
+    : [];
+
+  // Get current and initial values
+  const currentNetWorth = chartData[chartData.length - 1]?.value || 0;
+  const initialNetWorth = networthData?.initial_balance || 0;
+
+  // Calculate percentage change over the period
+  const percentageChange =
+    initialNetWorth === 0
+      ? 0
+      : ((currentNetWorth - initialNetWorth) / Math.abs(initialNetWorth)) * 100;
+
+  const absoluteChange = currentNetWorth - initialNetWorth;
+
+  const chartStartDate = chartData[0]?.formattedDate || "";
+  const chartEndDate = chartData[chartData.length - 1]?.formattedDate || "";
+
+  if (isLoading) {
+    return (
+      <Card className="w-full">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <Skeleton className="h-6 w-20" />
+            <Skeleton className="h-6 w-12" />
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div>
+              <Skeleton className="h-10 w-48 mb-2" />
+              <Skeleton className="h-5 w-64" />
+            </div>
+            <Skeleton className="h-32 w-full" />
+            <div className="flex justify-between">
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-4 w-20" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="w-full">
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-lg font-semibold text-muted-foreground">
+            Net Worth
+          </CardTitle>
+          <DateRangePicker onDateChange={setDateRange} />
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-6">
+          {/* Net Worth Value and Change */}
+          <div>
+            <div className="text-3xl font-bold mb-2">
+              {formatCurrency(currentNetWorth)}
+            </div>
+            <div
+              className={`text-sm ${percentageChange >= 0 ? "text-green-600 dark:text-green-300" : "text-red-600 dark:text-red-300"}`}
+            >
+              {formatCurrency(absoluteChange)} (
+              {formatPercentage(percentageChange)})
+            </div>
+          </div>
+
+          {/* Chart */}
+          <div className="h-32">
+            <ChartContainer
+              config={{
+                netWorth: {
+                  label: "Net Worth",
+                  color: "hsl(142, 76%, 36%)",
+                },
+              }}
+              className="h-full w-full"
+            >
+              <LineChart data={chartData}>
+                <XAxis
+                  dataKey="date"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={false}
+                />
+                <YAxis hide />
+                <ChartTooltip
+                  content={
+                    <ChartTooltipContent
+                      formatter={(value) => [
+                        formatCurrency(value as number),
+                        " Net Worth",
+                      ]}
+                      labelFormatter={(label, payload) => {
+                        const data = payload?.[0]?.payload as ChartDataPoint;
+                        return data?.formattedDate || label;
+                      }}
+                    />
+                  }
+                />
+                <Line
+                  type="monotone"
+                  dataKey="value"
+                  stroke="var(--color-netWorth)"
+                  strokeWidth={2}
+                  dot={false}
+                />
+              </LineChart>
+            </ChartContainer>
+          </div>
+
+          {/* Date Range */}
+          <div className="flex justify-between text-xs text-muted-foreground">
+            <span>{chartStartDate}</span>
+            <span>{chartEndDate}</span>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}

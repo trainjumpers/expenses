@@ -263,7 +263,7 @@ export default function TransactionPage() {
                 <DropdownMenuItem
                   onSelect={handleDeleteClick}
                   disabled={deleteTransactionMutation.status === "pending"}
-                  className="text-destructive focus:text-destructive"
+                  className="text-red-600 dark:text-red-300 focus:text-destructive"
                 >
                   <Trash className="mr-2 w-4 h-4" />
                   <span>Delete</span>

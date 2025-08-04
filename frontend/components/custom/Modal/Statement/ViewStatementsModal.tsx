@@ -94,7 +94,7 @@ export function ViewStatementsModal({
             </div>
           ) : error ? (
             <div className="flex items-center justify-center py-8">
-              <div className="text-sm text-red-600">
+              <div className="text-sm text-red-600 dark:text-red-300">
                 Failed to load statements
               </div>
             </div>
