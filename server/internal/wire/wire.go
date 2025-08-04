@@ -52,6 +52,7 @@ var ProviderSet = wire.NewSet(
 var controllerSet = wire.NewSet(
 	controller.NewAuthController,
 	controller.NewStatementController,
+	controller.NewAnalyticsController,
 )
 
 var repositorySet = wire.NewSet(
@@ -61,6 +62,7 @@ var repositorySet = wire.NewSet(
 	repository.NewTransactionRepository,
 	repository.NewRuleRepository,
 	repository.NewStatementRepository,
+	repository.NewAnalyticsRepository,
 )
 
 var serviceSet = wire.NewSet(
@@ -72,6 +74,7 @@ var serviceSet = wire.NewSet(
 	service.NewRuleService,
 	service.NewRuleEngineService,
 	service.NewStatementService,
+	service.NewAnalyticsService,
 )
 
 var validatorSet = wire.NewSet(

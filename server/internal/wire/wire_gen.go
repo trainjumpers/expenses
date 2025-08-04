@@ -44,7 +44,9 @@ func InitializeApplication() (*Provider, error) {
 	statementRepositoryInterface := repository.NewStatementRepository(databaseManager, configConfig)
 	statementValidator := validator.NewStatementValidator()
 	statementServiceInterface := service.NewStatementService(statementRepositoryInterface, accountServiceInterface, statementValidator, transactionServiceInterface)
-	engine := api.Init(configConfig, authServiceInterface, userServiceInterface, accountServiceInterface, categoryServiceInterface, transactionServiceInterface, ruleServiceInterface, ruleEngineServiceInterface, statementServiceInterface)
+	analyticsRepositoryInterface := repository.NewAnalyticsRepository(databaseManager, configConfig)
+	analyticsServiceInterface := service.NewAnalyticsService(analyticsRepositoryInterface)
+	engine := api.Init(configConfig, authServiceInterface, userServiceInterface, accountServiceInterface, categoryServiceInterface, transactionServiceInterface, ruleServiceInterface, ruleEngineServiceInterface, statementServiceInterface, analyticsServiceInterface)
 	provider := NewProvider(engine, databaseManager)
 	return provider, nil
 }
@@ -75,10 +77,10 @@ var ProviderSet = wire.NewSet(
 	validatorSet,
 )
 
-var controllerSet = wire.NewSet(controller.NewAuthController, controller.NewStatementController)
+var controllerSet = wire.NewSet(controller.NewAuthController, controller.NewStatementController, controller.NewAnalyticsController)
 
-var repositorySet = wire.NewSet(repository.NewUserRepository, repository.NewAccountRepository, repository.NewCategoryRepository, repository.NewTransactionRepository, repository.NewRuleRepository, repository.NewStatementRepository)
+var repositorySet = wire.NewSet(repository.NewUserRepository, repository.NewAccountRepository, repository.NewCategoryRepository, repository.NewTransactionRepository, repository.NewRuleRepository, repository.NewStatementRepository, repository.NewAnalyticsRepository)
 
-var serviceSet = wire.NewSet(service.NewUserService, service.NewAuthService, service.NewAccountService, service.NewCategoryService, service.NewTransactionService, service.NewRuleService, service.NewRuleEngineService, service.NewStatementService)
+var serviceSet = wire.NewSet(service.NewUserService, service.NewAuthService, service.NewAccountService, service.NewCategoryService, service.NewTransactionService, service.NewRuleService, service.NewRuleEngineService, service.NewStatementService, service.NewAnalyticsService)
 
 var validatorSet = wire.NewSet(validator.NewStatementValidator)

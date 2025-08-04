@@ -39,6 +39,7 @@ export async function apiRequest<T>(
         typeof errorMsg === "string" ? errorMsg : "Request failed"
       );
     }
+    console.log("Data", data);
     return (data as { data: T }).data;
   } catch (err) {
     if (

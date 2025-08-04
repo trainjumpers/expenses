@@ -21,6 +21,7 @@ func Init(
 	ruleService service.RuleServiceInterface,
 	ruleEngineService service.RuleEngineServiceInterface,
 	statementService service.StatementServiceInterface,
+	analyticsService service.AnalyticsServiceInterface,
 ) *gin.Engine {
 	router := gin.New()
 	if !cfg.IsTest() || cfg.LoggingLevel != "" {
@@ -56,6 +57,7 @@ func Init(
 	transactionController := controller.NewTransactionController(cfg, transactionService)
 	ruleController := controller.NewRuleController(cfg, ruleService, ruleEngineService)
 	statementController := controller.NewStatementController(cfg, statementService)
+	analyticsController := controller.NewAnalyticsController(cfg, analyticsService)
 
 	api := router.Group("/api/v1")
 	{
@@ -125,6 +127,20 @@ func Init(
 			rule.DELETE("/:ruleId", ruleController.DeleteRule)
 			rule.PATCH("/:ruleId/action/:id", ruleController.UpdateRuleAction)
 			rule.PATCH("/:ruleId/condition/:id", ruleController.UpdateRuleCondition)
+		}
+
+		// Analytics routes
+		analytics := base.Group("/analytics", middleware.ProtectedWithCreatedBy(cfg)...)
+		{
+			analytics.POST("/overview", analyticsController.GetSpendingOverview)
+			analytics.POST("/categories", analyticsController.GetCategorySpending)
+			analytics.POST("/trends", analyticsController.GetSpendingTrends)
+			analytics.POST("/accounts", analyticsController.GetAccountSpending)
+			analytics.POST("/top-transactions", analyticsController.GetTopTransactions)
+			analytics.POST("/monthly-comparison", analyticsController.GetMonthlyComparison)
+			analytics.POST("/recurring", analyticsController.GetRecurringTransactions)
+			analytics.POST("/summary", analyticsController.GetAnalyticsSummary)
+			analytics.POST("/insights", analyticsController.GetAnalyticsInsights)
 		}
 	}
 
