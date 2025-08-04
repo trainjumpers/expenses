@@ -11,6 +11,7 @@ import (
 
 type RuleEngineServiceInterface interface {
 	ExecuteRules(ctx context.Context, userId int64, request models.ExecuteRulesRequest) (models.ExecuteRulesResponse, error)
+	ExecuteRulesInBackground(ctx context.Context, userId int64, request models.ExecuteRulesRequest)
 }
 
 type ruleEngineService struct {
@@ -32,12 +33,12 @@ func NewRuleEngineService(
 }
 
 func (s *ruleEngineService) ExecuteRules(ctx context.Context, userId int64, request models.ExecuteRulesRequest) (models.ExecuteRulesResponse, error) {
-	go s.executeRulesInBackground(context.Background(), userId, request)
+	go s.ExecuteRulesInBackground(context.Background(), userId, request)
 	logger.Infof("Rule execution started in background for user %d", userId)
 	return models.ExecuteRulesResponse{}, nil
 }
 
-func (s *ruleEngineService) executeRulesInBackground(ctx context.Context, userId int64, request models.ExecuteRulesRequest) {
+func (s *ruleEngineService) ExecuteRulesInBackground(ctx context.Context, userId int64, request models.ExecuteRulesRequest) {
 	logger.Infof("Executing rules for user %d", userId)
 
 	// Step 1: Fetch all categories

@@ -148,18 +148,15 @@ func (s *StatementService) processStatementAsync(ctx context.Context, statementI
 	if failCount == len(parsedTxs) {
 		status = models.StatementStatusError
 	}
+	s.ruleEngineService.ExecuteRulesInBackground(ctx, userId, models.ExecuteRulesRequest{
+		TransactionIds: &txnIds,
+	})
 	_, err = s.repo.UpdateStatementStatus(ctx, statementId, models.UpdateStatementStatusInput{
 		Status:  status,
 		Message: &msg,
 	})
 	if err != nil {
 		logger.Errorf("Failed to update statement status for ID %d: %v", statementId, err)
-	}
-	_, err = s.ruleEngineService.ExecuteRules(ctx, userId, models.ExecuteRulesRequest{
-		TransactionIds: &txnIds,
-	})
-	if err != nil {
-		logger.Errorf("Failed to execute rules for transactions: %v", err)
 	}
 }
 
