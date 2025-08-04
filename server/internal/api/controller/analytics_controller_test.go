@@ -311,4 +311,107 @@ var _ = Describe("AnalyticsController", func() {
 			}
 		})
 	})
+
+	Describe("GetNetworthTimeSeries", func() {
+		It("should get networth time series for authenticated user", func() {
+			startDate := "2023-01-01"
+			endDate := "2023-01-31"
+			url := "/analytics/networth?start_date=" + startDate + "&end_date=" + endDate
+
+			resp, response := testUser1.MakeRequest(http.MethodGet, url, nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			Expect(response["message"]).To(Equal("Networth time series retrieved successfully"))
+			Expect(response["data"]).To(HaveKey("initial_balance"))
+			Expect(response["data"]).To(HaveKey("time_series"))
+
+			data := response["data"].(map[string]any)
+			initialBalance := data["initial_balance"]
+			Expect(initialBalance).To(BeAssignableToTypeOf(float64(0)))
+
+			timeSeries := data["time_series"].([]any)
+			Expect(timeSeries).NotTo(BeNil())
+
+			// Verify structure of time series data
+			if len(timeSeries) > 0 {
+				firstPoint := timeSeries[0].(map[string]any)
+				Expect(firstPoint).To(HaveKey("date"))
+				Expect(firstPoint).To(HaveKey("networth"))
+				Expect(firstPoint["date"]).To(BeAssignableToTypeOf(""))
+				Expect(firstPoint["networth"]).To(BeAssignableToTypeOf(float64(0)))
+			}
+		})
+
+		It("should return error for missing start_date parameter", func() {
+			url := "/analytics/networth?end_date=2023-01-31"
+			resp, response := testUser1.MakeRequest(http.MethodGet, url, nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+			Expect(response["message"]).To(Equal("start_date and end_date query parameters are required"))
+		})
+
+		It("should return error for missing end_date parameter", func() {
+			url := "/analytics/networth?start_date=2023-01-01"
+			resp, response := testUser1.MakeRequest(http.MethodGet, url, nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+			Expect(response["message"]).To(Equal("start_date and end_date query parameters are required"))
+		})
+
+		It("should return error for invalid start_date format", func() {
+			url := "/analytics/networth?start_date=invalid&end_date=2023-01-31"
+			resp, response := testUser1.MakeRequest(http.MethodGet, url, nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+			Expect(response["message"]).To(Equal("invalid start_date format, expected YYYY-MM-DD"))
+		})
+
+		It("should return error for invalid end_date format", func() {
+			url := "/analytics/networth?start_date=2023-01-01&end_date=invalid"
+			resp, response := testUser1.MakeRequest(http.MethodGet, url, nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+			Expect(response["message"]).To(Equal("invalid end_date format, expected YYYY-MM-DD"))
+		})
+
+		It("should return error when start_date is after end_date", func() {
+			url := "/analytics/networth?start_date=2023-01-31&end_date=2023-01-01"
+			resp, response := testUser1.MakeRequest(http.MethodGet, url, nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+			Expect(response["message"]).To(Equal("start_date cannot be after end_date"))
+		})
+
+		It("should return error for unauthenticated user", func() {
+			url := "/analytics/networth?start_date=2023-01-01&end_date=2023-01-31"
+			resp, response := testHelperUnauthenticated.MakeRequest(http.MethodGet, url, nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
+			Expect(response["message"]).To(Equal("please log in to continue"))
+		})
+
+		It("should handle valid date range", func() {
+			startDate := "2023-01-01"
+			endDate := "2023-01-07"
+			url := "/analytics/networth?start_date=" + startDate + "&end_date=" + endDate
+
+			resp, response := testUser1.MakeRequest(http.MethodGet, url, nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+			data := response["data"].(map[string]any)
+			timeSeries := data["time_series"].([]any)
+
+			// Should have data points for each day in the range (inclusive)
+			expectedDays := 7 // Jan 1-7 inclusive
+			Expect(len(timeSeries)).To(Equal(expectedDays))
+
+			// Verify dates are in correct order
+			if len(timeSeries) > 1 {
+				firstPoint := timeSeries[0].(map[string]any)
+				lastPoint := timeSeries[len(timeSeries)-1].(map[string]any)
+				Expect(firstPoint["date"]).To(Equal(startDate))
+				Expect(lastPoint["date"]).To(Equal(endDate))
+			}
+		})
+
+		Context("with malformed tokens", func() {
+			It("should return unauthorized for malformed tokens", func() {
+				url := "/analytics/networth?start_date=2023-01-01&end_date=2023-01-31"
+				checkMalformedTokens(testUser1, http.MethodGet, url, nil)
+			})
+		})
+	})
 })

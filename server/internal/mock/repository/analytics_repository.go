@@ -9,9 +9,15 @@ import (
 )
 
 type MockAnalyticsRepository struct {
-	balances  map[string]map[int64]float64               // key: userId_startDate_endDate, value: accountId -> balance
-	analytics map[int64][]models.AccountBalanceAnalytics // key: userId, value: analytics
-	mu        sync.RWMutex
+	balances     map[string]map[int64]float64               // key: userId_startDate_endDate, value: accountId -> balance
+	analytics    map[int64][]models.AccountBalanceAnalytics // key: userId, value: analytics
+	networthData map[string]networthMockData                // key: userId_startDate_endDate, value: networth data
+	mu           sync.RWMutex
+}
+
+type networthMockData struct {
+	initialBalance float64
+	timeSeries     []map[string]interface{}
 }
 
 func NewMockAnalyticsRepository() *MockAnalyticsRepository {
@@ -34,6 +40,26 @@ func (m *MockAnalyticsRepository) GetBalance(ctx context.Context, userId int64, 
 
 	// Return empty map if no data found
 	return make(map[int64]float64), nil
+}
+
+func (m *MockAnalyticsRepository) GetNetworthTimeSeries(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) (float64, []map[string]interface{}, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	// For mock, return some sample data
+	initialBalance := 1000.0
+	timeSeries := []map[string]interface{}{
+		{
+			"date":         startDate.Format("2006-01-02"),
+			"daily_change": 100.0,
+		},
+		{
+			"date":         startDate.AddDate(0, 0, 1).Format("2006-01-02"),
+			"daily_change": -50.0,
+		},
+	}
+
+	return initialBalance, timeSeries, nil
 }
 
 func (m *MockAnalyticsRepository) GetAccountAnalytics(ctx context.Context, userId int64) ([]models.AccountBalanceAnalytics, error) {

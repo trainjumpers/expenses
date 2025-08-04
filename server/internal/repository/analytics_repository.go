@@ -10,6 +10,7 @@ import (
 
 type AnalyticsRepositoryInterface interface {
 	GetBalance(ctx context.Context, userId int64, startDate *time.Time, endDate *time.Time) (map[int64]float64, error)
+	GetNetworthTimeSeries(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) (float64, []map[string]interface{}, error)
 }
 
 type AnalyticsRepository struct {
@@ -37,7 +38,7 @@ func (r *AnalyticsRepository) GetBalance(ctx context.Context, userId int64, star
 	query := fmt.Sprintf(`
 		SELECT 
 			account_id,
-			COALESCE(SUM(amount), 0) as balance
+			COALESCE(SUM(amount), 0) * -1 as balance
 		FROM %s.%s
 		WHERE created_by = $1 
 			AND deleted_at IS NULL
@@ -63,4 +64,61 @@ func (r *AnalyticsRepository) GetBalance(ctx context.Context, userId int64, star
 	}
 
 	return balances, nil
+}
+
+// GetNetworthTimeSeries calculates the initial balance and daily networth changes
+// Returns initial balance (sum of all transactions before startDate) and daily aggregated data
+func (r *AnalyticsRepository) GetNetworthTimeSeries(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) (float64, []map[string]interface{}, error) {
+	// First, get the initial balance (sum of all transactions before startDate)
+	initialBalanceQuery := fmt.Sprintf(`
+		SELECT COALESCE(SUM(amount), 0) as initial_balance
+		FROM %s.%s
+		WHERE created_by = $1 
+			AND deleted_at IS NULL
+			AND date < $2`,
+		r.schema, r.txnTableName)
+
+	var initialBalance float64
+	row := r.db.FetchOne(ctx, initialBalanceQuery, userId, startDate)
+	err := row.Scan(&initialBalance)
+	if err != nil {
+		return 0, nil, err
+	}
+
+	// Get daily transaction sums within the date range
+	timeSeriesQuery := fmt.Sprintf(`
+		SELECT 
+			date,
+			COALESCE(SUM(amount), 0) as daily_change
+		FROM %s.%s
+		WHERE created_by = $1 
+			AND deleted_at IS NULL
+			AND date >= $2
+			AND date <= $3
+		GROUP BY date
+		ORDER BY date`,
+		r.schema, r.txnTableName)
+
+	rows, err := r.db.FetchAll(ctx, timeSeriesQuery, userId, startDate, endDate)
+	if err != nil {
+		return initialBalance, nil, err
+	}
+	defer rows.Close()
+
+	var timeSeries []map[string]interface{}
+	for rows.Next() {
+		var date time.Time
+		var dailyChange float64
+		err := rows.Scan(&date, &dailyChange)
+		if err != nil {
+			return initialBalance, nil, err
+		}
+
+		timeSeries = append(timeSeries, map[string]interface{}{
+			"date":         date.Format("2006-01-02"),
+			"daily_change": dailyChange,
+		})
+	}
+
+	return initialBalance, timeSeries, nil
 }

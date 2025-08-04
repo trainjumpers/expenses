@@ -9,6 +9,7 @@ import (
 
 type AnalyticsServiceInterface interface {
 	GetAccountAnalytics(ctx context.Context, userId int64) (models.AccountAnalyticsListResponse, error)
+	GetNetworthTimeSeries(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) (models.NetworthTimeSeriesResponse, error)
 }
 
 type AnalyticsService struct {
@@ -63,5 +64,50 @@ func (s *AnalyticsService) GetAccountAnalytics(ctx context.Context, userId int64
 
 	return models.AccountAnalyticsListResponse{
 		AccountAnalytics: accountAnalytics,
+	}, nil
+}
+
+func (s *AnalyticsService) GetNetworthTimeSeries(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) (models.NetworthTimeSeriesResponse, error) {
+	// Get initial balance and daily changes from repository
+	initialBalance, dailyData, err := s.analyticsRepo.GetNetworthTimeSeries(ctx, userId, startDate, endDate)
+	if err != nil {
+		return models.NetworthTimeSeriesResponse{}, err
+	}
+
+	// Build time series with cumulative networth
+	// Note: We negate values because we store debits as positive and credits as negative
+	// but frontend expects the opposite
+	var timeSeries []models.NetworthDataPoint
+	runningBalance := -initialBalance // Negate initial balance
+
+	// Create a map of dates with daily changes for easy lookup
+	dailyChanges := make(map[string]float64)
+	for _, data := range dailyData {
+		date := data["date"].(string)
+		dailyChange := data["daily_change"].(float64)
+		dailyChanges[date] = -dailyChange // Negate daily change
+	}
+
+	// Generate time series for each day in the range
+	currentDate := startDate
+	for currentDate.Before(endDate.AddDate(0, 0, 1)) { // Include end date
+		dateStr := currentDate.Format("2006-01-02")
+
+		// Add daily change if it exists
+		if dailyChange, exists := dailyChanges[dateStr]; exists {
+			runningBalance += dailyChange
+		}
+
+		timeSeries = append(timeSeries, models.NetworthDataPoint{
+			Date:     dateStr,
+			Networth: runningBalance,
+		})
+
+		currentDate = currentDate.AddDate(0, 0, 1)
+	}
+
+	return models.NetworthTimeSeriesResponse{
+		InitialBalance: -initialBalance, // Negate for frontend
+		TimeSeries:     timeSeries,
 	}, nil
 }
