@@ -32,7 +32,6 @@ interface ChartDataPoint {
 export const transformToChartData = (
   timeSeries: Array<{ date: string; networth: number }>
 ): ChartDataPoint[] => {
-  timeSeries.filter((point) => point.networth !== 0);
   return timeSeries.map((point) => ({
     date: format(new Date(point.date), "MMM dd"),
     value: point.networth,
