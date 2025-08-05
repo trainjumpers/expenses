@@ -2,21 +2,43 @@
 
 import Dashboard from "@/components/custom/Dashboard/Dashboard";
 import { NetWorth } from "@/components/custom/Dashboard/NetWorth";
+import { CategoryAnalytics } from "@/components/custom/CategoryAnalytics/CategoryAnalytics";
+import { AccountAnalytics } from "@/components/custom/AccountAnalytics/AccountAnalytics";
+import { AnalyticsSkeleton } from "@/components/custom/Dashboard/AnalyticsSkeleton";
 import { CommandCenterModal } from "@/components/custom/Modal/CommandCenterModal";
 import { InfoCenterModal } from "@/components/custom/Modal/InfoCenterModal";
 import { useUser } from "@/components/hooks/useUser";
+import { useCategoryAnalytics } from "@/components/hooks/useCategoryAnalytics";
+import { useAccountAnalytics } from "@/components/hooks/useAnalytics";
 import { Button } from "@/components/ui/button";
 import { Eye, Plus } from "lucide-react";
 import { useState } from "react";
+import { format } from "date-fns";
 
 export default function Page() {
   const { data: user } = useUser();
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
 
+  // Date range for category analytics (last month to now)
+  const [dateRange, setDateRange] = useState({
+    from: new Date(new Date().setMonth(new Date().getMonth() - 1)),
+    to: new Date(),
+  });
+
+  const { data: categoryData, isLoading: categoryLoading, isError: categoryError } = useCategoryAnalytics(
+    format(dateRange.from, "yyyy-MM-dd"),
+    format(dateRange.to, "yyyy-MM-dd")
+  );
+
+  const { data: accountData, isLoading: accountLoading, isError: accountError } = useAccountAnalytics();
+
+  const isLoading = categoryLoading || accountLoading;
+  const isError = categoryError || accountError;
+
   return (
     <Dashboard>
-      <div className="flex items-center justify-between px-8 py-8 bg-background rounded-xl mb-8">
+      <div className="flex items-center justify-between px-8 py-8 bg-background rounded-xl">
         <div>
           <h1 className="text-4xl font-bold text-foreground mb-2">
             Welcome back, {user?.name?.split(" ")[0] || "Human"}
@@ -37,7 +59,32 @@ export default function Page() {
 
       {/* Net Worth Chart */}
       <div className="mb-8">
-        <NetWorth />
+        <NetWorth dateRange={dateRange} onDateRangeChange={setDateRange} />
+      </div>
+
+      {/* Analytics Section */}
+      <div className="mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {isLoading ? (
+            <>
+              <AnalyticsSkeleton />
+              <AnalyticsSkeleton />
+            </>
+          ) : isError ? (
+            <div className="col-span-2 text-center py-8">
+              <p className="text-muted-foreground">Error loading analytics data.</p>
+            </div>
+          ) : (
+            <>
+              {categoryData && categoryData.category_transactions && (
+                <CategoryAnalytics data={categoryData.category_transactions} />
+              )}
+              {accountData && accountData.account_analytics && (
+                <AccountAnalytics data={accountData.account_analytics} />
+              )}
+            </>
+          )}
+        </div>
       </div>
 
       <CommandCenterModal

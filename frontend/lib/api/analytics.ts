@@ -2,6 +2,7 @@ import { apiRequest } from "@/lib/api/request";
 import { API_BASE_URL } from "@/lib/constants/api";
 import {
   AccountAnalyticsListResponse,
+  CategoryAnalyticsResponse,
   NetworthTimeSeriesResponse,
 } from "@/lib/models/analytics";
 
@@ -39,5 +40,27 @@ export async function getNetworthTimeSeries(
     "analytics",
     [],
     "Failed to fetch networth time series"
+  );
+}
+
+export async function getCategoryAnalytics(
+  startDate: string,
+  endDate: string,
+  signal?: AbortSignal
+): Promise<CategoryAnalyticsResponse> {
+  const params = new URLSearchParams({
+    start_date: startDate,
+    end_date: endDate,
+  });
+
+  return apiRequest<CategoryAnalyticsResponse>(
+    `${API_BASE_URL}/analytics/category?${params.toString()}`,
+    {
+      credentials: "include",
+      signal,
+    },
+    "analytics",
+    [],
+    "Failed to fetch category analytics"
   );
 }

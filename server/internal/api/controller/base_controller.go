@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
@@ -191,4 +192,34 @@ func (b *BaseController) setAuthCookie(ctx *gin.Context, name, value string, max
 	// Gin's SetCookie does not support SameSite, so use Header directly
 	h := cookie.String()
 	ctx.Writer.Header().Add("Set-Cookie", h)
+}
+
+// ParseDateRange parses start and end date from query parameters
+func (b *BaseController) ParseDateRange(ctx *gin.Context) (time.Time, time.Time, error) {
+	startDateStr := ctx.Query("start_date")
+	endDateStr := ctx.Query("end_date")
+
+	if startDateStr == "" || endDateStr == "" {
+		b.SendError(ctx, http.StatusBadRequest, "start_date and end_date query parameters are required")
+		return time.Time{}, time.Time{}, errors.New("date range not provided")
+	}
+
+	startDate, err := time.Parse("2006-01-02", startDateStr)
+	if err != nil {
+		b.SendError(ctx, http.StatusBadRequest, "invalid start_date format, expected YYYY-MM-DD")
+		return time.Time{}, time.Time{}, err
+	}
+
+	endDate, err := time.Parse("2006-01-02", endDateStr)
+	if err != nil {
+		b.SendError(ctx, http.StatusBadRequest, "invalid end_date format, expected YYYY-MM-DD")
+		return time.Time{}, time.Time{}, err
+	}
+
+	if startDate.After(endDate) {
+		b.SendError(ctx, http.StatusBadRequest, "start_date cannot be after end_date")
+		return time.Time{}, time.Time{}, errors.New("start_date cannot be after end_date")
+	}
+
+	return startDate, endDate, nil
 }

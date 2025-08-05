@@ -11,6 +11,7 @@ import (
 type AnalyticsServiceInterface interface {
 	GetAccountAnalytics(ctx context.Context, userId int64) (models.AccountAnalyticsListResponse, error)
 	GetNetworthTimeSeries(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) (models.NetworthTimeSeriesResponse, error)
+	GetCategoryAnalytics(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) (*models.CategoryAnalyticsResponse, error)
 }
 
 type AnalyticsService struct {
@@ -76,7 +77,7 @@ func (s *AnalyticsService) GetNetworthTimeSeries(ctx context.Context, userId int
 	}
 
 	// Get initial balance and daily changes from repository
-	initialBalance, dailyData, err := s.analyticsRepo.GetNetworthTimeSeries(ctx, userId, startDate, endDate)
+	initialBalance, totalIncome, totalExpenses, dailyData, err := s.analyticsRepo.GetNetworthTimeSeries(ctx, userId, startDate, endDate)
 	totalAccountBalance := 0.0
 	if err != nil {
 		return models.NetworthTimeSeriesResponse{}, err
@@ -130,6 +131,12 @@ func (s *AnalyticsService) GetNetworthTimeSeries(ctx context.Context, userId int
 
 	return models.NetworthTimeSeriesResponse{
 		InitialBalance: initialBalance, // Initial balance for frontend
+		TotalIncome:    totalIncome,
+		TotalExpenses:  totalExpenses,
 		TimeSeries:     timeSeries,
 	}, nil
+}
+
+func (s *AnalyticsService) GetCategoryAnalytics(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) (*models.CategoryAnalyticsResponse, error) {
+	return s.analyticsRepo.GetCategoryAnalytics(ctx, userId, startDate, endDate)
 }

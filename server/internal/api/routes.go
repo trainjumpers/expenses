@@ -136,6 +136,7 @@ func Init(
 		{
 			analytics.GET("/account", analyticsController.GetAccountAnalytics)
 			analytics.GET("/networth", analyticsController.GetNetworthTimeSeries)
+			analytics.GET("/category", analyticsController.GetCategoryAnalytics)
 		}
 	}
 
