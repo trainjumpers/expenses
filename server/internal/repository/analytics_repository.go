@@ -152,16 +152,17 @@ func (r *AnalyticsRepository) GetCategoryAnalytics(ctx context.Context, userId i
                 AND t.date <= $3
         )
         SELECT
-            c.id AS category_id,
-            c.name AS category_name,
+            COALESCE(c.id, -1) AS category_id,
+            COALESCE(c.name, 'Uncategorized') AS category_name,
             COALESCE(SUM(ut.amount), 0) AS total_amount
         FROM
             user_transactions ut
         LEFT JOIN
-            %s.categories c ON ut.category_id = c.id
-		WHERE c.created_by = $1
+            %s.categories c ON ut.category_id = c.id AND c.created_by = $1
         GROUP BY
-            c.id, c.name;
+            c.id, c.name
+        HAVING
+            SUM(ut.amount) != 0;
     `, r.schema, r.schema, r.schema)
 
 	rows, err := r.db.FetchAll(ctx, query, userId, startDate, endDate)

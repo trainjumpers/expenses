@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/table";
 import { CategoryAnalyticsResponse } from "@/lib/models/analytics";
 import { formatCurrency } from "@/lib/utils";
-import { ChevronRight, Plus, Tag } from "lucide-react";
+import { ChevronRight, Plus, Tag, FileQuestion } from "lucide-react";
 import { useState } from "react";
 
 interface CategoryAnalyticsProps {
@@ -96,10 +96,12 @@ export function CategoryAnalytics({ data }: CategoryAnalyticsProps) {
       const absoluteAmount = Math.abs(category.total_amount);
       const percentage =
         totalAmount > 0 ? (absoluteAmount / totalAmount) * 100 : 0;
+      const isUncategorized = category.category_id === -1;
       return {
         ...category,
         percentage,
-        color: categoryColors[index % categoryColors.length],
+        color: isUncategorized ? "bg-gray-400" : categoryColors[index % categoryColors.length],
+        isUncategorized,
       };
     })
     .sort((a, b) => b.percentage - a.percentage); // Sort by percentage descending
@@ -150,7 +152,11 @@ export function CategoryAnalytics({ data }: CategoryAnalyticsProps) {
                   key={category.category_id}
                   className="flex items-center gap-2"
                 >
-                  <div className={`w-3 h-3 rounded-full ${category.color}`} />
+                  {category.isUncategorized ? (
+                    <FileQuestion className="w-3 h-3 text-gray-500" />
+                  ) : (
+                    <div className={`w-3 h-3 rounded-full ${category.color}`} />
+                  )}
                   <span className="text-muted-foreground">
                     {category.category_name}:
                   </span>
@@ -199,9 +205,14 @@ export function CategoryAnalytics({ data }: CategoryAnalyticsProps) {
                       </button>
                     </TableCell>
                     <TableCell>
-                      <span className="font-medium">
-                        {category.category_name}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        {category.isUncategorized && (
+                          <FileQuestion className="w-4 h-4 text-gray-500" />
+                        )}
+                        <span className="font-medium">
+                          {category.category_name}
+                        </span>
+                      </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">

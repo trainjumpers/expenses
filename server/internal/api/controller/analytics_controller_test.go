@@ -668,6 +668,39 @@ var _ = Describe("AnalyticsController", func() {
 			Expect(categoryTransactions).NotTo(BeNil())
 		})
 
+		It("should include uncategorized transactions in analytics", func() {
+			// Use a date range that includes transaction 11 (Cash Withdrawal) which has no category
+			startDate := "2024-01-01"
+			endDate := "2024-01-31"
+			url := "/analytics/category?start_date=" + startDate + "&end_date=" + endDate
+
+			resp, response := testUser1.MakeRequest(http.MethodGet, url, nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+			data := response["data"].(map[string]any)
+			categoryTransactions := data["category_transactions"].([]any)
+			Expect(categoryTransactions).NotTo(BeNil())
+
+			// Look for uncategorized transactions
+			var foundUncategorized bool
+			for _, transaction := range categoryTransactions {
+				txn := transaction.(map[string]any)
+				categoryID := txn["category_id"].(float64)
+				categoryName := txn["category_name"].(string)
+				totalAmount := txn["total_amount"].(float64)
+
+				if categoryID == -1 && categoryName == "Uncategorized" {
+					foundUncategorized = true
+					// Verify that uncategorized has the correct amount (transaction 11: Cash Withdrawal = 100.00)
+					Expect(totalAmount).To(Equal(100.0))
+					break
+				}
+			}
+
+			// Ensure we found the uncategorized transactions
+			Expect(foundUncategorized).To(BeTrue(), "Expected to find uncategorized transactions")
+		})
+
 		It("should handle missing both query parameters", func() {
 			url := "/analytics/category"
 			resp, response := testUser1.MakeRequest(http.MethodGet, url, nil)
