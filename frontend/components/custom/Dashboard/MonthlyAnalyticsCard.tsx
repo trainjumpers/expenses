@@ -4,7 +4,12 @@ import { useMonthlyAnalytics } from "@/components/hooks/useAnalytics";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency } from "@/lib/utils";
-import { CalendarIcon, TrendingDownIcon, TrendingUpIcon, ArrowRightLeftIcon } from "lucide-react";
+import {
+  ArrowRightLeftIcon,
+  CalendarIcon,
+  TrendingDownIcon,
+  TrendingUpIcon,
+} from "lucide-react";
 import { useRef, useState } from "react";
 
 interface MonthlyData {
