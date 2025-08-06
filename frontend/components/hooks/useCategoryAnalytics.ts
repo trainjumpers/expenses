@@ -1,5 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
 import { getCategoryAnalytics } from "@/lib/api/analytics";
+import { useQuery } from "@tanstack/react-query";
 
 export function useCategoryAnalytics(startDate: string, endDate: string) {
   return useQuery({

@@ -69,4 +69,4 @@ export function IncomeExpenseSummary({ dateRange }: IncomeExpenseSummaryProps) {
       </CardContent>
     </Card>
   );
-} 
+}

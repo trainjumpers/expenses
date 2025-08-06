@@ -1,19 +1,19 @@
 "use client";
 
+import { AccountAnalytics } from "@/components/custom/AccountAnalytics/AccountAnalytics";
+import { CategoryAnalytics } from "@/components/custom/CategoryAnalytics/CategoryAnalytics";
+import { AnalyticsSkeleton } from "@/components/custom/Dashboard/AnalyticsSkeleton";
 import Dashboard from "@/components/custom/Dashboard/Dashboard";
 import { NetWorth } from "@/components/custom/Dashboard/NetWorth";
-import { CategoryAnalytics } from "@/components/custom/CategoryAnalytics/CategoryAnalytics";
-import { AccountAnalytics } from "@/components/custom/AccountAnalytics/AccountAnalytics";
-import { AnalyticsSkeleton } from "@/components/custom/Dashboard/AnalyticsSkeleton";
 import { CommandCenterModal } from "@/components/custom/Modal/CommandCenterModal";
 import { InfoCenterModal } from "@/components/custom/Modal/InfoCenterModal";
-import { useUser } from "@/components/hooks/useUser";
-import { useCategoryAnalytics } from "@/components/hooks/useCategoryAnalytics";
 import { useAccountAnalytics } from "@/components/hooks/useAnalytics";
+import { useCategoryAnalytics } from "@/components/hooks/useCategoryAnalytics";
+import { useUser } from "@/components/hooks/useUser";
 import { Button } from "@/components/ui/button";
+import { format } from "date-fns";
 import { Eye, Plus } from "lucide-react";
 import { useState } from "react";
-import { format } from "date-fns";
 
 export default function Page() {
   const { data: user } = useUser();
@@ -26,12 +26,20 @@ export default function Page() {
     to: new Date(),
   });
 
-  const { data: categoryData, isLoading: categoryLoading, isError: categoryError } = useCategoryAnalytics(
+  const {
+    data: categoryData,
+    isLoading: categoryLoading,
+    isError: categoryError,
+  } = useCategoryAnalytics(
     format(dateRange.from, "yyyy-MM-dd"),
     format(dateRange.to, "yyyy-MM-dd")
   );
 
-  const { data: accountData, isLoading: accountLoading, isError: accountError } = useAccountAnalytics();
+  const {
+    data: accountData,
+    isLoading: accountLoading,
+    isError: accountError,
+  } = useAccountAnalytics();
 
   const isLoading = categoryLoading || accountLoading;
   const isError = categoryError || accountError;
@@ -72,7 +80,9 @@ export default function Page() {
             </>
           ) : isError ? (
             <div className="col-span-2 text-center py-8">
-              <p className="text-muted-foreground">Error loading analytics data.</p>
+              <p className="text-muted-foreground">
+                Error loading analytics data.
+              </p>
             </div>
           ) : (
             <>

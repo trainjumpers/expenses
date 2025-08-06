@@ -1,10 +1,17 @@
+import { useAccounts } from "@/components/hooks/useAccounts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { AccountAnalyticsListResponse } from "@/lib/models/analytics";
 import { formatCurrency } from "@/lib/utils";
 import { ChevronRight } from "lucide-react";
 import { useState } from "react";
-import { useAccounts } from "@/components/hooks/useAccounts";
 
 interface AccountAnalyticsProps {
   data: AccountAnalyticsListResponse["account_analytics"];
@@ -13,7 +20,7 @@ interface AccountAnalyticsProps {
 // Color palette for different accounts
 const accountColors = [
   "bg-purple-500",
-  "bg-blue-600", 
+  "bg-blue-600",
   "bg-gray-600",
   "bg-blue-400",
   "bg-pink-400",
@@ -21,11 +28,13 @@ const accountColors = [
   "bg-orange-500",
   "bg-indigo-500",
   "bg-teal-500",
-  "bg-red-500"
+  "bg-red-500",
 ];
 
 export function AccountAnalytics({ data }: AccountAnalyticsProps) {
-  const [expandedAccounts, setExpandedAccounts] = useState<Set<number>>(new Set());
+  const [expandedAccounts, setExpandedAccounts] = useState<Set<number>>(
+    new Set()
+  );
   const { data: accountsData } = useAccounts();
 
   if (!data || data.length === 0) {
@@ -37,7 +46,9 @@ export function AccountAnalytics({ data }: AccountAnalyticsProps) {
         <CardContent>
           <div className="text-center py-8">
             <p className="text-muted-foreground">No account data found.</p>
-            <p className="text-muted-foreground">Please add some accounts to see analytics.</p>
+            <p className="text-muted-foreground">
+              Please add some accounts to see analytics.
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -45,22 +56,30 @@ export function AccountAnalytics({ data }: AccountAnalyticsProps) {
   }
 
   // Calculate total balance
-  const totalBalance = data.reduce((sum, account) => sum + Math.abs(account.current_balance), 0);
+  const totalBalance = data.reduce(
+    (sum, account) => sum + Math.abs(account.current_balance),
+    0
+  );
   // Calculate percentages and prepare data with account names
-  const accountsWithPercentages = data.map((account, index) => {
-    const absoluteBalance = Math.abs(account.current_balance);
-    const percentage = totalBalance > 0 ? (absoluteBalance / totalBalance) * 100 : 0;
-    
-    // Find the account name from accounts data
-    const accountInfo = accountsData?.find(acc => acc.id === account.account_id);
-    const accountName = accountInfo?.name || `Account ${account.account_id}`;
-    return {
-      ...account,
-      accountName,
-      percentage,
-      color: accountColors[index % accountColors.length]
-    };
-  }).sort((a, b) => b.percentage - a.percentage); // Sort by percentage descending
+  const accountsWithPercentages = data
+    .map((account, index) => {
+      const absoluteBalance = Math.abs(account.current_balance);
+      const percentage =
+        totalBalance > 0 ? (absoluteBalance / totalBalance) * 100 : 0;
+
+      // Find the account name from accounts data
+      const accountInfo = accountsData?.find(
+        (acc) => acc.id === account.account_id
+      );
+      const accountName = accountInfo?.name || `Account ${account.account_id}`;
+      return {
+        ...account,
+        accountName,
+        percentage,
+        color: accountColors[index % accountColors.length],
+      };
+    })
+    .sort((a, b) => b.percentage - a.percentage); // Sort by percentage descending
 
   const toggleAccountExpansion = (accountId: number) => {
     const newExpanded = new Set(expandedAccounts);
@@ -93,14 +112,18 @@ export function AccountAnalytics({ data }: AccountAnalyticsProps) {
               />
             ))}
           </div>
-          
+
           {/* Legend */}
           <div className="flex flex-wrap gap-4 text-sm">
             {accountsWithPercentages.map((account) => (
               <div key={account.account_id} className="flex items-center gap-2">
                 <div className={`w-3 h-3 rounded-full ${account.color}`} />
-                <span className="text-muted-foreground">{account.accountName}:</span>
-                <span className="font-medium">{account.percentage.toFixed(1)}%</span>
+                <span className="text-muted-foreground">
+                  {account.accountName}:
+                </span>
+                <span className="font-medium">
+                  {account.percentage.toFixed(1)}%
+                </span>
               </div>
             ))}
           </div>
@@ -112,9 +135,15 @@ export function AccountAnalytics({ data }: AccountAnalyticsProps) {
             <TableHeader>
               <TableRow className="border-b">
                 <TableHead className="w-12"></TableHead>
-                <TableHead className="text-left text-sm font-medium text-muted-foreground">NAME</TableHead>
-                <TableHead className="text-left text-sm font-medium text-muted-foreground">WEIGHT</TableHead>
-                <TableHead className="text-right text-sm font-medium text-muted-foreground">VALUE</TableHead>
+                <TableHead className="text-left text-sm font-medium text-muted-foreground">
+                  NAME
+                </TableHead>
+                <TableHead className="text-left text-sm font-medium text-muted-foreground">
+                  WEIGHT
+                </TableHead>
+                <TableHead className="text-right text-sm font-medium text-muted-foreground">
+                  VALUE
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -125,9 +154,11 @@ export function AccountAnalytics({ data }: AccountAnalyticsProps) {
                       onClick={() => toggleAccountExpansion(account.account_id)}
                       className="p-1 hover:bg-muted rounded transition-colors"
                     >
-                      <ChevronRight 
+                      <ChevronRight
                         className={`h-4 w-4 transition-transform ${
-                          expandedAccounts.has(account.account_id) ? 'rotate-90' : ''
+                          expandedAccounts.has(account.account_id)
+                            ? "rotate-90"
+                            : ""
                         }`}
                       />
                     </button>
@@ -142,21 +173,25 @@ export function AccountAnalytics({ data }: AccountAnalyticsProps) {
                           <div
                             key={i}
                             className={`flex-1 h-full ${
-                              i < Math.floor((account.percentage / 20)) 
-                                ? account.color 
-                                : 'bg-gray-200'
+                              i < Math.floor(account.percentage / 20)
+                                ? account.color
+                                : "bg-gray-200"
                             }`}
                             style={{
-                              marginRight: i < 4 ? '1px' : '0'
+                              marginRight: i < 4 ? "1px" : "0",
                             }}
                           />
                         ))}
                       </div>
-                      <span className="text-sm">{account.percentage.toFixed(2)}%</span>
+                      <span className="text-sm">
+                        {account.percentage.toFixed(2)}%
+                      </span>
                     </div>
                   </TableCell>
                   <TableCell className="text-right">
-                    <span className="font-medium">{formatCurrency(Math.abs(account.current_balance))}</span>
+                    <span className="font-medium">
+                      {formatCurrency(Math.abs(account.current_balance))}
+                    </span>
                   </TableCell>
                 </TableRow>
               ))}
@@ -166,4 +201,4 @@ export function AccountAnalytics({ data }: AccountAnalyticsProps) {
       </CardContent>
     </Card>
   );
-} 
+}
