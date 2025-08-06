@@ -60,6 +60,7 @@ export function RuleActions({
                 Set transaction description
               </option>
               <option value="set_amount">Set transaction amount</option>
+              <option value="set_transfer">Create transfer to account</option>
             </select>
             <span className="text-sm font-medium text-muted-foreground px-2">
               TO
