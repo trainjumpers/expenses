@@ -14,8 +14,7 @@ import {
   formatPercentage,
   transformToChartData,
 } from "@/lib/utils";
-import { format, subDays } from "date-fns";
-import { useState } from "react";
+import { format } from "date-fns";
 import { Line, LineChart, XAxis, YAxis } from "recharts";
 
 interface ChartDataPoint {
@@ -24,12 +23,15 @@ interface ChartDataPoint {
   formattedDate: string;
 }
 
-export function NetWorth() {
-  const [dateRange, setDateRange] = useState({
-    from: subDays(new Date(), 29),
-    to: new Date(),
-  });
+interface NetWorthProps {
+  dateRange: {
+    from: Date;
+    to: Date;
+  };
+  onDateRangeChange: (dateRange: { from: Date; to: Date }) => void;
+}
 
+export function NetWorth({ dateRange, onDateRangeChange }: NetWorthProps) {
   const { data: networthData, isLoading } = useNetworthTimeSeries(
     format(dateRange.from, "yyyy-MM-dd"),
     format(dateRange.to, "yyyy-MM-dd")
@@ -90,7 +92,7 @@ export function NetWorth() {
           </CardTitle>
           <DateRangePicker
             onUpdate={(values) =>
-              setDateRange({
+              onDateRangeChange({
                 from: values.range.from || dateRange.from,
                 to: values.range.to || dateRange.to,
               })

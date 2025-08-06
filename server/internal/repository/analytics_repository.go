@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"expenses/internal/config"
+	"expenses/internal/models"
 	database "expenses/pkg/database/manager"
 	"fmt"
 	"time"
@@ -10,7 +11,8 @@ import (
 
 type AnalyticsRepositoryInterface interface {
 	GetBalance(ctx context.Context, userId int64, startDate *time.Time, endDate *time.Time) (map[int64]float64, error)
-	GetNetworthTimeSeries(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) (float64, []map[string]any, error)
+	GetNetworthTimeSeries(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) (float64, float64, float64, []map[string]any, error)
+	GetCategoryAnalytics(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) (*models.CategoryAnalyticsResponse, error)
 }
 
 type AnalyticsRepository struct {
@@ -68,12 +70,12 @@ func (r *AnalyticsRepository) GetBalance(ctx context.Context, userId int64, star
 
 // GetNetworthTimeSeries calculates the initial balance and daily networth changes
 // Returns initial balance (sum of all transactions before startDate) and daily aggregated data
-func (r *AnalyticsRepository) GetNetworthTimeSeries(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) (float64, []map[string]any, error) {
+func (r *AnalyticsRepository) GetNetworthTimeSeries(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) (float64, float64, float64, []map[string]any, error) {
 	// First, get the initial balance (sum of all transactions before startDate)
 	initialBalanceQuery := fmt.Sprintf(`
 		SELECT COALESCE(SUM(amount), 0) * -1 as initial_balance
 		FROM %s.%s
-		WHERE created_by = $1 
+		WHERE created_by = $1
 			AND deleted_at IS NULL
 			AND date < $2`,
 		r.schema, r.txnTableName)
@@ -82,16 +84,18 @@ func (r *AnalyticsRepository) GetNetworthTimeSeries(ctx context.Context, userId 
 	row := r.db.FetchOne(ctx, initialBalanceQuery, userId, startDate)
 	err := row.Scan(&initialBalance)
 	if err != nil {
-		return 0, nil, err
+		return 0, 0, 0, nil, err
 	}
 
 	// Get daily transaction sums within the date range
 	timeSeriesQuery := fmt.Sprintf(`
-		SELECT 
+		SELECT
 			date,
-			COALESCE(SUM(amount), 0) * -1 as daily_change
+			COALESCE(SUM(amount), 0) * -1 as daily_change,
+			COALESCE(SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END), 0) as total_expenses,
+			COALESCE(SUM(CASE WHEN amount < 0 THEN amount * -1 ELSE 0 END), 0) as total_income
 		FROM %s.%s
-		WHERE created_by = $1 
+		WHERE created_by = $1
 			AND deleted_at IS NULL
 			AND date >= $2
 			AND date <= $3
@@ -101,18 +105,24 @@ func (r *AnalyticsRepository) GetNetworthTimeSeries(ctx context.Context, userId 
 
 	rows, err := r.db.FetchAll(ctx, timeSeriesQuery, userId, startDate, endDate)
 	if err != nil {
-		return initialBalance, nil, err
+		return initialBalance, 0, 0, nil, err
 	}
 	defer rows.Close()
 
 	var timeSeries []map[string]any
+	var totalIncome float64
+	var totalExpenses float64
 	for rows.Next() {
 		var date time.Time
 		var dailyChange float64
-		err := rows.Scan(&date, &dailyChange)
+		var income float64
+		var expense float64
+		err := rows.Scan(&date, &dailyChange, &expense, &income)
 		if err != nil {
-			return initialBalance, nil, err
+			return initialBalance, 0, 0, nil, err
 		}
+		totalIncome += income
+		totalExpenses += expense
 
 		timeSeries = append(timeSeries, map[string]any{
 			"date":         date.Format("2006-01-02"),
@@ -120,5 +130,60 @@ func (r *AnalyticsRepository) GetNetworthTimeSeries(ctx context.Context, userId 
 		})
 	}
 
-	return initialBalance, timeSeries, nil
+	return initialBalance, totalIncome, totalExpenses, timeSeries, nil
+}
+
+// GetCategoryAnalytics retrieves the category analytics for a given user and date range
+func (r *AnalyticsRepository) GetCategoryAnalytics(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) (*models.CategoryAnalyticsResponse, error) {
+	query := fmt.Sprintf(`
+        WITH user_transactions AS (
+            SELECT
+                t.amount,
+                tcm.category_id
+            FROM
+                %s.transaction t
+            LEFT JOIN
+                %s.transaction_category_mapping tcm ON t.id = tcm.transaction_id
+            WHERE
+                t.created_by = $1
+                AND t.deleted_at IS NULL
+                AND t.date >= $2
+                AND t.date <= $3
+        )
+        SELECT
+            c.id AS category_id,
+            c.name AS category_name,
+            COALESCE(SUM(ut.amount), 0) AS total_amount
+        FROM
+            user_transactions ut
+        LEFT JOIN
+            %s.categories c ON ut.category_id = c.id
+		WHERE c.created_by = $1
+        GROUP BY
+            c.id, c.name;
+    `, r.schema, r.schema, r.schema)
+
+	rows, err := r.db.FetchAll(ctx, query, userId, startDate, endDate)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var analytics models.CategoryAnalyticsResponse
+	analytics.CategoryTransactions = []models.CategoryTransaction{}
+
+	for rows.Next() {
+		var categoryTxn models.CategoryTransaction
+		err := rows.Scan(
+			&categoryTxn.CategoryID,
+			&categoryTxn.CategoryName,
+			&categoryTxn.TotalAmount,
+		)
+		if err != nil {
+			return nil, err
+		}
+		analytics.CategoryTransactions = append(analytics.CategoryTransactions, categoryTxn)
+	}
+
+	return &analytics, nil
 }

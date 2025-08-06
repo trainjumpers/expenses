@@ -24,7 +24,7 @@ export const queryClient = new QueryClient({
       onError: (error: unknown) => {
         const errorStatus = (error as { status?: number })?.status;
         if (errorStatus === 401) {
-          console.log("401 error in mutation, session may have expired");
+          console.warn("401 error in mutation, session may have expired");
           queryClient.clear();
           if (typeof window !== "undefined") {
             window.location.href = "/login";
@@ -51,6 +51,8 @@ export const queryKeys = {
   session: ["session"] as const,
   analytics: {
     accountAnalytics: ["analytics", "account"] as const,
+    categoryAnalytics: (startDate: string, endDate: string) =>
+      ["analytics", "category", startDate, endDate] as const,
     networthTimeSeries: (startDate: string, endDate: string) =>
       ["analytics", "networth", startDate, endDate] as const,
   },

@@ -9,11 +9,13 @@ import (
 )
 
 type MockAnalyticsRepository struct {
-	balances              map[string]map[int64]float64               // key: userId_startDate_endDate, value: accountId -> balance
-	analytics             map[int64][]models.AccountBalanceAnalytics // key: userId, value: analytics
-	networthData          map[string]networthMockData                // key: userId_startDate_endDate, value: networth data
-	shouldErrorOnBalance  bool                                       // simulate GetBalance errors
-	shouldErrorOnNetworth bool                                       // simulate GetNetworthTimeSeries errors
+	balances              map[string]map[int64]float64                 // key: userId_startDate_endDate, value: accountId -> balance
+	analytics             map[int64][]models.AccountBalanceAnalytics   // key: userId, value: analytics
+	networthData          map[string]networthMockData                  // key: userId_startDate_endDate, value: networth data
+	categoryAnalytics     map[string]*models.CategoryAnalyticsResponse // key: userId_startDate_endDate, value: category analytics
+	shouldErrorOnBalance  bool                                         // simulate GetBalance errors
+	shouldErrorOnNetworth bool                                         // simulate GetNetworthTimeSeries errors
+	shouldErrorOnCategory bool                                         // simulate GetCategoryAnalytics errors
 	mu                    sync.RWMutex
 }
 
@@ -27,8 +29,10 @@ func NewMockAnalyticsRepository() *MockAnalyticsRepository {
 		balances:              make(map[string]map[int64]float64),
 		analytics:             make(map[int64][]models.AccountBalanceAnalytics),
 		networthData:          make(map[string]networthMockData),
+		categoryAnalytics:     make(map[string]*models.CategoryAnalyticsResponse),
 		shouldErrorOnBalance:  false,
 		shouldErrorOnNetworth: false,
+		shouldErrorOnCategory: false,
 	}
 }
 
@@ -57,13 +61,13 @@ func (m *MockAnalyticsRepository) GetBalance(ctx context.Context, userId int64, 
 	return make(map[int64]float64), nil
 }
 
-func (m *MockAnalyticsRepository) GetNetworthTimeSeries(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) (float64, []map[string]any, error) {
+func (m *MockAnalyticsRepository) GetNetworthTimeSeries(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) (float64, float64, float64, []map[string]any, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
 	// Simulate error if configured
 	if m.shouldErrorOnNetworth {
-		return 0, nil, fmt.Errorf("simulated GetNetworthTimeSeries error")
+		return 0, 0, 0, nil, fmt.Errorf("simulated GetNetworthTimeSeries error")
 	}
 
 	// Create a key based on parameters
@@ -76,7 +80,7 @@ func (m *MockAnalyticsRepository) GetNetworthTimeSeries(ctx context.Context, use
 		for _, point := range data.timeSeries {
 			dailyChange, ok := point["daily_change"].(float64)
 			if !ok {
-				return 0, nil, fmt.Errorf("invalid type for daily_change in daily data")
+				return 0, 0, 0, nil, fmt.Errorf("invalid type for daily_change in daily data")
 			}
 			negatedPoint := map[string]any{
 				"date":         point["date"],
@@ -84,7 +88,8 @@ func (m *MockAnalyticsRepository) GetNetworthTimeSeries(ctx context.Context, use
 			}
 			negatedTimeSeries = append(negatedTimeSeries, negatedPoint)
 		}
-		return negatedInitialBalance, negatedTimeSeries, nil
+		// Return sample total income and expenses
+		return negatedInitialBalance, 500.0, 300.0, negatedTimeSeries, nil
 	}
 
 	// Return default sample data if no specific data set
@@ -110,7 +115,7 @@ func (m *MockAnalyticsRepository) GetNetworthTimeSeries(ctx context.Context, use
 		}
 		negatedTimeSeries = append(negatedTimeSeries, negatedPoint)
 	}
-	return negatedInitialBalance, negatedTimeSeries, nil
+	return negatedInitialBalance, 500.0, 300.0, negatedTimeSeries, nil
 }
 
 func (m *MockAnalyticsRepository) GetAccountAnalytics(ctx context.Context, userId int64) ([]models.AccountBalanceAnalytics, error) {
@@ -123,6 +128,41 @@ func (m *MockAnalyticsRepository) GetAccountAnalytics(ctx context.Context, userI
 
 	// Return empty slice if no data found
 	return []models.AccountBalanceAnalytics{}, nil
+}
+
+func (m *MockAnalyticsRepository) GetCategoryAnalytics(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) (*models.CategoryAnalyticsResponse, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	// Simulate error if configured
+	if m.shouldErrorOnCategory {
+		return nil, fmt.Errorf("simulated GetCategoryAnalytics error")
+	}
+
+	// Create a key based on parameters
+	key := m.createCategoryKey(userId, startDate, endDate)
+
+	if analytics, exists := m.categoryAnalytics[key]; exists {
+		return analytics, nil
+	}
+
+	// Return default sample data if no specific data set
+	defaultAnalytics := &models.CategoryAnalyticsResponse{
+		CategoryTransactions: []models.CategoryTransaction{
+			{
+				CategoryID:   1,
+				CategoryName: "Food",
+				TotalAmount:  150.0,
+			},
+			{
+				CategoryID:   2,
+				CategoryName: "Transportation",
+				TotalAmount:  200.0,
+			},
+		},
+	}
+
+	return defaultAnalytics, nil
 }
 
 // Helper methods for testing
@@ -164,6 +204,20 @@ func (m *MockAnalyticsRepository) SetShouldErrorOnNetworth(shouldError bool) {
 	m.shouldErrorOnNetworth = shouldError
 }
 
+func (m *MockAnalyticsRepository) SetCategoryAnalytics(userId int64, startDate time.Time, endDate time.Time, analytics *models.CategoryAnalyticsResponse) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	key := m.createCategoryKey(userId, startDate, endDate)
+	m.categoryAnalytics[key] = analytics
+}
+
+func (m *MockAnalyticsRepository) SetShouldErrorOnCategory(shouldError bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.shouldErrorOnCategory = shouldError
+}
+
 func (m *MockAnalyticsRepository) createBalanceKey(userId int64, startDate *time.Time, endDate *time.Time) string {
 	key := fmt.Sprintf("%d_", userId)
 	if startDate != nil {
@@ -181,5 +235,9 @@ func (m *MockAnalyticsRepository) createBalanceKey(userId int64, startDate *time
 }
 
 func (m *MockAnalyticsRepository) createNetworthKey(userId int64, startDate time.Time, endDate time.Time) string {
+	return fmt.Sprintf("%d_%s_%s", userId, startDate.Format("2006-01-02"), endDate.Format("2006-01-02"))
+}
+
+func (m *MockAnalyticsRepository) createCategoryKey(userId int64, startDate time.Time, endDate time.Time) string {
 	return fmt.Sprintf("%d_%s_%s", userId, startDate.Format("2006-01-02"), endDate.Format("2006-01-02"))
 }

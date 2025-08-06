@@ -21,5 +21,19 @@ type NetworthDataPoint struct {
 // NetworthTimeSeriesResponse represents the networth over time response
 type NetworthTimeSeriesResponse struct {
 	InitialBalance float64             `json:"initial_balance"`
+	TotalIncome    float64             `json:"total_income"`
+	TotalExpenses  float64             `json:"total_expenses"`
 	TimeSeries     []NetworthDataPoint `json:"time_series"`
+}
+
+// CategoryAnalytics represents the category analytics for a given period
+type CategoryAnalyticsResponse struct {
+	CategoryTransactions []CategoryTransaction `json:"category_transactions"`
+}
+
+// CategoryTransaction represents the total transaction amount for a category
+type CategoryTransaction struct {
+	CategoryID   int64   `json:"category_id"`
+	CategoryName string  `json:"category_name"`
+	TotalAmount  float64 `json:"total_amount"`
 }

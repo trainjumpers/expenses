@@ -36,7 +36,7 @@ export function useSession() {
               }
             }
           } catch (refreshError) {
-            console.log("Token refresh failed:", refreshError);
+            console.error("Token refresh failed:", refreshError);
           }
 
           return { isValid: false, needsRefresh: false };
@@ -44,7 +44,7 @@ export function useSession() {
 
         return { isValid: false, needsRefresh: false };
       } catch (error) {
-        console.log("Session check failed:", error);
+        console.error("Session check failed:", error);
         return { isValid: false, needsRefresh: false };
       }
     },
@@ -63,7 +63,7 @@ export function useSession() {
       !sessionQuery.isLoading &&
       !sessionQuery.isFetching
     ) {
-      console.log("User not authenticated, redirecting to login");
+      console.error("User not authenticated, redirecting to login");
       queryClient.clear();
       router.push("/login");
     }
