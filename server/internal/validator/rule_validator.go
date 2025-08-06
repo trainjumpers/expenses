@@ -82,7 +82,7 @@ func (v *RuleValidator) Validate(rule models.CreateRuleRequest) error {
 // ValidateActionType checks if the action type is valid.
 func (v *RuleValidator) validateActionType(actionType models.RuleFieldType) error {
 	switch actionType {
-	case models.RuleFieldName, models.RuleFieldDescription, models.RuleFieldAmount, models.RuleFieldCategory:
+	case models.RuleFieldName, models.RuleFieldDescription, models.RuleFieldAmount, models.RuleFieldCategory, models.RuleFieldTransfer:
 		return nil
 	default:
 		return errors.NewRuleInvalidActionTypeError(fmt.Errorf("action type %s is not valid", actionType))
@@ -96,9 +96,9 @@ func (v *RuleValidator) validateRuleType(actionType models.RuleFieldType, value 
 		if _, err := strconv.ParseFloat(value, 64); err != nil {
 			return errors.NewRuleInvalidConditionValueError(err)
 		}
-	case models.RuleFieldCategory:
+	case models.RuleFieldCategory, models.RuleFieldTransfer:
 		if _, err := strconv.ParseInt(value, 10, 64); err != nil {
-			return errors.NewRuleInvalidConditionValueError(err)
+			return errors.NewRuleInvalidConditionValueError(fmt.Errorf("value for %s must be a valid ID", actionType))
 		}
 	case models.RuleFieldName, models.RuleFieldDescription:
 		// Already a string, but you could add length or charset checks here if needed.
@@ -125,7 +125,7 @@ func (v *RuleValidator) validateAction(action models.CreateRuleActionRequest) er
 // ValidateConditionType checks if the condition type is valid.
 func (v *RuleValidator) validateConditionType(conditionType models.RuleFieldType) error {
 	switch conditionType {
-	case models.RuleFieldName, models.RuleFieldDescription, models.RuleFieldAmount, models.RuleFieldCategory:
+	case models.RuleFieldName, models.RuleFieldDescription, models.RuleFieldAmount, models.RuleFieldCategory, models.RuleFieldTransfer:
 		return nil
 	default:
 		return errors.NewRuleInvalidConditionTypeError(fmt.Errorf("condition type %s is not valid", conditionType))
@@ -143,7 +143,7 @@ func (v *RuleValidator) validateOperator(op models.RuleOperator, fieldType model
 		if op == models.OperatorEquals || op == models.OperatorContains {
 			return nil
 		}
-	case models.RuleFieldCategory:
+	case models.RuleFieldCategory, models.RuleFieldTransfer:
 		if op == models.OperatorEquals {
 			return nil
 		}

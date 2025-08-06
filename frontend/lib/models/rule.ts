@@ -3,7 +3,12 @@ export enum ConditionLogic {
   OR = "OR",
 }
 
-export type RuleFieldType = "amount" | "name" | "description" | "category";
+export type RuleFieldType =
+  | "amount"
+  | "name"
+  | "description"
+  | "category"
+  | "transfer";
 export type RuleOperator = "equals" | "contains" | "greater" | "lower";
 
 export const RULE_FIELD_TYPES: { label: string; value: RuleFieldType }[] = [
@@ -11,6 +16,7 @@ export const RULE_FIELD_TYPES: { label: string; value: RuleFieldType }[] = [
   { label: "Name", value: "name" },
   { label: "Description", value: "description" },
   { label: "Category", value: "category" },
+  { label: "Transfer", value: "transfer" },
 ];
 
 export const RULE_OPERATORS: { label: string; value: RuleOperator }[] = [

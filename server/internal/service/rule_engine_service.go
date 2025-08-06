@@ -18,17 +18,20 @@ type ruleEngineService struct {
 	ruleRepo        repository.RuleRepositoryInterface
 	transactionRepo repository.TransactionRepositoryInterface
 	categoryRepo    repository.CategoryRepositoryInterface
+	accountRepo     repository.AccountRepositoryInterface
 }
 
 func NewRuleEngineService(
 	ruleRepo repository.RuleRepositoryInterface,
 	transactionRepo repository.TransactionRepositoryInterface,
 	categoryRepo repository.CategoryRepositoryInterface,
+	accountRepo repository.AccountRepositoryInterface,
 ) RuleEngineServiceInterface {
 	return &ruleEngineService{
 		ruleRepo:        ruleRepo,
 		transactionRepo: transactionRepo,
 		categoryRepo:    categoryRepo,
+		accountRepo:     accountRepo,
 	}
 }
 
@@ -45,6 +48,13 @@ func (s *ruleEngineService) ExecuteRulesInBackground(ctx context.Context, userId
 	categories, err := s.categoryRepo.ListCategories(ctx, userId)
 	if err != nil {
 		logger.Errorf("Rule execution for user %d failed to fetch categories: %v", userId, err)
+		return
+	}
+
+	// Step 1.5: Fetch all accounts
+	accounts, err := s.accountRepo.ListAccounts(ctx, userId)
+	if err != nil {
+		logger.Errorf("Rule execution for user %d failed to fetch accounts: %v", userId, err)
 		return
 	}
 
@@ -65,8 +75,8 @@ func (s *ruleEngineService) ExecuteRulesInBackground(ctx context.Context, userId
 		return
 	}
 
-	// Create rule engine with categories and rules
-	engine := NewRuleEngine(categories, rules)
+	// Create rule engine with categories, accounts and rules
+	engine := NewRuleEngine(categories, accounts, rules)
 
 	pageSize := request.PageSize
 	if pageSize <= 0 || pageSize > 1000 {
@@ -277,6 +287,38 @@ func (s *ruleEngineService) applyChangeset(ctx context.Context, userId int64, ch
 		}
 	}
 
+	// Apply transfer updates
+	if changeset.TransferInfo != nil {
+		err = s.createTransferTransaction(ctx, userId, transaction, changeset.TransferInfo)
+		if err != nil {
+			return fmt.Errorf("failed to create transfer transaction: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (s *ruleEngineService) createTransferTransaction(ctx context.Context, userId int64, originalTransaction models.TransactionResponse, transferInfo *TransferInfo) error {
+	// Create the transfer transaction input
+	transferInput := models.CreateTransactionInput{
+		CreateBaseTransactionInput: models.CreateBaseTransactionInput{
+			Name:        fmt.Sprintf("Transfer from %s", originalTransaction.Name),
+			Description: fmt.Sprintf("Transfer from transaction: %s", originalTransaction.Name),
+			Amount:      &transferInfo.Amount,
+			Date:        originalTransaction.Date,
+			CreatedBy:   userId,
+			AccountId:   transferInfo.AccountId,
+		},
+		CategoryIds: originalTransaction.CategoryIds, // Inherit categories from original transaction
+	}
+
+	// Create the transfer transaction
+	_, err := s.transactionRepo.CreateTransaction(ctx, transferInput.CreateBaseTransactionInput, transferInput.CategoryIds)
+	if err != nil {
+		return fmt.Errorf("failed to create transfer transaction: %w", err)
+	}
+
+	logger.Infof("Created transfer transaction for user %d: amount %.2f to account %d", userId, transferInfo.Amount, transferInfo.AccountId)
 	return nil
 }
 
@@ -300,6 +342,9 @@ func (s *ruleEngineService) getUpdatedFields(changeset *Changeset) []models.Rule
 	}
 	if len(changeset.CategoryAdds) > 0 {
 		fields = append(fields, models.RuleFieldCategory)
+	}
+	if changeset.TransferInfo != nil {
+		fields = append(fields, models.RuleFieldTransfer)
 	}
 	return fields
 }

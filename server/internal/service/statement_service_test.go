@@ -34,7 +34,7 @@ var _ = Describe("StatementService", func() {
 		mockRuleRepo := repository.NewMockRuleRepository()
 		txnService = NewTransactionService(mockTxnRepo, mockCategoryRepo, mockAccountRepo, mockDbManager)
 		accountService = NewAccountService(mockAccountRepo)
-		ruleEngineService = NewRuleEngineService(mockRuleRepo, mockTxnRepo, mockCategoryRepo)
+		ruleEngineService = NewRuleEngineService(mockRuleRepo, mockTxnRepo, mockCategoryRepo, mockAccountRepo)
 
 		service = StatementService{
 			repo:               mockRepo,

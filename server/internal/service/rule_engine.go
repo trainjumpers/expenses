@@ -6,27 +6,40 @@ import (
 	"strings"
 )
 
+type TransferInfo struct {
+	AccountId int64
+	Amount    float64
+}
+
 type Changeset struct {
 	TransactionId int64
 	NameUpdate    *string
 	DescUpdate    *string
 	CategoryAdds  []int64
+	TransferInfo  *TransferInfo
 	AppliedRules  []int64
 }
 
 type RuleEngine struct {
 	categories map[int64]models.CategoryResponse
+	accounts   map[int64]models.AccountResponse
 	rules      []models.DescribeRuleResponse
 }
 
-func NewRuleEngine(categories []models.CategoryResponse, rules []models.DescribeRuleResponse) *RuleEngine {
+func NewRuleEngine(categories []models.CategoryResponse, accounts []models.AccountResponse, rules []models.DescribeRuleResponse) *RuleEngine {
 	categoryMap := make(map[int64]models.CategoryResponse)
 	for _, category := range categories {
 		categoryMap[category.Id] = category
 	}
 
+	accountMap := make(map[int64]models.AccountResponse)
+	for _, account := range accounts {
+		accountMap[account.Id] = account
+	}
+
 	return &RuleEngine{
 		categories: categoryMap,
+		accounts:   accountMap,
 		rules:      rules,
 	}
 }
@@ -78,6 +91,31 @@ func (e *RuleEngine) ProcessTransaction(transaction models.TransactionResponse) 
 
 				if !e.hasCategory(transaction.CategoryIds, categoryId) && !e.hasCategory(changeset.CategoryAdds, categoryId) {
 					changeset.CategoryAdds = append(changeset.CategoryAdds, categoryId)
+					ruleApplied = true
+					hasChanges = true
+				}
+			case models.RuleFieldTransfer:
+				accountId, err := strconv.ParseInt(action.ActionValue, 10, 64)
+				if err != nil {
+					continue
+				}
+
+				// Validate that the account exists and belongs to the user
+				if !e.accountExists(accountId, transaction.CreatedBy) {
+					continue
+				}
+
+				// Prevent transfer to the same account
+				if accountId == transaction.AccountId {
+					continue
+				}
+
+				// Only apply transfer if no transfer is already planned
+				if changeset.TransferInfo == nil {
+					changeset.TransferInfo = &TransferInfo{
+						AccountId: accountId,
+						Amount:    -transaction.Amount, // Negate the amount
+					}
 					ruleApplied = true
 					hasChanges = true
 				}
@@ -135,6 +173,8 @@ func (e *RuleEngine) evaluateCondition(condition models.RuleConditionResponse, t
 	switch condition.ConditionType {
 	case models.RuleFieldCategory:
 		return e.evaluateCategoryCondition(condition, transaction.CategoryIds)
+	case models.RuleFieldTransfer:
+		return e.evaluateTransferCondition(condition, transaction.AccountId)
 	default:
 		return e.evaluateStandardFieldCondition(condition, transaction)
 	}
@@ -196,9 +236,26 @@ func (e *RuleEngine) evaluateCategoryCondition(condition models.RuleConditionRes
 	return false
 }
 
+func (e *RuleEngine) evaluateTransferCondition(condition models.RuleConditionResponse, accountId int64) bool {
+	conditionAccountId, err := strconv.ParseInt(condition.ConditionValue, 10, 64)
+	if err != nil {
+		return false
+	}
+
+	if condition.ConditionOperator == models.OperatorEquals {
+		return accountId == conditionAccountId
+	}
+	return false
+}
+
 func (e *RuleEngine) categoryExists(categoryId int64, userId int64) bool {
 	category, exists := e.categories[categoryId]
 	return exists && category.CreatedBy == userId
+}
+
+func (e *RuleEngine) accountExists(accountId int64, userId int64) bool {
+	account, exists := e.accounts[accountId]
+	return exists && account.CreatedBy == userId
 }
 
 func (e *RuleEngine) hasCategory(categoryIds []int64, categoryId int64) bool {

@@ -1,6 +1,7 @@
 import { BaseRuleAction, BaseRuleCondition } from "@/lib/models/rule";
 
 type Category = { id: number; name: string };
+type Account = { id: number; name: string };
 
 function getCategoryId(value: string, categories: Category[]): string {
   const cat = categories.find(
@@ -9,16 +10,26 @@ function getCategoryId(value: string, categories: Category[]): string {
   return cat ? String(cat.id) : value;
 }
 
+function getAccountId(value: string, accounts: Account[]): string {
+  const acc = accounts.find(
+    (acc) => String(acc.id) === value || acc.name === value
+  );
+  return acc ? String(acc.id) : value;
+}
+
 export function normalizeRuleActions(
   actions: BaseRuleAction[],
-  categories: Category[]
+  categories: Category[],
+  accounts: Account[] = []
 ): BaseRuleAction[] {
   return actions.map((a) => ({
     action_type: a.action_type,
     action_value:
       a.action_type === "category"
         ? getCategoryId(a.action_value, categories)
-        : a.action_value,
+        : a.action_type === "transfer"
+          ? getAccountId(a.action_value, accounts)
+          : a.action_value,
   }));
 }
 
@@ -48,7 +59,8 @@ export function getEffectiveScopeAndDate(effective_from?: string): {
 
 export function normalizeRuleConditions(
   conditions: BaseRuleCondition[],
-  categories: Category[]
+  categories: Category[],
+  accounts: Account[] = []
 ): BaseRuleCondition[] {
   return conditions.map((c) => ({
     condition_type: c.condition_type,
@@ -56,6 +68,8 @@ export function normalizeRuleConditions(
     condition_value:
       c.condition_type === "category"
         ? getCategoryId(c.condition_value, categories)
-        : c.condition_value,
+        : c.condition_type === "transfer"
+          ? getAccountId(c.condition_value, accounts)
+          : c.condition_value,
   }));
 }

@@ -40,7 +40,7 @@ func InitializeApplication() (*Provider, error) {
 	transactionServiceInterface := service.NewTransactionService(transactionRepositoryInterface, categoryRepositoryInterface, accountRepositoryInterface, databaseManager)
 	ruleRepositoryInterface := repository.NewRuleRepository(databaseManager, configConfig)
 	ruleServiceInterface := service.NewRuleService(ruleRepositoryInterface, transactionRepositoryInterface, databaseManager)
-	ruleEngineServiceInterface := service.NewRuleEngineService(ruleRepositoryInterface, transactionRepositoryInterface, categoryRepositoryInterface)
+	ruleEngineServiceInterface := service.NewRuleEngineService(ruleRepositoryInterface, transactionRepositoryInterface, categoryRepositoryInterface, accountRepositoryInterface)
 	statementRepositoryInterface := repository.NewStatementRepository(databaseManager, configConfig)
 	statementValidator := validator.NewStatementValidator()
 	statementServiceInterface := service.NewStatementService(statementRepositoryInterface, accountServiceInterface, ruleEngineServiceInterface, statementValidator, transactionServiceInterface)

@@ -2175,6 +2175,8 @@ var _ = Describe("RuleController", func() {
 					{models.RuleFieldDescription, "Valid Description", true, "valid description"},
 					{models.RuleFieldCategory, "1", true, "valid category ID"},
 					{models.RuleFieldCategory, "invalid", false, "invalid category ID"},
+					{models.RuleFieldTransfer, "1", true, "valid transfer account ID"},
+					{models.RuleFieldTransfer, "invalid", false, "invalid transfer account ID"},
 				}
 
 				for _, tc := range testCases {

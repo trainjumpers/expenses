@@ -1,3 +1,4 @@
+import { useAccounts } from "@/components/hooks/useAccounts";
 import { useCategories } from "@/components/hooks/useCategories";
 import { RuleFieldType } from "@/lib/models/rule";
 
@@ -19,6 +20,7 @@ export function RuleInput({
   className = "flex-1 px-3 py-2 bg-background border border-border rounded-lg text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring",
 }: RuleInputProps) {
   const { data: categories = [] } = useCategories();
+  const { data: accounts = [] } = useAccounts();
 
   if (fieldType === "amount") {
     return (
@@ -45,6 +47,24 @@ export function RuleInput({
         {categories.map((cat) => (
           <option key={cat.id} value={String(cat.id)}>
             {cat.name}
+          </option>
+        ))}
+      </select>
+    );
+  }
+
+  if (fieldType === "transfer") {
+    return (
+      <select
+        className={className}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        disabled={disabled}
+      >
+        <option value="">Select account</option>
+        {accounts.map((account) => (
+          <option key={account.id} value={String(account.id)}>
+            {account.name}
           </option>
         ))}
       </select>

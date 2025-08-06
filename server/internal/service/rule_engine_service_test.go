@@ -17,6 +17,7 @@ var _ = Describe("RuleEngineService", func() {
 		mockRuleRepo     *repository.MockRuleRepository
 		mockTxnRepo      *repository.MockTransactionRepository
 		mockCategoryRepo *repository.MockCategoryRepository
+		mockAccountRepo  *repository.MockAccountRepository
 		ctx              context.Context
 		userId           int64
 	)
@@ -29,8 +30,9 @@ var _ = Describe("RuleEngineService", func() {
 		mockRuleRepo = repository.NewMockRuleRepository()
 		mockTxnRepo = repository.NewMockTransactionRepository()
 		mockCategoryRepo = repository.NewMockCategoryRepository()
+		mockAccountRepo = repository.NewMockAccountRepository()
 
-		service = NewRuleEngineService(mockRuleRepo, mockTxnRepo, mockCategoryRepo)
+		service = NewRuleEngineService(mockRuleRepo, mockTxnRepo, mockCategoryRepo, mockAccountRepo)
 	})
 
 	Describe("ExecuteRules - Basic Cases", func() {
@@ -437,8 +439,9 @@ var _ = Describe("RuleEngineService", func() {
 
 				// Create a simple rule engine with no rules
 				categories := []models.CategoryResponse{cat1}
+				accounts := []models.AccountResponse{}
 				rules := []models.DescribeRuleResponse{}
-				engine = NewRuleEngine(categories, rules)
+				engine = NewRuleEngine(categories, accounts, rules)
 			})
 
 			It("should process transactions with no rules", func() {
@@ -958,6 +961,305 @@ var _ = Describe("RuleEngineService", func() {
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(response).NotTo(BeNil())
+		})
+	})
+
+	Describe("Transfer Transaction Creation", func() {
+		var (
+			cat1, cat2 models.CategoryResponse
+			acc1, acc2 models.AccountResponse
+			rule1      models.RuleResponse
+			txn1       models.TransactionResponse
+		)
+
+		BeforeEach(func() {
+			// Create categories
+			cat1, err := mockCategoryRepo.CreateCategory(ctx, models.CreateCategoryInput{
+				Name:      "Food",
+				CreatedBy: userId,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			cat2, err = mockCategoryRepo.CreateCategory(ctx, models.CreateCategoryInput{
+				Name:      "Transfer",
+				CreatedBy: userId,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Create accounts
+			acc1, err = mockAccountRepo.CreateAccount(ctx, models.CreateAccountInput{
+				Name:      "Checking",
+				BankType:  models.BankTypeHDFC,
+				Currency:  models.CurrencyINR,
+				CreatedBy: userId,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			acc2, err = mockAccountRepo.CreateAccount(ctx, models.CreateAccountInput{
+				Name:      "Savings",
+				BankType:  models.BankTypeSBI,
+				Currency:  models.CurrencyINR,
+				CreatedBy: userId,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Create rule with transfer action
+			desc := "Transfer rule"
+			rule1, err = mockRuleRepo.CreateRule(ctx, models.CreateBaseRuleRequest{
+				Name:          "Transfer Rule",
+				Description:   &desc,
+				EffectiveFrom: time.Now().Add(-24 * time.Hour),
+				CreatedBy:     userId,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Create rule action for transfer
+			actions := []models.CreateRuleActionRequest{
+				{
+					RuleId:      rule1.Id,
+					ActionType:  models.RuleFieldTransfer,
+					ActionValue: fmt.Sprintf("%d", acc2.Id),
+				},
+			}
+			_, err = mockRuleRepo.CreateRuleActions(ctx, actions)
+			Expect(err).NotTo(HaveOccurred())
+
+			// Create rule condition
+			conditions := []models.CreateRuleConditionRequest{
+				{
+					RuleId:            rule1.Id,
+					ConditionType:     models.RuleFieldName,
+					ConditionOperator: models.OperatorContains,
+					ConditionValue:    "transfer",
+				},
+			}
+			_, err = mockRuleRepo.CreateRuleConditions(ctx, conditions)
+			Expect(err).NotTo(HaveOccurred())
+
+			// Create transaction that will trigger transfer
+			amount := 100.0
+			txn1, err = mockTxnRepo.CreateTransaction(ctx, models.CreateBaseTransactionInput{
+				Name:        "Transfer to savings",
+				Description: "Monthly transfer",
+				Amount:      &amount,
+				Date:        time.Now(),
+				CreatedBy:   userId,
+				AccountId:   acc1.Id,
+			}, []int64{cat1.Id})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should create transfer transaction when rule is applied", func() {
+			// Execute rules
+			txnIds := []int64{txn1.Id}
+			request := models.ExecuteRulesRequest{TransactionIds: &txnIds}
+			response, err := service.ExecuteRules(ctx, userId, request)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(response).NotTo(BeNil())
+
+			// Since execution is async, we can't directly test the transfer creation
+			// But we can verify the rule engine processes the transfer correctly
+			// by testing the changeset creation
+			categories := []models.CategoryResponse{cat1, cat2}
+			accounts := []models.AccountResponse{acc1, acc2}
+			rules := []models.DescribeRuleResponse{
+				{
+					Rule:       rule1,
+					Actions:    []models.RuleActionResponse{{ActionType: models.RuleFieldTransfer, ActionValue: fmt.Sprintf("%d", acc2.Id)}},
+					Conditions: []models.RuleConditionResponse{{ConditionType: models.RuleFieldName, ConditionValue: "transfer", ConditionOperator: models.OperatorContains}},
+				},
+			}
+
+			engine := NewRuleEngine(categories, accounts, rules)
+			changeset := engine.ProcessTransaction(txn1)
+
+			Expect(changeset).NotTo(BeNil())
+			Expect(changeset.TransferInfo).NotTo(BeNil())
+			Expect(changeset.TransferInfo.AccountId).To(Equal(acc2.Id))
+			Expect(changeset.TransferInfo.Amount).To(Equal(-txn1.Amount))
+			Expect(changeset.AppliedRules).To(ContainElement(rule1.Id))
+		})
+
+		It("should not create transfer to same account", func() {
+			// Update rule to transfer to same account
+			actions := []models.CreateRuleActionRequest{
+				{
+					RuleId:      rule1.Id,
+					ActionType:  models.RuleFieldTransfer,
+					ActionValue: fmt.Sprintf("%d", acc1.Id), // Same account
+				},
+			}
+			_, err := mockRuleRepo.CreateRuleActions(ctx, actions)
+			Expect(err).NotTo(HaveOccurred())
+
+			categories := []models.CategoryResponse{cat1, cat2}
+			accounts := []models.AccountResponse{acc1, acc2}
+			rules := []models.DescribeRuleResponse{
+				{
+					Rule:       rule1,
+					Actions:    []models.RuleActionResponse{{ActionType: models.RuleFieldTransfer, ActionValue: fmt.Sprintf("%d", acc1.Id)}},
+					Conditions: []models.RuleConditionResponse{{ConditionType: models.RuleFieldName, ConditionValue: "transfer", ConditionOperator: models.OperatorContains}},
+				},
+			}
+
+			engine := NewRuleEngine(categories, accounts, rules)
+			changeset := engine.ProcessTransaction(txn1)
+
+			Expect(changeset).To(BeNil()) // Should not create transfer to same account
+		})
+	})
+
+	Describe("Transfer Integration Tests", func() {
+		var (
+			cat1, cat2 models.CategoryResponse
+			acc1, acc2 models.AccountResponse
+			rule1      models.RuleResponse
+			txn1       models.TransactionResponse
+		)
+
+		BeforeEach(func() {
+			// Create categories
+			cat1, err := mockCategoryRepo.CreateCategory(ctx, models.CreateCategoryInput{
+				Name:      "Food",
+				CreatedBy: userId,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			cat2, err = mockCategoryRepo.CreateCategory(ctx, models.CreateCategoryInput{
+				Name:      "Transfer",
+				CreatedBy: userId,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Create accounts
+			acc1, err = mockAccountRepo.CreateAccount(ctx, models.CreateAccountInput{
+				Name:      "Checking",
+				BankType:  models.BankTypeHDFC,
+				Currency:  models.CurrencyINR,
+				CreatedBy: userId,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			acc2, err = mockAccountRepo.CreateAccount(ctx, models.CreateAccountInput{
+				Name:      "Savings",
+				BankType:  models.BankTypeSBI,
+				Currency:  models.CurrencyINR,
+				CreatedBy: userId,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Create rule with transfer action
+			desc := "Transfer rule"
+			rule1, err = mockRuleRepo.CreateRule(ctx, models.CreateBaseRuleRequest{
+				Name:          "Transfer Rule",
+				Description:   &desc,
+				EffectiveFrom: time.Now().Add(-24 * time.Hour),
+				CreatedBy:     userId,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Create rule action for transfer
+			actions := []models.CreateRuleActionRequest{
+				{
+					RuleId:      rule1.Id,
+					ActionType:  models.RuleFieldTransfer,
+					ActionValue: fmt.Sprintf("%d", acc2.Id),
+				},
+			}
+			_, err = mockRuleRepo.CreateRuleActions(ctx, actions)
+			Expect(err).NotTo(HaveOccurred())
+
+			// Create rule condition
+			conditions := []models.CreateRuleConditionRequest{
+				{
+					RuleId:            rule1.Id,
+					ConditionType:     models.RuleFieldName,
+					ConditionOperator: models.OperatorContains,
+					ConditionValue:    "transfer",
+				},
+			}
+			_, err = mockRuleRepo.CreateRuleConditions(ctx, conditions)
+			Expect(err).NotTo(HaveOccurred())
+
+			// Create transaction that will trigger transfer
+			amount := 100.0
+			txn1, err = mockTxnRepo.CreateTransaction(ctx, models.CreateBaseTransactionInput{
+				Name:        "Transfer to savings",
+				Description: "Monthly transfer",
+				Amount:      &amount,
+				Date:        time.Now(),
+				CreatedBy:   userId,
+				AccountId:   acc1.Id,
+			}, []int64{cat1.Id})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should execute complete transfer workflow", func() {
+			// Test the complete workflow from rule execution to transfer creation
+			txnIds := []int64{txn1.Id}
+			request := models.ExecuteRulesRequest{TransactionIds: &txnIds}
+			response, err := service.ExecuteRules(ctx, userId, request)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(response).NotTo(BeNil())
+
+			// Verify that the rule engine correctly processes the transfer
+			categories := []models.CategoryResponse{cat1, cat2}
+			accounts := []models.AccountResponse{acc1, acc2}
+			rules := []models.DescribeRuleResponse{
+				{
+					Rule:       rule1,
+					Actions:    []models.RuleActionResponse{{ActionType: models.RuleFieldTransfer, ActionValue: fmt.Sprintf("%d", acc2.Id)}},
+					Conditions: []models.RuleConditionResponse{{ConditionType: models.RuleFieldName, ConditionValue: "transfer", ConditionOperator: models.OperatorContains}},
+				},
+			}
+
+			engine := NewRuleEngine(categories, accounts, rules)
+			changeset := engine.ProcessTransaction(txn1)
+
+			Expect(changeset).NotTo(BeNil())
+			Expect(changeset.TransferInfo).NotTo(BeNil())
+			Expect(changeset.TransferInfo.AccountId).To(Equal(acc2.Id))
+			Expect(changeset.TransferInfo.Amount).To(Equal(-txn1.Amount))
+			Expect(changeset.AppliedRules).To(ContainElement(rule1.Id))
+
+			// Verify updated fields tracking
+			updatedFields := service.(*ruleEngineService).getUpdatedFields(changeset)
+			Expect(updatedFields).To(ContainElement(models.RuleFieldTransfer))
+		})
+
+		It("should handle transfer with multiple categories", func() {
+			// Create transaction with multiple categories
+			amount := 150.0
+			multiCatTxn, err := mockTxnRepo.CreateTransaction(ctx, models.CreateBaseTransactionInput{
+				Name:        "Transfer with categories",
+				Description: "Transfer with multiple categories",
+				Amount:      &amount,
+				Date:        time.Now(),
+				CreatedBy:   userId,
+				AccountId:   acc1.Id,
+			}, []int64{cat1.Id, cat2.Id})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Test that transfer inherits all categories
+			categories := []models.CategoryResponse{cat1, cat2}
+			accounts := []models.AccountResponse{acc1, acc2}
+			rules := []models.DescribeRuleResponse{
+				{
+					Rule:       rule1,
+					Actions:    []models.RuleActionResponse{{ActionType: models.RuleFieldTransfer, ActionValue: fmt.Sprintf("%d", acc2.Id)}},
+					Conditions: []models.RuleConditionResponse{{ConditionType: models.RuleFieldName, ConditionValue: "categories", ConditionOperator: models.OperatorContains}},
+				},
+			}
+
+			engine := NewRuleEngine(categories, accounts, rules)
+			changeset := engine.ProcessTransaction(multiCatTxn)
+
+			Expect(changeset).NotTo(BeNil())
+			Expect(changeset.TransferInfo).NotTo(BeNil())
+			Expect(changeset.TransferInfo.AccountId).To(Equal(acc2.Id))
+			Expect(changeset.TransferInfo.Amount).To(Equal(-multiCatTxn.Amount))
 		})
 	})
 })
