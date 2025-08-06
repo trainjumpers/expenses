@@ -78,82 +78,24 @@ export function MonthlyAnalyticsCard() {
   const dateRanges = getDateRanges();
 
   // Fetch data for all monthly options using individual hooks
-  const monthlyAnalytics0 = useMonthlyAnalytics(
-    dateRanges[0].startDate,
-    dateRanges[0].endDate
-  );
-  const monthlyAnalytics1 = useMonthlyAnalytics(
-    dateRanges[1].startDate,
-    dateRanges[1].endDate
-  );
-  const monthlyAnalytics2 = useMonthlyAnalytics(
-    dateRanges[2].startDate,
-    dateRanges[2].endDate
-  );
-  const monthlyAnalytics3 = useMonthlyAnalytics(
-    dateRanges[3].startDate,
-    dateRanges[3].endDate
-  );
-  const monthlyAnalytics4 = useMonthlyAnalytics(
-    dateRanges[4].startDate,
-    dateRanges[4].endDate
-  );
-  const monthlyAnalytics5 = useMonthlyAnalytics(
-    dateRanges[5].startDate,
-    dateRanges[5].endDate
-  );
+  const monthlyAnalytics = [
+    useMonthlyAnalytics(dateRanges[0].startDate, dateRanges[0].endDate),
+    useMonthlyAnalytics(dateRanges[1].startDate, dateRanges[1].endDate),
+    useMonthlyAnalytics(dateRanges[2].startDate, dateRanges[2].endDate),
+    useMonthlyAnalytics(dateRanges[3].startDate, dateRanges[3].endDate),
+    useMonthlyAnalytics(dateRanges[4].startDate, dateRanges[4].endDate),
+    useMonthlyAnalytics(dateRanges[5].startDate, dateRanges[5].endDate),
+  ];
 
   // Combine data with date ranges
-  const monthlyData: MonthlyData[] = [
-    {
-      startDate: dateRanges[0].startDate,
-      endDate: dateRanges[0].endDate,
-      label: dateRanges[0].label,
-      description: dateRanges[0].description,
-      data: monthlyAnalytics0.data,
-      isLoading: monthlyAnalytics0.isLoading,
-    },
-    {
-      startDate: dateRanges[1].startDate,
-      endDate: dateRanges[1].endDate,
-      label: dateRanges[1].label,
-      description: dateRanges[1].description,
-      data: monthlyAnalytics1.data,
-      isLoading: monthlyAnalytics1.isLoading,
-    },
-    {
-      startDate: dateRanges[2].startDate,
-      endDate: dateRanges[2].endDate,
-      label: dateRanges[2].label,
-      description: dateRanges[2].description,
-      data: monthlyAnalytics2.data,
-      isLoading: monthlyAnalytics2.isLoading,
-    },
-    {
-      startDate: dateRanges[3].startDate,
-      endDate: dateRanges[3].endDate,
-      label: dateRanges[3].label,
-      description: dateRanges[3].description,
-      data: monthlyAnalytics3.data,
-      isLoading: monthlyAnalytics3.isLoading,
-    },
-    {
-      startDate: dateRanges[4].startDate,
-      endDate: dateRanges[4].endDate,
-      label: dateRanges[4].label,
-      description: dateRanges[4].description,
-      data: monthlyAnalytics4.data,
-      isLoading: monthlyAnalytics4.isLoading,
-    },
-    {
-      startDate: dateRanges[5].startDate,
-      endDate: dateRanges[5].endDate,
-      label: dateRanges[5].label,
-      description: dateRanges[5].description,
-      data: monthlyAnalytics5.data,
-      isLoading: monthlyAnalytics5.isLoading,
-    },
-  ];
+  const monthlyData: MonthlyData[] = dateRanges.map((dateRange, index) => ({
+    startDate: dateRange.startDate,
+    endDate: dateRange.endDate,
+    label: dateRange.label,
+    description: dateRange.description,
+    data: monthlyAnalytics[index].data || null,
+    isLoading: monthlyAnalytics[index].isLoading,
+  }));
 
   const currentData = monthlyData[currentIndex];
 
