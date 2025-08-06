@@ -133,7 +133,7 @@ export function CategoryAnalytics({ data }: CategoryAnalyticsProps) {
         <CardContent className="space-y-6">
           {/* Horizontal Progress Bar */}
           <div className="space-y-4">
-            <div className="h-4 bg-gray-200 rounded-full overflow-hidden">
+            <div className="h-4 rounded-full overflow-hidden">
               {categoriesWithPercentages.map((category) => (
                 <div
                   key={category.category_id}
