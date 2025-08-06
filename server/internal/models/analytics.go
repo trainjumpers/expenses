@@ -37,3 +37,10 @@ type CategoryTransaction struct {
 	CategoryName string  `json:"category_name"`
 	TotalAmount  float64 `json:"total_amount"`
 }
+
+// MonthlyAnalyticsResponse represents the monthly analytics response
+type MonthlyAnalyticsResponse struct {
+	TotalIncome   float64 `json:"total_income"`
+	TotalExpenses float64 `json:"total_expenses"`
+	TotalAmount   float64 `json:"total_amount"`
+}

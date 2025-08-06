@@ -13,6 +13,7 @@ type AnalyticsRepositoryInterface interface {
 	GetBalance(ctx context.Context, userId int64, startDate *time.Time, endDate *time.Time) (map[int64]float64, error)
 	GetNetworthTimeSeries(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) (float64, float64, float64, []map[string]any, error)
 	GetCategoryAnalytics(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) (*models.CategoryAnalyticsResponse, error)
+	GetMonthlyAnalytics(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) (*models.MonthlyAnalyticsResponse, error)
 }
 
 type AnalyticsRepository struct {
@@ -186,4 +187,35 @@ func (r *AnalyticsRepository) GetCategoryAnalytics(ctx context.Context, userId i
 	}
 
 	return &analytics, nil
+}
+
+// GetMonthlyAnalytics retrieves income, expenses, and total amount for a specified date range
+// Note: In our data model, expenses are stored as positive amounts and income as negative amounts
+func (r *AnalyticsRepository) GetMonthlyAnalytics(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) (*models.MonthlyAnalyticsResponse, error) {
+	query := fmt.Sprintf(`
+		SELECT 
+			COALESCE(SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END), 0) as total_expenses,
+			COALESCE(SUM(CASE WHEN amount < 0 THEN amount * -1 ELSE 0 END), 0) as total_income
+		FROM %s.%s
+		WHERE created_by = $1 
+			AND deleted_at IS NULL
+			AND date >= $2 
+			AND date <= $3`,
+		r.schema, r.txnTableName)
+
+	var totalExpenses, totalIncome float64
+	row := r.db.FetchOne(ctx, query, userId, startDate, endDate)
+	err := row.Scan(&totalExpenses, &totalIncome)
+	if err != nil {
+		return nil, err
+	}
+
+	// Calculate total amount (income + expenses, treating income as positive)
+	totalAmount := totalIncome + totalExpenses
+
+	return &models.MonthlyAnalyticsResponse{
+		TotalIncome:   totalIncome,
+		TotalExpenses: totalExpenses,
+		TotalAmount:   totalAmount,
+	}, nil
 }

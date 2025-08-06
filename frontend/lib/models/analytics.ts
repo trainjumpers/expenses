@@ -35,3 +35,10 @@ export interface CategoryTransaction {
   category_name: string;
   total_amount: number;
 }
+
+// MonthlyAnalyticsResponse represents the monthly analytics response
+export interface MonthlyAnalyticsResponse {
+  total_income: number;
+  total_expenses: number;
+  total_amount: number;
+}

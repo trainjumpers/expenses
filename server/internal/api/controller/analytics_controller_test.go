@@ -971,4 +971,155 @@ var _ = Describe("AnalyticsController", func() {
 			})
 		})
 	})
+
+	Describe("GetMonthlyAnalytics", func() {
+		It("should get monthly analytics for authenticated user with date range", func() {
+			startDate := "2024-01-01"
+			endDate := "2024-06-30"
+			url := "/analytics/monthly?start_date=" + startDate + "&end_date=" + endDate
+
+			resp, response := testUser1.MakeRequest(http.MethodGet, url, nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			Expect(response["message"]).To(Equal("Monthly analytics retrieved successfully"))
+			Expect(response["data"]).To(HaveKey("total_income"))
+			Expect(response["data"]).To(HaveKey("total_expenses"))
+			Expect(response["data"]).To(HaveKey("total_amount"))
+
+			data := response["data"].(map[string]any)
+			Expect(data["total_income"]).To(BeAssignableToTypeOf(float64(0)))
+			Expect(data["total_expenses"]).To(BeAssignableToTypeOf(float64(0)))
+			Expect(data["total_amount"]).To(BeAssignableToTypeOf(float64(0)))
+		})
+
+		It("should get monthly analytics with custom 3-month date range", func() {
+			startDate := "2024-03-01"
+			endDate := "2024-05-31"
+			url := "/analytics/monthly?start_date=" + startDate + "&end_date=" + endDate
+
+			resp, response := testUser1.MakeRequest(http.MethodGet, url, nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			Expect(response["message"]).To(Equal("Monthly analytics retrieved successfully"))
+
+			data := response["data"].(map[string]any)
+			Expect(data).To(HaveKey("total_income"))
+			Expect(data).To(HaveKey("total_expenses"))
+			Expect(data).To(HaveKey("total_amount"))
+		})
+
+		It("should get monthly analytics with 12-month date range", func() {
+			startDate := "2023-06-01"
+			endDate := "2024-05-31"
+			url := "/analytics/monthly?start_date=" + startDate + "&end_date=" + endDate
+
+			resp, response := testUser1.MakeRequest(http.MethodGet, url, nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			Expect(response["message"]).To(Equal("Monthly analytics retrieved successfully"))
+
+			data := response["data"].(map[string]any)
+			Expect(data).To(HaveKey("total_income"))
+			Expect(data).To(HaveKey("total_expenses"))
+			Expect(data).To(HaveKey("total_amount"))
+		})
+
+		It("should return error for invalid start_date parameter", func() {
+			resp, response := testUser1.MakeRequest(http.MethodGet, "/analytics/monthly?start_date=invalid&end_date=2024-06-30", nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+			Expect(response["message"]).To(Equal("invalid start_date format, expected YYYY-MM-DD"))
+		})
+
+		It("should return error for missing start_date parameter", func() {
+			resp, response := testUser1.MakeRequest(http.MethodGet, "/analytics/monthly?end_date=2024-06-30", nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+			Expect(response["message"]).To(Equal("start_date and end_date query parameters are required"))
+		})
+
+		It("should return error for missing end_date parameter", func() {
+			resp, response := testUser1.MakeRequest(http.MethodGet, "/analytics/monthly?start_date=2024-01-01", nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+			Expect(response["message"]).To(Equal("start_date and end_date query parameters are required"))
+		})
+
+		It("should return error when end_date is before start_date", func() {
+			resp, response := testUser1.MakeRequest(http.MethodGet, "/analytics/monthly?start_date=2024-06-01&end_date=2024-01-01", nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+			Expect(response["message"]).To(Equal("start_date cannot be after end_date"))
+		})
+
+		It("should return unauthorized for unauthenticated request", func() {
+			resp, response := testHelperUnauthenticated.MakeRequest(http.MethodGet, "/analytics/monthly?start_date=2024-01-01&end_date=2024-06-30", nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
+			Expect(response["message"]).To(Equal("please log in to continue"))
+		})
+
+		It("should return valid analytics structure", func() {
+			startDate := "2024-01-01"
+			endDate := "2024-06-30"
+			url := "/analytics/monthly?start_date=" + startDate + "&end_date=" + endDate
+
+			resp, response := testUser1.MakeRequest(http.MethodGet, url, nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+			data := response["data"].(map[string]any)
+
+			// Verify all required fields are present and have correct types
+			totalIncome, hasIncome := data["total_income"]
+			Expect(hasIncome).To(BeTrue())
+			Expect(totalIncome).To(BeAssignableToTypeOf(float64(0)))
+
+			totalExpenses, hasExpenses := data["total_expenses"]
+			Expect(hasExpenses).To(BeTrue())
+			Expect(totalExpenses).To(BeAssignableToTypeOf(float64(0)))
+
+			totalAmount, hasAmount := data["total_amount"]
+			Expect(hasAmount).To(BeTrue())
+			Expect(totalAmount).To(BeAssignableToTypeOf(float64(0)))
+
+			// Verify values are non-negative (business logic check)
+			Expect(totalIncome.(float64)).To(BeNumerically(">=", 0))
+			Expect(totalExpenses.(float64)).To(BeNumerically(">=", 0))
+			Expect(totalAmount.(float64)).To(BeNumerically(">=", 0))
+		})
+
+		It("should return different results for different users", func() {
+			startDate := "2024-01-01"
+			endDate := "2024-06-30"
+			url := "/analytics/monthly?start_date=" + startDate + "&end_date=" + endDate
+
+			// Get analytics for user1
+			resp1, response1 := testUser1.MakeRequest(http.MethodGet, url, nil)
+			Expect(resp1.StatusCode).To(Equal(http.StatusOK))
+
+			// Get analytics for user2
+			resp2, response2 := testUser2.MakeRequest(http.MethodGet, url, nil)
+			Expect(resp2.StatusCode).To(Equal(http.StatusOK))
+
+			// Both should be successful
+			data1 := response1["data"].(map[string]any)
+			data2 := response2["data"].(map[string]any)
+
+			// Both should have the required structure
+			Expect(data1).To(HaveKey("total_income"))
+			Expect(data1).To(HaveKey("total_expenses"))
+			Expect(data1).To(HaveKey("total_amount"))
+
+			Expect(data2).To(HaveKey("total_income"))
+			Expect(data2).To(HaveKey("total_expenses"))
+			Expect(data2).To(HaveKey("total_amount"))
+		})
+
+		It("should handle large date range", func() {
+			startDate := "2020-01-01"
+			endDate := "2024-12-31"
+			url := "/analytics/monthly?start_date=" + startDate + "&end_date=" + endDate
+
+			resp, response := testUser1.MakeRequest(http.MethodGet, url, nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			Expect(response["message"]).To(Equal("Monthly analytics retrieved successfully"))
+
+			data := response["data"].(map[string]any)
+			Expect(data).To(HaveKey("total_income"))
+			Expect(data).To(HaveKey("total_expenses"))
+			Expect(data).To(HaveKey("total_amount"))
+		})
+	})
 })

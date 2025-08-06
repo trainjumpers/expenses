@@ -802,4 +802,180 @@ var _ = Describe("AnalyticsService", func() {
 			})
 		})
 	})
+
+	Describe("GetMonthlyAnalytics", func() {
+		var startDate, endDate time.Time
+
+		BeforeEach(func() {
+			startDate = time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+			endDate = time.Date(2024, 6, 30, 23, 59, 59, 0, time.UTC)
+		})
+
+		Context("when date range is invalid", func() {
+			It("should return error when end date is before start date", func() {
+				invalidStartDate := time.Date(2024, 6, 1, 0, 0, 0, 0, time.UTC)
+				invalidEndDate := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+
+				_, err := analyticsService.GetMonthlyAnalytics(ctx, userId, invalidStartDate, invalidEndDate)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("end date must be after or equal to start date"))
+			})
+
+			It("should allow same start and end date", func() {
+				sameDate := time.Date(2024, 6, 1, 0, 0, 0, 0, time.UTC)
+
+				_, err := analyticsService.GetMonthlyAnalytics(ctx, userId, sameDate, sameDate)
+				Expect(err).NotTo(HaveOccurred())
+			})
+		})
+
+		Context("when repository returns error", func() {
+			BeforeEach(func() {
+				mockAnalyticsRepo.SetShouldErrorOnMonthly(true)
+			})
+
+			It("should return error", func() {
+				_, err := analyticsService.GetMonthlyAnalytics(ctx, userId, startDate, endDate)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("failed to get monthly analytics"))
+			})
+		})
+
+		Context("when repository returns success", func() {
+			var expectedAnalytics *models.MonthlyAnalyticsResponse
+
+			BeforeEach(func() {
+				expectedAnalytics = &models.MonthlyAnalyticsResponse{
+					TotalIncome:   1500.0,
+					TotalExpenses: 1200.0,
+					TotalAmount:   2700.0,
+				}
+				mockAnalyticsRepo.SetMonthlyAnalytics(userId, startDate, endDate, expectedAnalytics)
+			})
+
+			It("should return monthly analytics successfully", func() {
+				result, err := analyticsService.GetMonthlyAnalytics(ctx, userId, startDate, endDate)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).NotTo(BeNil())
+				Expect(result.TotalIncome).To(Equal(1500.0))
+				Expect(result.TotalExpenses).To(Equal(1200.0))
+				Expect(result.TotalAmount).To(Equal(2700.0))
+			})
+		})
+
+		Context("when no specific data is set", func() {
+			It("should return default analytics", func() {
+				otherStartDate := time.Date(2024, 3, 1, 0, 0, 0, 0, time.UTC)
+				otherEndDate := time.Date(2024, 3, 31, 23, 59, 59, 0, time.UTC)
+
+				result, err := analyticsService.GetMonthlyAnalytics(ctx, userId, otherStartDate, otherEndDate)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).NotTo(BeNil())
+				Expect(result.TotalIncome).To(Equal(1000.0))  // Default from mock
+				Expect(result.TotalExpenses).To(Equal(800.0)) // Default from mock
+				Expect(result.TotalAmount).To(Equal(1800.0))  // Default from mock
+			})
+		})
+
+		Context("with different date ranges", func() {
+			BeforeEach(func() {
+				// Set different analytics for different date ranges
+				startDate3Months := time.Date(2024, 3, 1, 0, 0, 0, 0, time.UTC)
+				endDate3Months := time.Date(2024, 5, 31, 23, 59, 59, 0, time.UTC)
+				startDate12Months := time.Date(2023, 6, 1, 0, 0, 0, 0, time.UTC)
+				endDate12Months := time.Date(2024, 5, 31, 23, 59, 59, 0, time.UTC)
+
+				analytics3Months := &models.MonthlyAnalyticsResponse{
+					TotalIncome:   800.0,
+					TotalExpenses: 600.0,
+					TotalAmount:   1400.0,
+				}
+				analytics12Months := &models.MonthlyAnalyticsResponse{
+					TotalIncome:   3000.0,
+					TotalExpenses: 2500.0,
+					TotalAmount:   5500.0,
+				}
+				mockAnalyticsRepo.SetMonthlyAnalytics(userId, startDate3Months, endDate3Months, analytics3Months)
+				mockAnalyticsRepo.SetMonthlyAnalytics(userId, startDate12Months, endDate12Months, analytics12Months)
+			})
+
+			It("should return correct analytics for 3 months range", func() {
+				startDate3Months := time.Date(2024, 3, 1, 0, 0, 0, 0, time.UTC)
+				endDate3Months := time.Date(2024, 5, 31, 23, 59, 59, 0, time.UTC)
+
+				result, err := analyticsService.GetMonthlyAnalytics(ctx, userId, startDate3Months, endDate3Months)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result.TotalIncome).To(Equal(800.0))
+				Expect(result.TotalExpenses).To(Equal(600.0))
+				Expect(result.TotalAmount).To(Equal(1400.0))
+			})
+
+			It("should return correct analytics for 12 months range", func() {
+				startDate12Months := time.Date(2023, 6, 1, 0, 0, 0, 0, time.UTC)
+				endDate12Months := time.Date(2024, 5, 31, 23, 59, 59, 0, time.UTC)
+
+				result, err := analyticsService.GetMonthlyAnalytics(ctx, userId, startDate12Months, endDate12Months)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result.TotalIncome).To(Equal(3000.0))
+				Expect(result.TotalExpenses).To(Equal(2500.0))
+				Expect(result.TotalAmount).To(Equal(5500.0))
+			})
+		})
+
+		Context("with edge cases", func() {
+			It("should handle analytics with zero income", func() {
+				testStartDate := time.Date(2024, 4, 1, 0, 0, 0, 0, time.UTC)
+				testEndDate := time.Date(2024, 4, 30, 23, 59, 59, 0, time.UTC)
+
+				analyticsNoIncome := &models.MonthlyAnalyticsResponse{
+					TotalIncome:   0.0,
+					TotalExpenses: 500.0,
+					TotalAmount:   500.0,
+				}
+				mockAnalyticsRepo.SetMonthlyAnalytics(userId, testStartDate, testEndDate, analyticsNoIncome)
+
+				result, err := analyticsService.GetMonthlyAnalytics(ctx, userId, testStartDate, testEndDate)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result.TotalIncome).To(Equal(0.0))
+				Expect(result.TotalExpenses).To(Equal(500.0))
+				Expect(result.TotalAmount).To(Equal(500.0))
+			})
+
+			It("should handle analytics with zero expenses", func() {
+				testStartDate := time.Date(2024, 5, 1, 0, 0, 0, 0, time.UTC)
+				testEndDate := time.Date(2024, 5, 31, 23, 59, 59, 0, time.UTC)
+
+				analyticsNoExpenses := &models.MonthlyAnalyticsResponse{
+					TotalIncome:   1000.0,
+					TotalExpenses: 0.0,
+					TotalAmount:   1000.0,
+				}
+				mockAnalyticsRepo.SetMonthlyAnalytics(userId, testStartDate, testEndDate, analyticsNoExpenses)
+
+				result, err := analyticsService.GetMonthlyAnalytics(ctx, userId, testStartDate, testEndDate)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result.TotalIncome).To(Equal(1000.0))
+				Expect(result.TotalExpenses).To(Equal(0.0))
+				Expect(result.TotalAmount).To(Equal(1000.0))
+			})
+
+			It("should handle analytics with both zero income and expenses", func() {
+				testStartDate := time.Date(2024, 6, 1, 0, 0, 0, 0, time.UTC)
+				testEndDate := time.Date(2024, 6, 30, 23, 59, 59, 0, time.UTC)
+
+				analyticsZero := &models.MonthlyAnalyticsResponse{
+					TotalIncome:   0.0,
+					TotalExpenses: 0.0,
+					TotalAmount:   0.0,
+				}
+				mockAnalyticsRepo.SetMonthlyAnalytics(userId, testStartDate, testEndDate, analyticsZero)
+
+				result, err := analyticsService.GetMonthlyAnalytics(ctx, userId, testStartDate, testEndDate)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result.TotalIncome).To(Equal(0.0))
+				Expect(result.TotalExpenses).To(Equal(0.0))
+				Expect(result.TotalAmount).To(Equal(0.0))
+			})
+		})
+	})
 })

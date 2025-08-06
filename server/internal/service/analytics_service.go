@@ -12,6 +12,7 @@ type AnalyticsServiceInterface interface {
 	GetAccountAnalytics(ctx context.Context, userId int64) (models.AccountAnalyticsListResponse, error)
 	GetNetworthTimeSeries(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) (models.NetworthTimeSeriesResponse, error)
 	GetCategoryAnalytics(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) (*models.CategoryAnalyticsResponse, error)
+	GetMonthlyAnalytics(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) (*models.MonthlyAnalyticsResponse, error)
 }
 
 type AnalyticsService struct {
@@ -146,4 +147,19 @@ func (s *AnalyticsService) GetNetworthTimeSeries(ctx context.Context, userId int
 
 func (s *AnalyticsService) GetCategoryAnalytics(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) (*models.CategoryAnalyticsResponse, error) {
 	return s.analyticsRepo.GetCategoryAnalytics(ctx, userId, startDate, endDate)
+}
+
+func (s *AnalyticsService) GetMonthlyAnalytics(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) (*models.MonthlyAnalyticsResponse, error) {
+	// Validate input - endDate should be after or equal to startDate
+	if endDate.Before(startDate) {
+		return nil, fmt.Errorf("end date must be after or equal to start date")
+	}
+
+	// Call repository to get the analytics
+	analytics, err := s.analyticsRepo.GetMonthlyAnalytics(ctx, userId, startDate, endDate)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get monthly analytics: %w", err)
+	}
+
+	return analytics, nil
 }

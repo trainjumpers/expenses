@@ -75,3 +75,23 @@ func (a *AnalyticsController) GetCategoryAnalytics(ctx *gin.Context) {
 	logger.Infof("Category analytics retrieved successfully for user %d", userId)
 	a.SendSuccess(ctx, http.StatusOK, "Category analytics retrieved successfully", analytics)
 }
+
+func (a *AnalyticsController) GetMonthlyAnalytics(ctx *gin.Context) {
+	userId := a.GetAuthenticatedUserId(ctx)
+	logger.Infof("Fetching monthly analytics for user %d", userId)
+
+	startDate, endDate, err := a.ParseDateRange(ctx)
+	if err != nil {
+		return
+	}
+
+	analytics, err := a.analyticsService.GetMonthlyAnalytics(ctx, userId, startDate, endDate)
+	if err != nil {
+		logger.Errorf("Error getting monthly analytics: %v", err)
+		a.HandleError(ctx, err)
+		return
+	}
+
+	logger.Infof("Monthly analytics retrieved successfully for user %d", userId)
+	a.SendSuccess(ctx, http.StatusOK, "Monthly analytics retrieved successfully", analytics)
+}
