@@ -209,9 +209,7 @@ func (r *AnalyticsRepository) GetMonthlyAnalytics(ctx context.Context, userId in
 	if err != nil {
 		return nil, err
 	}
-
-	// Calculate total amount (income + expenses, treating income as positive)
-	totalAmount := totalIncome + totalExpenses
+	totalAmount := totalIncome - totalExpenses
 
 	return &models.MonthlyAnalyticsResponse{
 		TotalIncome:   totalIncome,

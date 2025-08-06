@@ -1074,10 +1074,9 @@ var _ = Describe("AnalyticsController", func() {
 			Expect(hasAmount).To(BeTrue())
 			Expect(totalAmount).To(BeAssignableToTypeOf(float64(0)))
 
-			// Verify values are non-negative (business logic check)
 			Expect(totalIncome.(float64)).To(BeNumerically(">=", 0))
 			Expect(totalExpenses.(float64)).To(BeNumerically(">=", 0))
-			Expect(totalAmount.(float64)).To(BeNumerically(">=", 0))
+			Expect(totalAmount.(float64)).To(BeNumerically("==", totalIncome.(float64)-totalExpenses.(float64)))
 		})
 
 		It("should return different results for different users", func() {

@@ -4,7 +4,12 @@ import { useMonthlyAnalytics } from "@/components/hooks/useAnalytics";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency } from "@/lib/utils";
-import { CalendarIcon, TrendingDownIcon, TrendingUpIcon } from "lucide-react";
+import {
+  ArrowRightLeftIcon,
+  CalendarIcon,
+  TrendingDownIcon,
+  TrendingUpIcon,
+} from "lucide-react";
 import { useRef, useState } from "react";
 
 interface MonthlyData {
@@ -215,9 +220,12 @@ export function MonthlyAnalyticsCard() {
 
                   {/* Net Amount */}
                   <div className="flex items-center justify-between p-2 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
-                    <span className="text-xs font-medium text-blue-700 dark:text-blue-400">
-                      Net Flow
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <ArrowRightLeftIcon className="h-3 w-3 text-blue-600" />
+                      <span className="text-xs font-medium text-blue-700 dark:text-blue-400">
+                        Net Flow
+                      </span>
+                    </div>
                     <span className="text-xs font-semibold text-blue-800 dark:text-blue-300">
                       {formatCurrency(item.data.total_amount)}
                     </span>

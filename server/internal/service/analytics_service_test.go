@@ -837,7 +837,6 @@ var _ = Describe("AnalyticsService", func() {
 			It("should return error", func() {
 				_, err := analyticsService.GetMonthlyAnalytics(ctx, userId, startDate, endDate)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("failed to get monthly analytics"))
 			})
 		})
 

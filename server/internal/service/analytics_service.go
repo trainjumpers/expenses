@@ -155,11 +155,5 @@ func (s *AnalyticsService) GetMonthlyAnalytics(ctx context.Context, userId int64
 		return nil, fmt.Errorf("end date must be after or equal to start date")
 	}
 
-	// Call repository to get the analytics
-	analytics, err := s.analyticsRepo.GetMonthlyAnalytics(ctx, userId, startDate, endDate)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get monthly analytics: %w", err)
-	}
-
-	return analytics, nil
+	return s.analyticsRepo.GetMonthlyAnalytics(ctx, userId, startDate, endDate)
 }
