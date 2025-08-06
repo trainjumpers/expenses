@@ -1,3 +1,5 @@
+import { AddCategoryModal } from "@/components/custom/Modal/Category/AddCategoryModal";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -9,11 +11,11 @@ import {
 } from "@/components/ui/table";
 import { CategoryAnalyticsResponse } from "@/lib/models/analytics";
 import { formatCurrency } from "@/lib/utils";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Plus, Tag } from "lucide-react";
 import { useState } from "react";
 
 interface CategoryAnalyticsProps {
-  data: CategoryAnalyticsResponse["category_transactions"];
+  data?: CategoryAnalyticsResponse["category_transactions"];
 }
 
 // Color palette for different categories
@@ -34,24 +36,52 @@ export function CategoryAnalytics({ data }: CategoryAnalyticsProps) {
   const [expandedCategories, setExpandedCategories] = useState<Set<number>>(
     new Set()
   );
+  const [isAddCategoryModalOpen, setIsAddCategoryModalOpen] = useState(false);
 
   if (!data || data.length === 0) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Category Analytics</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8">
-            <p className="text-muted-foreground">
-              No category data found for the selected period.
-            </p>
-            <p className="text-muted-foreground">
-              Please add some transactions to see analytics.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+      <>
+        <Card className="h-full">
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <span>Category Analytics</span>
+              <Tag className="h-5 w-5 text-muted-foreground" />
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col items-center justify-center py-12 space-y-6">
+              <div className="rounded-full bg-muted p-6">
+                <Tag className="h-12 w-12 text-muted-foreground" />
+              </div>
+              <div className="text-center space-y-2">
+                <h3 className="text-lg font-semibold">
+                  No categories yet
+                </h3>
+                <p className="text-sm text-muted-foreground max-w-sm">
+                  Start organizing your expenses by creating your first category. 
+                  You can add categories for groceries, entertainment, bills, and more.
+                </p>
+              </div>
+              <Button
+                onClick={() => setIsAddCategoryModalOpen(true)}
+                className="flex items-center gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                Add Your First Category
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <AddCategoryModal
+          isOpen={isAddCategoryModalOpen}
+          onOpenChange={setIsAddCategoryModalOpen}
+          onCategoryAdded={() => {
+            // The category list will automatically refresh due to React Query
+            setIsAddCategoryModalOpen(false);
+          }}
+        />
+      </>
     );
   }
 
@@ -86,12 +116,21 @@ export function CategoryAnalytics({ data }: CategoryAnalyticsProps) {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <span>Categories</span>
-        </CardTitle>
-      </CardHeader>
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <span>Categories</span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsAddCategoryModalOpen(true)}
+              className="h-8 w-8 p-0"
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          </CardTitle>
+        </CardHeader>
       <CardContent className="space-y-6">
         {/* Horizontal Progress Bar */}
         <div className="space-y-4">
@@ -199,5 +238,15 @@ export function CategoryAnalytics({ data }: CategoryAnalyticsProps) {
         </div>
       </CardContent>
     </Card>
+    
+    <AddCategoryModal
+      isOpen={isAddCategoryModalOpen}
+      onOpenChange={setIsAddCategoryModalOpen}
+      onCategoryAdded={() => {
+        // The category list will automatically refresh due to React Query
+        setIsAddCategoryModalOpen(false);
+      }}
+    />
+    </>
   );
 }

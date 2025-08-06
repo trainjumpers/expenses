@@ -129,6 +129,13 @@ func (s *AnalyticsService) GetNetworthTimeSeries(ctx context.Context, userId int
 		currentDate = currentDate.AddDate(0, 0, 1)
 	}
 
+	if len(timeSeries) == 0 {
+		timeSeries = append(timeSeries, models.NetworthDataPoint{
+			Date:     startDate.Format("2006-01-02"),
+			Networth: initialBalance,
+		})
+	}
+
 	return models.NetworthTimeSeriesResponse{
 		InitialBalance: initialBalance, // Initial balance for frontend
 		TotalIncome:    totalIncome,

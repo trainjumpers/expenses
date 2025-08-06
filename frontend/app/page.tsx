@@ -86,12 +86,8 @@ export default function Page() {
             </div>
           ) : (
             <>
-              {categoryData && categoryData.category_transactions && (
-                <CategoryAnalytics data={categoryData.category_transactions} />
-              )}
-              {accountData && accountData.account_analytics && (
-                <AccountAnalytics data={accountData.account_analytics} />
-              )}
+              <CategoryAnalytics data={categoryData?.category_transactions} />
+              <AccountAnalytics data={accountData?.account_analytics} />
             </>
           )}
         </div>
