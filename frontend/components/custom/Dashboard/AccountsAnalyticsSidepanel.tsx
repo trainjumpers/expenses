@@ -69,7 +69,7 @@ export function AccountsAnalyticsSidepanel({
         <div className="flex-shrink-0 mb-4">
           <MonthlyAnalyticsCard />
         </div>
-        
+
         <Card className="flex-1 flex flex-col">
           <CardHeader className="pb-4 flex-shrink-0">
             <div className="flex items-center justify-between">
@@ -106,7 +106,7 @@ export function AccountsAnalyticsSidepanel({
       <div className="flex-shrink-0 mb-4">
         <MonthlyAnalyticsCard />
       </div>
-      
+
       <Card className="flex-1 flex flex-col">
         <CardHeader className="pb-4 flex-shrink-0">
           <div className="flex items-center justify-between">

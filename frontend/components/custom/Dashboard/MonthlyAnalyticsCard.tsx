@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency } from "@/lib/utils";
 import { CalendarIcon, TrendingDownIcon, TrendingUpIcon } from "lucide-react";
-import { useState, useRef } from "react";
+import { useRef, useState } from "react";
 
 interface MonthlyData {
   startDate: string;
@@ -24,10 +24,10 @@ interface MonthlyData {
 function getDateRanges() {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  
+
   // Format date as YYYY-MM-DD
-  const formatDate = (date: Date) => date.toISOString().split('T')[0];
-  
+  const formatDate = (date: Date) => date.toISOString().split("T")[0];
+
   return [
     {
       label: "This Month",
@@ -36,14 +36,14 @@ function getDateRanges() {
       endDate: formatDate(today),
     },
     {
-      label: "Last Month", 
+      label: "Last Month",
       description: "Previous month",
       startDate: formatDate(new Date(now.getFullYear(), now.getMonth() - 1, 1)),
       endDate: formatDate(new Date(now.getFullYear(), now.getMonth(), 0)), // Last day of previous month
     },
     {
       label: "3 Months",
-      description: "Last 3 months", 
+      description: "Last 3 months",
       startDate: formatDate(new Date(now.getFullYear(), now.getMonth() - 3, 1)),
       endDate: formatDate(today),
     },
@@ -56,7 +56,9 @@ function getDateRanges() {
     {
       label: "1 Year",
       description: "Last 12 months",
-      startDate: formatDate(new Date(now.getFullYear(), now.getMonth() - 12, 1)),
+      startDate: formatDate(
+        new Date(now.getFullYear(), now.getMonth() - 12, 1)
+      ),
       endDate: formatDate(today),
     },
     {
@@ -75,36 +77,105 @@ export function MonthlyAnalyticsCard() {
   // Get date ranges for all time periods
   const dateRanges = getDateRanges();
 
-  // Fetch data for all monthly options
-  const monthlyData: MonthlyData[] = dateRanges.map((option) => {
-    const { data, isLoading } = useMonthlyAnalytics(option.startDate, option.endDate);
-    return {
-      startDate: option.startDate,
-      endDate: option.endDate,
-      label: option.label,
-      description: option.description,
-      data,
-      isLoading,
-    };
-  });
+  // Fetch data for all monthly options using individual hooks
+  const monthlyAnalytics0 = useMonthlyAnalytics(
+    dateRanges[0].startDate,
+    dateRanges[0].endDate
+  );
+  const monthlyAnalytics1 = useMonthlyAnalytics(
+    dateRanges[1].startDate,
+    dateRanges[1].endDate
+  );
+  const monthlyAnalytics2 = useMonthlyAnalytics(
+    dateRanges[2].startDate,
+    dateRanges[2].endDate
+  );
+  const monthlyAnalytics3 = useMonthlyAnalytics(
+    dateRanges[3].startDate,
+    dateRanges[3].endDate
+  );
+  const monthlyAnalytics4 = useMonthlyAnalytics(
+    dateRanges[4].startDate,
+    dateRanges[4].endDate
+  );
+  const monthlyAnalytics5 = useMonthlyAnalytics(
+    dateRanges[5].startDate,
+    dateRanges[5].endDate
+  );
+
+  // Combine data with date ranges
+  const monthlyData: MonthlyData[] = [
+    {
+      startDate: dateRanges[0].startDate,
+      endDate: dateRanges[0].endDate,
+      label: dateRanges[0].label,
+      description: dateRanges[0].description,
+      data: monthlyAnalytics0.data,
+      isLoading: monthlyAnalytics0.isLoading,
+    },
+    {
+      startDate: dateRanges[1].startDate,
+      endDate: dateRanges[1].endDate,
+      label: dateRanges[1].label,
+      description: dateRanges[1].description,
+      data: monthlyAnalytics1.data,
+      isLoading: monthlyAnalytics1.isLoading,
+    },
+    {
+      startDate: dateRanges[2].startDate,
+      endDate: dateRanges[2].endDate,
+      label: dateRanges[2].label,
+      description: dateRanges[2].description,
+      data: monthlyAnalytics2.data,
+      isLoading: monthlyAnalytics2.isLoading,
+    },
+    {
+      startDate: dateRanges[3].startDate,
+      endDate: dateRanges[3].endDate,
+      label: dateRanges[3].label,
+      description: dateRanges[3].description,
+      data: monthlyAnalytics3.data,
+      isLoading: monthlyAnalytics3.isLoading,
+    },
+    {
+      startDate: dateRanges[4].startDate,
+      endDate: dateRanges[4].endDate,
+      label: dateRanges[4].label,
+      description: dateRanges[4].description,
+      data: monthlyAnalytics4.data,
+      isLoading: monthlyAnalytics4.isLoading,
+    },
+    {
+      startDate: dateRanges[5].startDate,
+      endDate: dateRanges[5].endDate,
+      label: dateRanges[5].label,
+      description: dateRanges[5].description,
+      data: monthlyAnalytics5.data,
+      isLoading: monthlyAnalytics5.isLoading,
+    },
+  ];
 
   const currentData = monthlyData[currentIndex];
 
   const handleScroll = () => {
     if (!scrollRef.current) return;
-    
-    const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
+
+    const { scrollLeft, clientWidth } = scrollRef.current;
     const itemWidth = clientWidth;
     const newIndex = Math.round(scrollLeft / itemWidth);
-    
-    if (newIndex !== currentIndex && newIndex >= 0 && newIndex < dateRanges.length) {
+
+    if (
+      newIndex !== currentIndex &&
+      newIndex >= 0 &&
+      newIndex < dateRanges.length
+    ) {
       setCurrentIndex(newIndex);
     }
   };
 
   const scrollToIndex = (index: number) => {
     if (!scrollRef.current) return;
-    
+
     const itemWidth = scrollRef.current.clientWidth;
     scrollRef.current.scrollTo({
       left: index * itemWidth,
@@ -156,7 +227,7 @@ export function MonthlyAnalyticsCard() {
           onScroll={handleScroll}
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
         >
-          {monthlyData.map((item, index) => (
+          {monthlyData.map((item) => (
             <div
               key={`${item.startDate}-${item.endDate}`}
               className="min-w-full snap-center space-y-3"
@@ -212,7 +283,9 @@ export function MonthlyAnalyticsCard() {
                 </div>
               ) : (
                 <div className="text-center py-4">
-                  <p className="text-xs text-muted-foreground">No data available</p>
+                  <p className="text-xs text-muted-foreground">
+                    No data available
+                  </p>
                 </div>
               )}
             </div>
