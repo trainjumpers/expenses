@@ -95,3 +95,16 @@ export interface SkippedResult {
   transaction_id: number;
   reason: string;
 }
+
+export interface PaginatedRulesResponse {
+  rules: Rule[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+export interface RuleListQuery {
+  page?: number;
+  page_size?: number;
+  search?: string;
+}

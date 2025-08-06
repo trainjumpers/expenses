@@ -171,13 +171,13 @@ func (s *ruleEngineService) fetchSpecificRules(ctx context.Context, userId int64
 }
 
 func (s *ruleEngineService) fetchAllUserRules(ctx context.Context, userId int64) ([]models.DescribeRuleResponse, error) {
-	allRules, err := s.ruleRepo.ListRules(ctx, userId)
+	allRulesResponse, err := s.ruleRepo.ListRules(ctx, userId, models.RuleListQuery{})
 	if err != nil {
 		return nil, err
 	}
 
 	var rules []models.DescribeRuleResponse
-	for _, rule := range allRules {
+	for _, rule := range allRulesResponse.Rules {
 		if rule.EffectiveFrom.After(time.Now()) {
 			continue
 		}

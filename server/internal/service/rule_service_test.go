@@ -5,6 +5,7 @@ import (
 	mock_database "expenses/internal/mock/database"
 	mock "expenses/internal/mock/repository"
 	"expenses/internal/models"
+	"fmt"
 	"strings"
 	"sync"
 	"time"
@@ -188,22 +189,228 @@ var _ = Describe("RuleService", func() {
 		})
 
 		It("should list all rules for a specific user", func() {
-			rules, err := ruleService.ListRules(ctx, user1)
+			response, err := ruleService.ListRules(ctx, user1, nil)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(len(rules)).To(Equal(3))
+			Expect(len(response.Rules)).To(Equal(3))
+			Expect(response.Total).To(Equal(3))
 		})
 
 		It("should return empty list for user with no rules", func() {
-			rules, err := ruleService.ListRules(ctx, 999)
+			response, err := ruleService.ListRules(ctx, 999, nil)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(len(rules)).To(Equal(0))
+			Expect(len(response.Rules)).To(Equal(0))
+			Expect(response.Total).To(Equal(0))
 		})
 
 		It("should only return rules for the requested user", func() {
-			rules, err := ruleService.ListRules(ctx, user2)
+			response, err := ruleService.ListRules(ctx, user2, nil)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(len(rules)).To(Equal(1))
-			Expect(rules[0].Name).To(Equal("User2Rule"))
+			Expect(len(response.Rules)).To(Equal(1))
+			Expect(response.Total).To(Equal(1))
+			Expect(response.Rules[0].Name).To(Equal("User2Rule"))
+		})
+
+		Context("with pagination", func() {
+			BeforeEach(func() {
+				// Create additional rules for pagination testing
+				for i := 4; i <= 15; i++ {
+					input := models.CreateRuleRequest{
+						Rule: models.CreateBaseRuleRequest{
+							Name:          fmt.Sprintf("Test Rule %d", i),
+							Description:   ptrToString(fmt.Sprintf("Rule description %d", i)),
+							EffectiveFrom: now,
+							CreatedBy:     user1,
+						},
+						Actions:    []models.CreateRuleActionRequest{{ActionType: models.RuleFieldAmount, ActionValue: "100"}},
+						Conditions: []models.CreateRuleConditionRequest{{ConditionType: models.RuleFieldAmount, ConditionValue: "100", ConditionOperator: models.OperatorEquals}},
+					}
+					_, err := ruleService.CreateRule(ctx, input)
+					Expect(err).NotTo(HaveOccurred())
+				}
+			})
+
+			It("should return paginated rules with specified page size", func() {
+				query := &models.RuleListQuery{
+					Page:     1,
+					PageSize: 5,
+				}
+				response, err := ruleService.ListRules(ctx, user1, query)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(response.Page).To(Equal(1))
+				Expect(response.PageSize).To(Equal(5))
+				Expect(response.Total).To(BeNumerically(">=", 15))
+				Expect(len(response.Rules)).To(Equal(5))
+			})
+
+			It("should handle search filtering", func() {
+				searchTerm := "Test Rule 1"
+				query := &models.RuleListQuery{
+					Page:     1,
+					PageSize: 10,
+					Search:   &searchTerm,
+				}
+				response, err := ruleService.ListRules(ctx, user1, query)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(response.Total).To(BeNumerically(">=", 1))
+				for _, rule := range response.Rules {
+					Expect(rule.Name).To(ContainSubstring("Test Rule 1"))
+				}
+			})
+		})
+	})
+
+	Describe("ListRules with Pagination", func() {
+		BeforeEach(func() {
+			// Create 15 rules for user1 with different names and descriptions
+			for i := 0; i < 15; i++ {
+				input := models.CreateRuleRequest{
+					Rule: models.CreateBaseRuleRequest{
+						Name:          fmt.Sprintf("Test Rule %d", i+1),
+						Description:   ptrToString(fmt.Sprintf("Rule description %d", i+1)),
+						EffectiveFrom: now,
+						CreatedBy:     user1,
+					},
+					Actions:    []models.CreateRuleActionRequest{{ActionType: models.RuleFieldAmount, ActionValue: "100"}},
+					Conditions: []models.CreateRuleConditionRequest{{ConditionType: models.RuleFieldAmount, ConditionValue: "100", ConditionOperator: models.OperatorEquals}},
+				}
+				_, err := ruleService.CreateRule(ctx, input)
+				Expect(err).NotTo(HaveOccurred())
+			}
+			// Create rule for user2
+			input := models.CreateRuleRequest{
+				Rule: models.CreateBaseRuleRequest{
+					Name:          "User2Rule",
+					Description:   ptrToString("desc"),
+					EffectiveFrom: now,
+					CreatedBy:     user2,
+				},
+				Actions:    []models.CreateRuleActionRequest{{ActionType: models.RuleFieldAmount, ActionValue: "100"}},
+				Conditions: []models.CreateRuleConditionRequest{{ConditionType: models.RuleFieldAmount, ConditionValue: "100", ConditionOperator: models.OperatorEquals}},
+			}
+			_, err := ruleService.CreateRule(ctx, input)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should return paginated rules with default values", func() {
+			query := models.RuleListQuery{
+				Page:     1,
+				PageSize: 10,
+			}
+			response, err := ruleService.ListRules(ctx, user1, &query)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(response.Page).To(Equal(1))
+			Expect(response.PageSize).To(Equal(10))
+			Expect(response.Total).To(BeNumerically(">=", 15))
+			Expect(len(response.Rules)).To(Equal(10))
+		})
+
+		It("should handle custom page size", func() {
+			query := models.RuleListQuery{
+				Page:     2,
+				PageSize: 5,
+			}
+			response, err := ruleService.ListRules(ctx, user1, &query)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(response.Page).To(Equal(2))
+			Expect(response.PageSize).To(Equal(5))
+			Expect(len(response.Rules)).To(Equal(5))
+		})
+
+		It("should filter by search term in name", func() {
+			searchTerm := "Test Rule 1"
+			query := models.RuleListQuery{
+				Page:     1,
+				PageSize: 10,
+				Search:   &searchTerm,
+			}
+			response, err := ruleService.ListRules(ctx, user1, &query)
+			Expect(err).NotTo(HaveOccurred())
+			// Should find Test Rule 1, 10, 11, 12, 13, 14, 15
+			Expect(response.Total).To(BeNumerically(">=", 6))
+
+			// Verify search results
+			for _, rule := range response.Rules {
+				Expect(strings.Contains(rule.Name, "Test Rule 1")).To(BeTrue())
+			}
+		})
+
+		It("should filter by search term in description", func() {
+			searchTerm := "description 5"
+			query := models.RuleListQuery{
+				Page:     1,
+				PageSize: 10,
+				Search:   &searchTerm,
+			}
+			response, err := ruleService.ListRules(ctx, user1, &query)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(response.Total).To(BeNumerically(">=", 1))
+
+			// Verify search results
+			found := false
+			for _, rule := range response.Rules {
+				if rule.Description != nil && strings.Contains(*rule.Description, "description 5") {
+					found = true
+					break
+				}
+			}
+			Expect(found).To(BeTrue())
+		})
+
+		It("should return empty results for non-matching search", func() {
+			searchTerm := "nonexistent"
+			query := models.RuleListQuery{
+				Page:     1,
+				PageSize: 10,
+				Search:   &searchTerm,
+			}
+			response, err := ruleService.ListRules(ctx, user1, &query)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(response.Total).To(Equal(0))
+			Expect(len(response.Rules)).To(Equal(0))
+		})
+
+		It("should only return rules for the requested user", func() {
+			query := models.RuleListQuery{
+				Page:     1,
+				PageSize: 10,
+			}
+			response, err := ruleService.ListRules(ctx, user2, &query)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(response.Total).To(Equal(1))
+			Expect(len(response.Rules)).To(Equal(1))
+			Expect(response.Rules[0].Name).To(Equal("User2Rule"))
+		})
+
+		It("should handle page beyond available data", func() {
+			query := models.RuleListQuery{
+				Page:     100,
+				PageSize: 10,
+			}
+			response, err := ruleService.ListRules(ctx, user1, &query)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(response.Page).To(Equal(100))
+			Expect(len(response.Rules)).To(Equal(0))
+		})
+
+		It("should set default values for invalid parameters", func() {
+			query := models.RuleListQuery{
+				Page:     0,  // Invalid
+				PageSize: -1, // Invalid
+			}
+			response, err := ruleService.ListRules(ctx, user1, &query)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(response.Page).To(Equal(1))      // Default
+			Expect(response.PageSize).To(Equal(10)) // Default
+		})
+
+		It("should limit page size to maximum", func() {
+			query := models.RuleListQuery{
+				Page:     1,
+				PageSize: 200, // Above maximum
+			}
+			response, err := ruleService.ListRules(ctx, user1, &query)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(response.PageSize).To(Equal(100)) // Maximum
 		})
 	})
 

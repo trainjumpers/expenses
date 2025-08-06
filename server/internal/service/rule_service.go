@@ -12,7 +12,7 @@ import (
 type RuleServiceInterface interface {
 	CreateRule(ctx context.Context, ruleReq models.CreateRuleRequest) (models.DescribeRuleResponse, error)
 	GetRuleById(ctx context.Context, id int64, userId int64) (models.DescribeRuleResponse, error)
-	ListRules(ctx context.Context, userId int64) ([]models.RuleResponse, error)
+	ListRules(ctx context.Context, userId int64, query *models.RuleListQuery) (models.PaginatedRulesResponse, error)
 	UpdateRule(ctx context.Context, id int64, ruleReq models.UpdateRuleRequest, userId int64) (models.RuleResponse, error)
 	UpdateRuleAction(ctx context.Context, id int64, ruleId int64, ruleReq models.UpdateRuleActionRequest, userId int64) (models.RuleActionResponse, error)
 	UpdateRuleCondition(ctx context.Context, id int64, ruleId int64, ruleReq models.UpdateRuleConditionRequest, userId int64) (models.RuleConditionResponse, error)
@@ -105,14 +105,32 @@ func (s *ruleService) GetRuleById(ctx context.Context, id int64, userId int64) (
 	return ruleResponse, nil
 }
 
-func (s *ruleService) ListRules(ctx context.Context, userId int64) ([]models.RuleResponse, error) {
-	logger.Debugf("Fetching all rules for user %d", userId)
-	rules, err := s.ruleRepo.ListRules(ctx, userId)
-	if err != nil {
-		return nil, err
+func (s *ruleService) ListRules(ctx context.Context, userId int64, query *models.RuleListQuery) (models.PaginatedRulesResponse, error) {
+	logger.Debugf("Fetching rules for user %d", userId)
+
+	// If query is nil, create default query for all rules
+	if query == nil {
+		query = &models.RuleListQuery{}
 	}
-	logger.Debugf("Fetched %d rules for user %d", len(rules), userId)
-	return rules, nil
+
+	// Set default values for pagination
+	if query.Page <= 0 {
+		query.Page = 1
+	}
+	if query.PageSize <= 0 {
+		query.PageSize = 10
+	}
+	if query.PageSize > 100 {
+		query.PageSize = 100
+	}
+
+	response, err := s.ruleRepo.ListRules(ctx, userId, *query)
+	if err != nil {
+		return models.PaginatedRulesResponse{}, err
+	}
+
+	logger.Debugf("Fetched %d rules (page %d of %d total) for user %d", len(response.Rules), query.Page, response.Total, userId)
+	return response, nil
 }
 
 func (s *ruleService) UpdateRule(ctx context.Context, id int64, ruleReq models.UpdateRuleRequest, userId int64) (models.RuleResponse, error) {

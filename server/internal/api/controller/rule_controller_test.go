@@ -812,8 +812,10 @@ var _ = Describe("RuleController", func() {
 			resp, response := testUser3.MakeRequest(http.MethodGet, "/rule", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["message"]).To(Equal("Rules fetched successfully"))
-			Expect(response["data"]).To(BeAssignableToTypeOf([]any{}))
-			Expect(response["data"]).To(BeEmpty())
+			data := response["data"].(map[string]any)
+			Expect(data["rules"]).To(BeAssignableToTypeOf([]any{}))
+			Expect(data["rules"]).To(BeEmpty())
+			Expect(data["total"]).To(Equal(float64(0)))
 		})
 
 		It("should list rules for the user and verify all fields", func() {
@@ -823,7 +825,8 @@ var _ = Describe("RuleController", func() {
 			resp, response := testUser1.MakeRequest(http.MethodGet, "/rule", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["message"]).To(Equal("Rules fetched successfully"))
-			data := response["data"].([]any)
+			responseData := response["data"].(map[string]any)
+			data := responseData["rules"].([]any)
 			var found1, found2 bool
 			for _, r := range data {
 				rule := r.(map[string]any)
@@ -886,7 +889,8 @@ var _ = Describe("RuleController", func() {
 			// List all rules and verify condition_logic values
 			resp, response := testUser1.MakeRequest(http.MethodGet, "/rule", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
-			data := response["data"].([]any)
+			responseData := response["data"].(map[string]any)
+			data := responseData["rules"].([]any)
 
 			var andRule, orRule map[string]any
 			for _, item := range data {
@@ -915,12 +919,172 @@ var _ = Describe("RuleController", func() {
 			resp, response := testUser2.MakeRequest(http.MethodGet, "/rule", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response["message"]).To(Equal("Rules fetched successfully"))
-			Expect(len(response["data"].([]any))).To(Equal(0))
+			responseData := response["data"].(map[string]any)
+			rules := responseData["rules"].([]any)
+			Expect(len(rules)).To(Equal(0))
 		})
 
 		It("should return unauthorized for invalid token", func() {
 			resp, _ := testHelperUnauthenticated.MakeRequest(http.MethodGet, "/rule", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
+		})
+	})
+
+	Describe("ListRules with Pagination", func() {
+		var ruleIds []int64
+
+		BeforeEach(func() {
+			// Create multiple rules for pagination testing
+			ruleIds = make([]int64, 0)
+			for i := 0; i < 15; i++ {
+				input := models.CreateRuleRequest{
+					Rule: models.CreateBaseRuleRequest{
+						Name:          fmt.Sprintf("Test Rule %d", i+1),
+						Description:   ptrToString(fmt.Sprintf("Rule description %d", i+1)),
+						EffectiveFrom: now,
+					},
+					Actions: []models.CreateRuleActionRequest{
+						{
+							ActionType:  models.RuleFieldAmount,
+							ActionValue: "100",
+						},
+					},
+					Conditions: []models.CreateRuleConditionRequest{
+						{
+							ConditionType:     models.RuleFieldAmount,
+							ConditionValue:    "100",
+							ConditionOperator: models.OperatorEquals,
+						},
+					},
+				}
+				resp, response := testUser1.MakeRequest(http.MethodPost, "/rule", input)
+				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+				rule := response["data"].(map[string]any)["rule"].(map[string]any)
+				ruleIds = append(ruleIds, int64(rule["id"].(float64)))
+			}
+		})
+
+		It("should return paginated rules with default parameters", func() {
+			resp, response := testUser1.MakeRequest(http.MethodGet, "/rule?page=1", nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			Expect(response["message"]).To(Equal("Rules fetched successfully"))
+
+			data := response["data"].(map[string]any)
+			Expect(data).To(HaveKey("rules"))
+			Expect(data).To(HaveKey("total"))
+			Expect(data).To(HaveKey("page"))
+			Expect(data).To(HaveKey("page_size"))
+
+			rules := data["rules"].([]any)
+			total := int(data["total"].(float64))
+			page := int(data["page"].(float64))
+			pageSize := int(data["page_size"].(float64))
+
+			Expect(total).To(BeNumerically(">=", 15))
+			Expect(page).To(Equal(1))
+			Expect(pageSize).To(Equal(10))
+			Expect(len(rules)).To(Equal(10)) // Default page size
+		})
+
+		It("should return correct page with custom page size", func() {
+			url := "/rule?page=2&page_size=5"
+			resp, response := testUser1.MakeRequest(http.MethodGet, url, nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+			data := response["data"].(map[string]any)
+			rules := data["rules"].([]any)
+			page := int(data["page"].(float64))
+			pageSize := int(data["page_size"].(float64))
+
+			Expect(page).To(Equal(2))
+			Expect(pageSize).To(Equal(5))
+			Expect(len(rules)).To(Equal(5))
+		})
+
+		It("should filter rules by search term in name", func() {
+			url := "/rule?search=Test%20Rule%201"
+			resp, response := testUser1.MakeRequest(http.MethodGet, url, nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+			data := response["data"].(map[string]any)
+			rules := data["rules"].([]any)
+			total := int(data["total"].(float64))
+
+			// Should find rules with "Test Rule 1" in name (Test Rule 1, Test Rule 10, Test Rule 11, etc.)
+			Expect(total).To(BeNumerically(">=", 6)) // At least Test Rule 1, 10, 11, 12, 13, 14, 15
+
+			// Verify all returned rules contain the search term
+			for _, r := range rules {
+				rule := r.(map[string]any)
+				name := rule["name"].(string)
+				Expect(strings.Contains(name, "Test Rule 1")).To(BeTrue())
+			}
+		})
+
+		It("should filter rules by search term in description", func() {
+			url := "/rule?search=description%205"
+			resp, response := testUser1.MakeRequest(http.MethodGet, url, nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+			data := response["data"].(map[string]any)
+			rules := data["rules"].([]any)
+			total := int(data["total"].(float64))
+
+			// Should find rules with "description 5" in description
+			Expect(total).To(BeNumerically(">=", 1))
+
+			// Verify the returned rule contains the search term in description
+			rule := rules[0].(map[string]any)
+			description := rule["description"].(string)
+			Expect(strings.Contains(description, "description 5")).To(BeTrue())
+		})
+
+		It("should return empty results for non-matching search", func() {
+			url := "/rule?search=nonexistent"
+			resp, response := testUser1.MakeRequest(http.MethodGet, url, nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+			data := response["data"].(map[string]any)
+			rules := data["rules"].([]any)
+			total := int(data["total"].(float64))
+
+			Expect(total).To(Equal(0))
+			Expect(len(rules)).To(Equal(0))
+		})
+
+		It("should handle page beyond available data", func() {
+			url := "/rule?page=100&page_size=10"
+			resp, response := testUser1.MakeRequest(http.MethodGet, url, nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+			data := response["data"].(map[string]any)
+			rules := data["rules"].([]any)
+			page := int(data["page"].(float64))
+
+			Expect(page).To(Equal(100))
+			Expect(len(rules)).To(Equal(0))
+		})
+
+		It("should return unauthorized for invalid token", func() {
+			resp, _ := testHelperUnauthenticated.MakeRequest(http.MethodGet, "/rule?page=1", nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
+		})
+
+		It("should handle search with pagination", func() {
+			url := "/rule?search=Test%20Rule&page=2&page_size=5"
+			resp, response := testUser1.MakeRequest(http.MethodGet, url, nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+			data := response["data"].(map[string]any)
+			rules := data["rules"].([]any)
+			page := int(data["page"].(float64))
+			pageSize := int(data["page_size"].(float64))
+			total := int(data["total"].(float64))
+
+			Expect(page).To(Equal(2))
+			Expect(pageSize).To(Equal(5))
+			Expect(total).To(BeNumerically(">=", 15))     // Should find all our test rules
+			Expect(len(rules)).To(BeNumerically("<=", 5)) // Should not exceed page size
 		})
 	})
 

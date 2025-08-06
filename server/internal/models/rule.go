@@ -142,3 +142,18 @@ type SkippedResult struct {
 	TransactionId int64  `json:"transaction_id"`
 	Reason        string `json:"reason"`
 }
+
+// PaginatedRulesResponse is the paginated response for rule listing
+type PaginatedRulesResponse struct {
+	Rules    []RuleResponse `json:"rules"`
+	Total    int            `json:"total"`
+	Page     int            `json:"page"`
+	PageSize int            `json:"page_size"`
+}
+
+// RuleListQuery holds query params for filtering, sorting, and pagination
+type RuleListQuery struct {
+	Page     int     // page number (1-based)
+	PageSize int     // items per page
+	Search   *string // search in name/description
+}

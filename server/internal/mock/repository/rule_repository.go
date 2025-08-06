@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 
 	"expenses/internal/models"
@@ -94,16 +95,64 @@ func (m *MockRuleRepository) GetRule(ctx context.Context, id int64, userId int64
 	return rule, nil
 }
 
-func (m *MockRuleRepository) ListRules(ctx context.Context, userId int64) ([]models.RuleResponse, error) {
+func (m *MockRuleRepository) ListRules(ctx context.Context, userId int64, query models.RuleListQuery) (models.PaginatedRulesResponse, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	var result []models.RuleResponse
+
+	var filteredRules []models.RuleResponse
 	for _, rule := range m.rules {
-		if rule.CreatedBy == userId {
-			result = append(result, rule)
+		if rule.CreatedBy != userId {
+			continue
 		}
+
+		// Apply search filter if provided
+		if query.Search != nil && *query.Search != "" {
+			searchTerm := strings.ToLower(*query.Search)
+			nameMatch := strings.Contains(strings.ToLower(rule.Name), searchTerm)
+			descMatch := rule.Description != nil && strings.Contains(strings.ToLower(*rule.Description), searchTerm)
+			if !nameMatch && !descMatch {
+				continue
+			}
+		}
+
+		filteredRules = append(filteredRules, rule)
 	}
-	return result, nil
+
+	total := len(filteredRules)
+
+	// If no pagination specified (PageSize <= 0), return all results
+	if query.PageSize <= 0 {
+		return models.PaginatedRulesResponse{
+			Rules:    filteredRules,
+			Total:    total,
+			Page:     query.Page,
+			PageSize: query.PageSize,
+		}, nil
+	}
+
+	// Apply pagination
+	start := (query.Page - 1) * query.PageSize
+	end := start + query.PageSize
+
+	if start >= total {
+		return models.PaginatedRulesResponse{
+			Rules:    []models.RuleResponse{},
+			Total:    total,
+			Page:     query.Page,
+			PageSize: query.PageSize,
+		}, nil
+	}
+
+	if end > total {
+		end = total
+	}
+
+	return models.PaginatedRulesResponse{
+		Rules:    filteredRules[start:end],
+		Total:    total,
+		Page:     query.Page,
+		PageSize: query.PageSize,
+	}, nil
 }
 
 func (m *MockRuleRepository) ListRuleActionsByRuleId(ctx context.Context, ruleId int64) ([]models.RuleActionResponse, error) {

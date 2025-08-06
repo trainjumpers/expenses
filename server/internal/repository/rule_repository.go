@@ -20,7 +20,7 @@ type RuleRepositoryInterface interface {
 	CreateRuleConditions(ctx context.Context, conditions []models.CreateRuleConditionRequest) ([]models.RuleConditionResponse, error)
 	CreateRuleTransactionMapping(ctx context.Context, ruleId int64, transactionId int64) error
 	GetRule(ctx context.Context, id int64, userId int64) (models.RuleResponse, error)
-	ListRules(ctx context.Context, userId int64) ([]models.RuleResponse, error)
+	ListRules(ctx context.Context, userId int64, query models.RuleListQuery) (models.PaginatedRulesResponse, error)
 	ListRuleActionsByRuleId(ctx context.Context, ruleId int64) ([]models.RuleActionResponse, error)
 	ListRuleConditionsByRuleId(ctx context.Context, ruleId int64) ([]models.RuleConditionResponse, error)
 	UpdateRule(ctx context.Context, id int64, userId int64, rule models.UpdateRuleRequest) (models.RuleResponse, error)
@@ -135,27 +135,79 @@ func (r *RuleRepository) GetRule(ctx context.Context, id int64, userId int64) (m
 	return rule, nil
 }
 
-func (r *RuleRepository) ListRules(ctx context.Context, userId int64) ([]models.RuleResponse, error) {
-	rules := make([]models.RuleResponse, 0)
+func (r *RuleRepository) ListRules(ctx context.Context, userId int64, query models.RuleListQuery) (models.PaginatedRulesResponse, error) {
+	var response models.PaginatedRulesResponse
+	response.Rules = make([]models.RuleResponse, 0)
+	response.Page = query.Page
+	response.PageSize = query.PageSize
+
 	var rule models.RuleResponse
 	ptrs, dbFields, err := helper.GetDbFieldsFromObject(&rule)
 	if err != nil {
-		return rules, err
+		return response, err
 	}
-	query := fmt.Sprintf(`SELECT %s FROM %s.%s WHERE created_by = $1`, strings.Join(dbFields, ", "), r.schema, r.ruleTable)
-	rows, err := r.db.FetchAll(ctx, query, userId)
+
+	// Build WHERE clause
+	whereClause := "WHERE created_by = $1"
+	args := []interface{}{userId}
+	argIndex := 2
+
+	// Add search filter if provided
+	if query.Search != nil && *query.Search != "" {
+		searchPattern := "%" + *query.Search + "%"
+		whereClause += fmt.Sprintf(" AND (name ILIKE $%d OR description ILIKE $%d)", argIndex, argIndex)
+		args = append(args, searchPattern)
+		argIndex++
+	}
+
+	// Count total records for pagination
+	countQuery := fmt.Sprintf(`SELECT COUNT(*) FROM %s.%s %s`, r.schema, r.ruleTable, whereClause)
+	err = r.db.FetchOne(ctx, countQuery, args...).Scan(&response.Total)
 	if err != nil {
-		return rules, errorsPkg.NewRuleRepositoryError("failed to list rules", err)
+		return response, errorsPkg.NewRuleRepositoryError("failed to count rules", err)
+	}
+
+	// Build the main query with pagination (if page_size > 0)
+	var mainQuery string
+	if query.PageSize > 0 {
+		// Calculate offset for pagination
+		offset := (query.Page - 1) * query.PageSize
+
+		// Build query with pagination
+		mainQuery = fmt.Sprintf(`
+			SELECT %s 
+			FROM %s.%s 
+			%s 
+			ORDER BY id DESC 
+			LIMIT $%d OFFSET $%d`,
+			strings.Join(dbFields, ", "), r.schema, r.ruleTable, whereClause, argIndex, argIndex+1)
+
+		args = append(args, query.PageSize, offset)
+	} else {
+		// If no page_size specified, return all results
+		mainQuery = fmt.Sprintf(`
+			SELECT %s 
+			FROM %s.%s 
+			%s 
+			ORDER BY id DESC`,
+			strings.Join(dbFields, ", "), r.schema, r.ruleTable, whereClause)
+	}
+
+	rows, err := r.db.FetchAll(ctx, mainQuery, args...)
+	if err != nil {
+		return response, errorsPkg.NewRuleRepositoryError("failed to list rules", err)
 	}
 	defer rows.Close()
+
 	for rows.Next() {
 		err := rows.Scan(ptrs...)
 		if err != nil {
-			return rules, errorsPkg.NewRuleRepositoryError("failed to scan rule row", err)
+			return response, errorsPkg.NewRuleRepositoryError("failed to scan rule row", err)
 		}
-		rules = append(rules, rule)
+		response.Rules = append(response.Rules, rule)
 	}
-	return rules, nil
+
+	return response, nil
 }
 
 func (r *RuleRepository) ListRuleActionsByRuleId(ctx context.Context, ruleId int64) ([]models.RuleActionResponse, error) {
