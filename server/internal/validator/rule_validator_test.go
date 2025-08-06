@@ -289,6 +289,17 @@ var _ = Describe("RuleValidator", func() {
 			val = ""
 			req = models.UpdateRuleActionRequest{ActionType: &typ, ActionValue: &val}
 			Expect(v.ValidateUpdateAction(req)).ToNot(Succeed())
+
+			// Transfer: valid
+			typ = models.RuleFieldTransfer
+			val = "42"
+			req = models.UpdateRuleActionRequest{ActionType: &typ, ActionValue: &val}
+			Expect(v.ValidateUpdateAction(req)).To(Succeed())
+
+			// Transfer: invalid (not an integer)
+			val = "notanint"
+			req = models.UpdateRuleActionRequest{ActionType: &typ, ActionValue: &val}
+			Expect(v.ValidateUpdateAction(req)).ToNot(Succeed())
 		})
 
 		It("validates all supported condition types and operators", func() {
@@ -343,6 +354,25 @@ var _ = Describe("RuleValidator", func() {
 			}
 			Expect(v.ValidateUpdateCondition(req)).To(Succeed())
 			// Category with invalid operator
+			op = models.OperatorContains
+			req = models.UpdateRuleConditionRequest{
+				ConditionType:     &typ,
+				ConditionValue:    &val,
+				ConditionOperator: &op,
+			}
+			Expect(v.ValidateUpdateCondition(req)).ToNot(Succeed())
+
+			// Transfer with valid operator
+			typ = models.RuleFieldTransfer
+			val = "1"
+			op = models.OperatorEquals
+			req = models.UpdateRuleConditionRequest{
+				ConditionType:     &typ,
+				ConditionValue:    &val,
+				ConditionOperator: &op,
+			}
+			Expect(v.ValidateUpdateCondition(req)).To(Succeed())
+			// Transfer with invalid operator
 			op = models.OperatorContains
 			req = models.UpdateRuleConditionRequest{
 				ConditionType:     &typ,

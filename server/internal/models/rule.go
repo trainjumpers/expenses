@@ -13,6 +13,7 @@ const (
 	RuleFieldName        RuleFieldType = "name"
 	RuleFieldDescription RuleFieldType = "description"
 	RuleFieldCategory    RuleFieldType = "category"
+	RuleFieldTransfer    RuleFieldType = "transfer"
 )
 
 const (

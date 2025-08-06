@@ -47,7 +47,7 @@ var _ = Describe("RuleEngine", func() {
 	Describe("NewRuleEngine", func() {
 		It("should create engine with categories and rules", func() {
 			rules = []models.DescribeRuleResponse{}
-			engine = NewRuleEngine(categories, rules)
+			engine = NewRuleEngine(categories, []models.AccountResponse{}, rules)
 
 			Expect(engine).NotTo(BeNil())
 			Expect(engine.categories).To(HaveLen(4))
@@ -56,7 +56,7 @@ var _ = Describe("RuleEngine", func() {
 
 		It("should build category map correctly", func() {
 			rules = []models.DescribeRuleResponse{}
-			engine = NewRuleEngine(categories, rules)
+			engine = NewRuleEngine(categories, []models.AccountResponse{}, rules)
 
 			Expect(engine.categories[1].Name).To(Equal("Food"))
 			Expect(engine.categories[2].Name).To(Equal("Transport"))
@@ -69,7 +69,7 @@ var _ = Describe("RuleEngine", func() {
 		Context("when no rules exist", func() {
 			BeforeEach(func() {
 				rules = []models.DescribeRuleResponse{}
-				engine = NewRuleEngine(categories, rules)
+				engine = NewRuleEngine(categories, []models.AccountResponse{}, rules)
 			})
 
 			It("should return nil", func() {
@@ -102,7 +102,7 @@ var _ = Describe("RuleEngine", func() {
 						},
 					},
 				}
-				engine = NewRuleEngine(categories, rules)
+				engine = NewRuleEngine(categories, []models.AccountResponse{}, rules)
 			})
 
 			It("should return nil", func() {
@@ -135,7 +135,7 @@ var _ = Describe("RuleEngine", func() {
 						},
 					},
 				}
-				engine = NewRuleEngine(categories, rules)
+				engine = NewRuleEngine(categories, []models.AccountResponse{}, rules)
 			})
 
 			It("should return changeset with applied rule", func() {
@@ -178,7 +178,7 @@ var _ = Describe("RuleEngine", func() {
 						},
 					},
 				}
-				engine = NewRuleEngine(categories, rules)
+				engine = NewRuleEngine(categories, []models.AccountResponse{}, rules)
 			})
 
 			It("should match when amounts are equal", func() {
@@ -218,7 +218,7 @@ var _ = Describe("RuleEngine", func() {
 						},
 					},
 				}
-				engine = NewRuleEngine(categories, rules)
+				engine = NewRuleEngine(categories, []models.AccountResponse{}, rules)
 			})
 
 			It("should match when amount is greater", func() {
@@ -263,7 +263,7 @@ var _ = Describe("RuleEngine", func() {
 						},
 					},
 				}
-				engine = NewRuleEngine(categories, rules)
+				engine = NewRuleEngine(categories, []models.AccountResponse{}, rules)
 			})
 
 			It("should match when amount is lower", func() {
@@ -309,7 +309,7 @@ var _ = Describe("RuleEngine", func() {
 					},
 				},
 			}
-			engine = NewRuleEngine(categories, rules)
+			engine = NewRuleEngine(categories, []models.AccountResponse{}, rules)
 		})
 
 		It("should add new category", func() {
@@ -328,7 +328,7 @@ var _ = Describe("RuleEngine", func() {
 
 		It("should not add category from different user", func() {
 			rules[0].Actions[0].ActionValue = "4" // Category belongs to user 2
-			engine = NewRuleEngine(categories, rules)
+			engine = NewRuleEngine(categories, []models.AccountResponse{}, rules)
 
 			result := engine.ProcessTransaction(transaction)
 			Expect(result).To(BeNil()) // No changes since category doesn't belong to user
@@ -336,7 +336,7 @@ var _ = Describe("RuleEngine", func() {
 
 		It("should handle invalid category ID", func() {
 			rules[0].Actions[0].ActionValue = "invalid"
-			engine = NewRuleEngine(categories, rules)
+			engine = NewRuleEngine(categories, []models.AccountResponse{}, rules)
 
 			result := engine.ProcessTransaction(transaction)
 			Expect(result).To(BeNil()) // No changes since category ID is invalid
@@ -367,7 +367,7 @@ var _ = Describe("RuleEngine", func() {
 						},
 					},
 				}
-				engine = NewRuleEngine(categories, rules)
+				engine = NewRuleEngine(categories, []models.AccountResponse{}, rules)
 			})
 
 			It("should match exact name (case insensitive)", func() {
@@ -412,7 +412,7 @@ var _ = Describe("RuleEngine", func() {
 						},
 					},
 				}
-				engine = NewRuleEngine(categories, rules)
+				engine = NewRuleEngine(categories, []models.AccountResponse{}, rules)
 			})
 
 			It("should match when name contains substring", func() {
@@ -459,7 +459,7 @@ var _ = Describe("RuleEngine", func() {
 						},
 					},
 				}
-				engine = NewRuleEngine(categories, rules)
+				engine = NewRuleEngine(categories, []models.AccountResponse{}, rules)
 			})
 
 			It("should match description", func() {
@@ -493,7 +493,7 @@ var _ = Describe("RuleEngine", func() {
 						},
 					},
 				}
-				engine = NewRuleEngine(categories, rules)
+				engine = NewRuleEngine(categories, []models.AccountResponse{}, rules)
 			})
 
 			It("should match empty string when description is nil", func() {
@@ -528,7 +528,7 @@ var _ = Describe("RuleEngine", func() {
 					},
 				},
 			}
-			engine = NewRuleEngine(categories, rules)
+			engine = NewRuleEngine(categories, []models.AccountResponse{}, rules)
 		})
 
 		It("should match when transaction has the category", func() {
@@ -545,7 +545,7 @@ var _ = Describe("RuleEngine", func() {
 
 		It("should handle invalid category ID in condition", func() {
 			rules[0].Conditions[0].ConditionValue = "invalid"
-			engine = NewRuleEngine(categories, rules)
+			engine = NewRuleEngine(categories, []models.AccountResponse{}, rules)
 
 			result := engine.ProcessTransaction(transaction)
 			Expect(result).To(BeNil())
@@ -582,7 +582,7 @@ var _ = Describe("RuleEngine", func() {
 					},
 				},
 			}
-			engine = NewRuleEngine(categories, rules)
+			engine = NewRuleEngine(categories, []models.AccountResponse{}, rules)
 		})
 
 		It("should match when all conditions are met", func() {
@@ -605,7 +605,7 @@ var _ = Describe("RuleEngine", func() {
 		Context("with empty conditions", func() {
 			BeforeEach(func() {
 				rules[0].Conditions = []models.RuleConditionResponse{}
-				engine = NewRuleEngine(categories, rules)
+				engine = NewRuleEngine(categories, []models.AccountResponse{}, rules)
 			})
 
 			It("should return false for empty conditions", func() {
@@ -639,7 +639,7 @@ var _ = Describe("RuleEngine", func() {
 					},
 				},
 			}
-			engine = NewRuleEngine(categories, rules)
+			engine = NewRuleEngine(categories, []models.AccountResponse{}, rules)
 		})
 
 		It("should update transaction name", func() {
@@ -675,7 +675,7 @@ var _ = Describe("RuleEngine", func() {
 					},
 				}
 				rules = append(rules, secondRule)
-				engine = NewRuleEngine(categories, rules)
+				engine = NewRuleEngine(categories, []models.AccountResponse{}, rules)
 			})
 
 			It("should apply first rule only (no overwrite)", func() {
@@ -713,7 +713,7 @@ var _ = Describe("RuleEngine", func() {
 					},
 				},
 			}
-			engine = NewRuleEngine(categories, rules)
+			engine = NewRuleEngine(categories, []models.AccountResponse{}, rules)
 		})
 
 		It("should update transaction description", func() {
@@ -754,7 +754,7 @@ var _ = Describe("RuleEngine", func() {
 						},
 					},
 				}
-				engine = NewRuleEngine(categories, rules)
+				engine = NewRuleEngine(categories, []models.AccountResponse{}, rules)
 			})
 
 			It("should add multiple categories", func() {
@@ -788,7 +788,7 @@ var _ = Describe("RuleEngine", func() {
 					},
 				}
 				rules = append(rules, secondRule)
-				engine = NewRuleEngine(categories, rules)
+				engine = NewRuleEngine(categories, []models.AccountResponse{}, rules)
 
 				result := engine.ProcessTransaction(transaction)
 
@@ -830,7 +830,7 @@ var _ = Describe("RuleEngine", func() {
 						},
 					},
 				}
-				engine = NewRuleEngine(categories, rules)
+				engine = NewRuleEngine(categories, []models.AccountResponse{}, rules)
 			})
 
 			It("should skip rule when effective date is after transaction date", func() {
@@ -863,7 +863,7 @@ var _ = Describe("RuleEngine", func() {
 						},
 					},
 				}
-				engine = NewRuleEngine(categories, rules)
+				engine = NewRuleEngine(categories, []models.AccountResponse{}, rules)
 			})
 
 			It("should apply rule when effective date is before transaction date", func() {
@@ -906,7 +906,7 @@ var _ = Describe("RuleEngine", func() {
 						},
 					},
 				}
-				engine = NewRuleEngine(categories, rules)
+				engine = NewRuleEngine(categories, []models.AccountResponse{}, rules)
 			})
 
 			It("should match when all conditions are met", func() {
@@ -967,7 +967,7 @@ var _ = Describe("RuleEngine", func() {
 						},
 					},
 				}
-				engine = NewRuleEngine(categories, rules)
+				engine = NewRuleEngine(categories, []models.AccountResponse{}, rules)
 			})
 
 			It("should match when first condition is met", func() {
@@ -1045,7 +1045,7 @@ var _ = Describe("RuleEngine", func() {
 						},
 					},
 				}
-				engine = NewRuleEngine(categories, rules)
+				engine = NewRuleEngine(categories, []models.AccountResponse{}, rules)
 			})
 
 			It("should match when description condition is met (third condition)", func() {
@@ -1088,7 +1088,7 @@ var _ = Describe("RuleEngine", func() {
 						},
 					},
 				}
-				engine = NewRuleEngine(categories, rules)
+				engine = NewRuleEngine(categories, []models.AccountResponse{}, rules)
 			})
 
 			It("should work the same as AND logic with single condition", func() {
@@ -1123,7 +1123,7 @@ var _ = Describe("RuleEngine", func() {
 						},
 					},
 				}
-				engine = NewRuleEngine(categories, rules)
+				engine = NewRuleEngine(categories, []models.AccountResponse{}, rules)
 			})
 
 			It("should return false for empty conditions (same as AND)", func() {
@@ -1189,7 +1189,7 @@ var _ = Describe("RuleEngine", func() {
 						},
 					},
 				}
-				engine = NewRuleEngine(categories, rules)
+				engine = NewRuleEngine(categories, []models.AccountResponse{}, rules)
 			})
 
 			It("should apply both rules when their conditions are met", func() {
@@ -1250,7 +1250,7 @@ var _ = Describe("RuleEngine", func() {
 						},
 					},
 				}
-				engine = NewRuleEngine(categories, rules)
+				engine = NewRuleEngine(categories, []models.AccountResponse{}, rules)
 			})
 
 			It("should default to AND logic when ConditionLogic is not set", func() {
@@ -1303,7 +1303,7 @@ var _ = Describe("RuleEngine", func() {
 						},
 					},
 				}
-				engine = NewRuleEngine(categories, rules)
+				engine = NewRuleEngine(categories, []models.AccountResponse{}, rules)
 			})
 
 			It("should short-circuit AND evaluation on first failure", func() {
@@ -1350,7 +1350,7 @@ var _ = Describe("RuleEngine", func() {
 						},
 					},
 				}
-				engine = NewRuleEngine(categories, rules)
+				engine = NewRuleEngine(categories, []models.AccountResponse{}, rules)
 			})
 
 			It("should short-circuit OR evaluation on first success", func() {
@@ -1415,7 +1415,7 @@ var _ = Describe("RuleEngine", func() {
 						},
 					},
 				}
-				engine = NewRuleEngine(categories, rules)
+				engine = NewRuleEngine(categories, []models.AccountResponse{}, rules)
 			})
 
 			It("should apply all matching rules", func() {
@@ -1460,12 +1460,257 @@ var _ = Describe("RuleEngine", func() {
 						},
 					},
 				}
-				engine = NewRuleEngine(categories, rules)
+				engine = NewRuleEngine(categories, []models.AccountResponse{}, rules)
 			})
 
 			It("should not apply rule when not all conditions match", func() {
 				result := engine.ProcessTransaction(transaction)
 				Expect(result).To(BeNil())
+			})
+		})
+	})
+
+	Describe("Transfer Action", func() {
+		var accounts []models.AccountResponse
+
+		BeforeEach(func() {
+			accounts = []models.AccountResponse{
+				{
+					Id:        1,
+					Name:      "Checking Account",
+					BankType:  models.BankTypeHDFC,
+					Currency:  models.CurrencyINR,
+					Balance:   1000.0,
+					CreatedBy: userId,
+				},
+				{
+					Id:        2,
+					Name:      "Savings Account",
+					BankType:  models.BankTypeSBI,
+					Currency:  models.CurrencyINR,
+					Balance:   5000.0,
+					CreatedBy: userId,
+				},
+			}
+		})
+
+		Context("when transfer action is applied", func() {
+			BeforeEach(func() {
+				rules = []models.DescribeRuleResponse{
+					{
+						Rule: models.RuleResponse{
+							Id:            1,
+							Name:          "Transfer Rule",
+							EffectiveFrom: time.Now().Add(-24 * time.Hour),
+						},
+						Conditions: []models.RuleConditionResponse{
+							{
+								ConditionType:     models.RuleFieldName,
+								ConditionValue:    "Test Transaction",
+								ConditionOperator: models.OperatorEquals,
+							},
+						},
+						Actions: []models.RuleActionResponse{
+							{
+								ActionType:  models.RuleFieldTransfer,
+								ActionValue: "2", // Transfer to account ID 2
+							},
+						},
+					},
+				}
+				engine = NewRuleEngine(categories, accounts, rules)
+			})
+
+			It("should create transfer info with negated amount", func() {
+				result := engine.ProcessTransaction(transaction)
+
+				Expect(result).NotTo(BeNil())
+				Expect(result.TransferInfo).NotTo(BeNil())
+				Expect(result.TransferInfo.AccountId).To(Equal(int64(2)))
+				Expect(result.TransferInfo.Amount).To(Equal(-transaction.Amount))
+				Expect(result.AppliedRules).To(ContainElement(int64(1)))
+			})
+
+			It("should not transfer to the same account", func() {
+				// Update transaction to use account ID 2
+				transaction.AccountId = 2
+				result := engine.ProcessTransaction(transaction)
+
+				Expect(result).To(BeNil()) // Should not apply transfer to same account
+			})
+
+			It("should not transfer to non-existent account", func() {
+				// Update action to use non-existent account ID
+				rules[0].Actions[0].ActionValue = "999"
+				engine = NewRuleEngine(categories, accounts, rules)
+
+				result := engine.ProcessTransaction(transaction)
+
+				Expect(result).To(BeNil()) // Should not apply transfer to non-existent account
+			})
+
+			It("should not transfer to account owned by different user", func() {
+				// Add account owned by different user
+				otherUserAccount := models.AccountResponse{
+					Id:        3,
+					Name:      "Other User Account",
+					BankType:  models.BankTypeICICI,
+					Currency:  models.CurrencyINR,
+					Balance:   2000.0,
+					CreatedBy: userId + 1, // Different user
+				}
+				accounts = append(accounts, otherUserAccount)
+				rules[0].Actions[0].ActionValue = "3"
+				engine = NewRuleEngine(categories, accounts, rules)
+
+				result := engine.ProcessTransaction(transaction)
+
+				Expect(result).To(BeNil()) // Should not apply transfer to other user's account
+			})
+		})
+
+		Context("when transfer condition is used", func() {
+			BeforeEach(func() {
+				rules = []models.DescribeRuleResponse{
+					{
+						Rule: models.RuleResponse{
+							Id:            1,
+							Name:          "Transfer Condition Rule",
+							EffectiveFrom: time.Now().Add(-24 * time.Hour),
+						},
+						Conditions: []models.RuleConditionResponse{
+							{
+								ConditionType:     models.RuleFieldTransfer,
+								ConditionValue:    "1", // Check if transaction is from account 1
+								ConditionOperator: models.OperatorEquals,
+							},
+						},
+						Actions: []models.RuleActionResponse{
+							{
+								ActionType:  models.RuleFieldCategory,
+								ActionValue: "1",
+							},
+						},
+					},
+				}
+				engine = NewRuleEngine(categories, accounts, rules)
+			})
+
+			It("should match when transaction is from specified account", func() {
+				result := engine.ProcessTransaction(transaction)
+
+				Expect(result).NotTo(BeNil())
+				Expect(result.CategoryAdds).To(ContainElement(int64(1)))
+				Expect(result.AppliedRules).To(ContainElement(int64(1)))
+			})
+
+			It("should not match when transaction is from different account", func() {
+				transaction.AccountId = 2
+				result := engine.ProcessTransaction(transaction)
+
+				Expect(result).To(BeNil())
+			})
+
+			It("should handle invalid account ID in condition", func() {
+				// Update condition to use invalid account ID
+				rules[0].Conditions[0].ConditionValue = "invalid"
+				engine = NewRuleEngine(categories, accounts, rules)
+
+				result := engine.ProcessTransaction(transaction)
+
+				Expect(result).To(BeNil()) // Should not match with invalid account ID
+			})
+		})
+
+		Context("when multiple transfer actions are attempted", func() {
+			BeforeEach(func() {
+				rules = []models.DescribeRuleResponse{
+					{
+						Rule: models.RuleResponse{
+							Id:            1,
+							Name:          "First Transfer Rule",
+							EffectiveFrom: time.Now().Add(-24 * time.Hour),
+						},
+						Conditions: []models.RuleConditionResponse{
+							{
+								ConditionType:     models.RuleFieldName,
+								ConditionValue:    "Test Transaction",
+								ConditionOperator: models.OperatorEquals,
+							},
+						},
+						Actions: []models.RuleActionResponse{
+							{
+								ActionType:  models.RuleFieldTransfer,
+								ActionValue: "2",
+							},
+						},
+					},
+					{
+						Rule: models.RuleResponse{
+							Id:            2,
+							Name:          "Second Transfer Rule",
+							EffectiveFrom: time.Now().Add(-24 * time.Hour),
+						},
+						Conditions: []models.RuleConditionResponse{
+							{
+								ConditionType:     models.RuleFieldName,
+								ConditionValue:    "Test Transaction",
+								ConditionOperator: models.OperatorEquals,
+							},
+						},
+						Actions: []models.RuleActionResponse{
+							{
+								ActionType:  models.RuleFieldTransfer,
+								ActionValue: "2", // Same account as first rule
+							},
+						},
+					},
+				}
+				engine = NewRuleEngine(categories, accounts, rules)
+			})
+
+			It("should only apply the first transfer action", func() {
+				result := engine.ProcessTransaction(transaction)
+
+				Expect(result).NotTo(BeNil())
+				Expect(result.TransferInfo).NotTo(BeNil())
+				Expect(result.TransferInfo.AccountId).To(Equal(int64(2)))
+				Expect(result.AppliedRules).To(ContainElement(int64(1)))
+				Expect(result.AppliedRules).NotTo(ContainElement(int64(2))) // Second rule should not be applied
+			})
+		})
+
+		Context("when transfer action has invalid account ID", func() {
+			BeforeEach(func() {
+				rules = []models.DescribeRuleResponse{
+					{
+						Rule: models.RuleResponse{
+							Id:            1,
+							Name:          "Invalid Transfer Rule",
+							EffectiveFrom: time.Now().Add(-24 * time.Hour),
+						},
+						Conditions: []models.RuleConditionResponse{
+							{
+								ConditionType:     models.RuleFieldName,
+								ConditionValue:    "Test Transaction",
+								ConditionOperator: models.OperatorEquals,
+							},
+						},
+						Actions: []models.RuleActionResponse{
+							{
+								ActionType:  models.RuleFieldTransfer,
+								ActionValue: "invalid_account_id",
+							},
+						},
+					},
+				}
+				engine = NewRuleEngine(categories, accounts, rules)
+			})
+
+			It("should not apply transfer action with invalid account ID", func() {
+				result := engine.ProcessTransaction(transaction)
+
+				Expect(result).To(BeNil()) // Should not apply transfer with invalid account ID
 			})
 		})
 	})
