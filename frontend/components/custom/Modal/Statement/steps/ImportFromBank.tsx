@@ -46,6 +46,8 @@ interface ImportFromBankProps {
     total: number;
     processing: boolean;
   };
+  fileInputRef: React.RefObject<HTMLInputElement | null>;
+  additionalFileInputRef: React.RefObject<HTMLInputElement | null>;
 }
 
 export function ImportFromBank({
@@ -64,6 +66,8 @@ export function ImportFromBank({
   onStepChange,
   uploadStatementMutation,
   uploadProgress,
+  fileInputRef,
+  additionalFileInputRef,
 }: ImportFromBankProps) {
   return (
     <form onSubmit={handleSubmit}>
@@ -135,6 +139,7 @@ export function ImportFromBank({
                 </p>
                 <Input
                   id="file-input"
+                  ref={fileInputRef}
                   type="file"
                   accept=".csv,.xls,.xlsx"
                   multiple
@@ -186,6 +191,7 @@ export function ImportFromBank({
                     </p>
                     <Input
                       id="file-input-additional"
+                      ref={additionalFileInputRef}
                       type="file"
                       accept=".csv,.xls,.xlsx"
                       multiple

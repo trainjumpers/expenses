@@ -10,7 +10,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { StatementPreviewResponse } from "@/lib/models/statement";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 
 import { FallbackParsing } from "./steps/FallbackParsing";
 import { ImportFromBank } from "./steps/ImportFromBank";
@@ -56,6 +56,24 @@ export function ImportStatementModal({
     total: number;
     processing: boolean;
   }>({ current: 0, total: 0, processing: false });
+
+  // Refs for file inputs
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const additionalFileInputRef = useRef<HTMLInputElement>(null);
+  const fallbackFileInputRef = useRef<HTMLInputElement>(null);
+
+  // Helper function to reset file inputs
+  const resetFileInputs = useCallback(() => {
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+    if (additionalFileInputRef.current) {
+      additionalFileInputRef.current.value = "";
+    }
+    if (fallbackFileInputRef.current) {
+      fallbackFileInputRef.current.value = "";
+    }
+  }, []);
 
   const validateFile = (file: File, forBank: boolean): string | null => {
     if (file.size > 256 * 1024) {
@@ -123,56 +141,60 @@ export function ImportStatementModal({
     [step, skipRows, rowSize, previewStatementMutation, validateFiles]
   );
 
-  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    if (files.length > 0) {
-      // For custom parser (Preview step), only take the first file
-      if (step === ImportStep.Preview) {
-        handleFilesSelect([files[0]]);
-      } else {
-        handleFilesSelect(files);
+  const handleFileInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const files = Array.from(e.target.files || []);
+      if (files.length > 0) {
+        // For custom parser (Preview step), only take the first file
+        if (step === ImportStep.Preview) {
+          handleFilesSelect([files[0]]);
+        } else {
+          handleFilesSelect(files);
+        }
       }
-    }
-    // Reset the input value so the same file can be selected again
-    e.target.value = "";
-  };
+      resetFileInputs();
+    },
+    [step, handleFilesSelect, resetFileInputs]
+  );
 
-  const handleAdditionalFilesChange = (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const newFiles = Array.from(e.target.files || []);
-    if (newFiles.length > 0) {
-      // Filter out duplicates based on file name and size
-      const existingFileKeys = selectedFiles.map((f) => `${f.name}-${f.size}`);
-      const uniqueNewFiles = newFiles.filter(
-        (f) => !existingFileKeys.includes(`${f.name}-${f.size}`)
-      );
+  const handleAdditionalFilesChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const newFiles = Array.from(e.target.files || []);
+      if (newFiles.length > 0) {
+        // Filter out duplicates based on file name and size
+        const existingFileKeys = selectedFiles.map(
+          (f) => `${f.name}-${f.size}`
+        );
+        const uniqueNewFiles = newFiles.filter(
+          (f) => !existingFileKeys.includes(`${f.name}-${f.size}`)
+        );
 
-      if (uniqueNewFiles.length === 0) {
-        setError("All selected files are already added");
-        e.target.value = "";
-        return;
+        if (uniqueNewFiles.length === 0) {
+          setError("All selected files are already added");
+          resetFileInputs();
+          return;
+        }
+
+        const combinedFiles = [...selectedFiles, ...uniqueNewFiles];
+
+        // Validate the combined files
+        const validationError = validateFiles(
+          combinedFiles,
+          step === ImportStep.ImportFromBank
+        );
+        if (validationError) {
+          setError(validationError);
+          resetFileInputs();
+          return;
+        }
+
+        setError("");
+        setSelectedFiles(combinedFiles);
       }
-
-      const combinedFiles = [...selectedFiles, ...uniqueNewFiles];
-
-      // Validate the combined files
-      const validationError = validateFiles(
-        combinedFiles,
-        step === ImportStep.ImportFromBank
-      );
-      if (validationError) {
-        setError(validationError);
-        e.target.value = "";
-        return;
-      }
-
-      setError("");
-      setSelectedFiles(combinedFiles);
-    }
-    // Reset the input value so the same file can be selected again
-    e.target.value = "";
-  };
+      resetFileInputs();
+    },
+    [selectedFiles, validateFiles, step, resetFileInputs]
+  );
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -386,6 +408,8 @@ export function ImportStatementModal({
             onStepChange={setStep}
             uploadStatementMutation={uploadStatementMutation}
             uploadProgress={uploadProgress}
+            fileInputRef={fileInputRef}
+            additionalFileInputRef={additionalFileInputRef}
           />
         );
       case ImportStep.Preview:
@@ -408,6 +432,7 @@ export function ImportStatementModal({
             previewData={previewData}
             previewStatementMutation={previewStatementMutation}
             onStepChange={setStep}
+            fileInputRef={fallbackFileInputRef}
           />
         );
       case ImportStep.MapColumns:
