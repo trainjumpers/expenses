@@ -10,6 +10,8 @@ import { formatCurrency, formatPercentage } from "@/lib/utils";
 import { Plus } from "lucide-react";
 import { useState } from "react";
 
+import { MonthlyAnalyticsCard } from "./MonthlyAnalyticsCard";
+
 interface AccountData {
   id: number;
   name: string;
@@ -62,106 +64,120 @@ export function AccountsAnalyticsSidepanel({
 
   if (isLoading) {
     return (
-      <Card className={`w-80 ${className}`}>
-        <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
-            <Skeleton className="h-6 w-16" />
-            <Skeleton className="h-8 w-8" />
-          </div>
-          <Skeleton className="h-4 w-20" />
-        </CardHeader>
-        <CardContent className="space-y-1">
-          {Array.from({ length: 6 }).map((_, index) => (
-            <div
-              key={index}
-              className="flex items-center justify-between py-3 px-2"
-            >
-              <div className="flex items-center space-x-3">
-                <Skeleton className="h-4 w-4" />
-                <Skeleton className="h-4 w-20" />
-              </div>
-              <div className="text-right space-y-1">
-                <Skeleton className="h-4 w-16" />
-                <Skeleton className="h-3 w-10" />
-              </div>
+      <div className={`w-80 flex flex-col h-full ${className}`}>
+        {/* Monthly Analytics Card at the top */}
+        <div className="flex-shrink-0 mb-4">
+          <MonthlyAnalyticsCard />
+        </div>
+        
+        <Card className="flex-1 flex flex-col">
+          <CardHeader className="pb-4 flex-shrink-0">
+            <div className="flex items-center justify-between">
+              <Skeleton className="h-6 w-16" />
+              <Skeleton className="h-8 w-8" />
             </div>
-          ))}
-        </CardContent>
-      </Card>
+            <Skeleton className="h-4 w-20" />
+          </CardHeader>
+          <CardContent className="flex-1 overflow-y-auto space-y-1">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <div
+                key={index}
+                className="flex items-center justify-between py-3 px-2"
+              >
+                <div className="flex items-center space-x-3">
+                  <Skeleton className="h-4 w-4" />
+                  <Skeleton className="h-4 w-20" />
+                </div>
+                <div className="text-right space-y-1">
+                  <Skeleton className="h-4 w-16" />
+                  <Skeleton className="h-3 w-10" />
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
   return (
-    <Card className={`w-80 ${className}`}>
-      <CardHeader className="pb-4">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-lg font-semibold">Assets</CardTitle>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 w-8 p-0"
-            onClick={() => setIsAddAccountModalOpen(true)}
-          >
-            <Plus className="h-4 w-4" />
-          </Button>
-        </div>
-      </CardHeader>
-
-      <CardContent className="space-y-1">
-        {accounts.length === 0 ? (
-          <div className="text-center py-8 space-y-4">
-            <div className="text-muted-foreground space-y-2">
-              <p className="text-sm font-medium">No accounts yet</p>
-              <p className="text-xs">Add an account to start tracking</p>
-            </div>
+    <div className={`w-80 flex flex-col h-full ${className}`}>
+      {/* Monthly Analytics Card at the top */}
+      <div className="flex-shrink-0 mb-4">
+        <MonthlyAnalyticsCard />
+      </div>
+      
+      <Card className="flex-1 flex flex-col">
+        <CardHeader className="pb-4 flex-shrink-0">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg font-semibold">Assets</CardTitle>
             <Button
-              onClick={() => setIsAddAccountModalOpen(true)}
+              variant="ghost"
               size="sm"
-              className="w-full"
+              className="h-8 w-8 p-0"
+              onClick={() => setIsAddAccountModalOpen(true)}
             >
-              <Plus className="h-3 w-3 mr-2" />
-              Add Account
+              <Plus className="h-4 w-4" />
             </Button>
           </div>
-        ) : (
-          accounts.map((account) => (
-            <div
-              key={account.id}
-              className="flex items-center justify-between py-3 px-2 rounded-md hover:bg-muted/50 cursor-pointer group"
-            >
-              <div className="flex items-center space-x-3">
-                <span className="font-medium text-sm">{account.name}</span>
-              </div>
+        </CardHeader>
 
-              <div className="text-right">
-                <div className="font-semibold text-sm">
-                  {formatCurrency(account.balance, account.currency)}
-                </div>
-                <div
-                  className={`text-xs ${
-                    account.percentageChange > 0
-                      ? "text-green-600 dark:text-green-300"
-                      : account.percentageChange < 0
-                        ? "text-red-600 dark:text-red-300"
-                        : "text-muted-foreground"
-                  }`}
-                >
-                  {formatPercentage(account.percentageChange)}
-                </div>
+        <CardContent className="flex-1 overflow-y-auto space-y-1">
+          {accounts.length === 0 ? (
+            <div className="text-center py-8 space-y-4">
+              <div className="text-muted-foreground space-y-2">
+                <p className="text-sm font-medium">No accounts yet</p>
+                <p className="text-xs">Add an account to start tracking</p>
               </div>
+              <Button
+                onClick={() => setIsAddAccountModalOpen(true)}
+                size="sm"
+                className="w-full"
+              >
+                <Plus className="h-3 w-3 mr-2" />
+                Add Account
+              </Button>
             </div>
-          ))
-        )}
-      </CardContent>
+          ) : (
+            accounts.map((account) => (
+              <div
+                key={account.id}
+                className="flex items-center justify-between py-3 px-2 rounded-md hover:bg-muted/50 cursor-pointer group"
+              >
+                <div className="flex items-center space-x-3">
+                  <span className="font-medium text-sm">{account.name}</span>
+                </div>
 
-      <AddAccountModal
-        isOpen={isAddAccountModalOpen}
-        onOpenChange={setIsAddAccountModalOpen}
-        onAccountAdded={() => {
-          // The account list will automatically refresh due to React Query
-          // No additional action needed
-        }}
-      />
-    </Card>
+                <div className="text-right">
+                  <div className="font-semibold text-sm">
+                    {formatCurrency(account.balance, account.currency)}
+                  </div>
+                  <div
+                    className={`text-xs ${
+                      account.percentageChange > 0
+                        ? "text-green-600 dark:text-green-300"
+                        : account.percentageChange < 0
+                          ? "text-red-600 dark:text-red-300"
+                          : "text-muted-foreground"
+                    }`}
+                  >
+                    {formatPercentage(account.percentageChange)}
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </CardContent>
+
+        <AddAccountModal
+          isOpen={isAddAccountModalOpen}
+          onOpenChange={setIsAddAccountModalOpen}
+          onAccountAdded={() => {
+            // The account list will automatically refresh due to React Query
+            // No additional action needed
+          }}
+        />
+      </Card>
+    </div>
   );
 }

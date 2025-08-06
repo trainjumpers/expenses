@@ -55,5 +55,7 @@ export const queryKeys = {
       ["analytics", "category", startDate, endDate] as const,
     networthTimeSeries: (startDate: string, endDate: string) =>
       ["analytics", "networth", startDate, endDate] as const,
+    monthlyAnalytics: (startDate: string, endDate: string) =>
+      ["analytics", "monthly", startDate, endDate] as const,
   },
 } as const;

@@ -13,9 +13,11 @@ type MockAnalyticsRepository struct {
 	analytics             map[int64][]models.AccountBalanceAnalytics   // key: userId, value: analytics
 	networthData          map[string]networthMockData                  // key: userId_startDate_endDate, value: networth data
 	categoryAnalytics     map[string]*models.CategoryAnalyticsResponse // key: userId_startDate_endDate, value: category analytics
+	monthlyAnalytics      map[string]*models.MonthlyAnalyticsResponse  // key: userId_months, value: monthly analytics
 	shouldErrorOnBalance  bool                                         // simulate GetBalance errors
 	shouldErrorOnNetworth bool                                         // simulate GetNetworthTimeSeries errors
 	shouldErrorOnCategory bool                                         // simulate GetCategoryAnalytics errors
+	shouldErrorOnMonthly  bool                                         // simulate GetMonthlyAnalytics errors
 	mu                    sync.RWMutex
 }
 
@@ -30,9 +32,11 @@ func NewMockAnalyticsRepository() *MockAnalyticsRepository {
 		analytics:             make(map[int64][]models.AccountBalanceAnalytics),
 		networthData:          make(map[string]networthMockData),
 		categoryAnalytics:     make(map[string]*models.CategoryAnalyticsResponse),
+		monthlyAnalytics:      make(map[string]*models.MonthlyAnalyticsResponse),
 		shouldErrorOnBalance:  false,
 		shouldErrorOnNetworth: false,
 		shouldErrorOnCategory: false,
+		shouldErrorOnMonthly:  false,
 	}
 }
 
@@ -165,6 +169,32 @@ func (m *MockAnalyticsRepository) GetCategoryAnalytics(ctx context.Context, user
 	return defaultAnalytics, nil
 }
 
+func (m *MockAnalyticsRepository) GetMonthlyAnalytics(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) (*models.MonthlyAnalyticsResponse, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	// Simulate error if configured
+	if m.shouldErrorOnMonthly {
+		return nil, fmt.Errorf("simulated GetMonthlyAnalytics error")
+	}
+
+	// Create a key based on parameters
+	key := m.createMonthlyKey(userId, startDate, endDate)
+
+	if analytics, exists := m.monthlyAnalytics[key]; exists {
+		return analytics, nil
+	}
+
+	// Return default sample data if no specific data set
+	defaultAnalytics := &models.MonthlyAnalyticsResponse{
+		TotalIncome:   1000.0,
+		TotalExpenses: 800.0,
+		TotalAmount:   1800.0,
+	}
+
+	return defaultAnalytics, nil
+}
+
 // Helper methods for testing
 func (m *MockAnalyticsRepository) SetBalance(userId int64, startDate *time.Time, endDate *time.Time, balances map[int64]float64) {
 	m.mu.Lock()
@@ -218,6 +248,20 @@ func (m *MockAnalyticsRepository) SetShouldErrorOnCategory(shouldError bool) {
 	m.shouldErrorOnCategory = shouldError
 }
 
+func (m *MockAnalyticsRepository) SetMonthlyAnalytics(userId int64, startDate time.Time, endDate time.Time, analytics *models.MonthlyAnalyticsResponse) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	key := m.createMonthlyKey(userId, startDate, endDate)
+	m.monthlyAnalytics[key] = analytics
+}
+
+func (m *MockAnalyticsRepository) SetShouldErrorOnMonthly(shouldError bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.shouldErrorOnMonthly = shouldError
+}
+
 func (m *MockAnalyticsRepository) createBalanceKey(userId int64, startDate *time.Time, endDate *time.Time) string {
 	key := fmt.Sprintf("%d_", userId)
 	if startDate != nil {
@@ -239,5 +283,9 @@ func (m *MockAnalyticsRepository) createNetworthKey(userId int64, startDate time
 }
 
 func (m *MockAnalyticsRepository) createCategoryKey(userId int64, startDate time.Time, endDate time.Time) string {
+	return fmt.Sprintf("%d_%s_%s", userId, startDate.Format("2006-01-02"), endDate.Format("2006-01-02"))
+}
+
+func (m *MockAnalyticsRepository) createMonthlyKey(userId int64, startDate time.Time, endDate time.Time) string {
 	return fmt.Sprintf("%d_%s_%s", userId, startDate.Format("2006-01-02"), endDate.Format("2006-01-02"))
 }
