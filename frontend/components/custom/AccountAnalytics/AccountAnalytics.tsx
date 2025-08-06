@@ -1,4 +1,6 @@
+import { AddAccountModal } from "@/components/custom/Modal/Accounts/AddAccountModal";
 import { useAccounts } from "@/components/hooks/useAccounts";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -10,11 +12,11 @@ import {
 } from "@/components/ui/table";
 import { AccountAnalyticsListResponse } from "@/lib/models/analytics";
 import { formatCurrency } from "@/lib/utils";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Plus, Wallet } from "lucide-react";
 import { useState } from "react";
 
 interface AccountAnalyticsProps {
-  data: AccountAnalyticsListResponse["account_analytics"];
+  data?: AccountAnalyticsListResponse["account_analytics"];
 }
 
 // Color palette for different accounts
@@ -35,50 +37,90 @@ export function AccountAnalytics({ data }: AccountAnalyticsProps) {
   const [expandedAccounts, setExpandedAccounts] = useState<Set<number>>(
     new Set()
   );
+  const [isAddAccountModalOpen, setIsAddAccountModalOpen] = useState(false);
   const { data: accountsData } = useAccounts();
 
   if (!data || data.length === 0) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Account Analytics</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8">
-            <p className="text-muted-foreground">No account data found.</p>
-            <p className="text-muted-foreground">
-              Please add some accounts to see analytics.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+      <>
+        <Card className="h-full">
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <span>Account Analytics</span>
+              <Wallet className="h-5 w-5 text-muted-foreground" />
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col items-center justify-center py-12 space-y-6">
+              <div className="rounded-full bg-muted p-6">
+                <Wallet className="h-12 w-12 text-muted-foreground" />
+              </div>
+              <div className="text-center space-y-2">
+                <h3 className="text-lg font-semibold">No accounts yet</h3>
+                <p className="text-sm text-muted-foreground max-w-sm">
+                  Start tracking your finances by adding your first account. You
+                  can add bank accounts, credit cards, investments, and more.
+                </p>
+              </div>
+              <Button
+                onClick={() => setIsAddAccountModalOpen(true)}
+                className="flex items-center gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                Add Your First Account
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        <AddAccountModal
+          isOpen={isAddAccountModalOpen}
+          onOpenChange={setIsAddAccountModalOpen}
+          onAccountAdded={() => {
+            // The account list will automatically refresh due to React Query
+            setIsAddAccountModalOpen(false);
+          }}
+        />
+      </>
     );
   }
 
-  // Calculate total balance
-  const totalBalance = data.reduce(
-    (sum, account) => sum + Math.abs(account.current_balance),
+  // Calculate percentages and prepare data with account names and initial balances
+  const accountsWithBalances = data.map((account, index) => {
+    // Find the account info from accounts data
+    const accountInfo = accountsData?.find(
+      (acc) => acc.id === account.account_id
+    );
+    const accountName = accountInfo?.name || `Account ${account.account_id}`;
+    const initialBalance = accountInfo?.balance || 0;
+
+    // Calculate the actual balance including initial balance
+    const actualBalance = account.current_balance + initialBalance;
+    const absoluteBalance = Math.abs(actualBalance);
+
+    return {
+      ...account,
+      accountName,
+      initialBalance,
+      actualBalance,
+      absoluteBalance,
+      color: accountColors[index % accountColors.length],
+    };
+  });
+
+  // Calculate total balance from the actual balances
+  const totalBalance = accountsWithBalances.reduce(
+    (sum, account) => sum + account.absoluteBalance,
     0
   );
-  // Calculate percentages and prepare data with account names
-  const accountsWithPercentages = data
-    .map((account, index) => {
-      const absoluteBalance = Math.abs(account.current_balance);
-      const percentage =
-        totalBalance > 0 ? (absoluteBalance / totalBalance) * 100 : 0;
 
-      // Find the account name from accounts data
-      const accountInfo = accountsData?.find(
-        (acc) => acc.id === account.account_id
-      );
-      const accountName = accountInfo?.name || `Account ${account.account_id}`;
-      return {
-        ...account,
-        accountName,
-        percentage,
-        color: accountColors[index % accountColors.length],
-      };
-    })
+  // Calculate percentages and sort
+  const accountsWithPercentages = accountsWithBalances
+    .map((account) => ({
+      ...account,
+      percentage:
+        totalBalance > 0 ? (account.absoluteBalance / totalBalance) * 100 : 0,
+    }))
     .sort((a, b) => b.percentage - a.percentage); // Sort by percentage descending
 
   const toggleAccountExpansion = (accountId: number) => {
@@ -92,113 +134,139 @@ export function AccountAnalytics({ data }: AccountAnalyticsProps) {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <span>Accounts</span>
-          <span className="text-muted-foreground">•</span>
-          <span>{formatCurrency(totalBalance)}</span>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {/* Horizontal Progress Bar */}
-        <div className="space-y-4">
-          <div className="h-4 bg-gray-200 rounded-full overflow-hidden">
-            {accountsWithPercentages.map((account) => (
-              <div
-                key={account.account_id}
-                className={`h-full ${account.color} inline-block`}
-                style={{ width: `${account.percentage}%` }}
-              />
-            ))}
-          </div>
-
-          {/* Legend */}
-          <div className="flex flex-wrap gap-4 text-sm">
-            {accountsWithPercentages.map((account) => (
-              <div key={account.account_id} className="flex items-center gap-2">
-                <div className={`w-3 h-3 rounded-full ${account.color}`} />
-                <span className="text-muted-foreground">
-                  {account.accountName}:
-                </span>
-                <span className="font-medium">
-                  {account.percentage.toFixed(1)}%
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Detailed Table */}
-        <div className="border rounded-lg">
-          <Table>
-            <TableHeader>
-              <TableRow className="border-b">
-                <TableHead className="w-12"></TableHead>
-                <TableHead className="text-left text-sm font-medium text-muted-foreground">
-                  NAME
-                </TableHead>
-                <TableHead className="text-left text-sm font-medium text-muted-foreground">
-                  WEIGHT
-                </TableHead>
-                <TableHead className="text-right text-sm font-medium text-muted-foreground">
-                  VALUE
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span>Accounts</span>
+              <span className="text-muted-foreground">•</span>
+              <span>{formatCurrency(totalBalance)}</span>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsAddAccountModalOpen(true)}
+              className="h-8 w-8 p-0"
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Horizontal Progress Bar */}
+          <div className="space-y-4">
+            <div className="h-4 rounded-full overflow-hidden">
               {accountsWithPercentages.map((account) => (
-                <TableRow key={account.account_id} className="border-b">
-                  <TableCell className="w-12">
-                    <button
-                      onClick={() => toggleAccountExpansion(account.account_id)}
-                      className="p-1 hover:bg-muted rounded transition-colors"
-                    >
-                      <ChevronRight
-                        className={`h-4 w-4 transition-transform ${
-                          expandedAccounts.has(account.account_id)
-                            ? "rotate-90"
-                            : ""
-                        }`}
-                      />
-                    </button>
-                  </TableCell>
-                  <TableCell>
-                    <span className="font-medium">{account.accountName}</span>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <div className="w-16 h-2 flex">
-                        {Array.from({ length: 5 }).map((_, i) => (
-                          <div
-                            key={i}
-                            className={`flex-1 h-full ${
-                              i < Math.floor(account.percentage / 20)
-                                ? account.color
-                                : "bg-gray-200"
-                            }`}
-                            style={{
-                              marginRight: i < 4 ? "1px" : "0",
-                            }}
-                          />
-                        ))}
-                      </div>
-                      <span className="text-sm">
-                        {account.percentage.toFixed(2)}%
-                      </span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <span className="font-medium">
-                      {formatCurrency(Math.abs(account.current_balance))}
-                    </span>
-                  </TableCell>
-                </TableRow>
+                <div
+                  key={account.account_id}
+                  className={`h-full ${account.color} inline-block`}
+                  style={{ width: `${account.percentage}%` }}
+                />
               ))}
-            </TableBody>
-          </Table>
-        </div>
-      </CardContent>
-    </Card>
+            </div>
+
+            {/* Legend */}
+            <div className="flex flex-wrap gap-4 text-sm">
+              {accountsWithPercentages.map((account) => (
+                <div
+                  key={account.account_id}
+                  className="flex items-center gap-2"
+                >
+                  <div className={`w-3 h-3 rounded-full ${account.color}`} />
+                  <span className="text-muted-foreground">
+                    {account.accountName}:
+                  </span>
+                  <span className="font-medium">
+                    {account.percentage.toFixed(1)}%
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Detailed Table */}
+          <div className="border rounded-lg">
+            <Table>
+              <TableHeader>
+                <TableRow className="border-b">
+                  <TableHead className="w-12"></TableHead>
+                  <TableHead className="text-left text-sm font-medium text-muted-foreground">
+                    NAME
+                  </TableHead>
+                  <TableHead className="text-left text-sm font-medium text-muted-foreground">
+                    WEIGHT
+                  </TableHead>
+                  <TableHead className="text-right text-sm font-medium text-muted-foreground">
+                    VALUE
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {accountsWithPercentages.map((account) => (
+                  <TableRow key={account.account_id} className="border-b">
+                    <TableCell className="w-12">
+                      <button
+                        onClick={() =>
+                          toggleAccountExpansion(account.account_id)
+                        }
+                        className="p-1 hover:bg-muted rounded transition-colors"
+                      >
+                        <ChevronRight
+                          className={`h-4 w-4 transition-transform ${
+                            expandedAccounts.has(account.account_id)
+                              ? "rotate-90"
+                              : ""
+                          }`}
+                        />
+                      </button>
+                    </TableCell>
+                    <TableCell>
+                      <span className="font-medium">{account.accountName}</span>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <div className="w-16 h-2 flex">
+                          {Array.from({ length: 5 }).map((_, i) => (
+                            <div
+                              key={i}
+                              className={`flex-1 h-full ${
+                                i < Math.floor(account.percentage / 20)
+                                  ? account.color
+                                  : "bg-gray-200"
+                              }`}
+                              style={{
+                                marginRight: i < 4 ? "1px" : "0",
+                              }}
+                            />
+                          ))}
+                        </div>
+                        <span className="text-sm">
+                          {account.percentage.toFixed(2)}%
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <span className="font-medium">
+                        {formatCurrency(account.absoluteBalance)}
+                      </span>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+
+      <AddAccountModal
+        isOpen={isAddAccountModalOpen}
+        onOpenChange={setIsAddAccountModalOpen}
+        onAccountAdded={() => {
+          // The account list will automatically refresh due to React Query
+          setIsAddAccountModalOpen(false);
+        }}
+      />
+    </>
   );
 }

@@ -109,8 +109,19 @@ export function AccountsAnalyticsSidepanel({
 
       <CardContent className="space-y-1">
         {accounts.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            <p className="text-sm">No accounts found</p>
+          <div className="text-center py-8 space-y-4">
+            <div className="text-muted-foreground space-y-2">
+              <p className="text-sm font-medium">No accounts yet</p>
+              <p className="text-xs">Add an account to start tracking</p>
+            </div>
+            <Button
+              onClick={() => setIsAddAccountModalOpen(true)}
+              size="sm"
+              className="w-full"
+            >
+              <Plus className="h-3 w-3 mr-2" />
+              Add Account
+            </Button>
           </div>
         ) : (
           accounts.map((account) => (
