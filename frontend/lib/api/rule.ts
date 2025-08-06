@@ -19,7 +19,7 @@ export async function listRules(
   query?: RuleListQuery
 ): Promise<PaginatedRulesResponse> {
   const params = new URLSearchParams();
-  
+
   if (query?.page) {
     params.append("page", query.page.toString());
   }
@@ -31,7 +31,7 @@ export async function listRules(
   }
 
   const url = `${API_BASE_URL}/rule${params.toString() ? `?${params.toString()}` : ""}`;
-  
+
   return apiRequest<PaginatedRulesResponse>(
     url,
     {

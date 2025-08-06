@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/table";
 import { CategoryAnalyticsResponse } from "@/lib/models/analytics";
 import { formatCurrency } from "@/lib/utils";
-import { ChevronRight, Plus, Tag, FileQuestion } from "lucide-react";
+import { ChevronRight, FileQuestion, Plus, Tag } from "lucide-react";
 import { useState } from "react";
 
 interface CategoryAnalyticsProps {
@@ -100,7 +100,9 @@ export function CategoryAnalytics({ data }: CategoryAnalyticsProps) {
       return {
         ...category,
         percentage,
-        color: isUncategorized ? "bg-gray-400" : categoryColors[index % categoryColors.length],
+        color: isUncategorized
+          ? "bg-gray-400"
+          : categoryColors[index % categoryColors.length],
         isUncategorized,
       };
     })

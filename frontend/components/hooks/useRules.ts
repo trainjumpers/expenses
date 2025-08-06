@@ -5,7 +5,12 @@ import {
   listRules,
   updateRule,
 } from "@/lib/api/rule";
-import { CreateRuleInput, PaginatedRulesResponse, RuleListQuery, UpdateRuleInput } from "@/lib/models/rule";
+import {
+  CreateRuleInput,
+  PaginatedRulesResponse,
+  RuleListQuery,
+  UpdateRuleInput,
+} from "@/lib/models/rule";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 

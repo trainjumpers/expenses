@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/pagination";
 import type { Rule } from "@/lib/models/rule";
 import { BookOpen, Search, Trash2 } from "lucide-react";
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 interface ViewRulesModalProps {
   isOpen: boolean;
@@ -54,11 +54,14 @@ export const ViewRulesModal = ({
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  const queryParams = useMemo(() => ({
-    page: currentPage,
-    page_size: pageSize,
-    search: debouncedSearch || undefined,
-  }), [currentPage, pageSize, debouncedSearch]);
+  const queryParams = useMemo(
+    () => ({
+      page: currentPage,
+      page_size: pageSize,
+      search: debouncedSearch || undefined,
+    }),
+    [currentPage, pageSize, debouncedSearch]
+  );
 
   const { data: response, isLoading, refetch } = useRules(queryParams);
 
@@ -113,7 +116,9 @@ export const ViewRulesModal = ({
               <RuleListSkeleton count={3} />
             ) : rules.length === 0 ? (
               <div className="text-muted-foreground text-center py-8">
-                {debouncedSearch ? "No rules match your search." : "No rules to display yet."}
+                {debouncedSearch
+                  ? "No rules match your search."
+                  : "No rules to display yet."}
               </div>
             ) : (
               <>
@@ -161,11 +166,18 @@ export const ViewRulesModal = ({
                         <PaginationItem>
                           <PaginationPrevious
                             onClick={() => handlePageChange(currentPage - 1)}
-                            className={currentPage <= 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                            className={
+                              currentPage <= 1
+                                ? "pointer-events-none opacity-50"
+                                : "cursor-pointer"
+                            }
                           />
                         </PaginationItem>
-                        
-                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+
+                        {Array.from(
+                          { length: totalPages },
+                          (_, i) => i + 1
+                        ).map((page) => (
                           <PaginationItem key={page}>
                             <PaginationLink
                               onClick={() => handlePageChange(page)}
@@ -176,11 +188,15 @@ export const ViewRulesModal = ({
                             </PaginationLink>
                           </PaginationItem>
                         ))}
-                        
+
                         <PaginationItem>
                           <PaginationNext
                             onClick={() => handlePageChange(currentPage + 1)}
-                            className={currentPage >= totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                            className={
+                              currentPage >= totalPages
+                                ? "pointer-events-none opacity-50"
+                                : "cursor-pointer"
+                            }
                           />
                         </PaginationItem>
                       </PaginationContent>
