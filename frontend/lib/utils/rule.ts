@@ -28,8 +28,8 @@ export function normalizeRuleActions(
       a.action_type === "category"
         ? getCategoryId(a.action_value, categories)
         : a.action_type === "transfer"
-        ? getAccountId(a.action_value, accounts)
-        : a.action_value,
+          ? getAccountId(a.action_value, accounts)
+          : a.action_value,
   }));
 }
 
@@ -69,7 +69,7 @@ export function normalizeRuleConditions(
       c.condition_type === "category"
         ? getCategoryId(c.condition_value, categories)
         : c.condition_type === "transfer"
-        ? getAccountId(c.condition_value, accounts)
-        : c.condition_value,
+          ? getAccountId(c.condition_value, accounts)
+          : c.condition_value,
   }));
 }
