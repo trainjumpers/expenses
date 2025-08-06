@@ -70,25 +70,28 @@ export function ImportStatementModal({
     return null;
   };
 
-  const validateFiles = useCallback((files: File[], forBank: boolean): string | null => {
-    if (files.length === 0) return "Please select at least one file";
+  const validateFiles = useCallback(
+    (files: File[], forBank: boolean): string | null => {
+      if (files.length === 0) return "Please select at least one file";
 
-    // For custom parser (non-bank), only allow single file
-    if (!forBank && files.length > 1) {
-      return "Custom parser only supports single file upload";
-    }
+      // For custom parser (non-bank), only allow single file
+      if (!forBank && files.length > 1) {
+        return "Custom parser only supports single file upload";
+      }
 
-    // For bank parsing, allow up to 10 files
-    if (forBank && files.length > 10) {
-      return "Maximum 10 files allowed";
-    }
+      // For bank parsing, allow up to 10 files
+      if (forBank && files.length > 10) {
+        return "Maximum 10 files allowed";
+      }
 
-    for (const file of files) {
-      const error = validateFile(file, forBank);
-      if (error) return `${file.name}: ${error}`;
-    }
-    return null;
-  }, []);
+      for (const file of files) {
+        const error = validateFile(file, forBank);
+        if (error) return `${file.name}: ${error}`;
+      }
+      return null;
+    },
+    []
+  );
 
   const handleFilesSelect = useCallback(
     (files: File[]) => {
@@ -120,8 +123,6 @@ export function ImportStatementModal({
     [step, skipRows, rowSize, previewStatementMutation, validateFiles]
   );
 
-
-
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (files.length > 0) {
@@ -133,29 +134,36 @@ export function ImportStatementModal({
       }
     }
     // Reset the input value so the same file can be selected again
-    e.target.value = '';
+    e.target.value = "";
   };
 
-  const handleAdditionalFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAdditionalFilesChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const newFiles = Array.from(e.target.files || []);
     if (newFiles.length > 0) {
       // Filter out duplicates based on file name and size
-      const existingFileKeys = selectedFiles.map(f => `${f.name}-${f.size}`);
-      const uniqueNewFiles = newFiles.filter(f => !existingFileKeys.includes(`${f.name}-${f.size}`));
-      
+      const existingFileKeys = selectedFiles.map((f) => `${f.name}-${f.size}`);
+      const uniqueNewFiles = newFiles.filter(
+        (f) => !existingFileKeys.includes(`${f.name}-${f.size}`)
+      );
+
       if (uniqueNewFiles.length === 0) {
         setError("All selected files are already added");
-        e.target.value = '';
+        e.target.value = "";
         return;
       }
 
       const combinedFiles = [...selectedFiles, ...uniqueNewFiles];
-      
+
       // Validate the combined files
-      const validationError = validateFiles(combinedFiles, step === ImportStep.ImportFromBank);
+      const validationError = validateFiles(
+        combinedFiles,
+        step === ImportStep.ImportFromBank
+      );
       if (validationError) {
         setError(validationError);
-        e.target.value = '';
+        e.target.value = "";
         return;
       }
 
@@ -163,7 +171,7 @@ export function ImportStatementModal({
       setSelectedFiles(combinedFiles);
     }
     // Reset the input value so the same file can be selected again
-    e.target.value = '';
+    e.target.value = "";
   };
 
   const handleDrag = useCallback((e: React.DragEvent) => {
@@ -231,7 +239,11 @@ export function ImportStatementModal({
       return;
     }
 
-    setUploadProgress({ current: 0, total: selectedFiles.length, processing: true });
+    setUploadProgress({
+      current: 0,
+      total: selectedFiles.length,
+      processing: true,
+    });
 
     for (let i = 0; i < selectedFiles.length; i++) {
       try {
@@ -240,13 +252,15 @@ export function ImportStatementModal({
             { account_id: selectedAccountId, file: selectedFiles[i] },
             {
               onSuccess: () => {
-                setUploadProgress(prev => ({ ...prev, current: i + 1 }));
+                setUploadProgress((prev) => ({ ...prev, current: i + 1 }));
                 resolve();
               },
               onError: (err) => {
-                setError(`Failed to upload ${selectedFiles[i].name}: ${err.message}`);
+                setError(
+                  `Failed to upload ${selectedFiles[i].name}: ${err.message}`
+                );
                 reject(err);
-              }
+              },
             }
           );
         });
@@ -283,7 +297,8 @@ export function ImportStatementModal({
       if (newFiles.length === 0) {
         setPreviewData(null);
       } else if (index === currentFileIndex && step === ImportStep.Preview) {
-        const newCurrentFile = newFiles[Math.min(currentFileIndex, newFiles.length - 1)];
+        const newCurrentFile =
+          newFiles[Math.min(currentFileIndex, newFiles.length - 1)];
         previewStatementMutation.mutate(
           { file: newCurrentFile, skipRows, rowSize },
           {
@@ -300,8 +315,6 @@ export function ImportStatementModal({
     setError("");
   };
 
-
-
   const handleProcessStatement = async (mappings: Record<string, string>) => {
     if (selectedFiles.length === 0) {
       setError("Something went wrong, no files selected.");
@@ -313,7 +326,11 @@ export function ImportStatementModal({
       columnMapping: mappings,
     };
 
-    setUploadProgress({ current: 0, total: selectedFiles.length, processing: true });
+    setUploadProgress({
+      current: 0,
+      total: selectedFiles.length,
+      processing: true,
+    });
 
     for (let i = 0; i < selectedFiles.length; i++) {
       try {
@@ -327,13 +344,15 @@ export function ImportStatementModal({
             },
             {
               onSuccess: () => {
-                setUploadProgress(prev => ({ ...prev, current: i + 1 }));
+                setUploadProgress((prev) => ({ ...prev, current: i + 1 }));
                 resolve();
               },
               onError: (err) => {
-                setError(`Failed to process ${selectedFiles[i].name}: ${err.message}`);
+                setError(
+                  `Failed to process ${selectedFiles[i].name}: ${err.message}`
+                );
                 reject(err);
-              }
+              },
             }
           );
         });

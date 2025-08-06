@@ -145,7 +145,10 @@ export function ImportFromBank({
             ) : (
               <div className="space-y-2">
                 {selectedFiles.map((file, index) => (
-                  <div key={index} className="border rounded-lg p-4 bg-muted/50 dark:bg-muted/20">
+                  <div
+                    key={index}
+                    className="border rounded-lg p-4 bg-muted/50 dark:bg-muted/20"
+                  >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-3">
                         <FileText className="h-8 w-8 text-blue-500 dark:text-blue-400" />
@@ -169,12 +172,14 @@ export function ImportFromBank({
                     </div>
                   </div>
                 ))}
-                
+
                 {/* Add more files button */}
                 {selectedFiles.length < 10 && (
                   <div
                     className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors hover:border-primary"
-                    onClick={() => document.getElementById("file-input-additional")?.click()}
+                    onClick={() =>
+                      document.getElementById("file-input-additional")?.click()
+                    }
                   >
                     <p className="text-sm text-muted-foreground">
                       Click to add more files ({selectedFiles.length}/10)
@@ -198,12 +203,15 @@ export function ImportFromBank({
                 <div className="flex items-center space-x-3">
                   <div className="text-sm text-blue-700 dark:text-blue-300">
                     <p className="font-medium">
-                      Processing files... ({uploadProgress.current}/{uploadProgress.total})
+                      Processing files... ({uploadProgress.current}/
+                      {uploadProgress.total})
                     </p>
                     <div className="w-full bg-blue-200 dark:bg-blue-800 rounded-full h-2 mt-2">
-                      <div 
+                      <div
                         className="bg-blue-500 h-2 rounded-full transition-all duration-300"
-                        style={{ width: `${(uploadProgress.current / uploadProgress.total) * 100}%` }}
+                        style={{
+                          width: `${(uploadProgress.current / uploadProgress.total) * 100}%`,
+                        }}
                       />
                     </div>
                   </div>
@@ -245,7 +253,9 @@ export function ImportFromBank({
         <LoadingButton
           type="submit"
           loading={uploadStatementMutation.isPending}
-          disabled={uploadStatementMutation.isPending || selectedFiles.length === 0}
+          disabled={
+            uploadStatementMutation.isPending || selectedFiles.length === 0
+          }
           fixedWidth="140px"
         >
           Import Statement
