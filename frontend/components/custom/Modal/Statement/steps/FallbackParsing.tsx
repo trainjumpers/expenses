@@ -55,6 +55,7 @@ interface FallbackParsingProps {
     { file: File; skipRows: number; rowSize: number }
   >;
   onStepChange: (step: number) => void;
+  fileInputRef: React.RefObject<HTMLInputElement | null>;
 }
 
 export function FallbackParsing({
@@ -75,6 +76,7 @@ export function FallbackParsing({
   previewData,
   previewStatementMutation,
   onStepChange,
+  fileInputRef,
 }: FallbackParsingProps) {
   return (
     <div className="space-y-4 py-4">
@@ -191,6 +193,7 @@ export function FallbackParsing({
             </p>
             <Input
               id="file-input-fallback"
+              ref={fileInputRef}
               type="file"
               accept=".csv,.xls"
               onChange={onFileInputChange}

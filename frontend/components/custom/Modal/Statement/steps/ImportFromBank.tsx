@@ -25,9 +25,10 @@ interface ImportFromBankProps {
   accounts: Account[];
   selectedAccountId: number;
   onSelectedAccountIdChange: (id: number) => void;
-  selectedFile: File | null;
+  selectedFiles: File[];
   onFileInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onFileRemove: () => void;
+  onAdditionalFilesChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onFileRemove: (index?: number) => void;
   error: string;
   dragActive: boolean;
   handleDrag: (e: React.DragEvent) => void;
@@ -40,14 +41,22 @@ interface ImportFromBankProps {
     CreateStatementRequest,
     unknown
   >;
+  uploadProgress: {
+    current: number;
+    total: number;
+    processing: boolean;
+  };
+  fileInputRef: React.RefObject<HTMLInputElement | null>;
+  additionalFileInputRef: React.RefObject<HTMLInputElement | null>;
 }
 
 export function ImportFromBank({
   accounts,
   selectedAccountId,
   onSelectedAccountIdChange,
-  selectedFile,
+  selectedFiles,
   onFileInputChange,
+  onAdditionalFilesChange,
   onFileRemove,
   error,
   dragActive,
@@ -56,6 +65,9 @@ export function ImportFromBank({
   handleSubmit,
   onStepChange,
   uploadStatementMutation,
+  uploadProgress,
+  fileInputRef,
+  additionalFileInputRef,
 }: ImportFromBankProps) {
   return (
     <form onSubmit={handleSubmit}>
@@ -101,9 +113,9 @@ export function ImportFromBank({
 
         {/* File Upload */}
         <div className="space-y-2">
-          <Label>Statement File</Label>
+          <Label>Statement Files</Label>
           <div className="space-y-4">
-            {!selectedFile ? (
+            {selectedFiles.length === 0 ? (
               <div
                 onDragEnter={handleDrag}
                 onDragLeave={handleDrag}
@@ -119,42 +131,96 @@ export function ImportFromBank({
                 <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
                 <p className="text-sm text-foreground mb-2">
                   {dragActive
-                    ? "Drop the file here..."
-                    : "Drag & drop your bank statement here, or click to select"}
+                    ? "Drop the files here..."
+                    : "Drag & drop your bank statements here, or click to select"}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Supports CSV, XLS, XLSX files (max 256KB)
+                  Supports CSV, XLS, XLSX files (max 256KB each, up to 10 files)
                 </p>
                 <Input
                   id="file-input"
+                  ref={fileInputRef}
                   type="file"
                   accept=".csv,.xls,.xlsx"
+                  multiple
                   onChange={onFileInputChange}
                   className="hidden"
                 />
               </div>
             ) : (
-              <div className="border rounded-lg p-4 bg-muted/50 dark:bg-muted/20">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <FileText className="h-8 w-8 text-blue-500 dark:text-blue-400" />
-                    <div>
-                      <p className="text-sm font-medium text-foreground">
-                        {selectedFile.name}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {(selectedFile.size / 1024).toFixed(1)} KB
-                      </p>
+              <div className="space-y-2">
+                {selectedFiles.map((file, index) => (
+                  <div
+                    key={index}
+                    className="border rounded-lg p-4 bg-muted/50 dark:bg-muted/20"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <FileText className="h-8 w-8 text-blue-500 dark:text-blue-400" />
+                        <div>
+                          <p className="text-sm font-medium text-foreground">
+                            {file.name}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {(file.size / 1024).toFixed(1)} KB
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onFileRemove(index)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={onFileRemove}
+                ))}
+
+                {/* Add more files button */}
+                {selectedFiles.length < 10 && (
+                  <div
+                    className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors hover:border-primary"
+                    onClick={() =>
+                      document.getElementById("file-input-additional")?.click()
+                    }
                   >
-                    <X className="h-4 w-4" />
-                  </Button>
+                    <p className="text-sm text-muted-foreground">
+                      Click to add more files ({selectedFiles.length}/10)
+                    </p>
+                    <Input
+                      id="file-input-additional"
+                      ref={additionalFileInputRef}
+                      type="file"
+                      accept=".csv,.xls,.xlsx"
+                      multiple
+                      onChange={onAdditionalFilesChange}
+                      className="hidden"
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Upload Progress */}
+            {uploadProgress.processing && (
+              <div className="bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                <div className="flex items-center space-x-3">
+                  <div className="text-sm text-blue-700 dark:text-blue-300">
+                    <p className="font-medium">
+                      Processing files... ({uploadProgress.current}/
+                      {uploadProgress.total})
+                    </p>
+                    <div className="w-full bg-blue-200 dark:bg-blue-800 rounded-full h-2 mt-2">
+                      <div
+                        className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                        style={{
+                          width: `${(uploadProgress.current / uploadProgress.total) * 100}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
@@ -193,7 +259,9 @@ export function ImportFromBank({
         <LoadingButton
           type="submit"
           loading={uploadStatementMutation.isPending}
-          disabled={uploadStatementMutation.isPending || !selectedFile}
+          disabled={
+            uploadStatementMutation.isPending || selectedFiles.length === 0
+          }
           fixedWidth="140px"
         >
           Import Statement
