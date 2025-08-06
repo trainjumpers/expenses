@@ -40,7 +40,8 @@ export function ImportStatementModal({
   const previewStatementMutation = usePreviewStatement();
 
   const [step, setStep] = useState<ImportStep>(ImportStep.SelectBank);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [currentFileIndex, setCurrentFileIndex] = useState(0);
   const [skipRows, setSkipRows] = useState(0);
   const [rowSize, setRowSize] = useState(PREVIEW_SIZE);
   const [previewData, setPreviewData] =
@@ -50,6 +51,11 @@ export function ImportStatementModal({
   );
   const [dragActive, setDragActive] = useState(false);
   const [error, setError] = useState<string>("");
+  const [uploadProgress, setUploadProgress] = useState<{
+    current: number;
+    total: number;
+    processing: boolean;
+  }>({ current: 0, total: 0, processing: false });
 
   const validateFile = (file: File, forBank: boolean): string | null => {
     if (file.size > 256 * 1024) {
@@ -64,24 +70,46 @@ export function ImportStatementModal({
     return null;
   };
 
-  const handleFileSelect = useCallback(
-    (file: File) => {
-      const validationError = validateFile(
-        file,
+  const validateFiles = useCallback((files: File[], forBank: boolean): string | null => {
+    if (files.length === 0) return "Please select at least one file";
+
+    // For custom parser (non-bank), only allow single file
+    if (!forBank && files.length > 1) {
+      return "Custom parser only supports single file upload";
+    }
+
+    // For bank parsing, allow up to 10 files
+    if (forBank && files.length > 10) {
+      return "Maximum 10 files allowed";
+    }
+
+    for (const file of files) {
+      const error = validateFile(file, forBank);
+      if (error) return `${file.name}: ${error}`;
+    }
+    return null;
+  }, []);
+
+  const handleFilesSelect = useCallback(
+    (files: File[]) => {
+      const validationError = validateFiles(
+        files,
         step === ImportStep.ImportFromBank
       );
       if (validationError) {
         setError(validationError);
-        setSelectedFile(null);
+        setSelectedFiles([]);
         setPreviewData(null);
         return;
       }
 
       setError("");
-      setSelectedFile(file);
-      if (step === ImportStep.Preview) {
+      setSelectedFiles(files);
+      setCurrentFileIndex(0);
+
+      if (step === ImportStep.Preview && files.length > 0) {
         previewStatementMutation.mutate(
-          { file, skipRows, rowSize },
+          { file: files[0], skipRows, rowSize },
           {
             onSuccess: (data) => setPreviewData(data),
             onError: () => setPreviewData(null),
@@ -89,14 +117,53 @@ export function ImportStatementModal({
         );
       }
     },
-    [step, skipRows, rowSize, previewStatementMutation]
+    [step, skipRows, rowSize, previewStatementMutation, validateFiles]
   );
 
+
+
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      handleFileSelect(file);
+    const files = Array.from(e.target.files || []);
+    if (files.length > 0) {
+      // For custom parser (Preview step), only take the first file
+      if (step === ImportStep.Preview) {
+        handleFilesSelect([files[0]]);
+      } else {
+        handleFilesSelect(files);
+      }
     }
+    // Reset the input value so the same file can be selected again
+    e.target.value = '';
+  };
+
+  const handleAdditionalFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newFiles = Array.from(e.target.files || []);
+    if (newFiles.length > 0) {
+      // Filter out duplicates based on file name and size
+      const existingFileKeys = selectedFiles.map(f => `${f.name}-${f.size}`);
+      const uniqueNewFiles = newFiles.filter(f => !existingFileKeys.includes(`${f.name}-${f.size}`));
+      
+      if (uniqueNewFiles.length === 0) {
+        setError("All selected files are already added");
+        e.target.value = '';
+        return;
+      }
+
+      const combinedFiles = [...selectedFiles, ...uniqueNewFiles];
+      
+      // Validate the combined files
+      const validationError = validateFiles(combinedFiles, step === ImportStep.ImportFromBank);
+      if (validationError) {
+        setError(validationError);
+        e.target.value = '';
+        return;
+      }
+
+      setError("");
+      setSelectedFiles(combinedFiles);
+    }
+    // Reset the input value so the same file can be selected again
+    e.target.value = '';
   };
 
   const handleDrag = useCallback((e: React.DragEvent) => {
@@ -114,20 +181,26 @@ export function ImportStatementModal({
       e.preventDefault();
       e.stopPropagation();
       setDragActive(false);
-      const file = e.dataTransfer.files?.[0];
-      if (file) {
-        handleFileSelect(file);
+      const files = Array.from(e.dataTransfer.files || []);
+      if (files.length > 0) {
+        // For custom parser (Preview step), only take the first file
+        if (step === ImportStep.Preview) {
+          handleFilesSelect([files[0]]);
+        } else {
+          handleFilesSelect(files);
+        }
       }
     },
-    [handleFileSelect]
+    [handleFilesSelect, step]
   );
 
   const handleSkipRowsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseInt(e.target.value, 10);
     setSkipRows(value);
-    if (selectedFile) {
+    const currentFile = selectedFiles[currentFileIndex];
+    if (currentFile) {
       previewStatementMutation.mutate(
-        { file: selectedFile, skipRows: value, rowSize },
+        { file: currentFile, skipRows: value, rowSize },
         {
           onSuccess: (data) => setPreviewData(data),
           onError: () => setPreviewData(null),
@@ -139,9 +212,10 @@ export function ImportStatementModal({
   const handleRowSizeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseInt(e.target.value, PREVIEW_SIZE);
     setRowSize(isNaN(value) ? PREVIEW_SIZE : value);
-    if (selectedFile) {
+    const currentFile = selectedFiles[currentFileIndex];
+    if (currentFile) {
       previewStatementMutation.mutate(
-        { file: selectedFile, skipRows, rowSize: value },
+        { file: currentFile, skipRows, rowSize: value },
         {
           onSuccess: (data) => setPreviewData(data),
           onError: () => setPreviewData(null),
@@ -152,36 +226,85 @@ export function ImportStatementModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedFile || !selectedAccountId) {
-      setError("Please select a file and an account");
+    if (selectedFiles.length === 0 || !selectedAccountId) {
+      setError("Please select at least one file and an account");
       return;
     }
-    uploadStatementMutation.mutate(
-      { account_id: selectedAccountId, file: selectedFile },
-      { onSuccess: () => handleCancel() }
-    );
+
+    setUploadProgress({ current: 0, total: selectedFiles.length, processing: true });
+
+    for (let i = 0; i < selectedFiles.length; i++) {
+      try {
+        await new Promise<void>((resolve, reject) => {
+          uploadStatementMutation.mutate(
+            { account_id: selectedAccountId, file: selectedFiles[i] },
+            {
+              onSuccess: () => {
+                setUploadProgress(prev => ({ ...prev, current: i + 1 }));
+                resolve();
+              },
+              onError: (err) => {
+                setError(`Failed to upload ${selectedFiles[i].name}: ${err.message}`);
+                reject(err);
+              }
+            }
+          );
+        });
+      } catch {
+        setUploadProgress({ current: 0, total: 0, processing: false });
+        return;
+      }
+    }
+
+    setUploadProgress({ current: 0, total: 0, processing: false });
+    handleCancel();
   };
 
   const handleCancel = () => {
-    setSelectedFile(null);
+    setSelectedFiles([]);
+    setCurrentFileIndex(0);
     setSelectedAccountId(accounts[0]?.id || 0);
     setError("");
     setStep(ImportStep.SelectBank);
     setPreviewData(null);
     setSkipRows(0);
     setRowSize(PREVIEW_SIZE);
+    setUploadProgress({ current: 0, total: 0, processing: false });
     onOpenChange(false);
   };
 
-  const removeFile = () => {
-    setSelectedFile(null);
+  const removeFile = (index?: number) => {
+    if (index !== undefined) {
+      const newFiles = selectedFiles.filter((_, i) => i !== index);
+      setSelectedFiles(newFiles);
+      if (currentFileIndex >= newFiles.length) {
+        setCurrentFileIndex(Math.max(0, newFiles.length - 1));
+      }
+      if (newFiles.length === 0) {
+        setPreviewData(null);
+      } else if (index === currentFileIndex && step === ImportStep.Preview) {
+        const newCurrentFile = newFiles[Math.min(currentFileIndex, newFiles.length - 1)];
+        previewStatementMutation.mutate(
+          { file: newCurrentFile, skipRows, rowSize },
+          {
+            onSuccess: (data) => setPreviewData(data),
+            onError: () => setPreviewData(null),
+          }
+        );
+      }
+    } else {
+      setSelectedFiles([]);
+      setCurrentFileIndex(0);
+      setPreviewData(null);
+    }
     setError("");
-    setPreviewData(null);
   };
 
-  const handleProcessStatement = (mappings: Record<string, string>) => {
-    if (!selectedFile) {
-      setError("Something went wrong, no file selected.");
+
+
+  const handleProcessStatement = async (mappings: Record<string, string>) => {
+    if (selectedFiles.length === 0) {
+      setError("Something went wrong, no files selected.");
       return;
     }
 
@@ -190,19 +313,38 @@ export function ImportStatementModal({
       columnMapping: mappings,
     };
 
-    uploadStatementMutation.mutate(
-      {
-        account_id: selectedAccountId,
-        file: selectedFile,
-        bank_type: "others",
-        metadata: JSON.stringify(metadata),
-      },
-      {
-        onSuccess: () => {
-          handleCancel();
-        },
+    setUploadProgress({ current: 0, total: selectedFiles.length, processing: true });
+
+    for (let i = 0; i < selectedFiles.length; i++) {
+      try {
+        await new Promise<void>((resolve, reject) => {
+          uploadStatementMutation.mutate(
+            {
+              account_id: selectedAccountId,
+              file: selectedFiles[i],
+              bank_type: "others",
+              metadata: JSON.stringify(metadata),
+            },
+            {
+              onSuccess: () => {
+                setUploadProgress(prev => ({ ...prev, current: i + 1 }));
+                resolve();
+              },
+              onError: (err) => {
+                setError(`Failed to process ${selectedFiles[i].name}: ${err.message}`);
+                reject(err);
+              }
+            }
+          );
+        });
+      } catch {
+        setUploadProgress({ current: 0, total: 0, processing: false });
+        return;
       }
-    );
+    }
+
+    setUploadProgress({ current: 0, total: 0, processing: false });
+    handleCancel();
   };
 
   const renderStep = () => {
@@ -213,8 +355,9 @@ export function ImportStatementModal({
             accounts={accounts}
             selectedAccountId={selectedAccountId}
             onSelectedAccountIdChange={setSelectedAccountId}
-            selectedFile={selectedFile}
+            selectedFiles={selectedFiles}
             onFileInputChange={handleFileInputChange}
+            onAdditionalFilesChange={handleAdditionalFilesChange}
             onFileRemove={removeFile}
             error={error}
             dragActive={dragActive}
@@ -223,6 +366,7 @@ export function ImportStatementModal({
             handleSubmit={handleSubmit}
             onStepChange={setStep}
             uploadStatementMutation={uploadStatementMutation}
+            uploadProgress={uploadProgress}
           />
         );
       case ImportStep.Preview:
@@ -231,9 +375,9 @@ export function ImportStatementModal({
             accounts={accounts}
             selectedAccountId={selectedAccountId}
             onSelectedAccountIdChange={setSelectedAccountId}
-            selectedFile={selectedFile}
+            selectedFile={selectedFiles[0] || null}
             onFileInputChange={handleFileInputChange}
-            onFileRemove={removeFile}
+            onFileRemove={() => removeFile(0)}
             error={error}
             dragActive={dragActive}
             handleDrag={handleDrag}
