@@ -5,14 +5,14 @@ import {
   listRules,
   updateRule,
 } from "@/lib/api/rule";
-import { CreateRuleInput, Rule, UpdateRuleInput } from "@/lib/models/rule";
+import { CreateRuleInput, PaginatedRulesResponse, RuleListQuery, UpdateRuleInput } from "@/lib/models/rule";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-export function useRules() {
-  return useQuery<Rule[]>({
-    queryKey: ["rules"],
-    queryFn: listRules,
+export function useRules(query?: RuleListQuery) {
+  return useQuery<PaginatedRulesResponse>({
+    queryKey: ["rules", query],
+    queryFn: () => listRules(query),
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }
@@ -42,13 +42,8 @@ export function useUpdateRule() {
   return useMutation({
     mutationFn: ({ id, input }: { id: number; input: UpdateRuleInput }) =>
       updateRule(id, input),
-    onSuccess: (updatedRule) => {
-      queryClient.setQueryData<Rule[]>(["rules"], (old) => {
-        if (!old) return [updatedRule];
-        return old.map((rule) =>
-          rule.id === updatedRule.id ? updatedRule : rule
-        );
-      });
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["rules"] });
     },
   });
 }

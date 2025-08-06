@@ -6,20 +6,38 @@ import {
   CreateRuleInput,
   DescribeRuleResponse,
   ExecuteRulesResponse,
+  PaginatedRulesResponse,
   Rule,
   RuleAction,
   RuleCondition,
+  RuleListQuery,
   UpdateRuleInput,
 } from "@/lib/models/rule";
 
-// List all rules
-export async function listRules(): Promise<Rule[]> {
-  return apiRequest<Rule[]>(
-    `${API_BASE_URL}/rule`,
+// List rules with optional pagination and search
+export async function listRules(
+  query?: RuleListQuery
+): Promise<PaginatedRulesResponse> {
+  const params = new URLSearchParams();
+  
+  if (query?.page) {
+    params.append("page", query.page.toString());
+  }
+  if (query?.page_size) {
+    params.append("page_size", query.page_size.toString());
+  }
+  if (query?.search) {
+    params.append("search", query.search);
+  }
+
+  const url = `${API_BASE_URL}/rule${params.toString() ? `?${params.toString()}` : ""}`;
+  
+  return apiRequest<PaginatedRulesResponse>(
+    url,
     {
       credentials: "include",
     },
-    "rule",
+    "data",
     [],
     "Failed to fetch rules"
   );

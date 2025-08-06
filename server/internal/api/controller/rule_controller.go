@@ -48,16 +48,37 @@ func (rc *RuleController) CreateRule(c *gin.Context) {
 
 func (rc *RuleController) ListRules(c *gin.Context) {
 	userId := rc.GetAuthenticatedUserId(c)
-	logger.Infof("Fetching all rules for user %d", userId)
+	logger.Infof("Fetching rules for user %d", userId)
 
-	rules, err := rc.ruleService.ListRules(c, userId)
+	// Parse query parameters
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSizeStr := c.Query("page_size")
+	search := c.Query("search")
+
+	var query *models.RuleListQuery
+
+	// If any query parameters are provided, create query object
+	if pageSizeStr != "" || search != "" || page > 1 {
+		pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
+		query = &models.RuleListQuery{
+			Page:     page,
+			PageSize: pageSize,
+		}
+
+		if search != "" {
+			query.Search = &search
+		}
+	}
+
+	response, err := rc.ruleService.ListRules(c, userId, query)
 	if err != nil {
 		logger.Errorf("Error fetching rules: %v", err)
 		rc.HandleError(c, err)
 		return
 	}
-	logger.Infof("Successfully fetched %d rules for user %d", len(rules), userId)
-	rc.SendSuccess(c, http.StatusOK, "Rules fetched successfully", rules)
+
+	logger.Infof("Successfully fetched %d rules for user %d", len(response.Rules), userId)
+	rc.SendSuccess(c, http.StatusOK, "Rules fetched successfully", response)
 }
 
 func (rc *RuleController) GetRuleById(c *gin.Context) {
