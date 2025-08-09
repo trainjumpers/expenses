@@ -205,12 +205,21 @@ var _ = Describe("HDFCParser", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(txns).To(HaveLen(1))
 		})
+
+		It("truncates very long narration when parsing (debit)", func() {
+			input := "Date,Narration,Value Dat,Debit Amount,Credit Amount,Chq/Ref Number,Closing Balance\n" +
+				"01/10/24,This is a very long description that should be truncated for readability,01/10/24,10.00,0.00,REF123,0.00\n"
+			txns, err := parser.Parse([]byte(input), "", "")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(txns).To(HaveLen(1))
+			Expect(txns[0].Name).To(Equal("Debit: This is a very..."))
+		})
 	})
 
 	Describe("generateTransactionName", func() {
 		It("truncates overly long descriptions and prefixes Debit/Credit", func() {
 			name := parser.generateTransactionName("Some very long description that should be truncated for readability", false)
-			Expect(name).To(Equal("Debit: Some very long des..."))
+			Expect(name).To(Equal("Debit: Some very long..."))
 		})
 	})
 
