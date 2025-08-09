@@ -89,7 +89,7 @@ export function ViewCategoriesModal({
           <div className="space-y-4 py-2">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
+              <Input aria-label="Search categories"
                 placeholder="Search categories by name..."
                 value={searchTerm}
                 onChange={(e) => {
