@@ -155,6 +155,63 @@ var _ = Describe("HDFCParser", func() {
 			Expect(txns).To(HaveLen(1))
 			Expect(txns[0].CategoryIds).To(BeEmpty())
 		})
+
+		It("returns error when header row is missing", func() {
+			_, err := parser.Parse([]byte("No header here\nJust text"), "", "")
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("fails when scanner encounters an overly long line", func() {
+			// bufio.Scanner returns ErrTooLong when a token exceeds the buffer size
+			veryLong := make([]byte, 70*1024)
+			for i := range veryLong {
+				veryLong[i] = 'A'
+			}
+			_, err := parser.Parse(veryLong, "", "")
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("skips empty lines between transactions", func() {
+			input := "Date,Narration,Value Dat,Debit Amount,Credit Amount,Chq/Ref Number,Closing Balance\n\n" +
+				"01/10/24,POS SOME MERCHANT,30/09/24,2.00,0.00,0,20185.00\n\n"
+			txns, err := parser.Parse([]byte(input), "", "")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(txns).To(HaveLen(1))
+		})
+
+		It("skips lines with insufficient columns", func() {
+			input := "Date,Narration,Value Dat,Debit Amount,Credit Amount,Chq/Ref Number,Closing Balance\n" +
+				"01/10/24,Short\n" +
+				"01/10/24,POS SOME MERCHANT,30/09/24,2.00,0.00,0,20185.00\n"
+			txns, err := parser.Parse([]byte(input), "", "")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(txns).To(HaveLen(1))
+		})
+
+		It("skips rows with invalid date formats", func() {
+			input := "Date,Narration,Value Dat,Debit Amount,Credit Amount,Chq/Ref Number,Closing Balance\n" +
+				"bad-date,POS SOME MERCHANT,30/09/24,2.00,0.00,0,20185.00\n" +
+				"01/10/24,POS SOME MERCHANT,30/09/24,2.00,0.00,0,20185.00\n"
+			txns, err := parser.Parse([]byte(input), "", "")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(txns).To(HaveLen(1))
+		})
+
+		It("skips rows with non-numeric amount", func() {
+			input := "Date,Narration,Value Dat,Debit Amount,Credit Amount,Chq/Ref Number,Closing Balance\n" +
+				"01/10/24,POS SOME MERCHANT,30/09/24,abc,0.00,0,20185.00\n" +
+				"01/10/24,POS SOME MERCHANT,30/09/24,2.00,0.00,0,20185.00\n"
+			txns, err := parser.Parse([]byte(input), "", "")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(txns).To(HaveLen(1))
+		})
+	})
+
+	Describe("generateTransactionName", func() {
+		It("truncates overly long descriptions and prefixes Debit/Credit", func() {
+			name := parser.generateTransactionName("Some very long description that should be truncated for readability", false)
+			Expect(name).To(Equal("Debit: Some very long des..."))
+		})
 	})
 
 	Describe("Parser Registry", func() {
