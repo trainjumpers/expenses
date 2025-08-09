@@ -26,8 +26,8 @@ func (v *StatementValidator) ValidateStatementUpload(accountId int64, fileBytes 
 		return apierrors.NewStatementBadRequestError(errors.New("file size must be less than 256KB"))
 	}
 	trimmedFileName := strings.ToLower(strings.TrimSpace(fileName))
-	if !strings.HasSuffix(trimmedFileName, ".csv") && !strings.HasSuffix(trimmedFileName, ".xls") && !strings.HasSuffix(trimmedFileName, ".xlsx") {
-		return apierrors.NewStatementBadRequestError(errors.New("file must be CSV or Excel format (.csv, .xls, .xlsx)"))
+	if !strings.HasSuffix(trimmedFileName, ".csv") && !strings.HasSuffix(trimmedFileName, ".xls") && !strings.HasSuffix(trimmedFileName, ".xlsx") && !strings.HasSuffix(trimmedFileName, ".txt") {
+		return apierrors.NewStatementBadRequestError(errors.New("file must be CSV or Excel format (.csv, .xls, .xlsx, .txt)"))
 	}
 	return nil
 }

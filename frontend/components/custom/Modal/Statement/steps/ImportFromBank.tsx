@@ -135,13 +135,14 @@ export function ImportFromBank({
                     : "Drag & drop your bank statements here, or click to select"}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Supports CSV, XLS, XLSX files (max 256KB each, up to 10 files)
+                  Supports CSV, XLS, XLSX, TXT files (max 256KB each, up to 10
+                  files)
                 </p>
                 <Input
                   id="file-input"
                   ref={fileInputRef}
                   type="file"
-                  accept=".csv,.xls,.xlsx"
+                  accept=".csv,.xls,.xlsx,.txt"
                   multiple
                   onChange={onFileInputChange}
                   className="hidden"
@@ -193,7 +194,7 @@ export function ImportFromBank({
                       id="file-input-additional"
                       ref={additionalFileInputRef}
                       type="file"
-                      accept=".csv,.xls,.xlsx"
+                      accept=".csv,.xls,.xlsx,.txt"
                       multiple
                       onChange={onAdditionalFilesChange}
                       className="hidden"

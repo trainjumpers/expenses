@@ -189,13 +189,13 @@ export function FallbackParsing({
                 : "Drag & drop your bank statement here, or click to select"}
             </p>
             <p className="text-xs text-muted-foreground">
-              Supports CSV, XLS files (max 256KB)
+              Supports CSV, XLS, TXT files (max 256KB)
             </p>
             <Input
               id="file-input-fallback"
               ref={fileInputRef}
               type="file"
-              accept=".csv,.xls"
+              accept=".csv,.xls,.txt"
               onChange={onFileInputChange}
               className="hidden"
             />

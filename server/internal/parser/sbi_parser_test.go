@@ -11,7 +11,7 @@ import (
 
 func TestSBIParser(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "SBI Parser Suite")
+	RunSpecs(t, "Statement Parser Suite")
 }
 
 var _ = Describe("SBIParser", func() {

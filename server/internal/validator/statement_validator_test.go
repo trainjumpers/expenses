@@ -62,7 +62,7 @@ var _ = Describe("StatementValidator", func() {
 			})
 
 			It("should return error for invalid file type", func() {
-				err := validator.ValidateStatementUpload(accountId, fileBytes, "test.txt")
+				err := validator.ValidateStatementUpload(accountId, fileBytes, "test.png")
 				Expect(err).To(HaveOccurred())
 			})
 
