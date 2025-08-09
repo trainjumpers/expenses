@@ -1,13 +1,12 @@
 package parser
 
 import (
-    "expenses/internal/models"
-    "time"
+	"expenses/internal/models"
+	"time"
 
-    . "github.com/onsi/ginkgo/v2"
-    . "github.com/onsi/gomega"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
-
 
 var _ = Describe("HDFCParser", func() {
 	var parser *HDFCParser
