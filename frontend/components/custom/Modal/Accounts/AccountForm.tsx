@@ -82,6 +82,9 @@ export function AccountForm({
               <SelectItem value="sbi">State Bank of India</SelectItem>
               <SelectItem value="hdfc">HDFC Bank</SelectItem>
               <SelectItem value="icici">ICICI Bank</SelectItem>
+              <SelectItem value="icici_credit">
+                ICICI Bank (Credit Card)
+              </SelectItem>
               <SelectItem value="investment">Investment Account</SelectItem>
               <SelectItem value="others">Others</SelectItem>
             </SelectContent>

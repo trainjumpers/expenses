@@ -4,6 +4,7 @@ export type BankType =
   | "sbi"
   | "hdfc"
   | "icici"
+  | "icici_credit"
   | "others";
 export type Currency = "inr" | "usd";
 
