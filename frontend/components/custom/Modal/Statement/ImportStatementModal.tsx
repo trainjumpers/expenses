@@ -80,8 +80,8 @@ export function ImportStatementModal({
       return "File size must be less than 256KB";
     }
     const validExtensions = forBank
-      ? [".csv", ".xls", ".xlsx"]
-      : [".csv", ".xls"];
+      ? [".csv", ".xls", ".xlsx", ".txt"]
+      : [".csv", ".xls", ".txt"];
     if (!validExtensions.some((ext) => file.name.toLowerCase().endsWith(ext))) {
       return `File must be ${validExtensions.join(", ")} format`;
     }
