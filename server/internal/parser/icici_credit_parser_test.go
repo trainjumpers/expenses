@@ -3,8 +3,6 @@ package parser
 import (
 	"expenses/internal/models"
 	"expenses/pkg/utils"
-	"os"
-	"path/filepath"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -121,42 +119,55 @@ var _ = Describe("ICICICreditParser", func() {
 	})
 
 	Describe("Parse", func() {
-		It("should parse a valid ICICI credit statement file", func() {
-			// Using content from the provided CreditCardStatement.CSV
-			filePath := filepath.Join("../../../", "CreditCardStatement.CSV")
-			fileBytes, err := os.ReadFile(filePath)
-			Expect(err).NotTo(HaveOccurred())
+		It("should parse a valid ICICI credit statement", func() {
+			input := `"Accountno:","[ACCOUNT_NUMBER]"
+"Customer Name:","[CUSTOMER_NAME]"
+"Address:","[ADDRESS]"
 
-			txns, err := parser.Parse(fileBytes, "", "CreditCardStatement.CSV")
-			Expect(err).NotTo(HaveOccurred())
-			Expect(txns).To(HaveLen(44)) // 44 transactions in the first file
 
-			// Check a few transactions to ensure correctness
-			// Debit
+"Transaction Details:"
+"Date","Sr.No.","Transaction Details","Reward Point Header","Intl.Amount","Amount(in Rs)","BillingAmountSign"
+"[CARD_NUMBER]"
+"12/07/2025","11600218774","BOOK MY SHOW PAYU PG MUMBAI IN","12","0","612.16",""
+"16/07/2025","11627037259","PAYU*SWIGGY Bangalore IN","6","0","327.00",""
+"08/07/2025","11571085308","BBPS Payment received","0","0","10412.40","CR"
+"04/07/2025","11500123456","UPI-929092781855-Blinkit IN","8","0","385.00",""`
+
+			txns, err := parser.Parse([]byte(input), "", "test.csv")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(txns).To(HaveLen(4))
+
+			// Check debit transaction
 			Expect(txns[0].Name).To(Equal("BOOK MY SHOW PAYU PG MUMBAI IN"))
 			Expect(*txns[0].Amount).To(Equal(612.16))
 			Expect(txns[0].Date).To(Equal(time.Date(2025, 7, 12, 0, 0, 0, 0, time.UTC)))
 
-			// Credit
-			Expect(txns[9].Name).To(Equal("BBPS Payment received"))
-			Expect(*txns[9].Amount).To(Equal(-10412.40))
-			Expect(txns[9].Date).To(Equal(time.Date(2025, 7, 8, 0, 0, 0, 0, time.UTC)))
+			// Check credit transaction
+			Expect(txns[2].Name).To(Equal("BBPS Payment received"))
+			Expect(*txns[2].Amount).To(Equal(-10412.40))
+			Expect(txns[2].Date).To(Equal(time.Date(2025, 7, 8, 0, 0, 0, 0, time.UTC)))
 
-			// Another debit from a different card on the same statement
-			Expect(txns[28].Name).To(Equal("UPI-929092781855-Blinkit IN"))
-			Expect(*txns[28].Amount).To(Equal(385.00))
-			Expect(txns[28].Date).To(Equal(time.Date(2025, 7, 4, 0, 0, 0, 0, time.UTC)))
+			// Check another debit transaction
+			Expect(txns[3].Name).To(Equal("UPI-929092781855-Blinkit IN"))
+			Expect(*txns[3].Amount).To(Equal(385.00))
+			Expect(txns[3].Date).To(Equal(time.Date(2025, 7, 4, 0, 0, 0, 0, time.UTC)))
 		})
 
-		It("should parse another valid ICICI credit statement file", func() {
-			// Using content from the provided CreditCardStatement(1).CSV
-			filePath := filepath.Join("../../../", "CreditCardStatement(1).CSV")
-			fileBytes, err := os.ReadFile(filePath)
-			Expect(err).NotTo(HaveOccurred())
+		It("should parse another valid ICICI credit statement format", func() {
+			input := `"Accountno:","[ACCOUNT_NUMBER]"
+"Customer Name:","[CUSTOMER_NAME]"
+"Address:","[ADDRESS]"
 
-			txns, err := parser.Parse(fileBytes, "", "CreditCardStatement(1).CSV")
+
+"Transaction Details:"
+"Date","Sr.No.","Transaction Details","Reward Point Header","Intl.Amount","Amount(in Rs)","BillingAmountSign"
+"[CARD_NUMBER]"
+"02/08/2024","9598980587","GOOGLEPLAY MUMBAI IN","52","0","2600.00",""
+"11/08/2024","9647709815","HOTSTAR MUMBAI IN","25","0","1271.10",""`
+
+			txns, err := parser.Parse([]byte(input), "", "test.csv")
 			Expect(err).NotTo(HaveOccurred())
-			Expect(txns).To(HaveLen(2)) // 2 transactions in the second file
+			Expect(txns).To(HaveLen(2))
 
 			Expect(txns[0].Name).To(Equal("GOOGLEPLAY MUMBAI IN"))
 			Expect(*txns[0].Amount).To(Equal(2600.00))
@@ -167,11 +178,41 @@ var _ = Describe("ICICICreditParser", func() {
 			Expect(txns[1].Date).To(Equal(time.Date(2024, 8, 11, 0, 0, 0, 0, time.UTC)))
 		})
 
+		It("should skip card number rows and other non-transaction data", func() {
+			input := `"Accountno:","[ACCOUNT_NUMBER]"
+"Customer Name:","[CUSTOMER_NAME]"
+
+
+"Transaction Details:"
+"Date","Sr.No.","Transaction Details","Reward Point Header","Intl.Amount","Amount(in Rs)","BillingAmountSign"
+"[CARD_NUMBER]"
+"12/07/2025","11600218774","BOOK MY SHOW PAYU PG MUMBAI IN","12","0","612.16",""
+"[ANOTHER_CARD_NUMBER]"
+"16/07/2025","11627037259","PAYU*SWIGGY Bangalore IN","6","0","327.00",""`
+
+			txns, err := parser.Parse([]byte(input), "", "test.csv")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(txns).To(HaveLen(2)) // Should skip card number rows
+		})
+
 		It("should error if header row is missing", func() {
-			input := `"Accountno:","0000000031229212"
-"Customer Name:","MR NEDUNGADI PRANAV V"`
+			input := `"Accountno:","[ACCOUNT_NUMBER]"
+"Customer Name:","[CUSTOMER_NAME]"`
 			_, err := parser.Parse([]byte(input), "", "")
 			Expect(err).To(MatchError("transaction header row not found in ICICI credit statement"))
+		})
+
+		It("should handle empty transactions gracefully", func() {
+			input := `"Accountno:","[ACCOUNT_NUMBER]"
+"Customer Name:","[CUSTOMER_NAME]"
+
+
+"Transaction Details:"
+"Date","Sr.No.","Transaction Details","Reward Point Header","Intl.Amount","Amount(in Rs)","BillingAmountSign"`
+
+			txns, err := parser.Parse([]byte(input), "", "test.csv")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(txns).To(HaveLen(0))
 		})
 	})
 
