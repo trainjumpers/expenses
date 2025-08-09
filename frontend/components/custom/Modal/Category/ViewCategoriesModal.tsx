@@ -13,9 +13,18 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Icon, IconName } from "@/components/ui/icon-picker";
+import { Input } from "@/components/ui/input";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 import { Category } from "@/lib/models/category";
-import { Tag, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { Search, Tag, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 
 interface ViewCategoriesModalProps {
   isOpen: boolean;
@@ -36,6 +45,29 @@ export function ViewCategoriesModal({
   const [confirmDeleteCategory, setConfirmDeleteCategory] =
     useState<Category | null>(null);
 
+  // Frontend-only search + pagination
+  const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 5;
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchTerm.trim()), 300);
+    return () => clearTimeout(t);
+  }, [searchTerm]);
+
+  const filtered = useMemo(() => {
+    if (!debouncedSearch) return categories;
+    const s = debouncedSearch.toLowerCase();
+    return categories.filter((c) => c.name.toLowerCase().includes(s));
+  }, [categories, debouncedSearch]);
+
+  const totalPages = Math.ceil(filtered.length / pageSize) || 1;
+  const pagedCategories = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filtered.slice(start, start + pageSize);
+  }, [filtered, currentPage]);
+
   const handleDeleteCategory = async (category: Category) => {
     deleteCategoryMutation.mutate(category.id, {
       onSuccess: () => {
@@ -47,14 +79,26 @@ export function ViewCategoriesModal({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[425px] max-h-[80vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Tag className="h-5 w-5" />
               Categories
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-4 py-2">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search categories by name..."
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="pl-10"
+              />
+            </div>
             {isLoading ? (
               <div className="space-y-2">
                 {[...Array(3)].map((_, i) => (
@@ -64,9 +108,15 @@ export function ViewCategoriesModal({
                   />
                 ))}
               </div>
+            ) : pagedCategories.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                {debouncedSearch
+                  ? "No categories match your search."
+                  : "No categories found. Add your first category to get started."}
+              </div>
             ) : (
               <div className="space-y-2">
-                {categories.map((category) => (
+                {pagedCategories.map((category) => (
                   <div
                     key={category.id}
                     className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50"
@@ -97,9 +147,50 @@ export function ViewCategoriesModal({
                     </div>
                   </div>
                 ))}
-                {categories.length === 0 && (
-                  <div className="text-center py-8 text-muted-foreground">
-                    No categories found. Add your first category to get started.
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-between text-sm text-muted-foreground pt-2">
+                    <Pagination>
+                      <PaginationContent>
+                        <PaginationItem>
+                          <PaginationPrevious
+                            onClick={() =>
+                              setCurrentPage((p) => Math.max(1, p - 1))
+                            }
+                            className={
+                              currentPage <= 1
+                                ? "pointer-events-none opacity-50"
+                                : "cursor-pointer"
+                            }
+                          />
+                        </PaginationItem>
+                        {Array.from(
+                          { length: totalPages },
+                          (_, i) => i + 1
+                        ).map((page) => (
+                          <PaginationItem key={page}>
+                            <PaginationLink
+                              onClick={() => setCurrentPage(page)}
+                              isActive={currentPage === page}
+                              className="cursor-pointer"
+                            >
+                              {page}
+                            </PaginationLink>
+                          </PaginationItem>
+                        ))}
+                        <PaginationItem>
+                          <PaginationNext
+                            onClick={() =>
+                              setCurrentPage((p) => Math.min(totalPages, p + 1))
+                            }
+                            className={
+                              currentPage >= totalPages
+                                ? "pointer-events-none opacity-50"
+                                : "cursor-pointer"
+                            }
+                          />
+                        </PaginationItem>
+                      </PaginationContent>
+                    </Pagination>
                   </div>
                 )}
               </div>
