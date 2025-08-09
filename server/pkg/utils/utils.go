@@ -83,12 +83,19 @@ func ConvertStruct(src any, dst any) {
 	}
 }
 
-// parseDate tries to parse a date string with multiple common layouts.
+// ParseDate tries to parse a date string with multiple common layouts.
 func ParseDate(dateStr string) (time.Time, error) {
 	layouts := []string{
-		"2006-01-02", "01-02-2006", "01/02/2006", "2006/01/02",
-		"Jan 2, 2006", "2 Jan 2006", "02 Jan 2006",
-		"January 2, 2006", "2 January 2006", "02 January 2006",
+		// Standard formats
+		"2006-01-02", "2006/01/02",
+		// SBI formats
+		"2 Jan 2006", "02 Jan 2006", "2 January 2006", "02 January 2006",
+		// HDFC and ICICI formats (DD/MM/YYYY and DD/MM/YY) - prioritize these
+		"02/01/2006", "2/1/2006", "02/01/06", "2/1/06",
+		// US formats (MM/DD/YYYY) - these come after DD/MM to avoid ambiguity
+		"01-02-2006", "01/02/2006",
+		// Other common formats
+		"Jan 2, 2006", "January 2, 2006",
 		time.RFC3339,
 	}
 	for _, layout := range layouts {
@@ -99,12 +106,20 @@ func ParseDate(dateStr string) (time.Time, error) {
 	return time.Time{}, fmt.Errorf("unable to parse date: %s", dateStr)
 }
 
-// ParseFloat cleans and parses a string into a float64.
+// ParseFloat cleans and parses a string into a float64, removing commas and handling empty strings.
 func ParseFloat(amountStr string) (float64, error) {
-	if amountStr == "" {
-		return 0, nil
-	}
+	// Remove commas and extra spaces
 	cleanAmount := strings.ReplaceAll(amountStr, ",", "")
 	cleanAmount = strings.TrimSpace(cleanAmount)
-	return strconv.ParseFloat(cleanAmount, 64)
+
+	if cleanAmount == "" {
+		return 0, errors.New("empty amount string")
+	}
+
+	amount, err := strconv.ParseFloat(cleanAmount, 64)
+	if err != nil {
+		return 0, fmt.Errorf("invalid amount format: %s", amountStr)
+	}
+
+	return amount, nil
 }

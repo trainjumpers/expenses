@@ -6,11 +6,10 @@ import (
 	"errors"
 	"expenses/internal/models"
 	"expenses/pkg/logger"
+	"expenses/pkg/utils"
 	"fmt"
 	"regexp"
-	"strconv"
 	"strings"
-	"time"
 )
 
 type SBIParser struct{}
@@ -85,7 +84,7 @@ func (p *SBIParser) parseTransactionRow(fields []string) (*models.CreateTransact
 	debitStr := strings.TrimSpace(fields[4])
 	creditStr := strings.TrimSpace(fields[5])
 
-	txnDate, err := p.parseDate(txnDateStr)
+	txnDate, err := utils.ParseDate(txnDateStr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse transaction date '%s': %w", txnDateStr, err)
 	}
@@ -94,13 +93,13 @@ func (p *SBIParser) parseTransactionRow(fields []string) (*models.CreateTransact
 	var isCredit bool
 
 	if debitStr != "" && debitStr != " " {
-		amount, err = p.parseAmount(debitStr)
+		amount, err = utils.ParseFloat(debitStr)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse debit amount '%s': %w", debitStr, err)
 		}
 		isCredit = false
 	} else if creditStr != "" && creditStr != " " {
-		amount, err = p.parseAmount(creditStr)
+		amount, err = utils.ParseFloat(creditStr)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse credit amount '%s': %w", creditStr, err)
 		}
@@ -129,41 +128,6 @@ func (p *SBIParser) parseTransactionRow(fields []string) (*models.CreateTransact
 	}
 
 	return transaction, nil
-}
-
-func (p *SBIParser) parseDate(dateStr string) (time.Time, error) {
-	layouts := []string{
-		"2 Jan 2006",
-		"02 Jan 2006",
-		"2 January 2006",
-		"02 January 2006",
-	}
-
-	for _, layout := range layouts {
-		if date, err := time.Parse(layout, dateStr); err == nil {
-			return date, nil
-		}
-	}
-
-	return time.Time{}, fmt.Errorf("unable to parse date: %s", dateStr)
-}
-
-// parseAmount parses amount string and removes commas
-func (p *SBIParser) parseAmount(amountStr string) (float64, error) {
-	// Remove commas and extra spaces
-	cleanAmount := strings.ReplaceAll(amountStr, ",", "")
-	cleanAmount = strings.TrimSpace(cleanAmount)
-
-	if cleanAmount == "" {
-		return 0, errors.New("empty amount string")
-	}
-
-	amount, err := strconv.ParseFloat(cleanAmount, 64)
-	if err != nil {
-		return 0, fmt.Errorf("invalid amount format: %s", amountStr)
-	}
-
-	return amount, nil
 }
 
 // generateTransactionName creates a readable transaction name from description

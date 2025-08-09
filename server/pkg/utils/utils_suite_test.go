@@ -222,16 +222,77 @@ var _ = Describe("Utils", func() {
 	})
 
 	Describe("ParseDate", func() {
-		expectedDate := time.Date(2023, 10, 26, 0, 0, 0, 0, time.UTC)
-		expectedDateTime := time.Date(2023, 10, 26, 10, 0, 0, 0, time.UTC)
+		Context("with SBI date formats", func() {
+			It("should parse SBI date formats correctly", func() {
+				testCases := []struct {
+					input    string
+					expected time.Time
+				}{
+					{"1 Aug 2022", time.Date(2022, 8, 1, 0, 0, 0, 0, time.UTC)},
+					{"01 Aug 2022", time.Date(2022, 8, 1, 0, 0, 0, 0, time.UTC)},
+					{"15 Jan 2022", time.Date(2022, 1, 15, 0, 0, 0, 0, time.UTC)},
+					{"2 January 2022", time.Date(2022, 1, 2, 0, 0, 0, 0, time.UTC)},
+					{"02 January 2022", time.Date(2022, 1, 2, 0, 0, 0, 0, time.UTC)},
+				}
 
-		Context("with valid date strings", func() {
+				for _, tc := range testCases {
+					result, err := ParseDate(tc.input)
+					Expect(err).NotTo(HaveOccurred(), "Failed to parse: %s", tc.input)
+					Expect(result).To(Equal(tc.expected), "Mismatch for input: %s", tc.input)
+				}
+			})
+		})
+
+		Context("with HDFC date formats", func() {
+			It("should parse HDFC dd/mm/yy and dd/mm/yyyy formats", func() {
+				testCases := []struct {
+					input    string
+					expected time.Time
+				}{
+					{"01/04/25", time.Date(2025, 4, 1, 0, 0, 0, 0, time.UTC)},
+					{"1/4/25", time.Date(2025, 4, 1, 0, 0, 0, 0, time.UTC)},
+					{"28/02/2025", time.Date(2025, 2, 28, 0, 0, 0, 0, time.UTC)},
+					{"2/1/2006", time.Date(2006, 1, 2, 0, 0, 0, 0, time.UTC)},
+				}
+
+				for _, tc := range testCases {
+					result, err := ParseDate(tc.input)
+					Expect(err).NotTo(HaveOccurred(), "Failed to parse: %s", tc.input)
+					Expect(result).To(Equal(tc.expected), "Mismatch for input: %s", tc.input)
+				}
+			})
+		})
+
+		Context("with ICICI date formats", func() {
+			It("should parse ICICI DD/MM/YYYY format", func() {
+				testCases := []struct {
+					input    string
+					expected time.Time
+				}{
+					{"12/07/2025", time.Date(2025, 7, 12, 0, 0, 0, 0, time.UTC)},
+					{"08/07/2025", time.Date(2025, 7, 8, 0, 0, 0, 0, time.UTC)},
+					{"02/08/2024", time.Date(2024, 8, 2, 0, 0, 0, 0, time.UTC)},
+				}
+
+				for _, tc := range testCases {
+					result, err := ParseDate(tc.input)
+					Expect(err).NotTo(HaveOccurred(), "Failed to parse: %s", tc.input)
+					Expect(result).To(Equal(tc.expected), "Mismatch for input: %s", tc.input)
+				}
+			})
+		})
+
+		Context("with standard date formats", func() {
+			expectedDate := time.Date(2023, 10, 26, 0, 0, 0, 0, time.UTC)
+			expectedDateTime := time.Date(2023, 10, 26, 10, 0, 0, 0, time.UTC)
+
 			// Helper function to compare dates without time
 			dateComparator := func(parsedTime, expectedTime time.Time) bool {
 				y1, m1, d1 := parsedTime.Date()
 				y2, m2, d2 := expectedTime.Date()
 				return y1 == y2 && m1 == m2 && d1 == d2
 			}
+
 			It("should parse layout 2006-01-02", func() {
 				t, err := ParseDate("2023-10-26")
 				Expect(err).NotTo(HaveOccurred())
@@ -270,6 +331,10 @@ var _ = Describe("Utils", func() {
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(Equal("unable to parse date: "))
 			})
+			It("should return an error for invalid date values", func() {
+				_, err := ParseDate("32/01/2025")
+				Expect(err).To(HaveOccurred())
+			})
 		})
 	})
 
@@ -284,6 +349,11 @@ var _ = Describe("Utils", func() {
 				f, err := ParseFloat("1,234.56")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(f).To(Equal(1234.56))
+			})
+			It("should parse amounts with Indian comma formatting", func() {
+				f, err := ParseFloat("2,59,000.00")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(f).To(Equal(259000.0))
 			})
 			It("should parse an integer string", func() {
 				f, err := ParseFloat("789")
@@ -300,17 +370,33 @@ var _ = Describe("Utils", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(f).To(Equal(-50.25))
 			})
-			It("should return 0 for an empty string without an error", func() {
-				f, err := ParseFloat("")
+			It("should parse zero values", func() {
+				f, err := ParseFloat("0.00")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(f).To(Equal(0.0))
 			})
 		})
 
-		Context("with an invalid amount string", func() {
-			It("should return an error", func() {
+		Context("with invalid amount strings", func() {
+			It("should return an error for empty string", func() {
+				_, err := ParseFloat("")
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("empty amount string"))
+			})
+			It("should return an error for spaces only", func() {
+				_, err := ParseFloat("   ")
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("empty amount string"))
+			})
+			It("should return an error for invalid number format", func() {
 				_, err := ParseFloat("not-a-number")
 				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("invalid amount format"))
+			})
+			It("should return an error for mixed text and numbers", func() {
+				_, err := ParseFloat("abc123")
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("invalid amount format"))
 			})
 		})
 	})

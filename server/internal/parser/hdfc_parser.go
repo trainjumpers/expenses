@@ -6,11 +6,10 @@ import (
 	"errors"
 	"expenses/internal/models"
 	"expenses/pkg/logger"
+	"expenses/pkg/utils"
 	"fmt"
 	"regexp"
-	"strconv"
 	"strings"
-	"time"
 )
 
 // HDFCParser parses HDFC bank statements exported as CSV-like text
@@ -88,7 +87,7 @@ func (p *HDFCParser) parseTransactionRow(fields []string) (*models.CreateTransac
 	creditStr := strings.TrimSpace(fields[4])
 	refNo := strings.TrimSpace(fields[5])
 
-	txnDate, err := p.parseDate(dateStr)
+	txnDate, err := utils.ParseDate(dateStr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse transaction date '%s': %w", dateStr, err)
 	}
@@ -97,13 +96,13 @@ func (p *HDFCParser) parseTransactionRow(fields []string) (*models.CreateTransac
 	var isCredit bool
 
 	if debitStr != "" && debitStr != "0" && strings.TrimSpace(debitStr) != "0.00" {
-		amount, err = p.parseAmount(debitStr)
+		amount, err = utils.ParseFloat(debitStr)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse debit amount '%s': %w", debitStr, err)
 		}
 		isCredit = false
 	} else if creditStr != "" && creditStr != "0" && strings.TrimSpace(creditStr) != "0.00" {
-		amount, err = p.parseAmount(creditStr)
+		amount, err = utils.ParseFloat(creditStr)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse credit amount '%s': %w", creditStr, err)
 		}
@@ -131,34 +130,6 @@ func (p *HDFCParser) parseTransactionRow(fields []string) (*models.CreateTransac
 	}
 
 	return transaction, nil
-}
-
-func (p *HDFCParser) parseDate(dateStr string) (time.Time, error) {
-	layouts := []string{
-		"02/01/06", // dd/mm/yy
-		"2/1/06",
-		"02/01/2006", // dd/mm/yyyy
-		"2/1/2006",
-	}
-	for _, layout := range layouts {
-		if date, err := time.Parse(layout, dateStr); err == nil {
-			return date, nil
-		}
-	}
-	return time.Time{}, fmt.Errorf("unable to parse date: %s", dateStr)
-}
-
-func (p *HDFCParser) parseAmount(amountStr string) (float64, error) {
-	clean := strings.ReplaceAll(amountStr, ",", "")
-	clean = strings.TrimSpace(clean)
-	if clean == "" {
-		return 0, errors.New("empty amount string")
-	}
-	amt, err := strconv.ParseFloat(clean, 64)
-	if err != nil {
-		return 0, fmt.Errorf("invalid amount format: %s", amountStr)
-	}
-	return amt, nil
 }
 
 func (p *HDFCParser) generateTransactionName(narration string, isCredit bool) string {

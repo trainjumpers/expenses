@@ -2,6 +2,7 @@ package parser
 
 import (
 	"expenses/internal/models"
+	"expenses/pkg/utils"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -26,14 +27,14 @@ var _ = Describe("HDFCParser", func() {
 				{"28/02/2025", time.Date(2025, 2, 28, 0, 0, 0, 0, time.UTC)},
 			}
 			for _, tc := range testCases {
-				result, err := parser.parseDate(tc.input)
+				result, err := utils.ParseDate(tc.input)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(Equal(tc.expected))
 			}
 		})
 
 		It("errors on unsupported date format", func() {
-			_, err := parser.parseDate("2025-04-01")
+			_, err := utils.ParseDate("invalid-date-format")
 			Expect(err).To(HaveOccurred())
 		})
 	})
@@ -50,18 +51,18 @@ var _ = Describe("HDFCParser", func() {
 				{"  2,000.50  ", 2000.50},
 			}
 			for _, tc := range testCases {
-				result, err := parser.parseAmount(tc.input)
+				result, err := utils.ParseFloat(tc.input)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(Equal(tc.expected))
 			}
 		})
 
 		It("errors on invalid inputs", func() {
-			_, err := parser.parseAmount("")
+			_, err := utils.ParseFloat("")
 			Expect(err).To(HaveOccurred())
-			_, err = parser.parseAmount("   ")
+			_, err = utils.ParseFloat("   ")
 			Expect(err).To(HaveOccurred())
-			_, err = parser.parseAmount("abc123")
+			_, err = utils.ParseFloat("abc123")
 			Expect(err).To(HaveOccurred())
 		})
 	})

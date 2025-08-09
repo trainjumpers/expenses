@@ -2,6 +2,7 @@ package parser
 
 import (
 	"expenses/internal/models"
+	"expenses/pkg/utils"
 	"testing"
 	"time"
 
@@ -35,14 +36,14 @@ var _ = Describe("SBIParser", func() {
 			}
 
 			for _, tc := range testCases {
-				result, err := parser.parseDate(tc.input)
+				result, err := utils.ParseDate(tc.input)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(Equal(tc.expected))
 			}
 		})
 
 		It("should error on unsupported date format", func() {
-			_, err := parser.parseDate("2022/01/15")
+			_, err := utils.ParseDate("invalid-date-format")
 			Expect(err).To(HaveOccurred())
 		})
 	})
@@ -61,24 +62,24 @@ var _ = Describe("SBIParser", func() {
 			}
 
 			for _, tc := range testCases {
-				result, err := parser.parseAmount(tc.input)
+				result, err := utils.ParseFloat(tc.input)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(Equal(tc.expected))
 			}
 		})
 
 		It("should error on empty string", func() {
-			_, err := parser.parseAmount("")
+			_, err := utils.ParseFloat("")
 			Expect(err).To(HaveOccurred())
 		})
 
 		It("should error on spaces only", func() {
-			_, err := parser.parseAmount("   ")
+			_, err := utils.ParseFloat("   ")
 			Expect(err).To(HaveOccurred())
 		})
 
 		It("should error on invalid number format", func() {
-			_, err := parser.parseAmount("abc123")
+			_, err := utils.ParseFloat("abc123")
 			Expect(err).To(HaveOccurred())
 		})
 		Describe("parseTransactionRow", func() {
