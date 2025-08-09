@@ -9,9 +9,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 import { Account } from "@/lib/models/account";
-import { Trash2, Wallet } from "lucide-react";
-import { useState } from "react";
+import { Search, Trash2, Wallet } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 
 interface ViewAccountsModalProps {
   isOpen: boolean;
@@ -29,6 +38,34 @@ export function ViewAccountsModal({
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
   const [confirmDeleteAccount, setConfirmDeleteAccount] =
     useState<Account | null>(null);
+
+  // Frontend-only search + pagination
+  const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 5;
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchTerm.trim()), 300);
+    return () => clearTimeout(t);
+  }, [searchTerm]);
+
+  const filtered = useMemo(() => {
+    if (!debouncedSearch) return accounts;
+    const s = debouncedSearch.toLowerCase();
+    return accounts.filter(
+      (a) =>
+        a.name.toLowerCase().includes(s) ||
+        a.bank_type.toLowerCase().includes(s) ||
+        a.currency.toLowerCase().includes(s)
+    );
+  }, [accounts, debouncedSearch]);
+
+  const totalPages = Math.ceil(filtered.length / pageSize) || 1;
+  const pagedAccounts = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filtered.slice(start, start + pageSize);
+  }, [filtered, currentPage]);
 
   const handleAccountUpdated = () => {
     setSelectedAccount(null);
@@ -51,7 +88,7 @@ export function ViewAccountsModal({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Wallet className="h-5 w-5" />
@@ -59,13 +96,27 @@ export function ViewAccountsModal({
             </DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            {accounts.length === 0 ? (
-              <p className="text-center text-muted-foreground">
-                No accounts found. Add one to get started!
-              </p>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search by name, bank, or currency..."
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="pl-10"
+              />
+            </div>
+            {pagedAccounts.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                {debouncedSearch
+                  ? "No accounts match your search."
+                  : "No accounts found. Add one to get started!"}
+              </div>
             ) : (
               <div className="grid gap-4">
-                {accounts.map((account) => (
+                {pagedAccounts.map((account) => (
                   <div
                     key={account.id}
                     className="flex items-center justify-between p-4 rounded-lg border border-border"
@@ -97,6 +148,53 @@ export function ViewAccountsModal({
                     </div>
                   </div>
                 ))}
+
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-between text-sm text-muted-foreground">
+                    <Pagination>
+                      <PaginationContent>
+                        <PaginationItem>
+                          <PaginationPrevious
+                            onClick={() =>
+                              setCurrentPage((p) => Math.max(1, p - 1))
+                            }
+                            className={
+                              currentPage <= 1
+                                ? "pointer-events-none opacity-50"
+                                : "cursor-pointer"
+                            }
+                          />
+                        </PaginationItem>
+                        {Array.from(
+                          { length: totalPages },
+                          (_, i) => i + 1
+                        ).map((page) => (
+                          <PaginationItem key={page}>
+                            <PaginationLink
+                              onClick={() => setCurrentPage(page)}
+                              isActive={currentPage === page}
+                              className="cursor-pointer"
+                            >
+                              {page}
+                            </PaginationLink>
+                          </PaginationItem>
+                        ))}
+                        <PaginationItem>
+                          <PaginationNext
+                            onClick={() =>
+                              setCurrentPage((p) => Math.min(totalPages, p + 1))
+                            }
+                            className={
+                              currentPage >= totalPages
+                                ? "pointer-events-none opacity-50"
+                                : "cursor-pointer"
+                            }
+                          />
+                        </PaginationItem>
+                      </PaginationContent>
+                    </Pagination>
+                  </div>
+                )}
               </div>
             )}
             <Button
