@@ -191,6 +191,9 @@ func (b *BaseController) setAuthCookie(ctx *gin.Context, name, value string, max
 	}
 	// Gin's SetCookie does not support SameSite, so use Header directly
 	h := cookie.String()
+	if !strings.Contains(h, "Partitioned") {
+		h = h + "; Partitioned"
+	}
 	ctx.Writer.Header().Add("Set-Cookie", h)
 }
 
