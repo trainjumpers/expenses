@@ -1,0 +1,1706 @@
+basePath: /api/v1
+definitions:
+  models.AccountResponse:
+    properties:
+      balance:
+        type: number
+      bank_type:
+        $ref: '#/definitions/models.BankType'
+      created_by:
+        type: integer
+      currency:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+    type: object
+  models.BankType:
+    enum:
+    - investment
+    - axis
+    - sbi
+    - hdfc
+    - icici
+    - others
+    type: string
+    x-enum-varnames:
+    - BankTypeInvestment
+    - BankTypeAxis
+    - BankTypeSBI
+    - BankTypeHDFC
+    - BankTypeICICI
+    - BankTypeOthers
+  models.CategoryResponse:
+    properties:
+      created_by:
+        type: integer
+      icon:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+    type: object
+  models.CreateAccountInput:
+    properties:
+      balance:
+        type: number
+      bank_type:
+        allOf:
+        - $ref: '#/definitions/models.BankType'
+        enum:
+        - investment
+        - axis
+        - sbi
+        - hdfc
+        - icici
+        - others
+      created_by:
+        type: integer
+      currency:
+        enum:
+        - inr
+        - usd
+        type: string
+      name:
+        type: string
+    required:
+    - bank_type
+    - created_by
+    - currency
+    - name
+    type: object
+  models.CreateBaseRuleRequest:
+    properties:
+      created_by:
+        type: integer
+      description:
+        maxLength: 255
+        type: string
+      effective_from:
+        type: string
+      name:
+        maxLength: 100
+        minLength: 1
+        type: string
+    required:
+    - effective_from
+    - name
+    type: object
+  models.CreateCategoryInput:
+    properties:
+      created_by:
+        type: integer
+      icon:
+        type: string
+      name:
+        type: string
+    required:
+    - created_by
+    - name
+    type: object
+  models.CreateRuleActionRequest:
+    properties:
+      action_type:
+        $ref: '#/definitions/models.RuleFieldType'
+      action_value:
+        maxLength: 100
+        minLength: 1
+        type: string
+      rule_id:
+        type: integer
+    required:
+    - action_type
+    - action_value
+    type: object
+  models.CreateRuleConditionRequest:
+    properties:
+      condition_operator:
+        $ref: '#/definitions/models.RuleOperator'
+      condition_type:
+        $ref: '#/definitions/models.RuleFieldType'
+      condition_value:
+        maxLength: 100
+        minLength: 1
+        type: string
+      rule_id:
+        type: integer
+    required:
+    - condition_operator
+    - condition_type
+    - condition_value
+    type: object
+  models.CreateRuleRequest:
+    properties:
+      actions:
+        items:
+          $ref: '#/definitions/models.CreateRuleActionRequest'
+        minItems: 1
+        type: array
+      conditions:
+        items:
+          $ref: '#/definitions/models.CreateRuleConditionRequest'
+        minItems: 1
+        type: array
+      rule:
+        $ref: '#/definitions/models.CreateBaseRuleRequest'
+    required:
+    - actions
+    - conditions
+    - rule
+    type: object
+  models.CreateTransactionInput:
+    properties:
+      account_id:
+        type: integer
+      amount:
+        type: number
+      category_ids:
+        items:
+          type: integer
+        type: array
+      created_by:
+        type: integer
+      date:
+        type: string
+      description:
+        maxLength: 1000
+        type: string
+      name:
+        maxLength: 200
+        minLength: 1
+        type: string
+    required:
+    - account_id
+    - amount
+    - created_by
+    - date
+    - name
+    type: object
+  models.CreateUserInput:
+    properties:
+      email:
+        type: string
+      name:
+        type: string
+      password:
+        minLength: 6
+        type: string
+    required:
+    - email
+    - name
+    - password
+    type: object
+  models.LoginInput:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  models.PaginatedStatementResponse:
+    properties:
+      page:
+        type: integer
+      page_size:
+        type: integer
+      statements:
+        items:
+          $ref: '#/definitions/models.StatementResponse'
+        type: array
+      total:
+        type: integer
+    type: object
+  models.PaginatedTransactionsResponse:
+    properties:
+      page:
+        type: integer
+      page_size:
+        type: integer
+      total:
+        type: integer
+      transactions:
+        items:
+          $ref: '#/definitions/models.TransactionResponse'
+        type: array
+    type: object
+  models.RuleActionResponse:
+    properties:
+      action_type:
+        $ref: '#/definitions/models.RuleFieldType'
+      action_value:
+        type: string
+      id:
+        type: integer
+      rule_id:
+        type: integer
+    type: object
+  models.RuleConditionResponse:
+    properties:
+      condition_operator:
+        $ref: '#/definitions/models.RuleOperator'
+      condition_type:
+        $ref: '#/definitions/models.RuleFieldType'
+      condition_value:
+        type: string
+      id:
+        type: integer
+      rule_id:
+        type: integer
+    type: object
+  models.RuleFieldType:
+    enum:
+    - amount
+    - name
+    - description
+    - category
+    type: string
+    x-enum-varnames:
+    - RuleFieldAmount
+    - RuleFieldName
+    - RuleFieldDescription
+    - RuleFieldCategory
+  models.RuleOperator:
+    enum:
+    - equals
+    - contains
+    - greater
+    - lower
+    type: string
+    x-enum-varnames:
+    - OperatorEquals
+    - OperatorContains
+    - OperatorGreater
+    - OperatorLower
+  models.RuleResponse:
+    properties:
+      created_by:
+        type: integer
+      description:
+        type: string
+      effective_from:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+    type: object
+  models.StatementPreview:
+    properties:
+      headers:
+        items:
+          type: string
+        type: array
+      rows:
+        items:
+          items:
+            type: string
+          type: array
+        type: array
+    type: object
+  models.StatementResponse:
+    properties:
+      account_id:
+        type: integer
+      created_at:
+        type: string
+      created_by:
+        type: integer
+      file_type:
+        type: string
+      id:
+        type: integer
+      message:
+        type: string
+      original_filename:
+        type: string
+      status:
+        $ref: '#/definitions/models.StatementStatus'
+    type: object
+  models.StatementStatus:
+    enum:
+    - pending
+    - processing
+    - done
+    - error
+    type: string
+    x-enum-varnames:
+    - StatementStatusPending
+    - StatementStatusProcessing
+    - StatementStatusDone
+    - StatementStatusError
+  models.TransactionResponse:
+    properties:
+      account_id:
+        type: integer
+      amount:
+        type: number
+      category_ids:
+        items:
+          type: integer
+        type: array
+      created_by:
+        type: integer
+      date:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+    type: object
+  models.UpdateAccountInput:
+    properties:
+      balance:
+        type: number
+      bank_type:
+        allOf:
+        - $ref: '#/definitions/models.BankType'
+        enum:
+        - investment
+        - axis
+        - sbi
+        - hdfc
+        - icici
+        - others
+      currency:
+        enum:
+        - inr
+        - usd
+        type: string
+      name:
+        type: string
+    type: object
+  models.UpdateCategoryInput:
+    properties:
+      icon:
+        type: string
+      name:
+        type: string
+    type: object
+  models.UpdateRuleActionRequest:
+    properties:
+      action_type:
+        $ref: '#/definitions/models.RuleFieldType'
+      action_value:
+        type: string
+    type: object
+  models.UpdateRuleConditionRequest:
+    properties:
+      condition_operator:
+        $ref: '#/definitions/models.RuleOperator'
+      condition_type:
+        $ref: '#/definitions/models.RuleFieldType'
+      condition_value:
+        type: string
+    type: object
+  models.UpdateRuleRequest:
+    properties:
+      description:
+        maxLength: 255
+        type: string
+      effective_from:
+        type: string
+      name:
+        maxLength: 100
+        type: string
+    type: object
+  models.UpdateTransactionInput:
+    properties:
+      account_id:
+        type: integer
+      amount:
+        type: number
+      category_ids:
+        items:
+          type: integer
+        type: array
+      date:
+        type: string
+      description:
+        maxLength: 1000
+        type: string
+      name:
+        maxLength: 200
+        minLength: 1
+        type: string
+    type: object
+  models.UpdateUserInput:
+    properties:
+      name:
+        type: string
+    type: object
+  models.UpdateUserPasswordInput:
+    properties:
+      new_password:
+        minLength: 6
+        type: string
+      old_password:
+        type: string
+    required:
+    - new_password
+    - old_password
+    type: object
+  models.UserResponse:
+    properties:
+      email:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+    type: object
+host: localhost:5000
+info:
+  contact: {}
+  description: Enter your email as username and password to authenticate
+  title: Expense Tracker API
+  version: "1.0"
+paths:
+  /account:
+    get:
+      description: Get all accounts for the authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of accounts
+          schema:
+            items:
+              $ref: '#/definitions/models.AccountResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BasicAuth: []
+      summary: List all accounts
+      tags:
+      - accounts
+    post:
+      consumes:
+      - application/json
+      description: Create a new bank account for the authenticated user
+      parameters:
+      - description: Account data
+        in: body
+        name: account
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateAccountInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Account created successfully
+          schema:
+            $ref: '#/definitions/models.AccountResponse'
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BasicAuth: []
+      summary: Create a new account
+      tags:
+      - accounts
+  /account/{accountId}:
+    delete:
+      description: Delete account by account ID for the authenticated user
+      parameters:
+      - description: Account ID
+        in: path
+        name: accountId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Account deleted successfully
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Account not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BasicAuth: []
+      summary: Delete account
+      tags:
+      - accounts
+    get:
+      description: Get account details by account ID for the authenticated user
+      parameters:
+      - description: Account ID
+        in: path
+        name: accountId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Account details
+          schema:
+            $ref: '#/definitions/models.AccountResponse'
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Account not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BasicAuth: []
+      summary: Get account by ID
+      tags:
+      - accounts
+    patch:
+      consumes:
+      - application/json
+      description: Update account details by account ID for the authenticated user
+      parameters:
+      - description: Account ID
+        in: path
+        name: accountId
+        required: true
+        type: integer
+      - description: Updated account data
+        in: body
+        name: account
+        required: true
+        schema:
+          $ref: '#/definitions/models.UpdateAccountInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Account updated successfully
+          schema:
+            $ref: '#/definitions/models.AccountResponse'
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Account not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BasicAuth: []
+      summary: Update account
+      tags:
+      - accounts
+  /category:
+    get:
+      description: Get all categories for the authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of categories
+          schema:
+            items:
+              $ref: '#/definitions/models.CategoryResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BasicAuth: []
+      summary: List all categories
+      tags:
+      - categories
+    post:
+      consumes:
+      - application/json
+      description: Create a new expense category for the authenticated user
+      parameters:
+      - description: Category data
+        in: body
+        name: category
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateCategoryInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Category created successfully
+          schema:
+            $ref: '#/definitions/models.CategoryResponse'
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BasicAuth: []
+      summary: Create a new category
+      tags:
+      - categories
+  /category/{categoryId}:
+    delete:
+      description: Delete category by category ID for the authenticated user
+      parameters:
+      - description: Category ID
+        in: path
+        name: categoryId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Category deleted successfully
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Category not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BasicAuth: []
+      summary: Delete category
+      tags:
+      - categories
+    get:
+      description: Get category details by category ID for the authenticated user
+      parameters:
+      - description: Category ID
+        in: path
+        name: categoryId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Category details
+          schema:
+            $ref: '#/definitions/models.CategoryResponse'
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Category not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BasicAuth: []
+      summary: Get category by ID
+      tags:
+      - categories
+    patch:
+      consumes:
+      - application/json
+      description: Update category details by category ID for the authenticated user
+      parameters:
+      - description: Category ID
+        in: path
+        name: categoryId
+        required: true
+        type: integer
+      - description: Updated category data
+        in: body
+        name: category
+        required: true
+        schema:
+          $ref: '#/definitions/models.UpdateCategoryInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Category updated successfully
+          schema:
+            $ref: '#/definitions/models.CategoryResponse'
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Category not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BasicAuth: []
+      summary: Update category
+      tags:
+      - categories
+  /login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate user with email and password. Returns user data and
+        sets authentication cookies. For API testing, you can extract the access_token
+        from cookies and use it in the Authorization header as "Bearer <token>".
+      parameters:
+      - description: Login credentials
+        in: body
+        name: credentials
+        required: true
+        schema:
+          $ref: '#/definitions/models.LoginInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Login successful - check cookies for access_token
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Invalid credentials
+          schema:
+            additionalProperties: true
+            type: object
+      summary: User login
+      tags:
+      - auth
+  /logout:
+    post:
+      description: Clear authentication cookies and log out user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Logged out successfully
+          schema:
+            additionalProperties: true
+            type: object
+      summary: User logout
+      tags:
+      - auth
+  /refresh:
+    post:
+      description: Get a new access token using refresh token from cookies
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Token refreshed successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Invalid refresh token
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Refresh access token
+      tags:
+      - auth
+  /rule:
+    get:
+      description: Get all transaction categorization rules for the authenticated
+        user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of rules
+          schema:
+            items:
+              $ref: '#/definitions/models.RuleResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BasicAuth: []
+      summary: List all rules
+      tags:
+      - rules
+    post:
+      consumes:
+      - application/json
+      description: Create a new transaction categorization rule for the authenticated
+        user
+      parameters:
+      - description: Rule data
+        in: body
+        name: rule
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateRuleRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Rule created successfully
+          schema:
+            $ref: '#/definitions/models.RuleResponse'
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BasicAuth: []
+      summary: Create a new rule
+      tags:
+      - rules
+  /rule/{ruleId}:
+    delete:
+      description: Delete rule by rule ID for the authenticated user
+      parameters:
+      - description: Rule ID
+        in: path
+        name: ruleId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Rule deleted successfully
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Rule not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BasicAuth: []
+      summary: Delete rule
+      tags:
+      - rules
+    get:
+      description: Get rule details by rule ID for the authenticated user
+      parameters:
+      - description: Rule ID
+        in: path
+        name: ruleId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Rule details
+          schema:
+            $ref: '#/definitions/models.RuleResponse'
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Rule not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BasicAuth: []
+      summary: Get rule by ID
+      tags:
+      - rules
+    patch:
+      consumes:
+      - application/json
+      description: Update rule details by rule ID for the authenticated user
+      parameters:
+      - description: Rule ID
+        in: path
+        name: ruleId
+        required: true
+        type: integer
+      - description: Updated rule data
+        in: body
+        name: rule
+        required: true
+        schema:
+          $ref: '#/definitions/models.UpdateRuleRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Rule updated successfully
+          schema:
+            $ref: '#/definitions/models.RuleResponse'
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Rule not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BasicAuth: []
+      summary: Update rule
+      tags:
+      - rules
+  /rule/{ruleId}/action/{id}:
+    patch:
+      consumes:
+      - application/json
+      description: Update a specific action within a rule for the authenticated user
+      parameters:
+      - description: Rule ID
+        in: path
+        name: ruleId
+        required: true
+        type: integer
+      - description: Action ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Updated action data
+        in: body
+        name: action
+        required: true
+        schema:
+          $ref: '#/definitions/models.UpdateRuleActionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Rule action updated successfully
+          schema:
+            $ref: '#/definitions/models.RuleActionResponse'
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Rule or action not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BasicAuth: []
+      summary: Update rule action
+      tags:
+      - rules
+  /rule/{ruleId}/condition/{id}:
+    patch:
+      consumes:
+      - application/json
+      description: Update a specific condition within a rule for the authenticated
+        user
+      parameters:
+      - description: Rule ID
+        in: path
+        name: ruleId
+        required: true
+        type: integer
+      - description: Condition ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Updated condition data
+        in: body
+        name: condition
+        required: true
+        schema:
+          $ref: '#/definitions/models.UpdateRuleConditionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Rule condition updated successfully
+          schema:
+            $ref: '#/definitions/models.RuleConditionResponse'
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Rule or condition not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BasicAuth: []
+      summary: Update rule condition
+      tags:
+      - rules
+  /signup:
+    post:
+      consumes:
+      - application/json
+      description: Register a new user with email, name, and password
+      parameters:
+      - description: User registration data
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateUserInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: User created successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: User already exists
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Create a new user account
+      tags:
+      - auth
+  /statement:
+    get:
+      description: Get all uploaded statements for the authenticated user with pagination
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 15
+        description: Page size
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of statements
+          schema:
+            $ref: '#/definitions/models.PaginatedStatementResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BasicAuth: []
+      summary: List statements
+      tags:
+      - statements
+    post:
+      consumes:
+      - multipart/form-data
+      description: Upload and process a bank statement file for transaction parsing
+      parameters:
+      - description: Account ID
+        in: formData
+        name: account_id
+        required: true
+        type: integer
+      - description: Bank type
+        enum:
+        - investment
+        - axis
+        - sbi
+        - hdfc
+        - icici
+        - others
+        in: formData
+        name: bank_type
+        required: true
+        type: string
+      - description: Additional metadata
+        in: formData
+        name: metadata
+        type: string
+      - description: Statement file (CSV, PDF, etc.)
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Statement uploaded and processing started
+          schema:
+            $ref: '#/definitions/models.StatementResponse'
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BasicAuth: []
+      summary: Upload bank statement
+      tags:
+      - statements
+  /statement/{id}:
+    get:
+      description: Get the processing status and details of a specific statement
+      parameters:
+      - description: Statement ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Statement status and details
+          schema:
+            $ref: '#/definitions/models.StatementResponse'
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Statement not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BasicAuth: []
+      summary: Get statement status
+      tags:
+      - statements
+  /statement/preview:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Preview the contents of a bank statement file before processing
+      parameters:
+      - description: Number of rows to skip
+        in: formData
+        name: skip_rows
+        type: integer
+      - description: Number of rows to preview
+        in: formData
+        name: row_size
+        type: integer
+      - description: Statement file (CSV, PDF, etc.)
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Statement preview
+          schema:
+            $ref: '#/definitions/models.StatementPreview'
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BasicAuth: []
+      summary: Preview bank statement
+      tags:
+      - statements
+  /transaction:
+    get:
+      description: Get all transactions for the authenticated user with optional filtering
+        and pagination
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 15
+        description: Page size
+        in: query
+        name: page_size
+        type: integer
+      - default: date
+        description: Sort by field
+        in: query
+        name: sort_by
+        type: string
+      - default: desc
+        description: Sort order (asc/desc)
+        in: query
+        name: sort_order
+        type: string
+      - description: Filter by account ID
+        in: query
+        name: account_id
+        type: integer
+      - description: Filter by category ID
+        in: query
+        name: category_id
+        type: integer
+      - description: Filter uncategorized transactions
+        in: query
+        name: uncategorized
+        type: boolean
+      - description: Minimum amount filter
+        in: query
+        name: min_amount
+        type: number
+      - description: Maximum amount filter
+        in: query
+        name: max_amount
+        type: number
+      - description: Date from filter (YYYY-MM-DD)
+        in: query
+        name: date_from
+        type: string
+      - description: Date to filter (YYYY-MM-DD)
+        in: query
+        name: date_to
+        type: string
+      - description: Filter by statement ID
+        in: query
+        name: statement_id
+        type: integer
+      - description: Search in transaction descriptions
+        in: query
+        name: search
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of transactions
+          schema:
+            $ref: '#/definitions/models.PaginatedTransactionsResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BasicAuth: []
+      summary: List transactions
+      tags:
+      - transactions
+    post:
+      consumes:
+      - application/json
+      description: Create a new transaction for the authenticated user
+      parameters:
+      - description: Transaction data
+        in: body
+        name: transaction
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateTransactionInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Transaction created successfully
+          schema:
+            $ref: '#/definitions/models.TransactionResponse'
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BasicAuth: []
+      summary: Create a new transaction
+      tags:
+      - transactions
+  /transaction/{transactionId}:
+    delete:
+      description: Delete transaction by transaction ID for the authenticated user
+      parameters:
+      - description: Transaction ID
+        in: path
+        name: transactionId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Transaction deleted successfully
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Transaction not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BasicAuth: []
+      summary: Delete transaction
+      tags:
+      - transactions
+    get:
+      description: Get transaction details by transaction ID for the authenticated
+        user
+      parameters:
+      - description: Transaction ID
+        in: path
+        name: transactionId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Transaction details
+          schema:
+            $ref: '#/definitions/models.TransactionResponse'
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Transaction not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BasicAuth: []
+      summary: Get transaction by ID
+      tags:
+      - transactions
+    patch:
+      consumes:
+      - application/json
+      description: Update transaction details by transaction ID for the authenticated
+        user
+      parameters:
+      - description: Transaction ID
+        in: path
+        name: transactionId
+        required: true
+        type: integer
+      - description: Updated transaction data
+        in: body
+        name: transaction
+        required: true
+        schema:
+          $ref: '#/definitions/models.UpdateTransactionInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Transaction updated successfully
+          schema:
+            $ref: '#/definitions/models.TransactionResponse'
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Transaction not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BasicAuth: []
+      summary: Update transaction
+      tags:
+      - transactions
+  /user:
+    delete:
+      description: Delete the authenticated user's account
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: User deleted successfully
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BasicAuth: []
+      summary: Delete current user
+      tags:
+      - users
+    get:
+      description: Get the authenticated user's profile information
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User profile
+          schema:
+            $ref: '#/definitions/models.UserResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: User not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BasicAuth: []
+      summary: Get current user
+      tags:
+      - users
+    patch:
+      consumes:
+      - application/json
+      description: Update the authenticated user's profile information
+      parameters:
+      - description: Updated user data
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/models.UpdateUserInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User updated successfully
+          schema:
+            $ref: '#/definitions/models.UserResponse'
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BasicAuth: []
+      summary: Update current user
+      tags:
+      - users
+  /user/password:
+    post:
+      consumes:
+      - application/json
+      description: Update the authenticated user's password
+      parameters:
+      - description: Password update data
+        in: body
+        name: password
+        required: true
+        schema:
+          $ref: '#/definitions/models.UpdateUserPasswordInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Password updated successfully
+          schema:
+            $ref: '#/definitions/models.UserResponse'
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BasicAuth: []
+      summary: Update user password
+      tags:
+      - users
+securityDefinitions:
+  BasicAuth:
+    type: basic
+swagger: "2.0"
