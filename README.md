@@ -13,7 +13,7 @@ Expense management application for Indian users with automated bank statement pa
 ## Tech Stack
 
 - **Backend**: Go 1.25, Gin, PostgreSQL, Ginkgo testing, Goose migrations
-- **Frontend**: Next.js 15, React 19, TypeScript, Tailwind CSS 4, Shadcn UI, TanStack Query
+- **Frontend**: Next.js 15, React 19, TypeScript, Tailwind CSS 4, Shadcn UI, TanStack Query, Bun
 
 ## Quick Start
 
@@ -32,6 +32,8 @@ just dev
 ```
 
 The backend will run on `http://localhost:8080` and frontend on `http://localhost:3000`.
+
+**Note**: Ensure Bun is installed and activated in your shell. If using mise, run: `eval "$(mise activate zsh)"`
 
 ## Environment Setup
 

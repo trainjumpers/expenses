@@ -85,7 +85,7 @@ db-downgrade-reset reset=default_downgrade:
 # Start the frontend development server
 [working-directory: 'frontend']
 @frontend:
-    npm run dev
+    bun run dev
 
 # Update all frontend dependencies including major versions
 [working-directory: 'frontend']
@@ -97,24 +97,24 @@ db-downgrade-reset reset=default_downgrade:
     echo ""
 
     echo "🔍 Checking for outdated packages..."
-    npm outdated || true
+    bun outdated || true
     echo ""
 
     echo "📝 Updating package.json to latest versions..."
-    npx npm-check-updates -u --upgradeAll
+    bunx npm-check-updates -u --upgradeAll
     echo ""
 
     echo "⬆️  Installing updated dependencies..."
-    npm install
+    bun install
     echo ""
 
     echo "🔒 Auditing packages for vulnerabilities..."
-    npm audit fix || true
+    bun audit || true
     echo ""
 
     echo "📋 Additional update commands you may want to run:"
-    echo "   - Update Shadcn UI components: npx shadcn@latest add [component-name]"
-    echo "   - Update all Shadcn components: npx shadcn@latest add"
+    echo "   - Update Shadcn UI components: bunx shadcn@latest add [component-name]"
+    echo "   - Update all Shadcn components: bunx shadcn@latest add"
     echo ""
 
     echo "✅ Dependencies updated successfully!"
@@ -128,4 +128,4 @@ db-downgrade-reset reset=default_downgrade:
 @format:
     cd server && go fmt ./...
     cd server && go mod tidy
-    cd frontend && npm run format
+    cd frontend && bun run format

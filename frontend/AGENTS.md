@@ -4,21 +4,22 @@
 
 ### Development
 
-- `npm run dev` - Start Next.js dev server with Turbopack (port 3000)
+- `bun run dev` - Start Next.js dev server with Turbopack (port 3000)
 - `just frontend` - Start frontend dev server (from root)
-- `npm run build` - Production build
-- `npm start` - Start production server
+- `bun run build` - Production build
+- `bun run start` - Start production server
 
 ### Formatting & Linting
 
-- `npm run format` - Format all files with Prettier
-- `npm run lint` - Run ESLint
-- `npm run lint:fix` - Auto-fix ESLint issues
+- `bun run format` - Format all files with Prettier
+- `bun run lint` - Run ESLint
+- `bun run lint:fix` - Auto-fix ESLint issues
 
 ## Tech Stack & Frameworks
 
 - **React 19** - Latest with Server Components
 - **Next.js 15** - App Router, Turbopack
+- **Bun 1.x** - Package manager and runtime
 - **TypeScript 5** - Strict mode enabled
 - **Tailwind CSS 4** - Utility-first styling
 - **Shadcn UI** - Pre-built Radix UI components
@@ -196,7 +197,7 @@ No test framework is currently configured. Consider adding:
 4. Build UI components in `components/custom/`
 5. Use Shadcn UI components from `components/ui/`
 6. Add routes in `app/` directory
-7. Run `npm run lint:fix` and `npm run format` before commit
+7. Run `bun run lint:fix` and `bun run format` before commit
 
 ## Notes
 
