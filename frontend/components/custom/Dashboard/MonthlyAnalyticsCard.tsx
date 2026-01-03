@@ -7,6 +7,8 @@ import { formatCurrency } from "@/lib/utils";
 import {
   ArrowRightLeftIcon,
   CalendarIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
   TrendingDownIcon,
   TrendingUpIcon,
 } from "lucide-react";
@@ -242,20 +244,42 @@ export function MonthlyAnalyticsCard() {
           ))}
         </div>
 
-        {/* Dots Indicator */}
-        <div className="flex justify-center gap-1">
-          {dateRanges.map((_, index) => (
-            <button
-              key={index}
-              className={`h-1.5 w-1.5 rounded-full transition-all duration-200 ${
-                index === currentIndex
-                  ? "bg-primary w-4"
-                  : "bg-muted-foreground/30 hover:bg-muted-foreground/50"
-              }`}
-              onClick={() => scrollToIndex(index)}
-              aria-label={`View ${dateRanges[index].label} analytics`}
-            />
-          ))}
+        {/* Navigation */}
+        <div className="flex items-center justify-center gap-3">
+          <button
+            type="button"
+            className="p-1 rounded-full text-muted-foreground hover:text-foreground disabled:opacity-40"
+            onClick={() => scrollToIndex(Math.max(0, currentIndex - 1))}
+            disabled={currentIndex === 0}
+            aria-label="View previous range"
+          >
+            <ChevronLeftIcon className="h-4 w-4" />
+          </button>
+          <div className="flex justify-center gap-1">
+            {dateRanges.map((_, index) => (
+              <button
+                key={index}
+                className={`h-1.5 w-1.5 rounded-full transition-all duration-200 ${
+                  index === currentIndex
+                    ? "bg-primary w-4"
+                    : "bg-muted-foreground/30 hover:bg-muted-foreground/50"
+                }`}
+                onClick={() => scrollToIndex(index)}
+                aria-label={`View ${dateRanges[index].label} analytics`}
+              />
+            ))}
+          </div>
+          <button
+            type="button"
+            className="p-1 rounded-full text-muted-foreground hover:text-foreground disabled:opacity-40"
+            onClick={() =>
+              scrollToIndex(Math.min(dateRanges.length - 1, currentIndex + 1))
+            }
+            disabled={currentIndex === dateRanges.length - 1}
+            aria-label="View next range"
+          >
+            <ChevronRightIcon className="h-4 w-4" />
+          </button>
         </div>
       </CardContent>
     </Card>
