@@ -56,7 +56,7 @@ var _ = Describe("StatementValidator", func() {
 			})
 
 			It("should return error for file too large", func() {
-				largeFile := make([]byte, 256*1024+1)
+				largeFile := make([]byte, 5*1024*1024+1)
 				err := validator.ValidateStatementUpload(accountId, largeFile, fileName)
 				Expect(err).To(HaveOccurred())
 			})
@@ -95,8 +95,8 @@ var _ = Describe("StatementValidator", func() {
 		})
 
 		Context("with edge cases", func() {
-			It("should accept file exactly at 256KB limit", func() {
-				limitFile := make([]byte, 256*1024)
+			It("should accept file exactly at 5MB limit", func() {
+				limitFile := make([]byte, 5*1024*1024)
 				err := validator.ValidateStatementUpload(accountId, limitFile, fileName)
 				Expect(err).NotTo(HaveOccurred())
 			})
@@ -154,7 +154,7 @@ var _ = Describe("StatementValidator", func() {
 				Expect(err).To(HaveOccurred())
 			})
 			It("should return error for file too large", func() {
-				largeFile := make([]byte, 256*1024+1)
+				largeFile := make([]byte, 5*1024*1024+1)
 				err := validator.ValidateStatementPreview(largeFile, fileName, skipRows, rowSize)
 				Expect(err).To(HaveOccurred())
 			})

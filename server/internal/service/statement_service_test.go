@@ -7,6 +7,7 @@ import (
 	repository "expenses/internal/mock/repository"
 	"expenses/internal/models"
 	"expenses/internal/validator"
+	"expenses/pkg/utils"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -422,7 +423,6 @@ var _ = Describe("StatementService", func() {
 		})
 
 		It("should parse a statement with multiple valid transactions", func() {
-			// Create a valid account with a supported bank type
 			accInput := models.CreateAccountInput{
 				Name:      "Test Account",
 				BankType:  models.BankTypeSBI,
@@ -431,18 +431,18 @@ var _ = Describe("StatementService", func() {
 			}
 			acc, err := accountService.CreateAccount(ctx, accInput)
 			Expect(err).NotTo(HaveOccurred())
-			// Complex input with multiple transactions
-			fileBytes := []byte(
-				"Txn Date	Value Date	Description	Ref No.	Debit	Credit	Balance\n" +
-					"3 Aug 2022	1 Aug 2022	TO TRANSFER-UPI/DR/221356312527/RITIK S/SBIN/rs6321908@/UPI--	123456	100.00		1000.00\n" +
-					"2 Aug 2022	2 Aug 2022	BY TRANSFER-NEFT*HDFC0000001*N215222062454075*QURIATE TECHNOLO--	654321		200.00	1200.00\n" +
-					"1 Aug 2022	3 Aug 2022	DEBIT-ATMCard AMC  607431*3795 CLASSIC--	789012	150.00		1300.00\n" +
-					"Computer Generated Statement")
+			data := [][]string{
+				{"Date", "Details", "Ref No/Cheque No", "Debit", "Credit", "Balance"},
+				{"03/08/2022", "WDL TFR UPI/DR/221356312527/RITIK S/SBIN/rs6321908@/UPI", "123456", "100.00", "", "1000.00"},
+				{"02/08/2022", "DEP TFR NEFT*HDFC0000001*N215222062454075*QURIATE TECHNOLO", "654321", "", "200.00", "1200.00"},
+				{"01/08/2022", "DEBIT-ATMCard AMC  607431*3795 CLASSIC", "789012", "150.00", "", "1300.00"},
+			}
+			fileBytes := utils.CreateXLSXFile(data)
 			input := models.ParseStatementInput{
 				FileBytes:        fileBytes,
-				FileName:         "statement.csv",
+				FileName:         "statement.xlsx",
 				AccountId:        acc.Id,
-				OriginalFilename: "statement.csv",
+				OriginalFilename: "statement.xlsx",
 			}
 			resp, err := service.ParseStatement(ctx, input, userId)
 			Expect(err).NotTo(HaveOccurred())
@@ -471,17 +471,18 @@ var _ = Describe("StatementService", func() {
 			}
 			acc, err := accountService.CreateAccount(ctx, accInput)
 			Expect(err).NotTo(HaveOccurred())
-			fileBytes := []byte(
-				"Txn Date	Value Date	Description	Ref No.	Debit	Credit	Balance\n" +
-					"1 Aug 2022	1 Aug 2022	TO TRANSFER-UPI/DR/221356312527/RITIK S/SBIN/rs6321908@/UPI--	123456	100.00		1000.00\n" +
-					"BADROW\n" +
-					"2 Aug 2022	2 Aug 2022	BY TRANSFER-NEFT*HDFC0000001*N215222062454075*QURIATE TECHNOLO--	654321		200.00	1200.00\n" +
-					"Computer Generated Statement")
+			data := [][]string{
+				{"Date", "Details", "Ref No/Cheque No", "Debit", "Credit", "Balance"},
+				{"01/08/2022", "WDL TFR UPI/DR/221356312527/RITIK S/SBIN/rs6321908@/UPI", "123456", "100.00", "", "1000.00"},
+				{"BADROW"},
+				{"02/08/2022", "DEP TFR NEFT*HDFC0000001*N215222062454075*QURIATE TECHNOLO", "654321", "", "200.00", "1200.00"},
+			}
+			fileBytes := utils.CreateXLSXFile(data)
 			input := models.ParseStatementInput{
 				FileBytes:        fileBytes,
-				FileName:         "statement.csv",
+				FileName:         "statement.xlsx",
 				AccountId:        acc.Id,
-				OriginalFilename: "statement.csv",
+				OriginalFilename: "statement.xlsx",
 			}
 			resp, _ := service.ParseStatement(ctx, input, userId)
 			Expect(err).NotTo(HaveOccurred())
@@ -548,24 +549,25 @@ var _ = Describe("StatementService", func() {
 					Date:        date,
 					AccountId:   acc.Id,
 					CreatedBy:   userId,
-					Description: "TO TRANSFER-UPI/DR/221356312527/RITIK S/SBIN/rs6321908@/UPI--",
+					Description: "WDL TFR UPI/DR/221356312527/RITIK S/SBIN/rs6321908@/UPI",
 				},
 				CategoryIds: []int64{},
 			}
 			_, err = txnService.CreateTransaction(ctx, existingTx)
 			Expect(err).NotTo(HaveOccurred())
 
-			// Now try to parse a statement with the same transaction
-			fileBytes := []byte(
-				"Txn Date	Value Date	Description	Ref No.	Debit	Credit	Balance\n" +
-					"1 Aug 2022	1 Aug 2022	TO TRANSFER-UPI/DR/221356312527/RITIK S/SBIN/rs6321908@/UPI--	123456	100.00		1000.00\n" +
-					"2 Aug 2022	2 Aug 2022	BY TRANSFER-NEFT*HDFC0000001*N215222062454075*QURIATE TECHNOLO--	654321		200.00	1200.00\n" +
-					"Computer Generated Statement")
+			// Now try to parse a statement with same transaction
+			data := [][]string{
+				{"Date", "Details", "Ref No/Cheque No", "Debit", "Credit", "Balance"},
+				{"01/08/2022", "WDL TFR UPI/DR/221356312527/RITIK S/SBIN/rs6321908@/UPI", "123456", "100.00", "", "1000.00"},
+				{"02/08/2022", "DEP TFR NEFT*HDFC0000001*N215222062454075*QURIATE TECHNOLO", "654321", "", "200.00", "1200.00"},
+			}
+			fileBytes := utils.CreateXLSXFile(data)
 			input := models.ParseStatementInput{
 				FileBytes:        fileBytes,
-				FileName:         "statement.csv",
+				FileName:         "statement.xlsx",
 				AccountId:        acc.Id,
-				OriginalFilename: "statement.csv",
+				OriginalFilename: "statement.xlsx",
 			}
 			resp, err := service.ParseStatement(ctx, input, userId)
 			Expect(err).NotTo(HaveOccurred())
@@ -603,7 +605,7 @@ var _ = Describe("StatementService", func() {
 						Date:        date,
 						AccountId:   acc.Id,
 						CreatedBy:   userId,
-						Description: "TO TRANSFER-UPI/DR/221356312527/RITIK S/SBIN/rs6321908@/UPI--",
+						Description: "WDL TFR UPI/DR/221356312527/RITIK S/SBIN/rs6321908@/UPI",
 					},
 					CategoryIds: []int64{},
 				}
@@ -611,16 +613,17 @@ var _ = Describe("StatementService", func() {
 			}
 
 			// Now parse a statement with transactions that will all fail
-			fileBytes := []byte(
-				"Txn Date	Value Date	Description	Ref No.	Debit	Credit	Balance\n" +
-					"1 Aug 2022	1 Aug 2022	TO TRANSFER-UPI/DR/221356312527/RITIK S/SBIN/rs6321908@/UPI--	123456	100.00		1000.00\n" +
-					"1 Aug 2022	1 Aug 2022	TO TRANSFER-UPI/DR/221356312527/RITIK S/SBIN/rs6321908@/UPI--	123456	100.00		1000.00\n" +
-					"Computer Generated Statement")
+			data := [][]string{
+				{"Date", "Details", "Ref No/Cheque No", "Debit", "Credit", "Balance"},
+				{"01/08/2022", "WDL TFR UPI/DR/221356312527/RITIK S/SBIN/rs6321908@/UPI", "123456", "100.00", "", "1000.00"},
+				{"01/08/2022", "WDL TFR UPI/DR/221356312527/RITIK S/SBIN/rs6321908@/UPI", "123456", "100.00", "", "1000.00"},
+			}
+			fileBytes := utils.CreateXLSXFile(data)
 			input := models.ParseStatementInput{
 				FileBytes:        fileBytes,
-				FileName:         "statement.csv",
+				FileName:         "statement.xlsx",
 				AccountId:        acc.Id,
-				OriginalFilename: "statement.csv",
+				OriginalFilename: "statement.xlsx",
 			}
 			resp, err := service.ParseStatement(ctx, input, userId)
 			Expect(err).NotTo(HaveOccurred())
@@ -669,12 +672,15 @@ var _ = Describe("StatementService", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			// Only headers, no data rows
-			fileBytes := []byte("Txn Date	Value Date	Description	Ref No.	Debit	Credit	Balance\nComputer Generated Statement")
+			data := [][]string{
+				{"Date", "Details", "Ref No/Cheque No", "Debit", "Credit", "Balance"},
+			}
+			fileBytes := utils.CreateXLSXFile(data)
 			input := models.ParseStatementInput{
 				FileBytes:        fileBytes,
-				FileName:         "statement.csv",
+				FileName:         "statement.xlsx",
 				AccountId:        acc.Id,
-				OriginalFilename: "statement.csv",
+				OriginalFilename: "statement.xlsx",
 			}
 			resp, err := service.ParseStatement(ctx, input, userId)
 			Expect(err).NotTo(HaveOccurred())
@@ -703,15 +709,16 @@ var _ = Describe("StatementService", func() {
 			acc, err := accountService.CreateAccount(ctx, accInput)
 			Expect(err).NotTo(HaveOccurred())
 
-			fileBytes := []byte(
-				"Txn Date	Value Date	Description	Ref No.	Debit	Credit	Balance\n" +
-					"1 Aug 2022	1 Aug 2022	TO TRANSFER-UPI/DR/221356312527/RITIK S/SBIN/rs6321908@/UPI--	123456	100.00		1000.00\n" +
-					"Computer Generated Statement")
+			data := [][]string{
+				{"Date", "Details", "Ref No/Cheque No", "Debit", "Credit", "Balance"},
+				{"01/08/2022", "WDL TFR UPI/DR/221356312527/RITIK S/SBIN/rs6321908@/UPI", "123456", "100.00", "", "1000.00"},
+			}
+			fileBytes := utils.CreateXLSXFile(data)
 			input := models.ParseStatementInput{
 				FileBytes:        fileBytes,
-				FileName:         "statement.csv",
+				FileName:         "statement.xlsx",
 				AccountId:        acc.Id,
-				OriginalFilename: "statement.csv",
+				OriginalFilename: "statement.xlsx",
 				BankType:         string(models.BankTypeSBI), // Override with SBI parser
 			}
 			resp, err := service.ParseStatement(ctx, input, userId)
@@ -737,15 +744,16 @@ var _ = Describe("StatementService", func() {
 			acc, err := accountService.CreateAccount(ctx, accInput)
 			Expect(err).NotTo(HaveOccurred())
 
-			fileBytes := []byte(
-				"Txn Date	Value Date	Description	Ref No.	Debit	Credit	Balance\n" +
-					"1 Aug 2022	1 Aug 2022	TO TRANSFER-UPI/DR/221356312527/RITIK S/SBIN/rs6321908@/UPI--	123456	100.00		1000.00\n" +
-					"Computer Generated Statement")
+			data := [][]string{
+				{"Date", "Details", "Ref No/Cheque No", "Debit", "Credit", "Balance"},
+				{"01/08/2022", "WDL TFR UPI/DR/221356312527/RITIK S/SBIN/rs6321908@/UPI", "123456", "100.00", "", "1000.00"},
+			}
+			fileBytes := utils.CreateXLSXFile(data)
 			input := models.ParseStatementInput{
 				FileBytes:        fileBytes,
-				FileName:         "statement.csv",
+				FileName:         "statement.xlsx",
 				AccountId:        acc.Id,
-				OriginalFilename: "statement.csv",
+				OriginalFilename: "statement.xlsx",
 				Metadata:         `{"skipRows": 0, "customField": "value"}`,
 			}
 			resp, err := service.ParseStatement(ctx, input, userId)
@@ -1017,8 +1025,8 @@ var _ = Describe("StatementService", func() {
 			})
 
 			It("should error when file size exceeds limit", func() {
-				// Create a file larger than 256KB
-				largeContent := make([]byte, 257*1024)
+				// Create a file larger than 5MB
+				largeContent := make([]byte, 5*1024*1024+1)
 				for i := range largeContent {
 					largeContent[i] = 'a'
 				}
@@ -1028,7 +1036,7 @@ var _ = Describe("StatementService", func() {
 
 				_, err := service.PreviewStatement(ctx, largeContent, fileName, skipRows, rowSize)
 				Expect(err).To(HaveOccurred())
-				Expect(errors.Unwrap(err).Error()).To(ContainSubstring("file size must be less than 256KB"))
+				Expect(errors.Unwrap(err).Error()).To(ContainSubstring("file size must be less than 5MB"))
 			})
 
 			It("should error when file format is unsupported", func() {

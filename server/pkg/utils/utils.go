@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/xuri/excelize/v2"
 )
 
 // extractFields extracts pointers, values, and column names for exported struct fields.
@@ -122,4 +124,24 @@ func ParseFloat(amountStr string) (float64, error) {
 	}
 
 	return amount, nil
+}
+
+// CreateXLSXFile creates an XLSX file from a 2D string array and returns bytes
+func CreateXLSXFile(data [][]string) []byte {
+	f := excelize.NewFile()
+	sheetName := "Sheet1"
+	f.SetSheetName("Sheet1", sheetName)
+
+	for rowIdx, row := range data {
+		for colIdx, cellValue := range row {
+			cell, _ := excelize.CoordinatesToCellName(colIdx+1, rowIdx+1)
+			f.SetCellValue(sheetName, cell, cellValue)
+		}
+	}
+
+	buf, err := f.WriteToBuffer()
+	if err != nil {
+		panic(err)
+	}
+	return buf.Bytes()
 }

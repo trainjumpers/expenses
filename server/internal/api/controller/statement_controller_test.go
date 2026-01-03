@@ -2,6 +2,7 @@ package controller_test
 
 import (
 	"expenses/internal/models"
+	"expenses/pkg/utils"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -34,18 +35,6 @@ func createAccount(testHelper *TestHelper, name string, balance float64) float64
 		Balance:  floatPtr(balance),
 	}
 	resp, response := testHelper.MakeRequest(http.MethodPost, "/account", accountInput)
-	Expect(resp.StatusCode).To(Equal(http.StatusCreated))
-	return response["data"].(map[string]any)["id"].(float64)
-}
-
-func uploadStatement(testHelper *TestHelper, accountId float64, filename string, fileContent []byte) float64 {
-	statementInput := map[string]any{
-		"account_id":        int64(accountId),
-		"original_filename": filename,
-		"file_type":         "csv",
-		"file":              fileContent,
-	}
-	resp, response := testHelper.MakeMultipartRequest(http.MethodPost, "/statement", statementInput)
 	Expect(resp.StatusCode).To(Equal(http.StatusCreated))
 	return response["data"].(map[string]any)["id"].(float64)
 }
@@ -408,9 +397,9 @@ var _ = Describe("StatementController", func() {
 			Expect(response).To(HaveKey("message"))
 		})
 
-		It("should return error for file larger than 256kb", func() {
-			// Create a file >256kb
-			bigFile := make([]byte, 257*1024)
+		It("should return error for file larger than 5MB", func() {
+			// Create a file >5MB
+			bigFile := make([]byte, 5*1024*1024+1)
 			for i := range bigFile {
 				bigFile[i] = 'A'
 			}
@@ -644,7 +633,7 @@ var _ = Describe("StatementController", func() {
 
 		It("should handle service error in PreviewStatement", func() {
 			// Create a file that will cause service-level validation error
-			fileContent := make([]byte, 300*1024) // File larger than 256KB
+			fileContent := make([]byte, 5*1024*1024+1) // File larger than 5MB
 			for i := range fileContent {
 				fileContent[i] = 'A'
 			}
@@ -732,19 +721,21 @@ var _ = Describe("StatementController", func() {
 			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
 			accountId := response["data"].(map[string]any)["id"].(float64)
 
-			// 4. Create a statement with file upload
-			fileContent := []byte(
-				"Txn Date	Value Date	Description	Ref No.	Debit	Credit	Balance\n" +
-					"1 Aug 2022	1 Aug 2022	TO TRANSFER-UPI/DR/221356312527/RITIK S/SBIN/rs6321908@/UPI--	123456	100.00		1000.00\n" +
-					"BADROW\n" +
-					"2 Aug 2022	2 Aug 2022	BY TRANSFER-NEFT*HDFC0000001*N215222062454075*QURIATE TECHNOLO--	654321		200.00	1200.00\n" +
-					"Computer Generated Statement")
-			fileName := "integration_statement.csv"
+			// 4. Create a statement with an XLSX upload so the SBI parser can handle it
+			xlsxData := [][]string{
+				{"Txn Date", "Details", "Ref No.", "Debit", "Credit", "Balance"},
+				{"1 Aug 2022", "TO TRANSFER-UPI/DR/221356312527/RITIK S/SBIN/rs6321908@/UPI--", "123456", "100.00", "", "1000.00"},
+				{"BADROW"},
+				{"2 Aug 2022", "BY TRANSFER-NEFT*HDFC0000001*N215222062454075*QURIATE TECHNOLO--", "654321", "", "200.00", "1200.00"},
+				{"Computer Generated Statement"},
+			}
+			fileBytes := utils.CreateXLSXFile(xlsxData)
+			fileName := "integration_statement.xlsx"
 			statementInput := map[string]any{
 				"account_id":        int64(accountId),
 				"original_filename": fileName,
-				"file_type":         "csv",
-				"file":              fileContent,
+				"file_type":         "excel",
+				"file":              fileBytes,
 			}
 			resp, response = testHelper.MakeMultipartRequest(http.MethodPost, "/statement", statementInput)
 			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
@@ -782,12 +773,24 @@ var _ = Describe("StatementController", func() {
 			testHelper := createUniqueUser(baseURL)
 			accountId := createAccount(testHelper, "Account 1", 1000.0)
 
-			fileContent4 := []byte("Txn Date\tValue Date\tDescription\tRef No.\tDebit\tCredit\tBalance\n" +
-				"1 Aug 2022\t1 Aug 2022\tDesc1\t123\t100.00\t\t1000.00\n" +
-				"2 Aug 2022\t2 Aug 2022\tDesc2\t124\t200.00\t\t1200.00\n" +
-				"3 Aug 2022\t3 Aug 2022\tDesc3\t125\t300.00\t\t1500.00\n" +
-				"4 Aug 2022\t4 Aug 2022\tDesc4\t126\t400.00\t\t1900.00\nComputer Generated Statement")
-			statementId := uploadStatement(testHelper, accountId, "statement_4.csv", fileContent4)
+			// Upload as XLSX so the SBI parser can parse rows reliably
+			xlsx4 := [][]string{
+				{"Txn Date", "Details", "Ref No.", "Debit", "Credit", "Balance"},
+				{"1 Aug 2022", "Desc1", "123", "100.00", "", "1000.00"},
+				{"2 Aug 2022", "Desc2", "124", "200.00", "", "1200.00"},
+				{"3 Aug 2022", "Desc3", "125", "300.00", "", "1500.00"},
+				{"4 Aug 2022", "Desc4", "126", "400.00", "", "1900.00"},
+			}
+			fileBytes4 := utils.CreateXLSXFile(xlsx4)
+			statementInput4 := map[string]any{
+				"account_id":        int64(accountId),
+				"original_filename": "statement_4.xlsx",
+				"file_type":         "excel",
+				"file":              fileBytes4,
+			}
+			resp, response := testHelper.MakeMultipartRequest(http.MethodPost, "/statement", statementInput4)
+			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+			statementId := response["data"].(map[string]any)["id"].(float64)
 			waitForStatementDone(testHelper, statementId)
 
 			// Fetch transactions for the first statement
@@ -799,15 +802,27 @@ var _ = Describe("StatementController", func() {
 			transactions := txData["transactions"].([]any)
 			Expect(transactions).To(HaveLen(4))
 
-			fileContent7 := []byte("Txn Date\tValue Date\tDescription\tRef No.\tDebit\tCredit\tBalance\n" +
-				"1 Aug 2022\t1 Aug 2022\tDesc1\t123\t100.00\t\t1000.00\n" +
-				"2 Aug 2022\t2 Aug 2022\tDesc2\t124\t200.00\t\t1200.00\n" +
-				"3 Aug 2022\t3 Aug 2022\tDesc3\t125\t300.00\t\t1500.00\n" +
-				"4 Aug 2022\t4 Aug 2022\tDesc4\t126\t400.00\t\t1900.00\n" +
-				"5 Aug 2022\t5 Aug 2022\tDesc5\t127\t500.00\t\t2400.00\n" +
-				"6 Aug 2022\t6 Aug 2022\tDesc6\t128\t600.00\t\t3000.00\n" +
-				"7 Aug 2022\t7 Aug 2022\tDesc7\t129\t700.00\t\t3700.00\nComputer Generated Statement")
-			statementId = uploadStatement(testHelper, accountId, "statement_7.csv", fileContent7)
+			// Upload as XLSX for the 7-row statement
+			xlsx7 := [][]string{
+				{"Txn Date", "Details", "Ref No.", "Debit", "Credit", "Balance"},
+				{"1 Aug 2022", "Desc1", "123", "100.00", "", "1000.00"},
+				{"2 Aug 2022", "Desc2", "124", "200.00", "", "1200.00"},
+				{"3 Aug 2022", "Desc3", "125", "300.00", "", "1500.00"},
+				{"4 Aug 2022", "Desc4", "126", "400.00", "", "1900.00"},
+				{"5 Aug 2022", "Desc5", "127", "500.00", "", "2400.00"},
+				{"6 Aug 2022", "Desc6", "128", "600.00", "", "3000.00"},
+				{"7 Aug 2022", "Desc7", "129", "700.00", "", "3700.00"},
+			}
+			fileBytes7 := utils.CreateXLSXFile(xlsx7)
+			statementInput7 := map[string]any{
+				"account_id":        int64(accountId),
+				"original_filename": "statement_7.xlsx",
+				"file_type":         "excel",
+				"file":              fileBytes7,
+			}
+			resp, response = testHelper.MakeMultipartRequest(http.MethodPost, "/statement", statementInput7)
+			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+			statementId = response["data"].(map[string]any)["id"].(float64)
 			waitForStatementDone(testHelper, statementId)
 
 			// Fetch transactions for the second statement
@@ -820,20 +835,41 @@ var _ = Describe("StatementController", func() {
 			Expect(transactions).To(HaveLen(3))
 		})
 
-		It("should parse statement with 1000 transactions", func() {
+		It("should parse statement with 10000 transactions", func() {
 			testHelper := createUniqueUser(baseURL)
 			accountId := createAccount(testHelper, "Account 1", 1000.0)
 
-			var rows string
-			for i := 1; i <= 1000; i++ {
-				rows += fmt.Sprintf("22 Aug 2022	22 Aug 2022	Desc%d	%d	%.2f		%.2f\n", i, 1000+i, float64(i), float64(1000+i))
+			// Build XLSX data (header + 10000 rows)
+			data := [][]string{
+				{"Txn Date", "Details", "Ref No.", "Debit", "Credit", "Balance"},
 			}
-			fileContent := []byte("Txn Date	Value Date	Description	Ref No.	Debit	Credit	Balance\n" + rows + "Computer Generated Statement")
-			statementId := uploadStatement(testHelper, accountId, "statement_1000.csv", fileContent)
+			for i := 1; i <= 1000; i++ {
+				row := []string{
+					"22 Aug 2022",
+					fmt.Sprintf("Desc%d", i),
+					fmt.Sprintf("%d", 1000+i),
+					fmt.Sprintf("%.2f", float64(i)),
+					fmt.Sprintf("%.2f", float64(1000+i)),
+					fmt.Sprintf("%.2f", float64(2000+i)),
+				}
+				data = append(data, row)
+			}
+
+			fileBytes := utils.CreateXLSXFile(data)
+			// Upload as an Excel file
+			statementInput := map[string]any{
+				"account_id":        int64(accountId),
+				"original_filename": "statement_10000.xlsx",
+				"file_type":         "excel",
+				"file":              fileBytes,
+			}
+			resp, response := testHelper.MakeMultipartRequest(http.MethodPost, "/statement", statementInput)
+			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+			statementId := response["data"].(map[string]any)["id"].(float64)
 			waitForStatementDone(testHelper, statementId)
 
 			// Fetch transactions for the statement
-			resp, response := testHelper.MakeRequest(http.MethodGet, "/transaction?page_size=10&statement_id="+strconv.FormatFloat(statementId, 'f', 0, 64), nil)
+			resp, response = testHelper.MakeRequest(http.MethodGet, "/transaction?page_size=10&statement_id="+strconv.FormatFloat(statementId, 'f', 0, 64), nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(response).To(HaveKey("data"))
 			txData := response["data"].(map[string]any)
@@ -872,11 +908,11 @@ var _ = Describe("StatementController", func() {
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 		})
 
-		It("should fail to parse multipart file >256kb", func() {
+		It("should fail to parse multipart file > 5MB", func() {
 			testHelper := createUniqueUser(baseURL)
 			accountId := createAccount(testHelper, "BigFileAccount", 1000.0)
-			// Create a file >256kb
-			bigFile := make([]byte, 257*1024)
+			// Create a file >5MB
+			bigFile := make([]byte, 5*1024*1024+1)
 			for i := range bigFile {
 				bigFile[i] = 'A'
 			}
