@@ -27,7 +27,7 @@ import type {
 } from "@/lib/models/transaction";
 import { MoreVertical, Pencil, Play, Plus, Trash, Upload } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 export interface TransactionFiltersState {
@@ -71,6 +71,15 @@ export default function TransactionPage() {
   const pathname = usePathname();
   const { data: categories = [] } = useCategories();
   const { data: accounts = [] } = useAccounts();
+
+  const hasSyncedFromUrlRef = useRef(false);
+  const pendingUrlSyncRef = useRef(true);
+  const parsedStateRef = useRef({
+    page: 1,
+    sortBy: "date",
+    sortOrder: "desc" as "asc" | "desc",
+    filters: initialFilters,
+  });
 
   // Filter state
   const [filters, setFilters] =
@@ -144,6 +153,14 @@ export default function TransactionPage() {
       search: searchParams.get("search") || "",
     };
 
+    parsedStateRef.current = {
+      page: nextPage,
+      sortBy: nextSortBy,
+      sortOrder: nextSortOrder,
+      filters: nextFilters,
+    };
+    pendingUrlSyncRef.current = true;
+
     setCurrentPage((prev) => (prev === nextPage ? prev : nextPage));
     setSortBy((prev) => (prev === nextSortBy ? prev : nextSortBy));
     setSortOrder((prev) => (prev === nextSortOrder ? prev : nextSortOrder));
@@ -151,6 +168,24 @@ export default function TransactionPage() {
       areFiltersEqual(prev, nextFilters) ? prev : nextFilters
     );
   }, [searchParams]);
+
+  useEffect(() => {
+    if (!pendingUrlSyncRef.current) {
+      return;
+    }
+
+    const parsed = parsedStateRef.current;
+    const isSynced =
+      currentPage === parsed.page &&
+      sortBy === parsed.sortBy &&
+      sortOrder === parsed.sortOrder &&
+      areFiltersEqual(filters, parsed.filters);
+
+    if (isSynced) {
+      hasSyncedFromUrlRef.current = true;
+      pendingUrlSyncRef.current = false;
+    }
+  }, [currentPage, sortBy, sortOrder, filters]);
 
   // Update URL when state changes
   const updateUrl = useCallback(() => {
@@ -172,7 +207,7 @@ export default function TransactionPage() {
 
     const nextQuery = params.toString();
     const currentQuery = searchParams.toString();
-    if (nextQuery === currentQuery) {
+    if (!hasSyncedFromUrlRef.current || nextQuery === currentQuery) {
       return;
     }
 
