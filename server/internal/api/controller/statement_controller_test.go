@@ -39,18 +39,6 @@ func createAccount(testHelper *TestHelper, name string, balance float64) float64
 	return response["data"].(map[string]any)["id"].(float64)
 }
 
-func uploadStatement(testHelper *TestHelper, accountId float64, filename string, fileContent []byte) float64 {
-	statementInput := map[string]any{
-		"account_id":        int64(accountId),
-		"original_filename": filename,
-		"file_type":         "csv",
-		"file":              fileContent,
-	}
-	resp, response := testHelper.MakeMultipartRequest(http.MethodPost, "/statement", statementInput)
-	Expect(resp.StatusCode).To(Equal(http.StatusCreated))
-	return response["data"].(map[string]any)["id"].(float64)
-}
-
 func waitForStatementDone(testHelper *TestHelper, statementId float64) map[string]any {
 	var status string
 	var data map[string]any
