@@ -156,3 +156,15 @@ export function getErrorStatus(error: unknown): number | undefined {
   }
   return undefined;
 }
+
+// Helper function to check if error is statement password required
+export function isStatementPasswordRequiredError(error: unknown): boolean {
+  if (typeof error === "object" && error !== null) {
+    const err = error as { message?: string; isPasswordRequired?: boolean };
+    return (
+      err.isPasswordRequired === true ||
+      err.message === "statement password required"
+    );
+  }
+  return false;
+}

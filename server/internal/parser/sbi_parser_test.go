@@ -168,7 +168,7 @@ var _ = Describe("SBIParser", func() {
 				{"02/12/2024", "DEP TFR NEFT*HDFC0000001*N123456789*COMPANY NAME", "REF456", "", "200.00", "1200.00"},
 			}
 			fileBytes := utils.CreateXLSXFile(data)
-			txns, err := parser.Parse(fileBytes, "", "")
+			txns, err := parser.Parse(fileBytes, "", "", "")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(txns).To(HaveLen(2))
 			Expect(txns[0].Name).To(Equal("UPI to JOHN DOE"))
@@ -183,7 +183,7 @@ var _ = Describe("SBIParser", func() {
 				{"03/12/2024", "Desc", "REF789", "150.00", "200.00", "1300.00"},
 			}
 			fileBytes := utils.CreateXLSXFile(data)
-			txns, err := parser.Parse(fileBytes, "", "")
+			txns, err := parser.Parse(fileBytes, "", "", "")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(txns).To(HaveLen(1))
 			Expect(*txns[0].Amount).To(Equal(150.00))
@@ -195,7 +195,7 @@ var _ = Describe("SBIParser", func() {
 				{"04/12/2024", "Desc", "REF345", "100.00", "", "1250.00", "ExtraValue"},
 			}
 			fileBytes := utils.CreateXLSXFile(data)
-			txns, err := parser.Parse(fileBytes, "", "")
+			txns, err := parser.Parse(fileBytes, "", "", "")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(txns).To(HaveLen(1))
 		})
@@ -206,7 +206,7 @@ var _ = Describe("SBIParser", func() {
 				{"05/12/2024", "Desc with spaces", "REF987", "100.00", "", "1175.00"},
 			}
 			fileBytes := utils.CreateXLSXFile(data)
-			txns, err := parser.Parse(fileBytes, "", "")
+			txns, err := parser.Parse(fileBytes, "", "", "")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(txns).To(HaveLen(1))
 		})
@@ -217,7 +217,7 @@ var _ = Describe("SBIParser", func() {
 				{"07/12/2024", "नमस्ते", "123456", "100.00", "", "1000.00"},
 			}
 			fileBytes := utils.CreateXLSXFile(data)
-			txns, err := parser.Parse(fileBytes, "", "")
+			txns, err := parser.Parse(fileBytes, "", "", "")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(txns).To(HaveLen(1))
 		})
@@ -228,7 +228,7 @@ var _ = Describe("SBIParser", func() {
 				{"07/12/2024", "नमस्ते", "REF123", "100.00", "", "1000.00"},
 			}
 			fileBytes := utils.CreateXLSXFile(data)
-			txns, err := parser.Parse(fileBytes, "", "")
+			txns, err := parser.Parse(fileBytes, "", "", "")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(txns).To(HaveLen(1))
 			Expect(txns[0].Name).To(ContainSubstring("नमस्ते"))
@@ -240,7 +240,7 @@ var _ = Describe("SBIParser", func() {
 				{"Just some text"},
 			}
 			fileBytes := utils.CreateXLSXFile(data)
-			_, err := parser.Parse(fileBytes, "", "")
+			_, err := parser.Parse(fileBytes, "", "", "")
 			Expect(err).To(MatchError(ContainSubstring("transaction header row not found")))
 		})
 
@@ -251,7 +251,7 @@ var _ = Describe("SBIParser", func() {
 				{"02/12/2024", "Desc", "REF654", "", "200.00", "1200.00"},
 			}
 			fileBytes := utils.CreateXLSXFile(data)
-			txns, err := parser.Parse(fileBytes, "", "")
+			txns, err := parser.Parse(fileBytes, "", "", "")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(txns).To(HaveLen(2))
 			Expect(txns[0].Description).To(Equal("Desc"))
@@ -264,7 +264,7 @@ var _ = Describe("SBIParser", func() {
 				{"01/12/2024", "Desc", "REF123", "100.00", "", "1000.00"},
 			}
 			fileBytes := utils.CreateXLSXFile(data)
-			txns, err := parser.Parse(fileBytes, "", "")
+			txns, err := parser.Parse(fileBytes, "", "", "")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(txns).To(HaveLen(1))
 			Expect(txns[0].CategoryIds).To(BeEmpty())
@@ -277,7 +277,7 @@ var _ = Describe("SBIParser", func() {
 				{"02/12/2024", "Desc", "REF456", "", "200.00", "1200.00"},
 			}
 			fileBytes := utils.CreateXLSXFile(data)
-			txns, err := parser.Parse(fileBytes, "", "")
+			txns, err := parser.Parse(fileBytes, "", "", "")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(txns).To(HaveLen(1))
 		})
@@ -289,7 +289,7 @@ var _ = Describe("SBIParser", func() {
 				{"02/12/2024", "Desc", "123456", "", "200.00", "1200.00"},
 			}
 			fileBytes := utils.CreateXLSXFile(data)
-			txns, err := parser.Parse(fileBytes, "", "")
+			txns, err := parser.Parse(fileBytes, "", "", "")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(txns).To(HaveLen(1))
 		})
@@ -301,7 +301,7 @@ var _ = Describe("SBIParser", func() {
 				{"02/12/2024", "Desc", "REF456", "", "200.00", "1200.00"},
 			}
 			fileBytes := utils.CreateXLSXFile(data)
-			txns, err := parser.Parse(fileBytes, "", "")
+			txns, err := parser.Parse(fileBytes, "", "", "")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(txns).To(HaveLen(1))
 		})

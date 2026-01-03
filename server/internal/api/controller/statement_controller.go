@@ -69,6 +69,7 @@ func (s *StatementController) CreateStatement(ctx *gin.Context) {
 		AccountId:        form.AccountId,
 		BankType:         form.BankType,
 		Metadata:         form.Metadata,
+		Password:         form.Password,
 		OriginalFilename: fileName,
 		FileBytes:        fileBytes,
 	}
@@ -99,7 +100,7 @@ func (s *StatementController) PreviewStatement(ctx *gin.Context) {
 		return
 	}
 
-	preview, err := s.statementService.PreviewStatement(ctx, fileBytes, fileName, form.SkipRows, form.RowSize)
+	preview, err := s.statementService.PreviewStatement(ctx, fileBytes, fileName, form.SkipRows, form.RowSize, form.Password)
 	if err != nil {
 		logger.Errorf("Error previewing statement: %v", err)
 		s.HandleError(ctx, err)

@@ -52,22 +52,16 @@ export const useUploadStatement = () => {
         "Statement uploaded successfully! Processing will begin shortly."
       );
     },
-    onError: (error: Error) => {
-      toast.error(error.message || "Failed to upload statement");
-    },
   });
 };
 
 export const usePreviewStatement = () => {
   return useMutation<
     StatementPreviewResponse,
-    Error,
-    { file: File; skipRows: number; rowSize: number }
+    { message: string; isPasswordRequired: boolean },
+    { file: File; skipRows: number; rowSize: number; password?: string }
   >({
-    mutationFn: ({ file, skipRows, rowSize }) =>
-      previewStatement(file, skipRows, rowSize),
-    onError: (error: Error) => {
-      toast.error(error.message || "Failed to preview statement");
-    },
+    mutationFn: ({ file, skipRows, rowSize, password }) =>
+      previewStatement(file, skipRows, rowSize, password),
   });
 };

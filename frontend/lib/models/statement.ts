@@ -16,6 +16,7 @@ export interface CreateStatementRequest {
   file: File;
   bank_type?: string;
   metadata?: string;
+  password?: string;
 }
 
 export interface StatementUploadResponse {
