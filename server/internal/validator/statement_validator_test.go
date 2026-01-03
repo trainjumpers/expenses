@@ -56,7 +56,7 @@ var _ = Describe("StatementValidator", func() {
 			})
 
 			It("should return error for file too large", func() {
-				largeFile := make([]byte, 256*1024+1)
+				largeFile := make([]byte, 5*1024*1024+1)
 				err := validator.ValidateStatementUpload(accountId, largeFile, fileName)
 				Expect(err).To(HaveOccurred())
 			})
@@ -154,7 +154,7 @@ var _ = Describe("StatementValidator", func() {
 				Expect(err).To(HaveOccurred())
 			})
 			It("should return error for file too large", func() {
-				largeFile := make([]byte, 256*1024+1)
+				largeFile := make([]byte, 5*1024*1024+1)
 				err := validator.ValidateStatementPreview(largeFile, fileName, skipRows, rowSize)
 				Expect(err).To(HaveOccurred())
 			})
