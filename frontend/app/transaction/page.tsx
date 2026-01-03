@@ -52,6 +52,19 @@ const initialFilters: TransactionFiltersState = {
   search: "",
 };
 
+const areFiltersEqual = (
+  left: TransactionFiltersState,
+  right: TransactionFiltersState
+) =>
+  left.accountId === right.accountId &&
+  left.categoryId === right.categoryId &&
+  left.uncategorized === right.uncategorized &&
+  left.minAmount === right.minAmount &&
+  left.maxAmount === right.maxAmount &&
+  left.dateFrom === right.dateFrom &&
+  left.dateTo === right.dateTo &&
+  left.search === right.search;
+
 export default function TransactionPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -115,10 +128,11 @@ export default function TransactionPage() {
       const val = searchParams.get(key);
       return val ? Number(val) : undefined;
     };
-    setCurrentPage(getNum("page") || 1);
-    setSortBy(searchParams.get("sort_by") || "date");
-    setSortOrder((searchParams.get("sort_order") as "asc" | "desc") || "desc");
-    setFilters({
+    const nextPage = getNum("page") || 1;
+    const nextSortBy = searchParams.get("sort_by") || "date";
+    const nextSortOrder =
+      (searchParams.get("sort_order") as "asc" | "desc") || "desc";
+    const nextFilters = {
       accountId: getNum("account_id"),
       categoryId: getNum("category_id"),
       uncategorized:
@@ -128,7 +142,14 @@ export default function TransactionPage() {
       dateFrom: searchParams.get("date_from") || undefined,
       dateTo: searchParams.get("date_to") || undefined,
       search: searchParams.get("search") || "",
-    });
+    };
+
+    setCurrentPage((prev) => (prev === nextPage ? prev : nextPage));
+    setSortBy((prev) => (prev === nextSortBy ? prev : nextSortBy));
+    setSortOrder((prev) => (prev === nextSortOrder ? prev : nextSortOrder));
+    setFilters((prev) =>
+      areFiltersEqual(prev, nextFilters) ? prev : nextFilters
+    );
   }, [searchParams]);
 
   // Update URL when state changes
@@ -148,8 +169,16 @@ export default function TransactionPage() {
     if (filters.dateFrom) params.set("date_from", filters.dateFrom);
     if (filters.dateTo) params.set("date_to", filters.dateTo);
     if (filters.search) params.set("search", filters.search);
-    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-  }, [currentPage, sortBy, sortOrder, filters, router, pathname]);
+
+    const nextQuery = params.toString();
+    const currentQuery = searchParams.toString();
+    if (nextQuery === currentQuery) {
+      return;
+    }
+
+    const nextUrl = nextQuery ? `${pathname}?${nextQuery}` : pathname;
+    router.replace(nextUrl, { scroll: false });
+  }, [currentPage, sortBy, sortOrder, filters, router, pathname, searchParams]);
 
   // When any filter/sort/page changes, update URL
   useEffect(() => {

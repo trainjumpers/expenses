@@ -124,7 +124,11 @@ const TransactionFilters: React.FC<TransactionFiltersProps> = ({
           onChange={(e) =>
             setTempFilters({ ...tempFilters, search: e.target.value })
           }
-          onBlur={() => onFilterChange({ search: tempFilters.search })}
+          onBlur={() => {
+            if (tempFilters.search !== filters.search) {
+              onFilterChange({ search: tempFilters.search });
+            }
+          }}
           style={{ height: 28 }}
         />
       </form>
