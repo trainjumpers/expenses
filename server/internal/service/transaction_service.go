@@ -13,6 +13,7 @@ import (
 
 type TransactionServiceInterface interface {
 	CreateTransaction(ctx context.Context, input models.CreateTransactionInput) (models.TransactionResponse, error)
+	CreateTransactions(ctx context.Context, inputs []models.CreateTransactionInput) ([]models.TransactionResponse, error)
 	GetTransactionById(ctx context.Context, transactionId int64, userId int64) (models.TransactionResponse, error)
 	UpdateTransaction(ctx context.Context, transactionId int64, userId int64, input models.UpdateTransactionInput) (models.TransactionResponse, error)
 	DeleteTransaction(ctx context.Context, transactionId int64, userId int64) error
@@ -48,6 +49,68 @@ func (s *TransactionService) CreateTransaction(ctx context.Context, input models
 	transactionInput := models.CreateBaseTransactionInput{}
 	utils.ConvertStruct(&input, &transactionInput)
 	return s.repo.CreateTransaction(ctx, transactionInput, input.CategoryIds)
+}
+
+func (s *TransactionService) CreateTransactions(ctx context.Context, inputs []models.CreateTransactionInput) ([]models.TransactionResponse, error) {
+	if len(inputs) == 0 {
+		return []models.TransactionResponse{}, nil
+	}
+
+	// Optimize validation by collecting unique accounts and categories
+	uniqueAccountIds := make(map[int64]int64) // accountId -> userId
+	uniqueCategoryIds := make(map[int64]bool)
+
+	// Validate all transactions and collect unique IDs
+	for _, input := range inputs {
+		// Validate date
+		if err := s.validateDateNotInFuture(input.Date); err != nil {
+			return nil, err
+		}
+
+		// Collect unique account IDs
+		uniqueAccountIds[input.AccountId] = input.CreatedBy
+
+		// Collect unique category IDs
+		for _, catId := range input.CategoryIds {
+			uniqueCategoryIds[catId] = true
+		}
+	}
+
+	// Validate each unique account only once
+	for accountId, userId := range uniqueAccountIds {
+		if err := s.validateAccountExists(ctx, accountId, userId); err != nil {
+			return nil, err
+		}
+	}
+
+	// Validate all unique categories only once
+	if len(uniqueCategoryIds) > 0 {
+		// Get the first user ID for category validation (all should belong to same user in bulk import)
+		var userId int64
+		for _, input := range inputs {
+			userId = input.CreatedBy
+			break
+		}
+
+		categoryIdSlice := make([]int64, 0, len(uniqueCategoryIds))
+		for catId := range uniqueCategoryIds {
+			categoryIdSlice = append(categoryIdSlice, catId)
+		}
+
+		if err := s.validateCategoryExists(ctx, categoryIdSlice, userId); err != nil {
+			return nil, err
+		}
+	}
+
+	// Convert to base transaction inputs
+	baseInputs := make([]models.CreateBaseTransactionInput, len(inputs))
+	categoryIds := make([][]int64, len(inputs))
+	for i, input := range inputs {
+		utils.ConvertStruct(&input, &baseInputs[i])
+		categoryIds[i] = input.CategoryIds
+	}
+
+	return s.repo.CreateTransactions(ctx, baseInputs, categoryIds)
 }
 
 func (s *TransactionService) GetTransactionById(ctx context.Context, transactionId int64, userId int64) (models.TransactionResponse, error) {

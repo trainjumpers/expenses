@@ -18,6 +18,7 @@ import (
 type StatementRepositoryInterface interface {
 	CreateStatement(ctx context.Context, input models.CreateStatementInput) (models.StatementResponse, error)
 	CreateStatementTxn(ctx context.Context, statementId int64, transactionId int64) error
+	CreateStatementTxns(ctx context.Context, statementId int64, transactionIds []int64) error
 	UpdateStatementStatus(ctx context.Context, statementId int64, input models.UpdateStatementStatusInput) (models.StatementResponse, error)
 	GetStatementByID(ctx context.Context, statementId int64, userId int64) (models.StatementResponse, error)
 	ListStatementByUserId(ctx context.Context, userId int64, limit, offset int) ([]models.StatementResponse, error)
@@ -62,6 +63,45 @@ func (r *StatementRepository) CreateStatementTxn(ctx context.Context, statementI
 	if err != nil {
 		return statementErrors.NewStatementCreateError(err)
 	}
+	return nil
+}
+
+func (r *StatementRepository) CreateStatementTxns(ctx context.Context, statementId int64, transactionIds []int64) error {
+	if len(transactionIds) == 0 {
+		return nil
+	}
+
+	const batchSize = 1000
+
+	// Process in batches of 1000
+	for batchStart := 0; batchStart < len(transactionIds); batchStart += batchSize {
+		batchEnd := batchStart + batchSize
+		if batchEnd > len(transactionIds) {
+			batchEnd = len(transactionIds)
+		}
+
+		batchTxIds := transactionIds[batchStart:batchEnd]
+
+		// Build bulk insert using VALUES for this batch
+		placeholders := make([]string, 0, len(batchTxIds))
+		args := make([]interface{}, 0, len(batchTxIds)*2)
+		argIndex := 1
+
+		for _, txID := range batchTxIds {
+			placeholders = append(placeholders, fmt.Sprintf("($%d, $%d)", argIndex, argIndex+1))
+			args = append(args, statementId, txID)
+			argIndex += 2
+		}
+
+		query := fmt.Sprintf(`INSERT INTO %s.%s (statement_id, transaction_id) VALUES %s`,
+			r.schema, r.mappingTableName, strings.Join(placeholders, ", "))
+
+		_, err := r.db.ExecuteQuery(ctx, query, args...)
+		if err != nil {
+			return statementErrors.NewStatementCreateError(err)
+		}
+	}
+
 	return nil
 }
 

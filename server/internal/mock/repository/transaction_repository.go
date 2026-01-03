@@ -76,6 +76,62 @@ func (m *MockTransactionRepository) CreateTransaction(ctx context.Context, input
 	return tx, nil
 }
 
+func (m *MockTransactionRepository) CreateTransactions(ctx context.Context, inputs []models.CreateBaseTransactionInput, categoryIds [][]int64) ([]models.TransactionResponse, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if len(inputs) != len(categoryIds) {
+		return nil, customErrors.NewTransactionAlreadyExistsError(nil)
+	}
+
+	results := make([]models.TransactionResponse, 0, len(inputs))
+
+	for i, input := range inputs {
+		// Check for duplicate transaction
+		for _, tx := range m.transactions {
+			if tx.CreatedBy == input.CreatedBy &&
+				tx.Date.Format("2006-01-02") == input.Date.Format("2006-01-02") &&
+				tx.Name == input.Name &&
+				tx.Amount == *input.Amount {
+				existingDesc := ""
+				if tx.Description != nil {
+					existingDesc = *tx.Description
+				}
+				inputDesc := input.Description
+				if existingDesc == inputDesc {
+					return nil, customErrors.NewTransactionAlreadyExistsError(nil)
+				}
+			}
+		}
+
+		// Create new transaction
+		newId := m.nextId
+		m.nextId++
+
+		baseTx := models.TransactionBaseResponse{
+			Id:          newId,
+			Name:        input.Name,
+			Description: &input.Description,
+			Amount:      *input.Amount,
+			Date:        input.Date,
+			CreatedBy:   input.CreatedBy,
+			AccountId:   input.AccountId,
+		}
+
+		tx := models.TransactionResponse{
+			TransactionBaseResponse: baseTx,
+			CategoryIds:             categoryIds[i],
+		}
+
+		m.transactions[newId] = tx
+		m.categoryMap[newId] = categoryIds[i]
+
+		results = append(results, tx)
+	}
+
+	return results, nil
+}
+
 func (m *MockTransactionRepository) UpdateCategoryMapping(ctx context.Context, transactionId int64, userId int64, categoryIds []int64) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -97,6 +153,20 @@ func (m *MockTransactionRepository) GetTransactionById(ctx context.Context, tran
 		return models.TransactionResponse{}, customErrors.NewTransactionNotFoundError(nil)
 	}
 	return tx, nil
+}
+
+func (m *MockTransactionRepository) GetTransactionsByIds(ctx context.Context, transactionIds []int64, userId int64) ([]models.TransactionResponse, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	var transactions []models.TransactionResponse
+	for _, id := range transactionIds {
+		tx, ok := m.transactions[id]
+		if ok && tx.CreatedBy == userId {
+			transactions = append(transactions, tx)
+		}
+	}
+	return transactions, nil
 }
 
 func (m *MockTransactionRepository) UpdateTransaction(ctx context.Context, transactionId int64, userId int64, input models.UpdateBaseTransactionInput) error {

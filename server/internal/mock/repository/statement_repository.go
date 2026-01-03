@@ -61,6 +61,19 @@ func (m *MockStatementRepository) CreateStatementTxn(ctx context.Context, statem
 	return nil
 }
 
+// CreateStatementTxns adds multiple mappings between statement and transactions for testing
+func (m *MockStatementRepository) CreateStatementTxns(ctx context.Context, statementId int64, transactionIds []int64) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for _, txId := range transactionIds {
+		m.statementTxnMappings = append(m.statementTxnMappings, statementTxnMapping{
+			StatementId:   statementId,
+			TransactionId: txId,
+		})
+	}
+	return nil
+}
+
 func (m *MockStatementRepository) UpdateStatementStatus(ctx context.Context, statementId int64, input models.UpdateStatementStatusInput) (models.StatementResponse, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
