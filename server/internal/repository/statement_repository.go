@@ -245,7 +245,6 @@ func (r *StatementRepository) CountStatementsByUserId(ctx context.Context, userI
 
 	sqlQuery := fmt.Sprintf(`SELECT COUNT(*) FROM %s.%s WHERE %s`, r.schema, r.tableName, strings.Join(whereClauses, " AND "))
 	var count int
-	logger.Debugf("CountStatementsByUserId SQL: %s, args: %v", sqlQuery, args)
 	err := r.db.FetchOne(ctx, sqlQuery, args...).Scan(&count)
 	if err != nil {
 		return 0, err

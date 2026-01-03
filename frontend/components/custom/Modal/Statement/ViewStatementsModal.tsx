@@ -85,8 +85,8 @@ export function ViewStatementsModal({
     page,
     page_size: pageSize,
     account_id: typeof accountId === "number" ? accountId : undefined,
-    date_from: dateFrom?.toDateString(),
-    date_to: dateTo?.toDateString(),
+    date_from: dateFrom ? format(new Date(dateFrom), "yyyy-MM-dd") : undefined,
+    date_to: dateTo ? format(new Date(dateTo), "yyyy-MM-dd") : undefined,
     search: search || undefined,
   });
   const statements = data?.statements || [];
