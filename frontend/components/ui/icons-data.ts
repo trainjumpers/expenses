@@ -403,37 +403,37 @@ export const iconsData: Array<{
   },
   {
     name: "arrow-big-down-dash",
-    categories: ["arrows", "navigation", "gaming", "files"],
+    categories: ["arrows", "gaming", "files"],
     tags: ["backwards", "reverse", "slow", "direction", "south", "download"],
   },
   {
     name: "arrow-big-down",
-    categories: ["arrows", "navigation", "gaming"],
+    categories: ["arrows", "gaming"],
     tags: ["backwards", "reverse", "direction", "south"],
   },
   {
     name: "arrow-big-left-dash",
-    categories: ["arrows", "navigation", "gaming"],
+    categories: ["arrows", "gaming"],
     tags: ["previous", "back", "direction", "west", "turn", "corner"],
   },
   {
     name: "arrow-big-left",
-    categories: ["arrows", "navigation", "gaming"],
+    categories: ["arrows", "gaming"],
     tags: ["previous", "back", "direction", "west", "indicate turn"],
   },
   {
     name: "arrow-big-right-dash",
-    categories: ["arrows", "navigation", "gaming"],
+    categories: ["arrows", "gaming"],
     tags: ["next", "forward", "direction", "east", "turn", "corner"],
   },
   {
     name: "arrow-big-right",
-    categories: ["arrows", "navigation", "gaming"],
+    categories: ["arrows", "gaming"],
     tags: ["next", "forward", "direction", "east", "indicate turn"],
   },
   {
     name: "arrow-big-up-dash",
-    categories: ["arrows", "navigation", "text", "development", "gaming"],
+    categories: ["arrows", "text", "development", "gaming"],
     tags: [
       "caps lock",
       "capitals",
@@ -450,7 +450,7 @@ export const iconsData: Array<{
   },
   {
     name: "arrow-big-up",
-    categories: ["arrows", "navigation", "text", "development", "gaming"],
+    categories: ["arrows", "text", "development", "gaming"],
     tags: [
       "shift",
       "keyboard",
@@ -510,7 +510,7 @@ export const iconsData: Array<{
   },
   {
     name: "arrow-down-from-line",
-    categories: ["arrows", "navigation", "files"],
+    categories: ["arrows", "files"],
     tags: [
       "backwards",
       "reverse",
@@ -524,7 +524,7 @@ export const iconsData: Array<{
   },
   {
     name: "arrow-down-left",
-    categories: ["arrows", "navigation"],
+    categories: ["arrows"],
     tags: ["direction", "south-west", "diagonal"],
   },
   {
@@ -543,17 +543,17 @@ export const iconsData: Array<{
   },
   {
     name: "arrow-down-right",
-    categories: ["arrows", "navigation"],
+    categories: ["arrows"],
     tags: ["direction", "south-east", "diagonal"],
   },
   {
     name: "arrow-down-to-dot",
-    categories: ["arrows", "navigation"],
+    categories: ["arrows"],
     tags: ["direction", "south", "waypoint", "location", "step", "into"],
   },
   {
     name: "arrow-down-to-line",
-    categories: ["arrows", "navigation", "files", "development"],
+    categories: ["arrows", "files", "development"],
     tags: [
       "behind",
       "direction",
@@ -570,7 +570,7 @@ export const iconsData: Array<{
   },
   {
     name: "arrow-down-up",
-    categories: ["arrows", "navigation"],
+    categories: ["arrows"],
     tags: [
       "bidirectional",
       "two-way",
@@ -619,12 +619,12 @@ export const iconsData: Array<{
   },
   {
     name: "arrow-down",
-    categories: ["arrows", "navigation"],
+    categories: ["arrows"],
     tags: ["backwards", "reverse", "direction", "south"],
   },
   {
     name: "arrow-left-from-line",
-    categories: ["arrows", "navigation"],
+    categories: ["arrows"],
     tags: [
       "previous",
       "back",
@@ -638,7 +638,7 @@ export const iconsData: Array<{
   },
   {
     name: "arrow-left-right",
-    categories: ["arrows", "navigation"],
+    categories: ["arrows"],
     tags: [
       "bidirectional",
       "two-way",
@@ -654,7 +654,7 @@ export const iconsData: Array<{
   },
   {
     name: "arrow-left-to-line",
-    categories: ["arrows", "navigation"],
+    categories: ["arrows"],
     tags: [
       "previous",
       "back",
@@ -668,12 +668,12 @@ export const iconsData: Array<{
   },
   {
     name: "arrow-left",
-    categories: ["arrows", "navigation"],
+    categories: ["arrows"],
     tags: ["previous", "back", "direction", "west", "<-"],
   },
   {
     name: "arrow-right-from-line",
-    categories: ["arrows", "navigation"],
+    categories: ["arrows"],
     tags: [
       "next",
       "forward",
@@ -688,7 +688,7 @@ export const iconsData: Array<{
   },
   {
     name: "arrow-right-left",
-    categories: ["arrows", "navigation"],
+    categories: ["arrows"],
     tags: [
       "bidirectional",
       "two-way",
@@ -704,7 +704,7 @@ export const iconsData: Array<{
   },
   {
     name: "arrow-right-to-line",
-    categories: ["arrows", "navigation", "development"],
+    categories: ["arrows", "development"],
     tags: [
       "next",
       "forward",
@@ -722,7 +722,7 @@ export const iconsData: Array<{
   },
   {
     name: "arrow-right",
-    categories: ["arrows", "navigation"],
+    categories: ["arrows"],
     tags: ["forward", "next", "direction", "east", "->"],
   },
   {
@@ -772,7 +772,7 @@ export const iconsData: Array<{
   },
   {
     name: "arrow-up-down",
-    categories: ["arrows", "navigation"],
+    categories: ["arrows"],
     tags: [
       "bidirectional",
       "two-way",
@@ -789,12 +789,12 @@ export const iconsData: Array<{
   },
   {
     name: "arrow-up-from-dot",
-    categories: ["arrows", "navigation"],
+    categories: ["arrows"],
     tags: ["direction", "north", "step", "out"],
   },
   {
     name: "arrow-up-from-line",
-    categories: ["arrows", "navigation", "files", "development"],
+    categories: ["arrows", "files", "development"],
     tags: [
       "forward",
       "direction",
@@ -810,7 +810,7 @@ export const iconsData: Array<{
   },
   {
     name: "arrow-up-left",
-    categories: ["arrows", "navigation"],
+    categories: ["arrows"],
     tags: ["direction", "north-west", "diagonal"],
   },
   {
@@ -829,12 +829,12 @@ export const iconsData: Array<{
   },
   {
     name: "arrow-up-right",
-    categories: ["arrows", "navigation"],
+    categories: ["arrows"],
     tags: ["direction", "north-east", "diagonal"],
   },
   {
     name: "arrow-up-to-line",
-    categories: ["arrows", "navigation", "files"],
+    categories: ["arrows", "files"],
     tags: [
       "forward",
       "direction",
@@ -877,7 +877,7 @@ export const iconsData: Array<{
   },
   {
     name: "arrow-up",
-    categories: ["arrows", "navigation"],
+    categories: ["arrows"],
     tags: ["forward", "direction", "north"],
   },
   {
@@ -1266,6 +1266,23 @@ export const iconsData: Array<{
     name: "baggage-claim",
     categories: ["transportation", "travel"],
     tags: ["baggage", "luggage", "travel", "cart", "trolley", "suitcase"],
+  },
+  {
+    name: "balloon",
+    categories: ["emoji"],
+    tags: [
+      "party",
+      "festival",
+      "congratulations",
+      "celebration",
+      "decoration",
+      "colorful",
+      "floating",
+      "fun",
+      "birthday",
+      "event",
+      "entertainment",
+    ],
   },
   {
     name: "ban",
@@ -1785,6 +1802,11 @@ export const iconsData: Array<{
     name: "bird",
     categories: ["animals"],
     tags: ["peace", "freedom", "wing", "avian", "tweet"],
+  },
+  {
+    name: "birdhouse",
+    categories: ["nature", "animals", "navigation", "home"],
+    tags: ["birdhouse", "bird", "garden", "home", "house", "woodwork"],
   },
   {
     name: "bitcoin",
@@ -2451,6 +2473,23 @@ export const iconsData: Array<{
       "improve",
       "upgrade",
       "level up",
+    ],
+  },
+  {
+    name: "book-search",
+    categories: ["text", "development", "gaming"],
+    tags: [
+      "reading",
+      "library",
+      "study",
+      "education",
+      "research",
+      "knowledge",
+      "discover",
+      "browsing",
+      "lookup",
+      "finding",
+      "scanning",
     ],
   },
   {
@@ -3393,6 +3432,20 @@ export const iconsData: Array<{
     tags: ["date", "month", "year", "event", "birthday", "birthdate"],
   },
   {
+    name: "calendars",
+    categories: ["time"],
+    tags: [
+      "date",
+      "month",
+      "year",
+      "event",
+      "dates",
+      "months",
+      "years",
+      "events",
+    ],
+  },
+  {
     name: "camera-off",
     categories: ["photography", "devices", "communication"],
     tags: ["photo", "webcam", "video"],
@@ -3429,6 +3482,11 @@ export const iconsData: Array<{
     name: "candy",
     categories: ["food-beverage"],
     tags: ["sugar", "food", "sweet"],
+  },
+  {
+    name: "cannabis-off",
+    categories: ["nature"],
+    tags: ["cannabis", "weed", "leaf"],
   },
   {
     name: "cannabis",
@@ -3555,7 +3613,7 @@ export const iconsData: Array<{
   },
   {
     name: "castle",
-    categories: ["buildings", "gaming"],
+    categories: ["buildings", "gaming", "navigation"],
     tags: ["fortress", "stronghold", "palace", "chateau", "building"],
   },
   {
@@ -3800,8 +3858,38 @@ export const iconsData: Array<{
     tags: ["fruit", "food"],
   },
   {
+    name: "chess-bishop",
+    categories: ["gaming", "emoji"],
+    tags: ["mitre", "miter", "piece", "board game", "religion"],
+  },
+  {
+    name: "chess-king",
+    categories: ["gaming", "emoji"],
+    tags: ["ruler", "crown", "piece", "board game", "stalemate"],
+  },
+  {
+    name: "chess-knight",
+    categories: ["gaming", "emoji"],
+    tags: ["piece", "horse", "board game"],
+  },
+  {
+    name: "chess-pawn",
+    categories: ["gaming", "emoji"],
+    tags: ["piece", "board game"],
+  },
+  {
+    name: "chess-queen",
+    categories: ["gaming", "emoji"],
+    tags: ["ruler", "crown", "piece", "board game", "stalemate"],
+  },
+  {
+    name: "chess-rook",
+    categories: ["gaming", "emoji"],
+    tags: ["castle", "piece", "board game"],
+  },
+  {
     name: "chevron-down",
-    categories: ["arrows", "navigation", "gaming"],
+    categories: ["arrows", "gaming"],
     tags: ["backwards", "reverse", "slow", "dropdown"],
   },
   {
@@ -3816,12 +3904,12 @@ export const iconsData: Array<{
   },
   {
     name: "chevron-left",
-    categories: ["arrows", "navigation"],
+    categories: ["arrows"],
     tags: ["back", "previous", "less than", "fewer", "menu", "<"],
   },
   {
     name: "chevron-right",
-    categories: ["arrows", "navigation", "math", "development"],
+    categories: ["arrows", "math", "development"],
     tags: [
       "forward",
       "next",
@@ -3839,7 +3927,7 @@ export const iconsData: Array<{
   },
   {
     name: "chevron-up",
-    categories: ["arrows", "navigation", "math", "gaming"],
+    categories: ["arrows", "math", "gaming"],
     tags: [
       "caret",
       "keyboard",
@@ -3862,7 +3950,7 @@ export const iconsData: Array<{
   },
   {
     name: "chevrons-down",
-    categories: ["arrows", "navigation", "gaming"],
+    categories: ["arrows", "gaming"],
     tags: ["backwards", "reverse", "slower"],
   },
   {
@@ -3903,7 +3991,7 @@ export const iconsData: Array<{
   },
   {
     name: "chevrons-left",
-    categories: ["arrows", "navigation", "gaming"],
+    categories: ["arrows", "gaming"],
     tags: ["turn", "corner"],
   },
   {
@@ -3913,7 +4001,7 @@ export const iconsData: Array<{
   },
   {
     name: "chevrons-right",
-    categories: ["arrows", "navigation", "gaming"],
+    categories: ["arrows", "gaming"],
     tags: ["turn", "corner"],
   },
   {
@@ -3923,7 +4011,7 @@ export const iconsData: Array<{
   },
   {
     name: "chevrons-up",
-    categories: ["arrows", "navigation", "gaming"],
+    categories: ["arrows", "gaming"],
     tags: ["forward", "ahead", "faster", "speed", "boost"],
   },
   {
@@ -3953,12 +4041,12 @@ export const iconsData: Array<{
   },
   {
     name: "circle-arrow-down",
-    categories: ["arrows", "navigation", "gaming"],
+    categories: ["arrows", "gaming"],
     tags: ["backwards", "reverse", "direction", "south", "sign", "button"],
   },
   {
     name: "circle-arrow-left",
-    categories: ["arrows", "navigation", "gaming"],
+    categories: ["arrows", "gaming"],
     tags: [
       "previous",
       "back",
@@ -3972,17 +4060,17 @@ export const iconsData: Array<{
   },
   {
     name: "circle-arrow-out-down-left",
-    categories: ["arrows", "navigation"],
+    categories: ["arrows"],
     tags: ["outwards", "direction", "south-west", "diagonal"],
   },
   {
     name: "circle-arrow-out-down-right",
-    categories: ["arrows", "navigation"],
+    categories: ["arrows"],
     tags: ["outwards", "direction", "south-east", "diagonal"],
   },
   {
     name: "circle-arrow-out-up-left",
-    categories: ["arrows", "navigation", "development"],
+    categories: ["arrows", "development"],
     tags: [
       "outwards",
       "direction",
@@ -3995,12 +4083,12 @@ export const iconsData: Array<{
   },
   {
     name: "circle-arrow-out-up-right",
-    categories: ["arrows", "navigation"],
+    categories: ["arrows"],
     tags: ["outwards", "direction", "north-east", "diagonal"],
   },
   {
     name: "circle-arrow-right",
-    categories: ["arrows", "navigation", "gaming"],
+    categories: ["arrows", "gaming"],
     tags: [
       "next",
       "forward",
@@ -4014,7 +4102,7 @@ export const iconsData: Array<{
   },
   {
     name: "circle-arrow-up",
-    categories: ["arrows", "navigation", "gaming"],
+    categories: ["arrows", "gaming"],
     tags: ["forward", "direction", "north", "sign", "button"],
   },
   {
@@ -4029,22 +4117,22 @@ export const iconsData: Array<{
   },
   {
     name: "circle-chevron-down",
-    categories: ["arrows", "navigation"],
+    categories: ["arrows"],
     tags: ["back", "menu"],
   },
   {
     name: "circle-chevron-left",
-    categories: ["arrows", "navigation"],
+    categories: ["arrows"],
     tags: ["back", "previous", "less than", "fewer", "menu", "<"],
   },
   {
     name: "circle-chevron-right",
-    categories: ["arrows", "navigation"],
+    categories: ["arrows"],
     tags: ["back", "more than", "greater", "menu", ">"],
   },
   {
     name: "circle-chevron-up",
-    categories: ["arrows", "navigation"],
+    categories: ["arrows"],
     tags: ["caret", "ahead", "menu", "^"],
   },
   {
@@ -4233,6 +4321,29 @@ export const iconsData: Array<{
       "marketing",
       "sticker",
       "price tag",
+    ],
+  },
+  {
+    name: "circle-pile",
+    categories: ["shapes"],
+    tags: [
+      "off",
+      "zero",
+      "record",
+      "shape",
+      "circle-pile",
+      "circle",
+      "pile",
+      "stack",
+      "layer",
+      "structure",
+      "form",
+      "group",
+      "collection",
+      "stock",
+      "inventory",
+      "materials",
+      "warehouse",
     ],
   },
   {
@@ -4646,6 +4757,11 @@ export const iconsData: Array<{
     ],
   },
   {
+    name: "clock-check",
+    categories: ["time"],
+    tags: ["time", "watch", "alarm"],
+  },
+  {
     name: "clock-fading",
     categories: ["time"],
     tags: ["time", "watch", "alarm"],
@@ -4688,6 +4804,30 @@ export const iconsData: Array<{
       "sync",
       "network",
       "exclamation",
+    ],
+  },
+  {
+    name: "cloud-backup",
+    categories: ["arrows", "files"],
+    tags: [
+      "storage",
+      "memory",
+      "bytes",
+      "servers",
+      "backup",
+      "timemachine",
+      "rotate",
+      "synchronize",
+      "synchronise",
+      "refresh",
+      "reconnect",
+      "transfer",
+      "data",
+      "security",
+      "upload",
+      "save",
+      "remote",
+      "safety",
     ],
   },
   {
@@ -4772,6 +4912,24 @@ export const iconsData: Array<{
     name: "cloud-sun",
     categories: ["weather"],
     tags: ["weather", "partly"],
+  },
+  {
+    name: "cloud-sync",
+    categories: ["arrows", "files"],
+    tags: [
+      "synchronize",
+      "synchronise",
+      "refresh",
+      "reconnect",
+      "transfer",
+      "backup",
+      "storage",
+      "upload",
+      "download",
+      "connection",
+      "network",
+      "data",
+    ],
   },
   {
     name: "cloud-upload",
@@ -5303,7 +5461,7 @@ export const iconsData: Array<{
   },
   {
     name: "dam",
-    categories: ["buildings", "sustainability"],
+    categories: ["buildings", "sustainability", "navigation"],
     tags: ["electricity", "energy", "water"],
   },
   {
@@ -6179,7 +6337,7 @@ export const iconsData: Array<{
   },
   {
     name: "factory",
-    categories: ["buildings"],
+    categories: ["buildings", "navigation"],
     tags: [
       "building",
       "business",
@@ -6244,24 +6402,9 @@ export const iconsData: Array<{
     tags: ["zip", "package", "archive"],
   },
   {
-    name: "file-audio-2",
-    categories: ["files"],
-    tags: ["music", "audio", "sound", "headphones"],
-  },
-  {
-    name: "file-audio",
-    categories: ["files"],
-    tags: ["music", "audio", "sound", "headphones"],
-  },
-  {
     name: "file-axis-3d",
     categories: ["design", "files"],
     tags: ["model", "3d", "axis", "coordinates"],
-  },
-  {
-    name: "file-badge-2",
-    categories: ["files"],
-    tags: ["award", "achievement", "badge", "rosette", "prize", "winner"],
   },
   {
     name: "file-badge",
@@ -6272,6 +6415,16 @@ export const iconsData: Array<{
     name: "file-box",
     categories: ["files"],
     tags: ["box", "package", "model"],
+  },
+  {
+    name: "file-braces-corner",
+    categories: ["files", "development"],
+    tags: ["code", "json", "curly braces", "curly brackets"],
+  },
+  {
+    name: "file-braces",
+    categories: ["files", "development"],
+    tags: ["code", "json", "curly braces", "curly brackets"],
   },
   {
     name: "file-chart-column-increasing",
@@ -6301,7 +6454,7 @@ export const iconsData: Array<{
     tags: ["statistics", "analytics", "diagram", "graph", "presentation"],
   },
   {
-    name: "file-check-2",
+    name: "file-check-corner",
     categories: ["files"],
     tags: ["done", "document", "todo", "tick", "complete", "task"],
   },
@@ -6316,7 +6469,7 @@ export const iconsData: Array<{
     tags: ["history", "log", "clock"],
   },
   {
-    name: "file-code-2",
+    name: "file-code-corner",
     categories: ["files", "development"],
     tags: ["script", "document", "html", "xml", "property list", "plist"],
   },
@@ -6354,6 +6507,23 @@ export const iconsData: Array<{
     tags: ["download", "import", "export"],
   },
   {
+    name: "file-exclamation-point",
+    categories: ["files", "notifications"],
+    tags: [
+      "hidden",
+      "warning",
+      "alert",
+      "danger",
+      "protected",
+      "exclamation mark",
+    ],
+  },
+  {
+    name: "file-headphone",
+    categories: ["files"],
+    tags: ["music", "audio", "sound", "headphones"],
+  },
+  {
     name: "file-heart",
     categories: ["files"],
     tags: ["heart", "favourite", "bookmark", "quick link"],
@@ -6369,29 +6539,9 @@ export const iconsData: Array<{
     tags: ["document"],
   },
   {
-    name: "file-json-2",
-    categories: ["files", "development"],
-    tags: ["code", "json", "curly braces", "curly brackets"],
-  },
-  {
-    name: "file-json",
-    categories: ["files", "development"],
-    tags: ["code", "json", "curly braces", "curly brackets"],
-  },
-  {
-    name: "file-key-2",
-    categories: ["files", "security"],
-    tags: ["key", "private", "public", "security"],
-  },
-  {
     name: "file-key",
     categories: ["files", "security"],
     tags: ["key", "private", "public", "security"],
-  },
-  {
-    name: "file-lock-2",
-    categories: ["files", "security"],
-    tags: ["lock", "password", "security"],
   },
   {
     name: "file-lock",
@@ -6399,7 +6549,7 @@ export const iconsData: Array<{
     tags: ["lock", "password", "security"],
   },
   {
-    name: "file-minus-2",
+    name: "file-minus-corner",
     categories: ["files"],
     tags: ["document"],
   },
@@ -6449,7 +6599,7 @@ export const iconsData: Array<{
     tags: ["movie", "video", "film"],
   },
   {
-    name: "file-plus-2",
+    name: "file-plus-corner",
     categories: ["files"],
     tags: ["add", "create", "new", "document"],
   },
@@ -6469,7 +6619,7 @@ export const iconsData: Array<{
     tags: ["scan", "code", "qr-code"],
   },
   {
-    name: "file-search-2",
+    name: "file-search-corner",
     categories: ["files"],
     tags: ["lost", "document", "find", "browser", "lens"],
   },
@@ -6477,6 +6627,11 @@ export const iconsData: Array<{
     name: "file-search",
     categories: ["files"],
     tags: ["lost", "document", "find", "browser", "lens"],
+  },
+  {
+    name: "file-signal",
+    categories: ["files"],
+    tags: ["audio", "music", "volume"],
   },
   {
     name: "file-sliders",
@@ -6530,7 +6685,7 @@ export const iconsData: Array<{
     tags: ["data", "txt", "pdf", "document"],
   },
   {
-    name: "file-type-2",
+    name: "file-type-corner",
     categories: ["files", "text"],
     tags: ["font", "text", "typography", "type"],
   },
@@ -6568,29 +6723,12 @@ export const iconsData: Array<{
     tags: ["movie", "video", "film"],
   },
   {
-    name: "file-volume-2",
-    categories: ["files"],
-    tags: ["audio", "music", "volume"],
-  },
-  {
     name: "file-volume",
     categories: ["files"],
     tags: ["audio", "music", "volume"],
   },
   {
-    name: "file-warning",
-    categories: ["files", "notifications"],
-    tags: [
-      "hidden",
-      "warning",
-      "alert",
-      "danger",
-      "protected",
-      "exclamation mark",
-    ],
-  },
-  {
-    name: "file-x-2",
+    name: "file-x-corner",
     categories: ["files"],
     tags: ["lost", "delete", "remove", "document"],
   },
@@ -6615,7 +6753,7 @@ export const iconsData: Array<{
     tags: ["movie", "video", "reel", "camera", "cinema", "entertainment"],
   },
   {
-    name: "fingerprint",
+    name: "fingerprint-pattern",
     categories: ["account", "security", "medical", "devices"],
     tags: ["2fa", "authentication", "biometric", "identity", "security"],
   },
@@ -6692,6 +6830,25 @@ export const iconsData: Array<{
     ],
   },
   {
+    name: "fishing-hook",
+    categories: ["sports", "travel"],
+    tags: [
+      "sea",
+      "boating",
+      "angler",
+      "bait",
+      "reel",
+      "tackle",
+      "marine",
+      "outdoors",
+      "fish",
+      "fishing",
+      "hook",
+      "sports",
+      "travel",
+    ],
+  },
+  {
     name: "flag-off",
     categories: ["account", "social"],
     tags: [
@@ -6754,6 +6911,13 @@ export const iconsData: Array<{
     name: "flame",
     categories: ["weather", "social", "gaming"],
     tags: [
+      "heat",
+      "burn",
+      "light",
+      "glow",
+      "ignite",
+      "passion",
+      "ember",
       "fire",
       "lit",
       "burning",
@@ -6771,12 +6935,12 @@ export const iconsData: Array<{
   {
     name: "flashlight-off",
     categories: ["photography", "devices"],
-    tags: ["torch"],
+    tags: ["torch", "light", "beam", "emergency", "safety", "tool", "bright"],
   },
   {
     name: "flashlight",
     categories: ["photography", "devices"],
-    tags: ["torch"],
+    tags: ["torch", "light", "beam", "emergency", "safety", "tool", "bright"],
   },
   {
     name: "flask-conical-off",
@@ -7064,6 +7228,24 @@ export const iconsData: Array<{
     tags: ["vehicle", "transport", "logistics"],
   },
   {
+    name: "form",
+    categories: ["development"],
+    tags: [
+      "document",
+      "page",
+      "file",
+      "layout",
+      "paper",
+      "stub",
+      "formality",
+      "structure",
+      "template",
+      "inputs",
+      "design",
+      "components",
+    ],
+  },
+  {
     name: "forward",
     categories: ["mail"],
     tags: ["send", "share", "email"],
@@ -7211,6 +7393,23 @@ export const iconsData: Array<{
     tags: ["console"],
   },
   {
+    name: "gamepad-directional",
+    categories: ["gaming", "devices"],
+    tags: [
+      "direction",
+      "arrow",
+      "controller",
+      "navigation",
+      "button",
+      "move",
+      "pointer",
+      "arrowhead",
+      "console",
+      "game",
+      "gaming",
+    ],
+  },
+  {
     name: "gamepad",
     categories: ["gaming", "devices"],
     tags: ["console"],
@@ -7280,14 +7479,35 @@ export const iconsData: Array<{
     tags: ["present", "box", "birthday", "party"],
   },
   {
+    name: "git-branch-minus",
+    categories: ["development"],
+    tags: [
+      "code",
+      "version control",
+      "vcs",
+      "repository",
+      "delete",
+      "remove",
+      "-",
+    ],
+  },
+  {
     name: "git-branch-plus",
     categories: ["development"],
-    tags: ["add", "create", "+"],
+    tags: [
+      "code",
+      "version control",
+      "vcs",
+      "repository",
+      "add",
+      "create",
+      "+",
+    ],
   },
   {
     name: "git-branch",
     categories: ["development"],
-    tags: ["code", "version control"],
+    tags: ["code", "version control", "vcs", "repository"],
   },
   {
     name: "git-commit-horizontal",
@@ -7856,6 +8076,11 @@ export const iconsData: Array<{
     tags: ["mist", "fog"],
   },
   {
+    name: "hd",
+    categories: ["devices", "multimedia"],
+    tags: ["tv", "resolution", "video", "high definition", "720p", "1080p"],
+  },
+  {
     name: "hdmi-port",
     categories: ["devices", "multimedia", "gaming"],
     tags: [
@@ -8020,6 +8245,23 @@ export const iconsData: Array<{
     ],
   },
   {
+    name: "helicopter",
+    categories: ["transportation", "travel"],
+    tags: [
+      "transport",
+      "flying",
+      "rotor",
+      "aviation",
+      "helipad",
+      "gear",
+      "flyer",
+      "technology",
+      "helicopter",
+      "aircraft",
+      "vehicle",
+    ],
+  },
+  {
     name: "hexagon",
     categories: ["shapes", "brands", "development"],
     tags: ["shape", "node.js", "logo"],
@@ -8136,7 +8378,7 @@ export const iconsData: Array<{
   },
   {
     name: "house",
-    categories: ["buildings", "home"],
+    categories: ["buildings", "home", "navigation"],
     tags: ["home", "living", "building", "residence", "architecture"],
   },
   {
@@ -8519,6 +8761,21 @@ export const iconsData: Array<{
       "duplicate",
       "double",
       "shortcuts",
+    ],
+  },
+  {
+    name: "layers-plus",
+    categories: ["design", "layout"],
+    tags: [
+      "stack",
+      "layers",
+      "add",
+      "new",
+      "increase",
+      "create",
+      "positive",
+      "copy",
+      "upgrade",
     ],
   },
   {
@@ -9914,6 +10171,27 @@ export const iconsData: Array<{
     ],
   },
   {
+    name: "monitor-cloud",
+    categories: ["connectivity", "devices", "development"],
+    tags: [
+      "virtual machine",
+      "virtual desktop",
+      "vm",
+      "vdi",
+      "computing",
+      "remote work",
+      "monitoring",
+      "infrastructure",
+      "software as a service",
+      "saas",
+      "workstation",
+      "environment",
+      "tv",
+      "screen",
+      "display",
+    ],
+  },
+  {
     name: "monitor-cog",
     categories: ["connectivity", "devices"],
     tags: [
@@ -10078,6 +10356,23 @@ export const iconsData: Array<{
     tags: ["dark", "night"],
   },
   {
+    name: "motorbike",
+    categories: ["transportation"],
+    tags: [
+      "moto",
+      "motorcycle",
+      "transport",
+      "vehicle",
+      "drive",
+      "ride",
+      "trip",
+      "race",
+      "racing",
+      "journey",
+      "delivery",
+    ],
+  },
+  {
     name: "mountain-snow",
     categories: ["nature"],
     tags: ["alpine", "climb", "snow"],
@@ -10091,6 +10386,24 @@ export const iconsData: Array<{
     name: "mouse-off",
     categories: ["devices"],
     tags: ["device", "scroll", "click", "disabled"],
+  },
+  {
+    name: "mouse-pointer-2-off",
+    categories: ["arrows", "cursors"],
+    tags: [
+      "pointer",
+      "mouse",
+      "cursor",
+      "off",
+      "disable",
+      "arrow",
+      "navigation",
+      "selection",
+      "select",
+      "click",
+      "no-click",
+      "interaction",
+    ],
   },
   {
     name: "mouse-pointer-2",
@@ -11310,7 +11623,7 @@ export const iconsData: Array<{
   },
   {
     name: "plane",
-    categories: ["transportation", "travel"],
+    categories: ["transportation", "travel", "navigation"],
     tags: ["plane", "trip", "airplane"],
   },
   {
@@ -11339,7 +11652,17 @@ export const iconsData: Array<{
   {
     name: "plug",
     categories: ["devices", "development"],
-    tags: ["electricity", "energy", "electronics", "socket", "outlet"],
+    tags: [
+      "electricity",
+      "energy",
+      "electronics",
+      "socket",
+      "outlet",
+      "power",
+      "voltage",
+      "current",
+      "charger",
+    ],
   },
   {
     name: "plus",
@@ -12388,8 +12711,23 @@ export const iconsData: Array<{
   },
   {
     name: "scale",
-    categories: ["navigation"],
-    tags: ["balance", "legal", "license", "right", "rule", "law"],
+    categories: ["navigation", "science", "finance"],
+    tags: [
+      "balance",
+      "legal",
+      "license",
+      "right",
+      "rule",
+      "law",
+      "justice",
+      "weight",
+      "measure",
+      "compare",
+      "judge",
+      "fair",
+      "ethics",
+      "decision",
+    ],
   },
   {
     name: "scaling",
@@ -12592,6 +12930,22 @@ export const iconsData: Array<{
     tags: ["cut", "snip", "chop", "stationery", "crafts"],
   },
   {
+    name: "scooter",
+    categories: ["transportation"],
+    tags: [
+      "vehicle",
+      "drive",
+      "trip",
+      "journey",
+      "transport",
+      "electric",
+      "ride",
+      "urban",
+      "commute",
+      "speed",
+    ],
+  },
+  {
     name: "screen-share-off",
     categories: ["connectivity", "devices", "communication"],
     tags: ["desktop", "disconnect", "monitor"],
@@ -12635,6 +12989,22 @@ export const iconsData: Array<{
       "story",
       "code",
       "coding",
+    ],
+  },
+  {
+    name: "search-alert",
+    categories: ["text", "social"],
+    tags: [
+      "find",
+      "scan",
+      "magnifier",
+      "magnifying glass",
+      "stop",
+      "warning",
+      "alert",
+      "error",
+      "anomaly",
+      "lens",
     ],
   },
   {
@@ -13806,6 +14176,19 @@ export const iconsData: Array<{
     tags: ["armchair", "furniture", "leisure", "lounge", "loveseat", "couch"],
   },
   {
+    name: "solar-panel",
+    categories: ["home", "science", "sustainability", "weather"],
+    tags: [
+      "solar panel",
+      "solar",
+      "panel",
+      "sun",
+      "energy",
+      "electricity",
+      "light",
+    ],
+  },
+  {
     name: "soup",
     categories: ["food-beverage"],
     tags: ["food", "dish", "restaurant", "course", "meal", "bowl", "starter"],
@@ -14027,7 +14410,7 @@ export const iconsData: Array<{
   },
   {
     name: "square-arrow-down-left",
-    categories: ["arrows", "navigation", "gaming"],
+    categories: ["arrows", "gaming"],
     tags: [
       "direction",
       "south-west",
@@ -14040,7 +14423,7 @@ export const iconsData: Array<{
   },
   {
     name: "square-arrow-down-right",
-    categories: ["arrows", "navigation", "gaming"],
+    categories: ["arrows", "gaming"],
     tags: [
       "direction",
       "south-east",
@@ -14053,7 +14436,7 @@ export const iconsData: Array<{
   },
   {
     name: "square-arrow-down",
-    categories: ["arrows", "navigation", "gaming"],
+    categories: ["arrows", "gaming"],
     tags: [
       "backwards",
       "reverse",
@@ -14066,7 +14449,7 @@ export const iconsData: Array<{
   },
   {
     name: "square-arrow-left",
-    categories: ["arrows", "navigation"],
+    categories: ["arrows"],
     tags: [
       "previous",
       "back",
@@ -14080,22 +14463,22 @@ export const iconsData: Array<{
   },
   {
     name: "square-arrow-out-down-left",
-    categories: ["arrows", "navigation"],
+    categories: ["arrows"],
     tags: ["outwards", "direction", "south-west", "diagonal"],
   },
   {
     name: "square-arrow-out-down-right",
-    categories: ["arrows", "navigation"],
+    categories: ["arrows"],
     tags: ["outwards", "direction", "south-east", "diagonal"],
   },
   {
     name: "square-arrow-out-up-left",
-    categories: ["arrows", "navigation"],
+    categories: ["arrows"],
     tags: ["outwards", "direction", "north-west", "diagonal"],
   },
   {
     name: "square-arrow-out-up-right",
-    categories: ["arrows", "navigation", "social"],
+    categories: ["arrows", "social"],
     tags: [
       "outwards",
       "direction",
@@ -14109,7 +14492,7 @@ export const iconsData: Array<{
   },
   {
     name: "square-arrow-right",
-    categories: ["arrows", "navigation"],
+    categories: ["arrows"],
     tags: [
       "next",
       "forward",
@@ -14123,12 +14506,12 @@ export const iconsData: Array<{
   },
   {
     name: "square-arrow-up-left",
-    categories: ["arrows", "navigation"],
+    categories: ["arrows"],
     tags: ["direction", "north-west", "diagonal", "sign", "keyboard", "button"],
   },
   {
     name: "square-arrow-up-right",
-    categories: ["arrows", "navigation", "social"],
+    categories: ["arrows", "social"],
     tags: [
       "direction",
       "north-east",
@@ -14141,7 +14524,7 @@ export const iconsData: Array<{
   },
   {
     name: "square-arrow-up",
-    categories: ["arrows", "navigation"],
+    categories: ["arrows"],
     tags: ["forward", "direction", "north", "sign", "keyboard", "button"],
   },
   {
@@ -14939,6 +15322,24 @@ export const iconsData: Array<{
     ],
   },
   {
+    name: "stone",
+    categories: ["nature"],
+    tags: [
+      "mineral",
+      "geology",
+      "nature",
+      "solid",
+      "pebble",
+      "crystal",
+      "ore",
+      "hard",
+      "coal",
+      "stone",
+      "rock",
+      "boulder",
+    ],
+  },
+  {
     name: "store",
     categories: ["buildings", "navigation", "shopping"],
     tags: ["shop", "supermarket", "stand", "boutique", "building"],
@@ -15724,6 +16125,37 @@ export const iconsData: Array<{
     tags: ["tools", "maintenance", "repair"],
   },
   {
+    name: "toolbox",
+    categories: ["tools", "home"],
+    tags: [
+      "toolkit",
+      "tools",
+      "trunk",
+      "chest",
+      "box",
+      "storage",
+      "utility",
+      "utilities",
+      "container",
+      "kit",
+      "set",
+      "repair",
+      "fix",
+      "service",
+      "maintenance",
+      "mechanic",
+      "workshop",
+      "construction",
+      "hardware",
+      "equipment",
+      "gear",
+      "handyman",
+      "engineering",
+      "craft",
+      "diy",
+    ],
+  },
+  {
     name: "tornado",
     categories: ["weather"],
     tags: ["weather", "wind", "storm", "hurricane"],
@@ -16425,6 +16857,28 @@ export const iconsData: Array<{
     ],
   },
   {
+    name: "van",
+    categories: ["transportation"],
+    tags: [
+      "minivan",
+      "cart",
+      "wagon",
+      "truck",
+      "lorry",
+      "trailer",
+      "camper",
+      "vehicle",
+      "drive",
+      "trip",
+      "journey",
+      "van",
+      "transport",
+      "carriage",
+      "delivery",
+      "travel",
+    ],
+  },
+  {
     name: "variable",
     categories: ["development", "math"],
     tags: [
@@ -16706,6 +17160,42 @@ export const iconsData: Array<{
     tags: ["clock", "time"],
   },
   {
+    name: "waves-arrow-down",
+    categories: ["weather", "sustainability"],
+    tags: [
+      "water",
+      "sea",
+      "level",
+      "sound",
+      "hertz",
+      "wavelength",
+      "vibrate",
+      "low",
+      "tide",
+      "ocean",
+      "rising",
+      "down",
+      "falling",
+    ],
+  },
+  {
+    name: "waves-arrow-up",
+    categories: ["weather", "sustainability"],
+    tags: [
+      "water",
+      "sea",
+      "level",
+      "sound",
+      "hertz",
+      "wavelength",
+      "vibrate",
+      "high",
+      "tide",
+      "ocean",
+      "rising",
+    ],
+  },
+  {
     name: "waves-ladder",
     categories: ["sports", "home"],
     tags: [
@@ -16761,6 +17251,21 @@ export const iconsData: Array<{
     name: "webhook",
     categories: ["development", "social", "account"],
     tags: ["push api", "interface", "callback"],
+  },
+  {
+    name: "weight-tilde",
+    categories: ["math"],
+    tags: [
+      "measure",
+      "scale",
+      "estimate",
+      "load",
+      "balance",
+      "size",
+      "measurement",
+      "quantity",
+      "mass",
+    ],
   },
   {
     name: "weight",
