@@ -195,14 +195,10 @@ func (s *ruleEngineService) fetchAllUserRules(ctx context.Context, userId int64)
 }
 
 func (s *ruleEngineService) fetchSpecificTransactions(ctx context.Context, userId int64, transactionIds []int64) ([]models.TransactionResponse, error) {
-	var transactions []models.TransactionResponse
-	for _, txnId := range transactionIds {
-		txn, err := s.transactionRepo.GetTransactionById(ctx, txnId, userId)
-		if err != nil {
-			logger.Warnf("Transaction %d not found for user %d: %v", txnId, userId, err)
-			continue
-		}
-		transactions = append(transactions, txn)
+	// Fetch all transactions in bulk instead of one by one
+	transactions, err := s.transactionRepo.GetTransactionsByIds(ctx, transactionIds, userId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch transactions: %w", err)
 	}
 	return transactions, nil
 }

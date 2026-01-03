@@ -42,15 +42,15 @@ func createAccount(testHelper *TestHelper, name string, balance float64) float64
 func waitForStatementDone(testHelper *TestHelper, statementId float64) map[string]any {
 	var status string
 	var data map[string]any
-	for i := 0; i < 20; i++ {
+	for i := 0; i < 8; i++ {
 		resp, response := testHelper.MakeRequest(http.MethodGet, "/statement/"+strconv.FormatFloat(statementId, 'f', 0, 64), nil)
 		Expect(resp.StatusCode).To(Equal(http.StatusOK))
 		data = response["data"].(map[string]any)
 		status = data["status"].(string)
-		if status == "done" {
+		if status != "processing" {
 			break
 		}
-		time.Sleep(1 * time.Second)
+		time.Sleep(5 * time.Second)
 	}
 	Expect(status).To(Equal("done"))
 	return data
@@ -835,15 +835,15 @@ var _ = Describe("StatementController", func() {
 			Expect(transactions).To(HaveLen(3))
 		})
 
-		It("should parse statement with 10000 transactions", func() {
+		It("should parse statement with 100K transactions", func() {
 			testHelper := createUniqueUser(baseURL)
 			accountId := createAccount(testHelper, "Account 1", 1000.0)
 
-			// Build XLSX data (header + 10000 rows)
+			// Build XLSX data (header + 100K rows)
 			data := [][]string{
 				{"Txn Date", "Details", "Ref No.", "Debit", "Credit", "Balance"},
 			}
-			for i := 1; i <= 1000; i++ {
+			for i := 1; i <= 100000; i++ {
 				row := []string{
 					"22 Aug 2022",
 					fmt.Sprintf("Desc%d", i),
@@ -877,7 +877,7 @@ var _ = Describe("StatementController", func() {
 			transactions := txData["transactions"].([]any)
 			Expect(len(transactions)).To(Equal(10))
 			Expect(txData).To(HaveKey("total"))
-			Expect(txData["total"]).To(Equal(1000.0))
+			Expect(txData["total"]).To(Equal(100000.0))
 		})
 
 		It("should error when accountId doesn't exist", func() {

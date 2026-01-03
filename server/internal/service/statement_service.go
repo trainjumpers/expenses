@@ -123,31 +123,44 @@ func (s *StatementService) processStatementAsync(ctx context.Context, statementI
 	}
 
 	logger.Debugf("Parsed %d transactions from statement ID %d", len(parsedTxs), statementId)
-	var successCount, failCount int
-	txnIds := make([]int64, 0, len(parsedTxs))
-	for _, tx := range parsedTxs {
-		tx.AccountId = input.AccountId
-		tx.CreatedBy = userId
-		transaction, err := s.txService.CreateTransaction(ctx, tx)
-		if err != nil {
-			failCount++
-			continue
-		}
-		err = s.repo.CreateStatementTxn(ctx, statementId, transaction.Id)
-		if err != nil {
-			logger.Errorf("Failed to link transaction %d to statement %d: %v", transaction.Id, statementId, err)
-			failCount++
-			continue
-		}
-		txnIds = append(txnIds, transaction.Id)
-		successCount++
+
+	// Prepare all transactions for bulk insert
+	for i := range parsedTxs {
+		parsedTxs[i].AccountId = input.AccountId
+		parsedTxs[i].CreatedBy = userId
 	}
 
-	msg := fmt.Sprintf("Processed %d transactions, %d failed", successCount, failCount)
-	status := models.StatementStatusDone
-	if failCount == len(parsedTxs) {
-		status = models.StatementStatusError
+	// Create all transactions in bulk
+	transactions, err := s.txService.CreateTransactions(ctx, parsedTxs)
+	if err != nil {
+		errMsg := fmt.Sprintf("failed to create transactions: %v", err)
+		_, _ = s.repo.UpdateStatementStatus(ctx, statementId, models.UpdateStatementStatusInput{
+			Status:  models.StatementStatusError,
+			Message: &errMsg,
+		})
+		return
 	}
+
+	// Extract transaction IDs
+	txnIds := make([]int64, len(transactions))
+	for i, tx := range transactions {
+		txnIds[i] = tx.Id
+	}
+
+	// Link all transactions to the statement in bulk
+	err = s.repo.CreateStatementTxns(ctx, statementId, txnIds)
+	if err != nil {
+		logger.Errorf("failed to link transactions to statement %d: %v", statementId, err)
+		errMsg := fmt.Sprintf("failed to link transactions: %v", err)
+		_, _ = s.repo.UpdateStatementStatus(ctx, statementId, models.UpdateStatementStatusInput{
+			Status:  models.StatementStatusError,
+			Message: &errMsg,
+		})
+		return
+	}
+
+	msg := fmt.Sprintf("Processed %d transactions, 0 failed", len(transactions))
+	status := models.StatementStatusDone
 	s.ruleEngineService.ExecuteRulesInBackground(ctx, userId, models.ExecuteRulesRequest{
 		TransactionIds: &txnIds,
 	})

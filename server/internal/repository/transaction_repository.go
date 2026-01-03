@@ -9,6 +9,7 @@ import (
 	"expenses/internal/models"
 	database "expenses/pkg/database/manager"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -16,7 +17,9 @@ import (
 
 type TransactionRepositoryInterface interface {
 	CreateTransaction(ctx context.Context, transaction models.CreateBaseTransactionInput, categoryIds []int64) (models.TransactionResponse, error)
+	CreateTransactions(ctx context.Context, transactions []models.CreateBaseTransactionInput, categoryIds [][]int64) ([]models.TransactionResponse, error)
 	GetTransactionById(ctx context.Context, transactionId int64, userId int64) (models.TransactionResponse, error)
+	GetTransactionsByIds(ctx context.Context, transactionIds []int64, userId int64) ([]models.TransactionResponse, error)
 	UpdateTransaction(ctx context.Context, transactionId int64, userId int64, input models.UpdateBaseTransactionInput) error
 	DeleteTransaction(ctx context.Context, transactionId int64, userId int64) error
 	ListTransactions(ctx context.Context, userId int64, query models.TransactionListQuery) (models.PaginatedTransactionsResponse, error)
@@ -81,6 +84,164 @@ func (r *TransactionRepository) CreateTransaction(ctx context.Context, transacti
 	return transactionResponse, nil
 }
 
+type transactionInsertKey struct {
+	createdBy   int64
+	date        string
+	name        string
+	description string
+	amount      string
+}
+
+func transactionKeyFromInput(tx models.CreateBaseTransactionInput) transactionInsertKey {
+	amount := ""
+	if tx.Amount != nil {
+		amount = strconv.FormatFloat(*tx.Amount, 'f', 2, 64)
+	}
+	return transactionInsertKey{
+		createdBy:   tx.CreatedBy,
+		date:        tx.Date.Format("2006-01-02"),
+		name:        tx.Name,
+		description: tx.Description,
+		amount:      amount,
+	}
+}
+
+func transactionKeyFromResponse(tx models.TransactionBaseResponse) transactionInsertKey {
+	description := ""
+	if tx.Description != nil {
+		description = *tx.Description
+	}
+	return transactionInsertKey{
+		createdBy:   tx.CreatedBy,
+		date:        tx.Date.Format("2006-01-02"),
+		name:        tx.Name,
+		description: description,
+		amount:      strconv.FormatFloat(tx.Amount, 'f', 2, 64),
+	}
+}
+
+func (r *TransactionRepository) CreateTransactions(ctx context.Context, transactions []models.CreateBaseTransactionInput, categoryIds [][]int64) ([]models.TransactionResponse, error) {
+	if len(transactions) == 0 {
+		return []models.TransactionResponse{}, nil
+	}
+
+	if len(transactions) != len(categoryIds) {
+		return nil, fmt.Errorf("transactions and categoryIds must have the same length")
+	}
+
+	const batchSize = 10000
+	var results []models.TransactionResponse
+
+	err := r.db.WithTxn(ctx, func(txCtx context.Context) error {
+		results = make([]models.TransactionResponse, 0, len(transactions))
+
+		// Process transactions in batches of 10k
+		for batchStart := 0; batchStart < len(transactions); batchStart += batchSize {
+			batchEnd := batchStart + batchSize
+			if batchEnd > len(transactions) {
+				batchEnd = len(transactions)
+			}
+
+			batchTxs := transactions[batchStart:batchEnd]
+			batchCatIds := categoryIds[batchStart:batchEnd]
+			keyToIndexes := make(map[transactionInsertKey][]int, len(batchTxs))
+
+			for i, tx := range batchTxs {
+				key := transactionKeyFromInput(tx)
+				keyToIndexes[key] = append(keyToIndexes[key], i)
+			}
+
+			placeholders := make([]string, 0, len(batchTxs))
+			args := make([]interface{}, 0, len(batchTxs)*6)
+			argIndex := 1
+
+			for _, tx := range batchTxs {
+				placeholders = append(placeholders, fmt.Sprintf("($%d, $%d, $%d, $%d, $%d, $%d)",
+					argIndex, argIndex+1, argIndex+2, argIndex+3, argIndex+4, argIndex+5))
+				args = append(args, tx.Name, tx.Description, tx.Amount, tx.Date, tx.CreatedBy, tx.AccountId)
+				argIndex += 6
+			}
+
+			query := fmt.Sprintf(`
+				INSERT INTO %s.%s (name, description, amount, date, created_by, account_id)
+				VALUES %s
+				ON CONFLICT DO NOTHING
+				RETURNING id, name, description, amount, date, created_by, account_id;
+			`, r.schema, r.tableName, strings.Join(placeholders, ", "))
+
+			rows, err := r.db.FetchAll(txCtx, query, args...)
+			if err != nil {
+				return err
+			}
+
+			inserted := make([]struct {
+				id     int64
+				rowIdx int
+			}, 0, len(batchTxs))
+
+			for rows.Next() {
+				var txResp models.TransactionBaseResponse
+				err = rows.Scan(&txResp.Id, &txResp.Name, &txResp.Description, &txResp.Amount, &txResp.Date, &txResp.CreatedBy, &txResp.AccountId)
+				if err != nil {
+					rows.Close()
+					return err
+				}
+
+				key := transactionKeyFromResponse(txResp)
+				indexes := keyToIndexes[key]
+				if len(indexes) == 0 {
+					rows.Close()
+					return fmt.Errorf("unable to match inserted transaction to input batch")
+				}
+				rowIdx := indexes[0]
+				keyToIndexes[key] = indexes[1:]
+
+				inserted = append(inserted, struct {
+					id     int64
+					rowIdx int
+				}{
+					id:     txResp.Id,
+					rowIdx: rowIdx,
+				})
+				results = append(results, models.TransactionResponse{
+					TransactionBaseResponse: txResp,
+					CategoryIds:             batchCatIds[rowIdx],
+				})
+			}
+			rows.Close()
+
+			if len(inserted) > 0 {
+				categoryBatch := &pgx.Batch{}
+				for _, insertedTx := range inserted {
+					for _, catID := range batchCatIds[insertedTx.rowIdx] {
+						query := fmt.Sprintf(`INSERT INTO %s.%s (category_id, transaction_id) VALUES ($1, $2) ON CONFLICT DO NOTHING;`,
+							r.schema, r.transactionCategoryMappingTable)
+						categoryBatch.Queue(query, catID, insertedTx.id)
+					}
+				}
+
+				if categoryBatch.Len() > 0 {
+					err := r.db.ExecuteBatch(txCtx, categoryBatch)
+					if err != nil {
+						if customErrors.CheckForeignKey(err, "fk_category") {
+							return customErrors.NewCategoryNotFoundError(err)
+						}
+						return err
+					}
+				}
+			}
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return results, nil
+}
+
 func (r *TransactionRepository) addMappings(ctx context.Context, transactionId int64, categoryIds []int64) error {
 	if err := r.updateMapping(ctx, r.transactionCategoryMappingTable, "transaction_id", "category_id", transactionId, categoryIds); err != nil {
 		if customErrors.CheckForeignKey(err, "fk_category") {
@@ -112,6 +273,42 @@ func (r *TransactionRepository) GetTransactionById(ctx context.Context, transact
 		return resp, err
 	}
 	return resp, nil
+}
+
+func (r *TransactionRepository) GetTransactionsByIds(ctx context.Context, transactionIds []int64, userId int64) ([]models.TransactionResponse, error) {
+	if len(transactionIds) == 0 {
+		return []models.TransactionResponse{}, nil
+	}
+
+	// Build placeholders for IN clause
+	placeholders := make([]string, len(transactionIds))
+	args := make([]interface{}, len(transactionIds)+1)
+	args[0] = userId
+
+	for i, id := range transactionIds {
+		placeholders[i] = fmt.Sprintf("$%d", i+2)
+		args[i+1] = id
+	}
+
+	baseQuery := fmt.Sprintf(baseTransactionQuery, r.schema, r.tableName, r.schema, r.transactionCategoryMappingTable)
+	query := baseQuery + ` WHERE t.created_by = $1 AND t.id IN (` + strings.Join(placeholders, ", ") + `) AND t.deleted_at IS NULL GROUP BY t.id`
+
+	rows, err := r.db.FetchAll(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var transactions []models.TransactionResponse
+	for rows.Next() {
+		tx, err := scanTransaction(rows)
+		if err != nil {
+			return nil, err
+		}
+		transactions = append(transactions, tx)
+	}
+
+	return transactions, nil
 }
 
 func (r *TransactionRepository) UpdateTransaction(ctx context.Context, transactionId int64, userId int64, transactionUpdate models.UpdateBaseTransactionInput) error {
