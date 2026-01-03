@@ -75,7 +75,7 @@ export function PasswordModal({ isOpen, onOpenChange }: PasswordModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-106.25">
         <DialogHeader>
           <DialogTitle>Change Password</DialogTitle>
           <DialogDescription>

@@ -1,4 +1,4 @@
-import { TransactionFiltersState } from "@/app/transaction/page";
+import type { TransactionFiltersState } from "@/app/transaction/page";
 import { Input } from "@/components/ui/input";
 import React from "react";
 

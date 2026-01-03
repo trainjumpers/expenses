@@ -1,7 +1,7 @@
 import { RuleModal } from "@/components/custom/Modal/Rule/RuleModal";
 import { useCategories } from "@/components/hooks/useCategories";
 import { useCreateRule } from "@/components/hooks/useRules";
-import {
+import type {
   BaseRule,
   BaseRuleAction,
   BaseRuleCondition,

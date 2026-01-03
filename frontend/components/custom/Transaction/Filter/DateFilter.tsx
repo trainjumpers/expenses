@@ -1,4 +1,4 @@
-import { TransactionFiltersState } from "@/app/transaction/page";
+import type { TransactionFiltersState } from "@/app/transaction/page";
 import { Button } from "@/components/ui/button";
 import { Calendar as DatePicker } from "@/components/ui/calendar";
 import {

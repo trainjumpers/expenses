@@ -2,7 +2,7 @@
 
 import { PUBLIC_ROUTES, useSession } from "@/components/hooks/useSession";
 import { usePathname } from "next/navigation";
-import { ReactNode } from "react";
+import type { ReactNode } from "react";
 
 import DashboardSkeleton from "./Dashboard/DashboardSkeleton";
 

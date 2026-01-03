@@ -10,8 +10,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { BankType, Currency } from "@/lib/models/account";
-import { ChangeEvent, useState } from "react";
+import type { BankType, Currency } from "@/lib/models/account";
+import type { ChangeEvent } from "react";
+import { useState } from "react";
 
 interface AccountFormProps {
   initialValues: {
@@ -59,7 +60,7 @@ export function AccountForm({
               setFormData({ ...formData, name: e.target.value })
             }
             placeholder="Enter account name"
-            className="col-span-2 w-[220px]"
+            className="col-span-2 w-55"
             required
           />
         </div>
@@ -74,7 +75,7 @@ export function AccountForm({
               setFormData({ ...formData, bank_type: value })
             }
           >
-            <SelectTrigger className="col-span-2 w-[220px]">
+            <SelectTrigger className="col-span-2 w-55">
               <SelectValue placeholder="Select bank" />
             </SelectTrigger>
             <SelectContent>
@@ -101,7 +102,7 @@ export function AccountForm({
               setFormData({ ...formData, currency: value })
             }
           >
-            <SelectTrigger className="col-span-2 w-[220px]">
+            <SelectTrigger className="col-span-2 w-55">
               <SelectValue placeholder="Select currency" />
             </SelectTrigger>
             <SelectContent>
@@ -123,7 +124,7 @@ export function AccountForm({
               setFormData({ ...formData, balance: e.target.value })
             }
             placeholder="Enter balance"
-            className="col-span-2 w-[220px]"
+            className="col-span-2 w-55"
           />
         </div>
       </div>

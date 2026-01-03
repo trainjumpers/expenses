@@ -7,7 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Transaction } from "@/lib/models/transaction";
+import type { Transaction } from "@/lib/models/transaction";
 
 import { TransactionForm } from "./TransactionForm";
 

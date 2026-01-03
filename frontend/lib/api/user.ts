@@ -1,6 +1,6 @@
 import { apiRequest } from "@/lib/api/request";
 import { API_BASE_URL } from "@/lib/constants/api";
-import { User } from "@/lib/models/user";
+import type { User } from "@/lib/models/user";
 import { toast } from "sonner";
 
 export async function getUser(): Promise<User> {

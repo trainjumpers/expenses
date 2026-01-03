@@ -6,9 +6,10 @@ import {
   listCategory,
   updateCategory,
 } from "@/lib/api/category";
-import { Category, CreateCategoryInput } from "@/lib/models/category";
+import type { Category, CreateCategoryInput } from "@/lib/models/category";
 import { queryKeys } from "@/lib/query-client";
-import { ApiErrorType, getErrorMessage } from "@/lib/types/errors";
+import type { ApiErrorType } from "@/lib/types/errors";
+import { getErrorMessage } from "@/lib/types/errors";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 

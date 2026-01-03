@@ -86,6 +86,43 @@ db-downgrade-reset reset=default_downgrade:
 [working-directory: 'frontend']
 @frontend:
     npm run dev
+
+# Update all frontend dependencies including major versions
+[working-directory: 'frontend']
+@update-deps:
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    echo "📦 Updating all dependencies (including major versions)..."
+    echo ""
+
+    echo "🔍 Checking for outdated packages..."
+    npm outdated || true
+    echo ""
+
+    echo "📝 Updating package.json to latest versions..."
+    npx npm-check-updates -u --upgradeAll
+    echo ""
+
+    echo "⬆️  Installing updated dependencies..."
+    npm install
+    echo ""
+
+    echo "🔒 Auditing packages for vulnerabilities..."
+    npm audit fix || true
+    echo ""
+
+    echo "📋 Additional update commands you may want to run:"
+    echo "   - Update Shadcn UI components: npx shadcn@latest add [component-name]"
+    echo "   - Update all Shadcn components: npx shadcn@latest add"
+    echo ""
+
+    echo "✅ Dependencies updated successfully!"
+
+# Generate icons data from Lucide icons
+[working-directory: 'frontend']
+@update-icons:
+    bash scripts/generate-icons.sh
     
 # Format all files
 @format:

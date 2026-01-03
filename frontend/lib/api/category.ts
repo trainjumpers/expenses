@@ -1,6 +1,6 @@
 import { apiRequest } from "@/lib/api/request";
 import { API_BASE_URL } from "@/lib/constants/api";
-import { Category, CreateCategoryInput } from "@/lib/models/category";
+import type { Category, CreateCategoryInput } from "@/lib/models/category";
 
 export async function listCategory(): Promise<Category[]> {
   return apiRequest<Category[]>(

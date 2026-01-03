@@ -1,6 +1,6 @@
 import { useAccounts } from "@/components/hooks/useAccounts";
 import { useCategories } from "@/components/hooks/useCategories";
-import { RuleFieldType } from "@/lib/models/rule";
+import type { RuleFieldType } from "@/lib/models/rule";
 
 interface RuleInputProps {
   fieldType: RuleFieldType;

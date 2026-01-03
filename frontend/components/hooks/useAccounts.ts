@@ -6,9 +6,10 @@ import {
   listAccounts,
   updateAccount,
 } from "@/lib/api/account";
-import { Account, CreateAccountInput } from "@/lib/models/account";
+import type { Account, CreateAccountInput } from "@/lib/models/account";
 import { queryKeys } from "@/lib/query-client";
-import { ApiErrorType, getErrorMessage } from "@/lib/types/errors";
+import type { ApiErrorType } from "@/lib/types/errors";
+import { getErrorMessage } from "@/lib/types/errors";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 

@@ -1,4 +1,4 @@
-import { BaseRule } from "@/lib/models/rule";
+import type { BaseRule } from "@/lib/models/rule";
 
 interface RuleBasicInfoProps {
   rule: BaseRule;

@@ -1,6 +1,6 @@
 import { RuleInput } from "@/components/custom/Modal/Rule/components/RuleInput";
 import { Button } from "@/components/ui/button";
-import { BaseRuleAction, RuleFieldType } from "@/lib/models/rule";
+import type { BaseRuleAction, RuleFieldType } from "@/lib/models/rule";
 import { Plus, Trash2 } from "lucide-react";
 
 interface RuleActionsProps {

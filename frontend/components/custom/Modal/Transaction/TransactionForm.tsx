@@ -10,6 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import type { IconName } from "@/components/ui/icon-picker";
 import { Icon } from "@/components/ui/icon-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,10 +20,11 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
-import { Account } from "@/lib/models/account";
-import { Category } from "@/lib/models/category";
+import type { Account } from "@/lib/models/account";
+import type { Category } from "@/lib/models/category";
 import { ChevronDownIcon } from "lucide-react";
-import { ChangeEvent, useEffect, useState } from "react";
+import type { ChangeEvent } from "react";
+import { useEffect, useState } from "react";
 
 interface TransactionFormProps {
   initialValues: {
@@ -95,7 +97,7 @@ export function TransactionForm({
             value={formData.name}
             onChange={handleInputChange}
             placeholder="Enter transaction name"
-            className="col-span-2 w-[220px]"
+            className="col-span-2 w-55"
             required
           />
         </div>
@@ -109,7 +111,7 @@ export function TransactionForm({
             value={formData.description}
             onChange={handleInputChange}
             placeholder="Enter transaction description"
-            className="col-span-2 w-[220px]"
+            className="col-span-2 w-55"
           />
         </div>
 
@@ -124,7 +126,7 @@ export function TransactionForm({
             value={formData.amount}
             onChange={handleInputChange}
             placeholder="Enter amount"
-            className="col-span-2 w-[220px]"
+            className="col-span-2 w-55"
             required
           />
         </div>
@@ -138,7 +140,7 @@ export function TransactionForm({
               <Button
                 variant="outline"
                 className={
-                  "col-span-2 w-[220px] justify-between font-normal" +
+                  "col-span-2 w-55 justify-between font-normal" +
                   (!formData.date ? " text-muted-foreground" : "")
                 }
               >
@@ -166,7 +168,7 @@ export function TransactionForm({
             <DropdownMenuTrigger asChild>
               <Button
                 variant="outline"
-                className="col-span-2 w-[220px] justify-start text-left font-normal flex items-center"
+                className="col-span-2 w-55 justify-start text-left font-normal flex items-center"
                 type="button"
               >
                 {(() => {
@@ -213,7 +215,7 @@ export function TransactionForm({
             <DropdownMenuTrigger asChild>
               <Button
                 variant="outline"
-                className="col-span-2 w-[220px] justify-start text-left font-normal flex items-center"
+                className="col-span-2 w-55 justify-start text-left font-normal flex items-center"
                 type="button"
               >
                 {(() => {
@@ -261,7 +263,7 @@ export function TransactionForm({
                       name={
                         (category.icon
                           ? category.icon
-                          : "circle-dashed") as import("@/components/ui/icon-picker").IconName
+                          : "circle-dashed") as IconName
                       }
                       className="mr-2 w-4 h-4 inline-block align-middle"
                     />

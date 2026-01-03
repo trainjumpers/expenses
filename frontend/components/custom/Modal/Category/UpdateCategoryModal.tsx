@@ -5,8 +5,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { IconName } from "@/components/ui/icon-picker";
-import { Category } from "@/lib/models/category";
+import type { IconName } from "@/components/ui/icon-picker";
+import type { Category } from "@/lib/models/category";
 import { Tag } from "lucide-react";
 import { useState } from "react";
 
@@ -51,7 +51,7 @@ export function UpdateCategoryModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-106.25">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Tag className="h-5 w-5" />

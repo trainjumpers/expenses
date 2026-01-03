@@ -9,7 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { CategoryAnalyticsResponse } from "@/lib/models/analytics";
+import type { CategoryAnalyticsResponse } from "@/lib/models/analytics";
 import { formatCurrency } from "@/lib/utils";
 import { ChevronRight, FileQuestion, Plus, Tag } from "lucide-react";
 import { useState } from "react";

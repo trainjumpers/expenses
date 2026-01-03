@@ -1,8 +1,9 @@
 import { Checkbox } from "@/components/ui/checkbox";
-import { Icon, IconName } from "@/components/ui/icon-picker";
-import { Account, Currency } from "@/lib/models/account";
-import { Category } from "@/lib/models/category";
-import { Transaction } from "@/lib/models/transaction";
+import type { IconName } from "@/components/ui/icon-picker";
+import { Icon } from "@/components/ui/icon-picker";
+import type { Account, Currency } from "@/lib/models/account";
+import type { Category } from "@/lib/models/category";
+import type { Transaction } from "@/lib/models/transaction";
 import React from "react";
 
 import DropdownCell from "./DropdownCell";
