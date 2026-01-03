@@ -1,5 +1,5 @@
-import { TransactionFiltersState } from "@/app/transaction/page";
-import { Account } from "@/lib/models/account";
+import type { TransactionFiltersState } from "@/app/transaction/page";
+import type { Account } from "@/lib/models/account";
 import React from "react";
 
 interface AccountFilterProps {

@@ -5,7 +5,7 @@ import {
   listRules,
   updateRule,
 } from "@/lib/api/rule";
-import {
+import type {
   CreateRuleInput,
   PaginatedRulesResponse,
   RuleListQuery,

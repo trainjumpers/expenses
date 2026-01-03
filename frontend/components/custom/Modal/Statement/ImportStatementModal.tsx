@@ -9,7 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { StatementPreviewResponse } from "@/lib/models/statement";
+import type { StatementPreviewResponse } from "@/lib/models/statement";
 import { useCallback, useRef, useState } from "react";
 
 import { FallbackParsing } from "./steps/FallbackParsing";

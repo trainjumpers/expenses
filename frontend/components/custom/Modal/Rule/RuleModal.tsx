@@ -13,12 +13,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
+import type {
   BaseRule,
   BaseRuleAction,
   BaseRuleCondition,
-  ConditionLogic,
-  Rule,
+  Rule} from "@/lib/models/rule";
+import {
+  ConditionLogic
 } from "@/lib/models/rule";
 import { getEffectiveScopeAndDate } from "@/lib/utils/rule";
 import { useEffect, useState } from "react";

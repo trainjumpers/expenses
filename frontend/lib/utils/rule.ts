@@ -1,4 +1,4 @@
-import { BaseRuleAction, BaseRuleCondition } from "@/lib/models/rule";
+import { type BaseRuleAction, type BaseRuleCondition } from "@/lib/models/rule";
 
 type Category = { id: number; name: string };
 type Account = { id: number; name: string };

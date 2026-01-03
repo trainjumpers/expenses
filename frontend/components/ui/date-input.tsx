@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useRef } from "react";
 
 interface DateInputProps {
   value?: Date;
@@ -24,15 +24,6 @@ const DateInput: React.FC<DateInputProps> = ({ value, onChange }) => {
   const monthRef = useRef<HTMLInputElement | null>(null);
   const dayRef = useRef<HTMLInputElement | null>(null);
   const yearRef = useRef<HTMLInputElement | null>(null);
-
-  useEffect(() => {
-    const d = value ? new Date(value) : new Date();
-    setDate({
-      day: d.getDate(),
-      month: d.getMonth() + 1,
-      year: d.getFullYear(),
-    });
-  }, [value]);
 
   const validateDate = (field: keyof DateParts, value: number): boolean => {
     if (

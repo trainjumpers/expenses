@@ -10,7 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { AccountAnalyticsListResponse } from "@/lib/models/analytics";
+import type { AccountAnalyticsListResponse } from "@/lib/models/analytics";
 import { formatCurrency } from "@/lib/utils";
 import { ChevronRight, Plus, Wallet } from "lucide-react";
 import { useState } from "react";

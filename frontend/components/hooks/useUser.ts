@@ -10,10 +10,11 @@ import {
   updatePassword as updatePasswordApi,
   updateUser as updateUserApi,
 } from "@/lib/api/user";
-import { User } from "@/lib/models/user";
+import type { User } from "@/lib/models/user";
 import { queryKeys } from "@/lib/query-client";
+import type {
+  ApiErrorType} from "@/lib/types/errors";
 import {
-  ApiErrorType,
   getErrorMessage,
   getErrorStatus,
   isAuthError,

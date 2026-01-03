@@ -5,7 +5,7 @@ import {
   getMonthlyAnalytics,
   getNetworthTimeSeries,
 } from "@/lib/api/analytics";
-import {
+import type {
   AccountAnalyticsListResponse,
   MonthlyAnalyticsResponse,
   NetworthTimeSeriesResponse,

@@ -1,5 +1,5 @@
-import { TransactionFiltersState } from "@/app/transaction/page";
-import { Category } from "@/lib/models/category";
+import type { TransactionFiltersState } from "@/app/transaction/page";
+import type { Category } from "@/lib/models/category";
 import React from "react";
 
 interface CategoryFilterProps {

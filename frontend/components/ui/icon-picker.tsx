@@ -15,15 +15,17 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { VirtualItem, useVirtualizer } from "@tanstack/react-virtual";
+import { type VirtualItem, useVirtualizer } from "@tanstack/react-virtual";
 import Fuse from "fuse.js";
-import { LucideIcon, LucideProps, X } from "lucide-react";
-import { DynamicIcon, IconName } from "lucide-react/dynamic";
+import type { LucideIcon, LucideProps} from "lucide-react";
+import { X } from "lucide-react";
+import type { IconName } from "lucide-react/dynamic";
+import { DynamicIcon } from "lucide-react/dynamic";
 import * as React from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useDebounceValue } from "usehooks-ts";
 
-import { iconsData } from "./icons-data";
+import type { iconsData } from "./icons-data";
 
 export type IconData = (typeof iconsData)[number];
 
@@ -214,6 +216,7 @@ const IconPicker = React.forwardRef<
 
     const parentRef = React.useRef<HTMLDivElement>(null);
 
+    // eslint-disable-next-line react-hooks/incompatible-library
     const virtualizer = useVirtualizer({
       count: virtualItems.length,
       getScrollElement: () => parentRef.current,
@@ -367,7 +370,7 @@ const IconPicker = React.forwardRef<
                   <h3 className="font-medium text-sm capitalize">
                     {categorizedIcons[item.categoryIndex].name}
                   </h3>
-                  <div className="h-[1px] bg-foreground/10 w-full" />
+                  <div className="h-px bg-foreground/10 w-full" />
                 </div>
               );
             }

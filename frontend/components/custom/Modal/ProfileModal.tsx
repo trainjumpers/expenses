@@ -1,4 +1,4 @@
-import { useUpdateUser, useUser } from "@/components/hooks/useUser";
+import { useUpdateUser } from "@/components/hooks/useUser";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -11,30 +11,28 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 interface ProfileModalProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
+  formData?: {
+    name: string;
+    email: string;
+  };
 }
 
-export function ProfileModal({ isOpen, onOpenChange }: ProfileModalProps) {
-  const { data: user } = useUser();
+export function ProfileModal({
+  isOpen,
+  onOpenChange,
+  formData: initialFormData,
+}: ProfileModalProps) {
   const updateUserMutation = useUpdateUser();
 
   const [formData, setFormData] = useState({
-    name: user?.name || "",
-    email: user?.email || "",
+    name: initialFormData?.name || "",
+    email: initialFormData?.email || "",
   });
-
-  useEffect(() => {
-    if (user) {
-      setFormData({
-        name: user.name,
-        email: user.email,
-      });
-    }
-  }, [user]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,11 +48,9 @@ export function ProfileModal({ isOpen, onOpenChange }: ProfileModalProps) {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  if (!user) return null;
-
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-106.25">
         <DialogHeader>
           <DialogTitle>Edit Profile</DialogTitle>
           <DialogDescription>

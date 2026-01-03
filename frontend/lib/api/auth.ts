@@ -1,6 +1,6 @@
 import { apiRequest } from "@/lib/api/request";
 import { API_BASE_URL } from "@/lib/constants/api";
-import { AuthResponse } from "@/lib/models/auth";
+import type { AuthResponse } from "@/lib/models/auth";
 import { toast } from "sonner";
 
 export async function login(

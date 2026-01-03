@@ -6,13 +6,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
+import type {
   BaseRuleCondition,
+  RuleFieldType,
+  RuleOperator} from "@/lib/models/rule";
+import {
   ConditionLogic,
   RULE_FIELD_TYPES,
-  RULE_OPERATORS,
-  RuleFieldType,
-  RuleOperator,
+  RULE_OPERATORS
 } from "@/lib/models/rule";
 import { CheckCircle, Circle, Plus, Trash2 } from "lucide-react";
 

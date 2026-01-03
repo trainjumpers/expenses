@@ -21,7 +21,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Transaction, TransactionQueryParams } from "@/lib/models/transaction";
+import type { Transaction, TransactionQueryParams } from "@/lib/models/transaction";
 import { MoreVertical, Pencil, Play, Plus, Trash, Upload } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";

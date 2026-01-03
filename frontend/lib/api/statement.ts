@@ -1,6 +1,6 @@
 import { apiRequest } from "@/lib/api/request";
 import { API_BASE_URL } from "@/lib/constants/api";
-import {
+import type {
   CreateStatementRequest,
   Statement,
   StatementPreviewResponse,

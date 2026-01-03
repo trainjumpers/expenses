@@ -1,6 +1,7 @@
+import type {
+  RuleModalInitialData} from "@/components/custom/Modal/Rule/RuleModal";
 import {
-  RuleModal,
-  RuleModalInitialData,
+  RuleModal
 } from "@/components/custom/Modal/Rule/RuleModal";
 import { useCategories } from "@/components/hooks/useCategories";
 import {
@@ -9,7 +10,7 @@ import {
   updateRuleActions,
   updateRuleConditions,
 } from "@/lib/api/rule";
-import {
+import type {
   BaseRuleAction,
   BaseRuleCondition,
   DescribeRuleResponse,

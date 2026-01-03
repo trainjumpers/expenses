@@ -9,10 +9,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Account } from "@/lib/models/account";
-import { StatementUploadResponse } from "@/lib/models/statement";
-import { CreateStatementRequest } from "@/lib/models/statement";
-import { UseMutationResult } from "@tanstack/react-query";
+import type { Account } from "@/lib/models/account";
+import type { StatementUploadResponse } from "@/lib/models/statement";
+import type { CreateStatementRequest } from "@/lib/models/statement";
+import type { UseMutationResult } from "@tanstack/react-query";
 import {
   AlertCircle,
   ChevronDownIcon,

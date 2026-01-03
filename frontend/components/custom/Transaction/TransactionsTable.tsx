@@ -5,7 +5,8 @@ import { useCategories } from "@/components/hooks/useCategories";
 import { useUpdateTransaction } from "@/components/hooks/useTransactions";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Icon, IconName } from "@/components/ui/icon-picker";
+import type { IconName } from "@/components/ui/icon-picker";
+import { Icon } from "@/components/ui/icon-picker";
 import {
   Table,
   TableBody,
@@ -14,7 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Transaction } from "@/lib/models/transaction";
+import type { Transaction } from "@/lib/models/transaction";
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import { useState } from "react";
 

@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Account } from "@/lib/models/account";
+import type { Account, BankType, Currency } from "@/lib/models/account";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -53,9 +53,9 @@ export function AddAccountModal({
     const input = {
       name: formData.name,
       bank_type:
-        formData.bank_type.toLowerCase() as import("@/lib/models/account").BankType,
+        formData.bank_type.toLowerCase() as BankType,
       currency:
-        formData.currency.toLowerCase() as import("@/lib/models/account").Currency,
+        formData.currency.toLowerCase() as Currency,
       balance: formData.balance ? Number(formData.balance) : undefined,
     };
 
@@ -70,7 +70,7 @@ export function AddAccountModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-106.25">
         <DialogHeader>
           <DialogTitle>Add Account</DialogTitle>
         </DialogHeader>
@@ -87,7 +87,7 @@ export function AddAccountModal({
                   setFormData({ ...formData, name: e.target.value })
                 }
                 placeholder="Enter account name"
-                className="col-span-2 w-[220px]"
+                className="col-span-2 w-55"
               />
             </div>
 
@@ -101,7 +101,7 @@ export function AddAccountModal({
                   setFormData({ ...formData, bank_type: value })
                 }
               >
-                <SelectTrigger className="col-span-2 w-[220px]">
+                <SelectTrigger className="col-span-2 w-55">
                   <SelectValue placeholder="Select bank" />
                 </SelectTrigger>
                 <SelectContent>
@@ -128,7 +128,7 @@ export function AddAccountModal({
                   setFormData({ ...formData, currency: value })
                 }
               >
-                <SelectTrigger className="col-span-2 w-[220px]">
+                <SelectTrigger className="col-span-2 w-55">
                   <SelectValue placeholder="Select currency" />
                 </SelectTrigger>
                 <SelectContent>
@@ -150,7 +150,7 @@ export function AddAccountModal({
                   setFormData({ ...formData, balance: e.target.value })
                 }
                 placeholder="Enter initial balance"
-                className="col-span-2 w-[220px]"
+                className="col-span-2 w-55"
               />
             </div>
           </div>

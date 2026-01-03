@@ -102,7 +102,14 @@ export function ProfileDropdown() {
         </PopoverContent>
       </Popover>
 
-      <ProfileModal isOpen={isProfileOpen} onOpenChange={setIsProfileOpen} />
+      <ProfileModal
+        isOpen={isProfileOpen}
+        onOpenChange={setIsProfileOpen}
+        formData={{
+          name: user.name,
+          email: user.email,
+        }}
+      />
 
       <PasswordModal isOpen={isPasswordOpen} onOpenChange={setIsPasswordOpen} />
 

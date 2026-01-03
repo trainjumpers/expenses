@@ -1,6 +1,6 @@
 import { apiRequest } from "@/lib/api/request";
 import { API_BASE_URL } from "@/lib/constants/api";
-import { Account, CreateAccountInput } from "@/lib/models/account";
+import type { Account, CreateAccountInput } from "@/lib/models/account";
 import { toast } from "sonner";
 
 export async function listAccounts(signal?: AbortSignal): Promise<Account[]> {

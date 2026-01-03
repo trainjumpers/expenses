@@ -18,7 +18,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
-import { Account } from "@/lib/models/account";
+import type { Account } from "@/lib/models/account";
 import { Search, Trash2, Wallet } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 

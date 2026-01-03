@@ -12,7 +12,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Icon, IconName } from "@/components/ui/icon-picker";
+import type { IconName } from "@/components/ui/icon-picker";
+import { Icon } from "@/components/ui/icon-picker";
 import { Input } from "@/components/ui/input";
 import {
   Pagination,
@@ -22,7 +23,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
-import { Category } from "@/lib/models/category";
+import type { Category } from "@/lib/models/category";
 import { Search, Tag, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 

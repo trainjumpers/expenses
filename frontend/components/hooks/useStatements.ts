@@ -4,8 +4,8 @@ import {
   previewStatement,
   uploadStatement,
 } from "@/lib/api/statement";
-import { PaginatedStatementResponse } from "@/lib/api/statement";
-import {
+import type { PaginatedStatementResponse } from "@/lib/api/statement";
+import type {
   CreateStatementRequest,
   StatementPreviewResponse,
 } from "@/lib/models/statement";

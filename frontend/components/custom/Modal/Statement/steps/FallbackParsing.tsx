@@ -22,9 +22,9 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Account } from "@/lib/models/account";
-import { StatementPreviewResponse } from "@/lib/models/statement";
-import { UseMutationResult } from "@tanstack/react-query";
+import type { Account } from "@/lib/models/account";
+import type { StatementPreviewResponse } from "@/lib/models/statement";
+import type { UseMutationResult } from "@tanstack/react-query";
 import {
   AlertCircle,
   ChevronDownIcon,
