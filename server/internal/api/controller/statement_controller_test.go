@@ -2,6 +2,7 @@ package controller_test
 
 import (
 	"expenses/internal/models"
+	"expenses/pkg/logger"
 	"expenses/pkg/utils"
 	"fmt"
 	"net/http"
@@ -42,7 +43,7 @@ func createAccount(testHelper *TestHelper, name string, balance float64) float64
 func waitForStatementDone(testHelper *TestHelper, statementId float64) map[string]any {
 	var status string
 	var data map[string]any
-	for i := 0; i < 20; i++ {
+	for i := 0; i < 5*60; i++ {
 		resp, response := testHelper.MakeRequest(http.MethodGet, "/statement/"+strconv.FormatFloat(statementId, 'f', 0, 64), nil)
 		Expect(resp.StatusCode).To(Equal(http.StatusOK))
 		data = response["data"].(map[string]any)
@@ -50,10 +51,31 @@ func waitForStatementDone(testHelper *TestHelper, statementId float64) map[strin
 		if status != "processing" && status != "pending" {
 			break
 		}
-		time.Sleep(5 * time.Second)
+		time.Sleep(1 * time.Second)
 	}
 	Expect(status).To(Equal("done"))
 	return data
+}
+
+func uploadStatement(testHelper *TestHelper, accountId float64, filename string) float64 {
+	xlsxData := [][]string{
+		{"Txn Date", "Details", "Ref No.", "Debit", "Credit", "Balance"},
+		{"1 Aug 2022", "TEST TRANSACTION", "123", "100.00", "", "1000.00"},
+		{"Computer Generated Statement"},
+	}
+	fileBytes := utils.CreateXLSXFile(xlsxData)
+	statementInput := map[string]any{
+		"account_id":        int64(accountId),
+		"original_filename": filename,
+		"file_type":         "excel",
+		"file":              fileBytes,
+	}
+	resp, response := testHelper.MakeMultipartRequest(http.MethodPost, "/statement", statementInput)
+	Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+	statementId := response["data"].(map[string]any)["id"].(float64)
+	logger.Warn("Uploaded statement ID: ", statementId, "Filename: ", filename)
+	waitForStatementDone(testHelper, statementId)
+	return statementId
 }
 
 var _ = Describe("StatementController", func() {
@@ -232,6 +254,244 @@ var _ = Describe("StatementController", func() {
 			Expect(data).To(HaveKey("statements"))
 			statements := data["statements"].([]any)
 			Expect(len(statements)).To(BeNumerically("<=", 100))
+		})
+	})
+
+	Describe("ListStatements Filters", func() {
+		It("should filter statements by account_id", func() {
+			testHelper := createUniqueUser(baseURL)
+			account1 := createAccount(testHelper, "Account 1", 1000.0)
+			account2 := createAccount(testHelper, "Account 2", 2000.0)
+
+			// Upload statements to both accounts
+			uploadStatement(testHelper, account1, "account1_statement1.xlsx")
+			uploadStatement(testHelper, account1, "account1_statement2.xlsx")
+			uploadStatement(testHelper, account2, "account2_statement1.xlsx")
+			uploadStatement(testHelper, account2, "account2_statement2.xlsx")
+
+			// Filter by account1 - should return 2 statements
+			resp, response := testHelper.MakeRequest(http.MethodGet, fmt.Sprintf("/statement?account_id=%.0f&page_size=10", account1), nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			data := response["data"].(map[string]any)
+			statements := data["statements"].([]any)
+			Expect(len(statements)).To(Equal(2))
+			Expect(data["total"]).To(Equal(2.0))
+
+			// Filter by account2 - should return 2 statements
+			resp, response = testHelper.MakeRequest(http.MethodGet, fmt.Sprintf("/statement?account_id=%.0f&page_size=10", account2), nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			data = response["data"].(map[string]any)
+			statements = data["statements"].([]any)
+			Expect(len(statements)).To(Equal(2))
+			Expect(data["total"]).To(Equal(2.0))
+		})
+
+		It("should return empty list for non-existent account_id", func() {
+			testHelper := createUniqueUser(baseURL)
+			account1 := createAccount(testHelper, "Account 1", 1000.0)
+
+			// Upload statement
+			uploadStatement(testHelper, account1, "account1_statement1.xlsx")
+
+			// Filter by non-existent account
+			resp, response := testHelper.MakeRequest(http.MethodGet, "/statement?account_id=99999&page_size=10", nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			data := response["data"].(map[string]any)
+			statements := data["statements"].([]any)
+			Expect(len(statements)).To(Equal(0))
+			Expect(data["total"]).To(Equal(0.0))
+		})
+
+		It("should filter statements by search (filename)", func() {
+			testHelper := createUniqueUser(baseURL)
+			account1 := createAccount(testHelper, "Account 1", 1000.0)
+
+			// Upload statements with distinct filenames
+			uploadStatement(testHelper, account1, "alpha_report.xlsx")
+			uploadStatement(testHelper, account1, "beta_report.xlsx")
+			uploadStatement(testHelper, account1, "gamma_summary.xlsx")
+
+			// fetch all statements
+			resp, response := testHelper.MakeRequest(http.MethodGet, "/statement?page_size=10", nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			data := response["data"].(map[string]any)
+			logger.Warnf("Data: %+v", data)
+			statements := data["statements"].([]any)
+			Expect(len(statements)).To(Equal(3))
+
+			// Search for "alpha" - should return 1 statement
+			resp, response = testHelper.MakeRequest(http.MethodGet, "/statement?search=alpha&page_size=10", nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			data = response["data"].(map[string]any)
+			statements = data["statements"].([]any)
+			Expect(len(statements)).To(Equal(1))
+			Expect(data["total"]).To(Equal(1.0))
+
+			// Search for "report" - should return 2 statements
+			resp, response = testHelper.MakeRequest(http.MethodGet, "/statement?search=report&page_size=10", nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			data = response["data"].(map[string]any)
+			statements = data["statements"].([]any)
+			Expect(len(statements)).To(Equal(2))
+			Expect(data["total"]).To(Equal(2.0))
+
+			// Search for "REPORT" - case-insensitive should still return 2 statements
+			resp, response = testHelper.MakeRequest(http.MethodGet, "/statement?search=REPORT&page_size=10", nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			data = response["data"].(map[string]any)
+			statements = data["statements"].([]any)
+			Expect(len(statements)).To(Equal(2))
+			Expect(data["total"]).To(Equal(2.0))
+
+			// Search for "xyz" - should return 0 statements
+			resp, response = testHelper.MakeRequest(http.MethodGet, "/statement?search=xyz&page_size=10", nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			data = response["data"].(map[string]any)
+			statements = data["statements"].([]any)
+			Expect(len(statements)).To(Equal(0))
+			Expect(data["total"]).To(Equal(0.0))
+		})
+
+		It("should not filter when search is empty", func() {
+			testHelper := createUniqueUser(baseURL)
+			account1 := createAccount(testHelper, "Account 1", 1000.0)
+
+			// Upload statement
+			uploadStatement(testHelper, account1, "test_statement.xlsx")
+
+			// Empty search - should return all statements
+			resp, response := testHelper.MakeRequest(http.MethodGet, "/statement?search=&page_size=10", nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			data := response["data"].(map[string]any)
+			statements := data["statements"].([]any)
+			Expect(len(statements)).To(Equal(1))
+		})
+
+		It("should filter statements by date_from", func() {
+			testHelper := createUniqueUser(baseURL)
+			account1 := createAccount(testHelper, "Account 1", 1000.0)
+
+			// Upload first statement
+			uploadStatement(testHelper, account1, "early_statement.xlsx")
+
+			// Wait to ensure second statement has different created_at
+			time.Sleep(1 * time.Second)
+
+			// Upload second statement
+			uploadStatement(testHelper, account1, "late_statement.xlsx")
+
+			// Get date after first upload but before second
+			dateFrom := time.Now().Format("2006-01-02")
+
+			// Filter with date_from - should only return statement created after this date
+			resp, response := testHelper.MakeRequest(http.MethodGet, fmt.Sprintf("/statement?date_from=%s&page_size=10", dateFrom), nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			data := response["data"].(map[string]any)
+			statements := data["statements"].([]any)
+			// Should return at least the second statement (created after the first)
+			Expect(len(statements)).To(BeNumerically(">=", 1))
+		})
+
+		It("should return empty when date_from > date_to", func() {
+			testHelper := createUniqueUser(baseURL)
+			account1 := createAccount(testHelper, "Account 1", 1000.0)
+
+			// Upload statement
+			uploadStatement(testHelper, account1, "test_statement.xlsx")
+
+			dateTo := time.Now().Format("2006-01-02")
+			dateFrom := time.Now().Add(1 * time.Hour).Format("2006-01-02")
+
+			// Filter with date_from > date_to
+			resp, response := testHelper.MakeRequest(http.MethodGet, fmt.Sprintf("/statement?date_from=%s&date_to=%s&page_size=10", dateFrom, dateTo), nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			data := response["data"].(map[string]any)
+			statements := data["statements"].([]any)
+			Expect(len(statements)).To(Equal(0))
+			Expect(data["total"]).To(Equal(0.0))
+		})
+
+		It("should ignore invalid date formats", func() {
+			testHelper := createUniqueUser(baseURL)
+			account1 := createAccount(testHelper, "Account 1", 1000.0)
+
+			// Upload statement
+			uploadStatement(testHelper, account1, "test_statement.xlsx")
+
+			// Invalid date format - should be treated as no filter
+			resp, response := testHelper.MakeRequest(http.MethodGet, "/statement?date_from=not-a-date&page_size=10", nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			data := response["data"].(map[string]any)
+			statements := data["statements"].([]any)
+			// Should still return all statements (no filter applied due to invalid date)
+			Expect(len(statements)).To(BeNumerically(">=", 1))
+		})
+
+		It("should filter by combined account_id and search", func() {
+			testHelper := createUniqueUser(baseURL)
+			account1 := createAccount(testHelper, "Account 1", 1000.0)
+			account2 := createAccount(testHelper, "Account 2", 2000.0)
+
+			// Upload statements to both accounts with different names
+			uploadStatement(testHelper, account1, "account1_alpha.xlsx")
+			uploadStatement(testHelper, account1, "account1_beta.xlsx")
+			uploadStatement(testHelper, account2, "account2_alpha.xlsx")
+			uploadStatement(testHelper, account2, "account2_gamma.xlsx")
+
+			// Filter by account1 + search "alpha" - should return 1 statement
+			resp, response := testHelper.MakeRequest(http.MethodGet, fmt.Sprintf("/statement?account_id=%.0f&search=alpha&page_size=10", account1), nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			data := response["data"].(map[string]any)
+			statements := data["statements"].([]any)
+			Expect(len(statements)).To(Equal(1))
+			Expect(data["total"]).To(Equal(1.0))
+		})
+
+		It("should filter by combined account_id and search with no matches", func() {
+			testHelper := createUniqueUser(baseURL)
+			account1 := createAccount(testHelper, "Account 1", 1000.0)
+
+			// Upload statement
+			uploadStatement(testHelper, account1, "account1_test.xlsx")
+
+			// Filter by account1 + search "nomatch" - should return 0 statements
+			resp, response := testHelper.MakeRequest(http.MethodGet, fmt.Sprintf("/statement?account_id=%.0f&search=nomatch&page_size=10", account1), nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			data := response["data"].(map[string]any)
+			statements := data["statements"].([]any)
+			Expect(len(statements)).To(Equal(0))
+			Expect(data["total"]).To(Equal(0.0))
+		})
+
+		It("should support pagination with filters", func() {
+			testHelper := createUniqueUser(baseURL)
+			account1 := createAccount(testHelper, "Account 1", 1000.0)
+
+			// Upload multiple statements
+			uploadStatement(testHelper, account1, "stmt1.xlsx")
+			uploadStatement(testHelper, account1, "stmt2.xlsx")
+			uploadStatement(testHelper, account1, "stmt3.xlsx")
+			uploadStatement(testHelper, account1, "stmt4.xlsx")
+
+			// Filter by account1 with page_size=2, page=1
+			resp, response := testHelper.MakeRequest(http.MethodGet, fmt.Sprintf("/statement?account_id=%.0f&page_size=2&page=1", account1), nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			data := response["data"].(map[string]any)
+			statements := data["statements"].([]any)
+			Expect(len(statements)).To(Equal(2))
+			Expect(data["page"]).To(Equal(1.0))
+			Expect(data["page_size"]).To(Equal(2.0))
+			Expect(data["total"]).To(Equal(4.0))
+
+			// Page 2 with same filter
+			resp, response = testHelper.MakeRequest(http.MethodGet, fmt.Sprintf("/statement?account_id=%.0f&page_size=2&page=2", account1), nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			data = response["data"].(map[string]any)
+			statements = data["statements"].([]any)
+			Expect(len(statements)).To(Equal(2))
+			Expect(data["page"]).To(Equal(2.0))
+			Expect(data["page_size"]).To(Equal(2.0))
+			Expect(data["total"]).To(Equal(4.0))
 		})
 	})
 

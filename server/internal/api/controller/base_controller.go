@@ -6,6 +6,7 @@ import (
 	customErrors "expenses/internal/errors"
 	"net/http"
 	"reflect"
+	"strconv"
 	"strings"
 	"time"
 
@@ -225,4 +226,66 @@ func (b *BaseController) ParseDateRange(ctx *gin.Context) (time.Time, time.Time,
 	}
 
 	return startDate, endDate, nil
+}
+
+// parseInt64QueryParam parses an int64 query parameter, returns nil if not present or invalid
+func (b *BaseController) parseInt64QueryParam(ctx *gin.Context, key string) *int64 {
+	valStr := ctx.Query(key)
+	if valStr == "" {
+		return nil
+	}
+	if v, err := strconv.ParseInt(valStr, 10, 64); err == nil {
+		return &v
+	}
+	return nil
+}
+
+// parseTimeQueryParam parses a time query parameter, returns nil if not present or invalid
+func (b *BaseController) parseTimeQueryParam(ctx *gin.Context, key, layout string) *time.Time {
+	valStr := ctx.Query(key)
+	if valStr == "" {
+		return nil
+	}
+	if v, err := time.Parse(layout, valStr); err == nil {
+		return &v
+	}
+	return nil
+}
+
+// parseStringQueryParam parses a string query parameter, returns nil if not present
+func (b *BaseController) parseStringQueryParam(ctx *gin.Context, key string) *string {
+	valStr := ctx.Query(key)
+	if valStr == "" {
+		return nil
+	}
+	return &valStr
+}
+
+// parseBoolQueryParam parses a bool query parameter, returns nil if not present or invalid
+func (b *BaseController) parseBoolQueryParam(ctx *gin.Context, key string) *bool {
+	valStr := ctx.Query(key)
+	if valStr == "" {
+		return nil
+	}
+	if valStr == "true" || valStr == "1" {
+		val := true
+		return &val
+	}
+	if valStr == "false" || valStr == "0" {
+		val := false
+		return &val
+	}
+	return nil
+}
+
+// parseFloat64QueryParam parses a float64 query parameter, returns nil if not present or invalid
+func (b *BaseController) parseFloat64QueryParam(ctx *gin.Context, key string) *float64 {
+	valStr := ctx.Query(key)
+	if valStr == "" {
+		return nil
+	}
+	if v, err := strconv.ParseFloat(valStr, 64); err == nil {
+		return &v
+	}
+	return nil
 }

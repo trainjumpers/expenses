@@ -46,7 +46,7 @@ func IsExcelPasswordProtectedBytes(data []byte) bool {
 			return true
 		}
 	}
-	
+
 	return false
 }
 

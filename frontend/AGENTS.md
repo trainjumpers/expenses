@@ -3,12 +3,14 @@
 ## Build, Lint, and Test Commands
 
 ### Development
+
 - `npm run dev` - Start Next.js dev server with Turbopack (port 3000)
 - `just frontend` - Start frontend dev server (from root)
 - `npm run build` - Production build
 - `npm start` - Start production server
 
 ### Formatting & Linting
+
 - `npm run format` - Format all files with Prettier
 - `npm run lint` - Run ESLint
 - `npm run lint:fix` - Auto-fix ESLint issues
@@ -29,11 +31,11 @@
 ## Code Style Guidelines
 
 ### Component Structure
+
 ```tsx
 "use client"; // Only when needed
-
-import React from "react";
 import { Button } from "@/components/ui/button";
+import React from "react";
 
 interface Props {
   // prop types
@@ -48,6 +50,7 @@ export default function ComponentName({ ...props }: Props) {
 ```
 
 ### Naming Conventions
+
 - **Files**: PascalCase (e.g., `UserProfile.tsx`, `useTransactions.ts`)
 - **Components**: PascalCase (e.g., `UserProfile`, `TransactionTable`)
 - **Hooks**: camelCase with `use` prefix (e.g., `useTransactions`, `useSession`)
@@ -57,6 +60,7 @@ export default function ComponentName({ ...props }: Props) {
 - **Event Handlers**: `handle` prefix (e.g., `handleClick`, `handleSubmit`)
 
 ### TypeScript Best Practices
+
 - Use interfaces for object shapes, types for unions/primitives
 - Avoid enums - use const objects instead
 - Use `satisfies` operator for type validation
@@ -65,6 +69,7 @@ export default function ComponentName({ ...props }: Props) {
 - Use `unknown` over `any` when type is uncertain
 
 ### React 19 Patterns
+
 - Use Server Components by default (no `"use client"`)
 - Minimize client directives - only add when needed
 - Use `useActionState` instead of deprecated `useFormState`
@@ -72,12 +77,14 @@ export default function ComponentName({ ...props }: Props) {
 - Use Suspense boundaries for async components
 
 ### State Management
+
 - **Server State**: TanStack Query with hooks in `components/hooks/`
 - **URL State**: Manage via Next.js `useSearchParams` and `router.push()`
 - **Local State**: React `useState`, `useReducer` for small UI state
 - **Global State**: React Context for session, theme (suspense-aware)
 
 ### Component Architecture
+
 ```
 components/
 ├── ui/              # Shadcn UI components (no business logic)
@@ -98,16 +105,19 @@ lib/
 ```
 
 ### Imports
+
 - Group and sort imports alphabetically
 - Use `@/` alias for absolute imports
 - Order: external, internal components, internal hooks, internal lib
+
 ```tsx
-import { Button } from "@/components/ui/button";
 import { useTransactions } from "@/components/hooks/useTransactions";
+import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/utils";
 ```
 
 ### API Layer
+
 - Use `lib/api/request.ts` `apiRequest()` for all fetch calls
 - API functions in `lib/api/` correspond to backend endpoints
 - Return `{ data: T }` pattern from API functions
@@ -115,6 +125,7 @@ import { formatCurrency } from "@/lib/utils";
 - Always include credentials for cookies
 
 ### Data Fetching (TanStack Query)
+
 - Create hooks in `components/hooks/` (e.g., `useTransactions.ts`)
 - Use `queryKeys` object from `lib/query-client.ts` for cache keys
 - Implement optimistic updates for mutations
@@ -122,6 +133,7 @@ import { formatCurrency } from "@/lib/utils";
 - Set appropriate `staleTime` for caching
 
 ### Styling
+
 - Use Shadcn UI components - do not create custom UI components
 - Tailwind classes via `cn()` utility for conditional classes
 - Follow design tokens (primary, secondary, accent, destructive)
@@ -129,6 +141,7 @@ import { formatCurrency } from "@/lib/utils";
 - Dark mode via `next-themes` - use `dark:` prefix
 
 ### Error Handling
+
 - Use `ApiErrorType` from `lib/types/errors.ts`
 - `getErrorMessage()` for user-friendly error messages
 - Toast notifications via `sonner` for user feedback
@@ -136,6 +149,7 @@ import { formatCurrency } from "@/lib/utils";
 - Handle API errors in request layer, show toasts at component level
 
 ### Form Handling
+
 - Use native HTML5 validation
 - React Hook Form for complex forms
 - Zod schemas for validation (via validator)
@@ -143,6 +157,7 @@ import { formatCurrency } from "@/lib/utils";
 - Show loading states during mutations
 
 ### File Organization
+
 - Page routes in `app/` directory
 - Reusable components in `components/`
 - Shared utilities in `lib/`
@@ -150,6 +165,7 @@ import { formatCurrency } from "@/lib/utils";
 - Constants in `lib/constants/`
 
 ### Performance
+
 - Use React.lazy for code splitting
 - Implement proper loading states
 - Use virtualization for long lists (`@tanstack/react-virtual`)
@@ -157,6 +173,7 @@ import { formatCurrency } from "@/lib/utils";
 - Debounce search inputs
 
 ### Accessibility
+
 - Use semantic HTML
 - ARIA labels on interactive elements
 - Keyboard navigation support
@@ -166,6 +183,7 @@ import { formatCurrency } from "@/lib/utils";
 ## Testing
 
 No test framework is currently configured. Consider adding:
+
 - Vitest for unit tests
 - Testing Library for component tests
 - Playwright for E2E tests

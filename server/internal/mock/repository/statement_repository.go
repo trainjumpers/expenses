@@ -100,12 +100,34 @@ func (m *MockStatementRepository) GetStatementByID(ctx context.Context, statemen
 	return statement, nil
 }
 
-func (m *MockStatementRepository) ListStatementByUserId(ctx context.Context, userId int64, limit, offset int) ([]models.StatementResponse, error) {
+func (m *MockStatementRepository) ListStatementByUserId(ctx context.Context, userId int64, limit, offset int, query models.StatementListQuery) ([]models.StatementResponse, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	var result []models.StatementResponse
 	for _, s := range m.statements {
 		if s.CreatedBy == userId {
+			if query.AccountId != nil && s.AccountId != *query.AccountId {
+				continue
+			}
+			if query.Search != nil && *query.Search != "" {
+				filename := s.OriginalFilename
+				found := false
+				for i := 0; i <= len(filename)-len(*query.Search); i++ {
+					if filename[i:i+len(*query.Search)] == *query.Search {
+						found = true
+						break
+					}
+				}
+				if !found {
+					continue
+				}
+			}
+			if query.DateFrom != nil && s.CreatedAt.Before(*query.DateFrom) {
+				continue
+			}
+			if query.DateTo != nil && s.CreatedAt.After(*query.DateTo) {
+				continue
+			}
 			result = append(result, s)
 		}
 	}
@@ -128,10 +150,32 @@ func (m *MockStatementRepository) ListStatementByUserId(ctx context.Context, use
 	return result[start:end], nil
 }
 
-func (m *MockStatementRepository) CountStatementsByUserId(ctx context.Context, userId int64) (int, error) {
+func (m *MockStatementRepository) CountStatementsByUserId(ctx context.Context, userId int64, query models.StatementListQuery) (int, error) {
 	count := 0
 	for _, s := range m.statements {
 		if s.CreatedBy == userId {
+			if query.AccountId != nil && s.AccountId != *query.AccountId {
+				continue
+			}
+			if query.Search != nil && *query.Search != "" {
+				filename := s.OriginalFilename
+				found := false
+				for i := 0; i <= len(filename)-len(*query.Search); i++ {
+					if filename[i:i+len(*query.Search)] == *query.Search {
+						found = true
+						break
+					}
+				}
+				if !found {
+					continue
+				}
+			}
+			if query.DateFrom != nil && s.CreatedAt.Before(*query.DateFrom) {
+				continue
+			}
+			if query.DateTo != nil && s.CreatedAt.After(*query.DateTo) {
+				continue
+			}
 			count++
 		}
 	}

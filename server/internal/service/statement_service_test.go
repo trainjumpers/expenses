@@ -65,7 +65,7 @@ var _ = Describe("StatementService", func() {
 			}
 
 			// List page 1, page_size 5
-			resp, err := service.ListStatements(ctx, userId, 1, 5)
+			resp, err := service.ListStatements(ctx, userId, models.StatementListQuery{Page: 1, PageSize: 5})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(resp.Statements).To(HaveLen(5))
 			Expect(resp.Total).To(Equal(7))
@@ -73,7 +73,7 @@ var _ = Describe("StatementService", func() {
 			Expect(resp.PageSize).To(Equal(5))
 
 			// List page 2, page_size 5
-			resp2, err := service.ListStatements(ctx, userId, 2, 5)
+			resp2, err := service.ListStatements(ctx, userId, models.StatementListQuery{Page: 2, PageSize: 5})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(resp2.Statements).To(HaveLen(2))
 			Expect(resp2.Total).To(Equal(7))
@@ -135,7 +135,7 @@ var _ = Describe("StatementService", func() {
 				_, err := mockRepo.CreateStatement(ctx, input)
 				Expect(err).NotTo(HaveOccurred())
 			}
-			count, err := mockRepo.CountStatementsByUserId(ctx, userId)
+			count, err := mockRepo.CountStatementsByUserId(ctx, userId, models.StatementListQuery{})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(count).To(Equal(3))
 		})
@@ -143,7 +143,7 @@ var _ = Describe("StatementService", func() {
 
 	Describe("Error Handling", func() {
 		It("should return empty list and total 0 for user with no statements", func() {
-			resp, err := service.ListStatements(ctx, 999, 1, 5)
+			resp, err := service.ListStatements(ctx, 999, models.StatementListQuery{Page: 1, PageSize: 5})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(resp.Statements).To(HaveLen(0))
 			Expect(resp.Total).To(Equal(0))
@@ -161,7 +161,7 @@ var _ = Describe("StatementService", func() {
 		})
 
 		It("should return 0 for counting statements for user with no statements", func() {
-			count, err := mockRepo.CountStatementsByUserId(ctx, 8888)
+			count, err := mockRepo.CountStatementsByUserId(ctx, 8888, models.StatementListQuery{})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(count).To(Equal(0))
 		})
@@ -252,7 +252,7 @@ var _ = Describe("StatementService", func() {
 				_, err := mockRepo.CreateStatement(ctx, input)
 				Expect(err).NotTo(HaveOccurred())
 			}
-			resp, err := service.ListStatements(ctx, userId, 10, 5)
+			resp, err := service.ListStatements(ctx, userId, models.StatementListQuery{Page: 10, PageSize: 5})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(resp.Statements).To(HaveLen(0))
 		})
@@ -268,7 +268,7 @@ var _ = Describe("StatementService", func() {
 			}
 			_, err := mockRepo.CreateStatement(ctx, input)
 			Expect(err).NotTo(HaveOccurred())
-			resp, err := service.ListStatements(ctx, userId, 1, 200)
+			resp, err := service.ListStatements(ctx, userId, models.StatementListQuery{Page: 1, PageSize: 200})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(resp.PageSize).To(Equal(10))
 		})
@@ -777,7 +777,7 @@ var _ = Describe("StatementService", func() {
 		})
 
 		It("should return empty list for negative page number", func() {
-			resp, err := service.ListStatements(ctx, userId, -5, 5)
+			resp, err := service.ListStatements(ctx, userId, models.StatementListQuery{Page: -5, PageSize: 5})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(resp.Statements).To(HaveLen(0))
 			Expect(resp.Total).To(Equal(0))
@@ -794,7 +794,7 @@ var _ = Describe("StatementService", func() {
 			}
 			_, err := mockRepo.CreateStatement(ctx, input)
 			Expect(err).NotTo(HaveOccurred())
-			resp, err := service.ListStatements(ctx, userId, 1, -10)
+			resp, err := service.ListStatements(ctx, userId, models.StatementListQuery{Page: 1, PageSize: -10})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(resp.PageSize).To(Equal(10))
 		})
@@ -810,7 +810,7 @@ var _ = Describe("StatementService", func() {
 			}
 			_, err := mockRepo.CreateStatement(ctx, input)
 			Expect(err).NotTo(HaveOccurred())
-			resp, err := service.ListStatements(ctx, userId, 1, 101)
+			resp, err := service.ListStatements(ctx, userId, models.StatementListQuery{Page: 1, PageSize: 101})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(resp.PageSize).To(Equal(10)) // Assuming 10 is the max allowed
 		})
