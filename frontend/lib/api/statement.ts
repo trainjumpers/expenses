@@ -56,13 +56,26 @@ export interface PaginatedStatementResponse {
   page_size: number;
 }
 
+export interface StatementQueryParams {
+  page?: number;
+  page_size?: number;
+  account_id?: number;
+  date_from?: string;
+  date_to?: string;
+  search?: string;
+}
+
 export async function listStatements(
   signal?: AbortSignal,
-  params?: { page?: number; page_size?: number }
+  params?: StatementQueryParams
 ): Promise<PaginatedStatementResponse> {
   const query = [];
   if (params?.page) query.push(`page=${params.page}`);
   if (params?.page_size) query.push(`page_size=${params.page_size}`);
+  if (params?.account_id) query.push(`account_id=${params.account_id}`);
+  if (params?.date_from) query.push(`date_from=${params.date_from}`);
+  if (params?.date_to) query.push(`date_to=${params.date_to}`);
+  if (params?.search) query.push(`search=${encodeURIComponent(params.search)}`);
   const queryString = query.length > 0 ? `?${query.join("&")}` : "";
   return apiRequest<PaginatedStatementResponse>(
     `${API_BASE_URL}/statement${queryString}`,

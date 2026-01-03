@@ -17,7 +17,7 @@ import (
 type StatementServiceInterface interface {
 	ParseStatement(ctx context.Context, input models.ParseStatementInput, userId int64) (models.StatementResponse, error)
 	GetStatementStatus(ctx context.Context, statementId int64, userId int64) (models.StatementResponse, error)
-	ListStatements(ctx context.Context, userId int64, page int, pageSize int) (models.PaginatedStatementResponse, error)
+	ListStatements(ctx context.Context, userId int64, query models.StatementListQuery) (models.PaginatedStatementResponse, error)
 	PreviewStatement(ctx context.Context, fileBytes []byte, fileName string, skipRows int, rowSize int, password string) (*models.StatementPreview, error)
 }
 
@@ -51,7 +51,7 @@ func (s *StatementService) ParseStatement(ctx context.Context, input models.Pars
 	}
 
 	if strings.HasSuffix(strings.ToLower(input.OriginalFilename), ".xlsx") {
-		if protected := parser.IsExcelPasswordProtectedBytes(input.FileBytes); (protected && input.Password == "") {
+		if protected := parser.IsExcelPasswordProtectedBytes(input.FileBytes); protected && input.Password == "" {
 			return models.StatementResponse{}, customErrors.NewStatementPasswordRequiredError(errors.New("statement password required"))
 		}
 		if err := parser.ValidateWorkbookPassword(input.FileBytes, input.Password); err != nil {
@@ -193,18 +193,18 @@ func (s *StatementService) GetStatementStatus(ctx context.Context, statementId i
 	return s.repo.GetStatementByID(ctx, statementId, userId)
 }
 
-func (s *StatementService) ListStatements(ctx context.Context, userId int64, page int, pageSize int) (models.PaginatedStatementResponse, error) {
-	if page < 1 {
-		page = 1
+func (s *StatementService) ListStatements(ctx context.Context, userId int64, query models.StatementListQuery) (models.PaginatedStatementResponse, error) {
+	if query.Page < 1 {
+		query.Page = 1
 	}
-	if pageSize < 1 || pageSize > 100 {
-		pageSize = 10
+	if query.PageSize < 1 || query.PageSize > 100 {
+		query.PageSize = 10
 	}
-	statements, err := s.repo.ListStatementByUserId(ctx, userId, pageSize, (page-1)*pageSize)
+	statements, err := s.repo.ListStatementByUserId(ctx, userId, query.PageSize, (query.Page-1)*query.PageSize, query)
 	if err != nil {
 		return models.PaginatedStatementResponse{}, err
 	}
-	total, err := s.repo.CountStatementsByUserId(ctx, userId)
+	total, err := s.repo.CountStatementsByUserId(ctx, userId, query)
 	if err != nil {
 		return models.PaginatedStatementResponse{}, err
 	}
@@ -212,8 +212,8 @@ func (s *StatementService) ListStatements(ctx context.Context, userId int64, pag
 	return models.PaginatedStatementResponse{
 		Statements: statements,
 		Total:      total,
-		Page:       page,
-		PageSize:   pageSize,
+		Page:       query.Page,
+		PageSize:   query.PageSize,
 	}, nil
 }
 
@@ -227,7 +227,7 @@ func (s *StatementService) PreviewStatement(ctx context.Context, fileBytes []byt
 	}
 
 	if strings.HasSuffix(strings.ToLower(fileName), ".xlsx") {
-		if protected := parser.IsExcelPasswordProtectedBytes(fileBytes); (protected && password == "") {
+		if protected := parser.IsExcelPasswordProtectedBytes(fileBytes); protected && password == "" {
 			return nil, customErrors.NewStatementPasswordRequiredError(errors.New("statement password required"))
 		}
 	}

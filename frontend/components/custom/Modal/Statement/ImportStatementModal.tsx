@@ -66,7 +66,8 @@ function PasswordPrompt({
         <Label>File Password Required</Label>
       </div>
       <p className="text-xs text-muted-foreground mb-2">
-        This Excel file is password protected. Please enter password to continue.
+        This Excel file is password protected. Please enter password to
+        continue.
       </p>
       <Input
         type="password"
@@ -334,7 +335,13 @@ export function ImportStatementModal({
         },
       }
     );
-  }, [selectedFiles, skipRows, rowSize, filePassword, previewStatementMutation]);
+  }, [
+    selectedFiles,
+    skipRows,
+    rowSize,
+    filePassword,
+    previewStatementMutation,
+  ]);
 
   const submitUpload = useCallback(async () => {
     if (selectedFiles.length === 0 || !selectedAccountId) {
@@ -527,7 +534,16 @@ export function ImportStatementModal({
 
     lastPreviewKeyRef.current = nextPreviewKey;
     handlePreview();
-  }, [step, selectedFiles, skipRows, rowSize, filePassword, isPasswordRequired, isPreviewing, handlePreview]);
+  }, [
+    step,
+    selectedFiles,
+    skipRows,
+    rowSize,
+    filePassword,
+    isPasswordRequired,
+    isPreviewing,
+    handlePreview,
+  ]);
 
   useEffect(() => {
     setIsPasswordRequired(false);

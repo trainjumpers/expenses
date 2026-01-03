@@ -115,10 +115,9 @@ func (s *StatementController) GetStatements(ctx *gin.Context) {
 	userID := s.GetAuthenticatedUserId(ctx)
 	logger.Infof("Fetching statements for user %d", userID)
 
-	page, _ := strconv.Atoi(ctx.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(ctx.DefaultQuery("page_size", "15"))
+	query := s.bindStatementListQuery(ctx)
 
-	resp, err := s.statementService.ListStatements(ctx, userID, page, pageSize)
+	resp, err := s.statementService.ListStatements(ctx, userID, query)
 	if err != nil {
 		logger.Errorf("Error fetching statements: %v", err)
 		s.HandleError(ctx, err)
@@ -127,6 +126,20 @@ func (s *StatementController) GetStatements(ctx *gin.Context) {
 
 	logger.Infof("Successfully fetched %d statements for user %d", len(resp.Statements), userID)
 	s.SendSuccess(ctx, http.StatusOK, "Statements fetched successfully", resp)
+}
+
+func (s *StatementController) bindStatementListQuery(ctx *gin.Context) models.StatementListQuery {
+	page, _ := strconv.Atoi(ctx.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(ctx.DefaultQuery("page_size", "15"))
+
+	return models.StatementListQuery{
+		Page:      page,
+		PageSize:  pageSize,
+		AccountId: s.parseInt64QueryParam(ctx, "account_id"),
+		DateFrom:  s.parseTimeQueryParam(ctx, "date_from", "2006-01-02"),
+		DateTo:    s.parseTimeQueryParam(ctx, "date_to", "2006-01-02"),
+		Search:    s.parseStringQueryParam(ctx, "search"),
+	}
 }
 
 func (s *StatementController) GetStatementStatus(ctx *gin.Context) {

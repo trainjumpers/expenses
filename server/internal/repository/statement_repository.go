@@ -21,8 +21,8 @@ type StatementRepositoryInterface interface {
 	CreateStatementTxns(ctx context.Context, statementId int64, transactionIds []int64) error
 	UpdateStatementStatus(ctx context.Context, statementId int64, input models.UpdateStatementStatusInput) (models.StatementResponse, error)
 	GetStatementByID(ctx context.Context, statementId int64, userId int64) (models.StatementResponse, error)
-	ListStatementByUserId(ctx context.Context, userId int64, limit, offset int) ([]models.StatementResponse, error)
-	CountStatementsByUserId(ctx context.Context, userId int64) (int, error)
+	ListStatementByUserId(ctx context.Context, userId int64, limit, offset int, query models.StatementListQuery) ([]models.StatementResponse, error)
+	CountStatementsByUserId(ctx context.Context, userId int64, query models.StatementListQuery) (int, error)
 }
 
 type StatementRepository struct {
@@ -150,21 +150,53 @@ func (r *StatementRepository) GetStatementByID(ctx context.Context, statementId 
 	return statement, nil
 }
 
-func (r *StatementRepository) ListStatementByUserId(ctx context.Context, userId int64, limit, offset int) ([]models.StatementResponse, error) {
+func (r *StatementRepository) ListStatementByUserId(ctx context.Context, userId int64, limit, offset int, query models.StatementListQuery) ([]models.StatementResponse, error) {
 	statements := make([]models.StatementResponse, 0)
 	var statement models.StatementResponse
 	ptrs, dbFields, err := helper.GetDbFieldsFromObject(&statement)
 	if err != nil {
 		return statements, err
 	}
-	query := fmt.Sprintf(`
+
+	whereClauses := []string{"created_by = $1", "deleted_at IS NULL"}
+	argIndex := 2
+	args := []interface{}{userId}
+
+	if query.AccountId != nil {
+		whereClauses = append(whereClauses, fmt.Sprintf("account_id = $%d", argIndex))
+		args = append(args, *query.AccountId)
+		argIndex++
+	}
+
+	if query.DateFrom != nil {
+		whereClauses = append(whereClauses, fmt.Sprintf("created_at >= $%d", argIndex))
+		args = append(args, *query.DateFrom)
+		argIndex++
+	}
+
+	if query.DateTo != nil {
+		whereClauses = append(whereClauses, fmt.Sprintf("created_at <= $%d", argIndex))
+		args = append(args, *query.DateTo)
+		argIndex++
+	}
+
+	if query.Search != nil && *query.Search != "" {
+		whereClauses = append(whereClauses, fmt.Sprintf("original_filename ILIKE $%d", argIndex))
+		args = append(args, "%"+*query.Search+"%")
+		argIndex++
+	}
+
+	sqlQuery := fmt.Sprintf(`
 		SELECT %s
 		FROM %s.%s
-		WHERE created_by = $1 AND deleted_at IS NULL
+		WHERE %s
 		ORDER BY created_at DESC
-		LIMIT $2 OFFSET $3`,
-		strings.Join(dbFields, ", "), r.schema, r.tableName)
-	rows, err := r.db.FetchAll(ctx, query, userId, limit, offset)
+		LIMIT $%d OFFSET $%d`,
+		strings.Join(dbFields, ", "), r.schema, r.tableName, strings.Join(whereClauses, " AND "), argIndex, argIndex+1)
+
+	args = append(args, limit, offset)
+
+	rows, err := r.db.FetchAll(ctx, sqlQuery, args...)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return statements, nil
@@ -182,10 +214,39 @@ func (r *StatementRepository) ListStatementByUserId(ctx context.Context, userId 
 	return statements, nil
 }
 
-func (r *StatementRepository) CountStatementsByUserId(ctx context.Context, userId int64) (int, error) {
-	query := fmt.Sprintf(`SELECT COUNT(*) FROM %s.%s WHERE created_by = $1 AND deleted_at IS NULL`, r.schema, r.tableName)
+func (r *StatementRepository) CountStatementsByUserId(ctx context.Context, userId int64, query models.StatementListQuery) (int, error) {
+	whereClauses := []string{"created_by = $1", "deleted_at IS NULL"}
+	argIndex := 2
+	args := []interface{}{userId}
+
+	if query.AccountId != nil {
+		whereClauses = append(whereClauses, fmt.Sprintf("account_id = $%d", argIndex))
+		args = append(args, *query.AccountId)
+		argIndex++
+	}
+
+	if query.DateFrom != nil {
+		whereClauses = append(whereClauses, fmt.Sprintf("created_at >= $%d", argIndex))
+		args = append(args, *query.DateFrom)
+		argIndex++
+	}
+
+	if query.DateTo != nil {
+		whereClauses = append(whereClauses, fmt.Sprintf("created_at <= $%d", argIndex))
+		args = append(args, *query.DateTo)
+		argIndex++
+	}
+
+	if query.Search != nil && *query.Search != "" {
+		whereClauses = append(whereClauses, fmt.Sprintf("original_filename ILIKE $%d", argIndex))
+		args = append(args, "%"+*query.Search+"%")
+		argIndex++
+	}
+
+	sqlQuery := fmt.Sprintf(`SELECT COUNT(*) FROM %s.%s WHERE %s`, r.schema, r.tableName, strings.Join(whereClauses, " AND "))
 	var count int
-	err := r.db.FetchOne(ctx, query, userId).Scan(&count)
+	logger.Debugf("CountStatementsByUserId SQL: %s, args: %v", sqlQuery, args)
+	err := r.db.FetchOne(ctx, sqlQuery, args...).Scan(&count)
 	if err != nil {
 		return 0, err
 	}

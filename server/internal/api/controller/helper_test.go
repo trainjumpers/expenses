@@ -81,12 +81,18 @@ func (h *TestHelper) MakeRequest(method, reqUrl string, body any) (*http.Respons
 
 // MakeMultipartRequest sends a multipart/form-data request with file and fields
 func (h *TestHelper) MakeMultipartRequest(method, url string, fields map[string]any) (*http.Response, map[string]any) {
+	// Use provided original_filename if available so uploaded file has correct name
+	filename := "file.csv"
+	if f, ok := fields["original_filename"]; ok {
+		filename = fmt.Sprintf("%v", f)
+	}
+
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 	for key, val := range fields {
 		switch v := val.(type) {
 		case []byte:
-			part, _ := writer.CreateFormFile(key, "file.csv")
+			part, _ := writer.CreateFormFile(key, filename)
 			part.Write(v)
 		default:
 			writer.WriteField(key, fmt.Sprintf("%v", v))

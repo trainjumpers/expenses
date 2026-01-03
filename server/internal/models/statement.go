@@ -76,3 +76,12 @@ type PreviewStatementForm struct {
 	Password string                `form:"password"`
 	File     *multipart.FileHeader `form:"file" binding:"required"`
 }
+
+type StatementListQuery struct {
+	Page      int        // page number (1-based)
+	PageSize  int        // items per page
+	AccountId *int64     // filter by account
+	DateFrom  *time.Time // filter by start date
+	DateTo    *time.Time // filter by end date
+	Search    *string    // search in filename
+}

@@ -26,7 +26,7 @@ var _ = Describe("PostgreSQL Database Manager", Ordered, func() {
 		cfg = &config.Config{
 			DBSchema: "public",
 		}
-		if (os.Getenv("DB_PORT") == "") {
+		if os.Getenv("DB_PORT") == "" {
 			os.Setenv("DB_PORT", "5432")
 		}
 

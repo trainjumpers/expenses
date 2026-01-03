@@ -7,7 +7,6 @@ import (
 	"expenses/pkg/logger"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -111,63 +110,6 @@ func (t *TransactionController) DeleteTransaction(ctx *gin.Context) {
 	t.SendSuccess(ctx, http.StatusNoContent, "", nil)
 }
 
-func parseInt64QueryParam(ctx *gin.Context, key string) *int64 {
-	valStr := ctx.Query(key)
-	if valStr == "" {
-		return nil
-	}
-	if v, err := strconv.ParseInt(valStr, 10, 64); err == nil {
-		return &v
-	}
-	return nil
-}
-
-func parseFloat64QueryParam(ctx *gin.Context, key string) *float64 {
-	valStr := ctx.Query(key)
-	if valStr == "" {
-		return nil
-	}
-	if v, err := strconv.ParseFloat(valStr, 64); err == nil {
-		return &v
-	}
-	return nil
-}
-
-func parseTimeQueryParam(ctx *gin.Context, key, layout string) *time.Time {
-	valStr := ctx.Query(key)
-	if valStr == "" {
-		return nil
-	}
-	if v, err := time.Parse(layout, valStr); err == nil {
-		return &v
-	}
-	return nil
-}
-
-func parseStringQueryParam(ctx *gin.Context, key string) *string {
-	valStr := ctx.Query(key)
-	if valStr == "" {
-		return nil
-	}
-	return &valStr
-}
-
-func parseBoolQueryParam(ctx *gin.Context, key string) *bool {
-	valStr := ctx.Query(key)
-	if valStr == "" {
-		return nil
-	}
-	if valStr == "true" || valStr == "1" {
-		val := true
-		return &val
-	}
-	if valStr == "false" || valStr == "0" {
-		val := false
-		return &val
-	}
-	return nil
-}
-
 func (t *TransactionController) bindTransactionListQuery(ctx *gin.Context) models.TransactionListQuery {
 	page, _ := strconv.Atoi(ctx.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(ctx.DefaultQuery("page_size", "15"))
@@ -177,15 +119,15 @@ func (t *TransactionController) bindTransactionListQuery(ctx *gin.Context) model
 		PageSize:      pageSize,
 		SortBy:        ctx.DefaultQuery("sort_by", "date"),
 		SortOrder:     ctx.DefaultQuery("sort_order", "desc"),
-		AccountId:     parseInt64QueryParam(ctx, "account_id"),
-		CategoryId:    parseInt64QueryParam(ctx, "category_id"),
-		Uncategorized: parseBoolQueryParam(ctx, "uncategorized"),
-		MinAmount:     parseFloat64QueryParam(ctx, "min_amount"),
-		MaxAmount:     parseFloat64QueryParam(ctx, "max_amount"),
-		DateFrom:      parseTimeQueryParam(ctx, "date_from", "2006-01-02"),
-		DateTo:        parseTimeQueryParam(ctx, "date_to", "2006-01-02"),
-		StatementId:   parseInt64QueryParam(ctx, "statement_id"),
-		Search:        parseStringQueryParam(ctx, "search"),
+		AccountId:     t.parseInt64QueryParam(ctx, "account_id"),
+		CategoryId:    t.parseInt64QueryParam(ctx, "category_id"),
+		Uncategorized: t.parseBoolQueryParam(ctx, "uncategorized"),
+		MinAmount:     t.parseFloat64QueryParam(ctx, "min_amount"),
+		MaxAmount:     t.parseFloat64QueryParam(ctx, "max_amount"),
+		DateFrom:      t.parseTimeQueryParam(ctx, "date_from", "2006-01-02"),
+		DateTo:        t.parseTimeQueryParam(ctx, "date_to", "2006-01-02"),
+		StatementId:   t.parseInt64QueryParam(ctx, "statement_id"),
+		Search:        t.parseStringQueryParam(ctx, "search"),
 	}
 }
 

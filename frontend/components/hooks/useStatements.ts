@@ -1,4 +1,5 @@
 import {
+  type StatementQueryParams,
   getStatement,
   listStatements,
   previewStatement,
@@ -15,18 +16,17 @@ import { toast } from "sonner";
 const STATEMENT_KEYS = {
   all: ["statements"] as const,
   lists: () => [...STATEMENT_KEYS.all, "list"] as const,
-  list: (filters: Record<string, unknown>) =>
+  list: (filters: StatementQueryParams) =>
     [...STATEMENT_KEYS.lists(), filters] as const,
   details: () => [...STATEMENT_KEYS.all, "detail"] as const,
   detail: (id: number) => [...STATEMENT_KEYS.details(), id] as const,
 };
 
-export const useStatements = (page: number = 1, pageSize: number = 10) => {
+export const useStatements = (params: StatementQueryParams = {}) => {
   return useQuery<PaginatedStatementResponse>({
-    queryKey: ["statements", page, pageSize],
-    queryFn: ({ signal }) =>
-      listStatements(signal, { page, page_size: pageSize }),
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    queryKey: STATEMENT_KEYS.list(params),
+    queryFn: ({ signal }) => listStatements(signal, params),
+    staleTime: 5 * 60 * 1000,
   });
 };
 

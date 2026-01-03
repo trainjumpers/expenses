@@ -1,12 +1,27 @@
 import TablePagination from "@/components/custom/Transaction/TablePagination";
 import { useAccounts } from "@/components/hooks/useAccounts";
 import { useStatements } from "@/components/hooks/useStatements";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -15,7 +30,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Building2, Calendar, FileText } from "lucide-react";
+import { format } from "date-fns";
+import { Calendar as CalendarIcon } from "lucide-react";
+import { Building2, FileText, Search, X } from "lucide-react";
 import { useState } from "react";
 
 interface ViewStatementsModalProps {
@@ -57,35 +74,143 @@ export function ViewStatementsModal({
   onOpenChange,
 }: ViewStatementsModalProps) {
   const [page, setPage] = useState(1);
+  const [accountId, setAccountId] = useState<number | undefined>();
+  const [dateFrom, setDateFrom] = useState<Date | undefined>();
+  const [dateTo, setDateTo] = useState<Date | undefined>();
+  const [search, setSearch] = useState("");
+
   const pageSize = 5;
-  const { data, isLoading, error } = useStatements(page, pageSize);
+
+  const { data, isLoading, error } = useStatements({
+    page,
+    page_size: pageSize,
+    account_id: typeof accountId === "number" ? accountId : undefined,
+    date_from: dateFrom?.toDateString(),
+    date_to: dateTo?.toDateString(),
+    search: search || undefined,
+  });
   const statements = data?.statements || [];
   const total = data?.total || 0;
   const totalPages = Math.ceil(total / pageSize);
   const { data: accounts = [] } = useAccounts();
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
   const getFileTypeIcon = () => {
     return <FileText className="h-4 w-4 text-blue-500" />;
   };
 
+  const handleClearFilters = () => {
+    setAccountId(undefined);
+    setDateFrom(undefined);
+    setDateTo(undefined);
+    setSearch("");
+    setPage(1);
+  };
+
+  const hasActiveFilters =
+    typeof accountId === "number" || dateFrom || dateTo || search;
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[800px] max-h-[80vh]">
+      <DialogContent className="sm:max-w-200 max-h-[80vh]">
         <DialogHeader>
           <DialogTitle>Statement History</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by filename..."
+                  value={search}
+                  onChange={(e) => {
+                    setSearch(e.target.value);
+                    setPage(1);
+                  }}
+                  className="pl-9"
+                />
+              </div>
+              <Select
+                value={accountId?.toString() || "all"}
+                onValueChange={(value) => {
+                  setAccountId(value === "all" ? undefined : Number(value));
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger className="w-50">
+                  <SelectValue placeholder="All Accounts" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Accounts</SelectItem>
+                  {accounts.map((account) => (
+                    <SelectItem key={account.id} value={account.id.toString()}>
+                      {account.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="ghost" className="justify-start text-sm">
+                    <CalendarIcon className="h-4 w-4 mr-2" />
+                    {dateFrom
+                      ? format(new Date(dateFrom), "MMM d, yyyy")
+                      : "From Date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={dateFrom ? new Date(dateFrom) : undefined}
+                    onSelect={(date) => {
+                      setDateFrom(date);
+                      setPage(1);
+                    }}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="ghost" className="justify-start text-sm">
+                    <CalendarIcon className="h-4 w-4 mr-2" />
+                    {dateTo
+                      ? format(new Date(dateTo), "MMM d, yyyy")
+                      : "To Date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={dateTo ? new Date(dateTo) : undefined}
+                    onSelect={(date) => {
+                      setDateTo(date);
+                      setPage(1);
+                    }}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            {hasActiveFilters && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleClearFilters}
+                className="ml-auto"
+              >
+                <X className="h-4 w-4 mr-1" />
+                Clear Filters
+              </Button>
+            )}
+          </div>
+
           {isLoading ? (
             <div className="flex items-center justify-center py-8">
               <div className="text-sm text-muted-foreground">
@@ -102,17 +227,25 @@ export function ViewStatementsModal({
             <div className="flex flex-col items-center justify-center py-12 space-y-3">
               <FileText className="h-12 w-12 text-muted-foreground" />
               <div className="text-sm text-muted-foreground text-center">
-                <p className="font-medium">No statements uploaded yet</p>
-                <p>Upload your first bank statement to get started</p>
+                <p className="font-medium">
+                  {hasActiveFilters
+                    ? "No statements found"
+                    : "No statements uploaded yet"}
+                </p>
+                <p>
+                  {hasActiveFilters
+                    ? "Try adjusting your filters"
+                    : "Upload your first bank statement to get started"}
+                </p>
               </div>
             </div>
           ) : (
             <div className="border rounded-lg overflow-hidden">
-              <div className="max-h-[400px] overflow-y-auto">
+              <div className="max-h-100 overflow-y-auto">
                 <Table>
                   <TableHeader className="sticky top-0 bg-background">
                     <TableRow>
-                      <TableHead className="w-[50px]">File</TableHead>
+                      <TableHead className="w-12">File</TableHead>
                       <TableHead>Filename</TableHead>
                       <TableHead>Account</TableHead>
                       <TableHead>Status</TableHead>
@@ -130,7 +263,7 @@ export function ViewStatementsModal({
                         <TableCell>
                           <div className="space-y-1">
                             <p
-                              className="text-sm font-medium truncate max-w-[200px]"
+                              className="text-sm font-medium truncate max-w-50"
                               title={statement.original_filename}
                             >
                               {statement.original_filename}
@@ -157,7 +290,10 @@ export function ViewStatementsModal({
                           <div className="flex items-center space-x-2">
                             <Calendar className="h-4 w-4 text-muted-foreground" />
                             <span className="text-sm">
-                              {formatDate(statement.created_at)}
+                              {format(
+                                new Date(statement.created_at),
+                                "MMM d, yyyy, h:mm aa"
+                              )}
                             </span>
                           </div>
                         </TableCell>
