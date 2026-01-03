@@ -18,6 +18,6 @@ if [ -n "$LUCIDE_TAG" ]; then
   cd - > /dev/null
 fi
 
-npx ts-node --project tsconfig.scripts.json scripts/generate-icons-data.ts
-npx prettier --write components/ui/icons-data.ts
+bunx ts-node --project tsconfig.scripts.json scripts/generate-icons-data.ts
+bunx prettier --write components/ui/icons-data.ts
 rm -rf "$LUCIDE_DIR"
