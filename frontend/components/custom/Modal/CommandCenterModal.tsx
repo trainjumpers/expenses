@@ -9,7 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import type { LucideIcon} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { PlusCircle, Receipt, Tag, Wallet } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";

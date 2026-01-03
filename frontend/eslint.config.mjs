@@ -1,8 +1,8 @@
-import nextVitals from "eslint-config-next/core-web-vitals";
-import { defineConfig, globalIgnores } from "eslint/config";
-import unusedImports from "eslint-plugin-unused-imports";
 import tseslint from "@typescript-eslint/eslint-plugin";
 import tsParser from "@typescript-eslint/parser";
+import nextVitals from "eslint-config-next/core-web-vitals";
+import unusedImports from "eslint-plugin-unused-imports";
+import { defineConfig, globalIgnores } from "eslint/config";
 
 export default defineConfig([
   ...nextVitals,

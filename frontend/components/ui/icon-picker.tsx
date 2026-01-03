@@ -17,7 +17,7 @@ import {
 import { cn } from "@/lib/utils";
 import { type VirtualItem, useVirtualizer } from "@tanstack/react-virtual";
 import Fuse from "fuse.js";
-import type { LucideIcon, LucideProps} from "lucide-react";
+import type { LucideIcon, LucideProps } from "lucide-react";
 import { X } from "lucide-react";
 import type { IconName } from "lucide-react/dynamic";
 import { DynamicIcon } from "lucide-react/dynamic";

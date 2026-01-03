@@ -13,7 +13,7 @@ import type {
   TransactionQueryParams,
 } from "@/lib/models/transaction";
 import { queryKeys } from "@/lib/query-client";
-import type { ApiErrorType} from "@/lib/types/errors";
+import type { ApiErrorType } from "@/lib/types/errors";
 import { getErrorMessage } from "@/lib/types/errors";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";

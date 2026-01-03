@@ -12,8 +12,7 @@ import {
 } from "@/lib/api/user";
 import type { User } from "@/lib/models/user";
 import { queryKeys } from "@/lib/query-client";
-import type {
-  ApiErrorType} from "@/lib/types/errors";
+import type { ApiErrorType } from "@/lib/types/errors";
 import {
   getErrorMessage,
   getErrorStatus,

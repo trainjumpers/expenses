@@ -23,7 +23,7 @@ import { Textarea } from "@/components/ui/textarea";
 import type { Account } from "@/lib/models/account";
 import type { Category } from "@/lib/models/category";
 import { ChevronDownIcon } from "lucide-react";
-import type { ChangeEvent} from "react";
+import type { ChangeEvent } from "react";
 import { useEffect, useState } from "react";
 
 interface TransactionFormProps {

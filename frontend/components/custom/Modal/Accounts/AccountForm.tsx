@@ -11,7 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { BankType, Currency } from "@/lib/models/account";
-import type { ChangeEvent} from "react";
+import type { ChangeEvent } from "react";
 import { useState } from "react";
 
 interface AccountFormProps {

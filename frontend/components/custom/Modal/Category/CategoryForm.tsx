@@ -1,7 +1,7 @@
 import { LoadingButton } from "@/components/ui/LoadingButton";
 import { Button } from "@/components/ui/button";
 import { DialogFooter } from "@/components/ui/dialog";
-import type { IconName} from "@/components/ui/icon-picker";
+import type { IconName } from "@/components/ui/icon-picker";
 import { IconPicker } from "@/components/ui/icon-picker";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";

@@ -9,7 +9,7 @@ export function ThemeProvider({
   ...props
 }: React.ComponentProps<typeof NextThemesProvider>) {
   const { resolvedTheme } = useTheme();
-  
+
   if (!resolvedTheme) {
     return (
       <div className="min-h-screen w-screen flex items-center justify-center bg-zinc-900">

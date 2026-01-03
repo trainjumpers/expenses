@@ -52,10 +52,8 @@ export function AddAccountModal({
 
     const input = {
       name: formData.name,
-      bank_type:
-        formData.bank_type.toLowerCase() as BankType,
-      currency:
-        formData.currency.toLowerCase() as Currency,
+      bank_type: formData.bank_type.toLowerCase() as BankType,
+      currency: formData.currency.toLowerCase() as Currency,
       balance: formData.balance ? Number(formData.balance) : undefined,
     };
 
