@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	customErrors "expenses/internal/errors"
 	"expenses/internal/models"
 	"expenses/internal/parser"
 	"expenses/internal/repository"
@@ -17,7 +18,7 @@ type StatementServiceInterface interface {
 	ParseStatement(ctx context.Context, input models.ParseStatementInput, userId int64) (models.StatementResponse, error)
 	GetStatementStatus(ctx context.Context, statementId int64, userId int64) (models.StatementResponse, error)
 	ListStatements(ctx context.Context, userId int64, page int, pageSize int) (models.PaginatedStatementResponse, error)
-	PreviewStatement(ctx context.Context, fileBytes []byte, fileName string, skipRows int, rowSize int) (*models.StatementPreview, error)
+	PreviewStatement(ctx context.Context, fileBytes []byte, fileName string, skipRows int, rowSize int, password string) (*models.StatementPreview, error)
 }
 
 type StatementService struct {
@@ -49,8 +50,17 @@ func (s *StatementService) ParseStatement(ctx context.Context, input models.Pars
 		return models.StatementResponse{}, err
 	}
 
+	if strings.HasSuffix(strings.ToLower(input.OriginalFilename), ".xlsx") {
+		if protected := parser.IsExcelPasswordProtectedBytes(input.FileBytes); (protected && input.Password == "") {
+			return models.StatementResponse{}, customErrors.NewStatementPasswordRequiredError(errors.New("statement password required"))
+		}
+		if err := parser.ValidateWorkbookPassword(input.FileBytes, input.Password); err != nil {
+			return models.StatementResponse{}, err
+		}
+	}
+
 	fileType := "csv"
-	if strings.HasSuffix(input.OriginalFilename, ".xls") || strings.HasSuffix(input.OriginalFilename, ".xlsx") {
+	if strings.HasSuffix(strings.ToLower(input.OriginalFilename), ".xls") || strings.HasSuffix(strings.ToLower(input.OriginalFilename), ".xlsx") {
 		fileType = "excel"
 	}
 
@@ -112,9 +122,12 @@ func (s *StatementService) processStatementAsync(ctx context.Context, statementI
 	}
 
 	logger.Debugf("Using parser: %T for bank type: %s", parserImpl, parserType)
-	parsedTxs, err := parserImpl.Parse(input.FileBytes, input.Metadata, input.OriginalFilename)
+	parsedTxs, err := parserImpl.Parse(input.FileBytes, input.Metadata, input.OriginalFilename, input.Password)
 	if err != nil {
 		errMsg := fmt.Sprintf("Failed to parse statement: %v", err)
+		if errors.Is(err, parser.ErrWorkbookPasswordRequired) {
+			errMsg = "statement password required"
+		}
 		_, _ = s.repo.UpdateStatementStatus(ctx, statementId, models.UpdateStatementStatusInput{
 			Status:  models.StatementStatusError,
 			Message: &errMsg,
@@ -204,7 +217,7 @@ func (s *StatementService) ListStatements(ctx context.Context, userId int64, pag
 	}, nil
 }
 
-func (s *StatementService) PreviewStatement(ctx context.Context, fileBytes []byte, fileName string, skipRows int, rowSize int) (*models.StatementPreview, error) {
+func (s *StatementService) PreviewStatement(ctx context.Context, fileBytes []byte, fileName string, skipRows int, rowSize int, password string) (*models.StatementPreview, error) {
 	if rowSize == 0 {
 		rowSize = 10
 	}
@@ -213,6 +226,16 @@ func (s *StatementService) PreviewStatement(ctx context.Context, fileBytes []byt
 		return nil, err
 	}
 
+	if strings.HasSuffix(strings.ToLower(fileName), ".xlsx") {
+		if protected := parser.IsExcelPasswordProtectedBytes(fileBytes); (protected && password == "") {
+			return nil, customErrors.NewStatementPasswordRequiredError(errors.New("statement password required"))
+		}
+	}
+
 	p := parser.CustomParser{}
-	return p.Preview(fileBytes, fileName, skipRows, rowSize)
+	preview, err := p.Preview(fileBytes, fileName, skipRows, rowSize, password)
+	if err != nil {
+		return nil, err
+	}
+	return preview, nil
 }

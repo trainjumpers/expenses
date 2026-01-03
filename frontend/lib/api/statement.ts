@@ -20,6 +20,9 @@ export async function uploadStatement(
   if (data.metadata) {
     formData.append("metadata", data.metadata);
   }
+  if (data.password) {
+    formData.append("password", data.password);
+  }
 
   const response = await fetch(`${API_BASE_URL}/statement`, {
     method: "POST",
@@ -29,7 +32,14 @@ export async function uploadStatement(
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error || "Failed to upload statement");
+    throw {
+      message:
+        errorData.message || errorData.error || "Failed to upload statement",
+      status: response.status,
+      isPasswordRequired:
+        errorData.message === "statement password required" ||
+        errorData.error === "statement password required",
+    };
   }
 
   const result = await response.json();
@@ -81,12 +91,17 @@ export async function getStatement(id: number): Promise<Statement> {
 export async function previewStatement(
   file: File,
   skipRows: number,
-  rowSize: number
+  rowSize: number,
+  password?: string
 ): Promise<StatementPreviewResponse> {
   const formData = new FormData();
   formData.append("file", file);
   formData.append("skip_rows", skipRows.toString());
   formData.append("row_size", rowSize.toString());
+
+  if (password) {
+    formData.append("password", password);
+  }
 
   const response = await fetch(`${API_BASE_URL}/statement/preview`, {
     method: "POST",
@@ -96,7 +111,14 @@ export async function previewStatement(
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error || "Failed to preview statement");
+    throw {
+      message:
+        errorData.message || errorData.error || "Failed to preview statement",
+      status: response.status,
+      isPasswordRequired:
+        errorData.message === "statement password required" ||
+        errorData.error === "statement password required",
+    };
   }
 
   const result = await response.json();

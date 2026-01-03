@@ -26,7 +26,7 @@ Row3Col1,Row3Col2,Row3Col3`
 			fileBytes := []byte(csvContent)
 
 			It("should parse correctly with no rows skipped and all rows returned", func() {
-				preview, err := p.Preview(fileBytes, "test.csv", 0, -1)
+				preview, err := p.Preview(fileBytes, "test.csv", 0, -1, "")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(preview.Headers).To(Equal([]string{"Header1", "Header2", "Header3"}))
 				Expect(preview.Rows).To(HaveLen(3))
@@ -38,14 +38,14 @@ Row3Col1,Row3Col2,Row3Col3`
 Generated on 2023-10-27
 Header1,Header2,Header3
 Row1Col1,Row1Col2,Row1Col3`
-				preview, err := p.Preview([]byte(csvWithMeta), "test.csv", 2, -1)
+				preview, err := p.Preview([]byte(csvWithMeta), "test.csv", 2, -1, "")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(preview.Headers).To(Equal([]string{"Header1", "Header2", "Header3"}))
 				Expect(preview.Rows).To(HaveLen(1))
 			})
 
 			It("should limit the number of data rows when rowSize is specified", func() {
-				preview, err := p.Preview(fileBytes, "test.csv", 0, 2)
+				preview, err := p.Preview(fileBytes, "test.csv", 0, 2, "")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(preview.Rows).To(HaveLen(2))
 			})
@@ -53,7 +53,7 @@ Row1Col1,Row1Col2,Row1Col3`
 			It("should trim leading and trailing spaces from headers and fields", func() {
 				csvWithSpaces := ` Header1,  Header2  ,Header3
   Row1Col1  ,Row1Col2  , Row1Col3 `
-				preview, err := p.Preview([]byte(csvWithSpaces), "test.csv", 0, -1)
+				preview, err := p.Preview([]byte(csvWithSpaces), "test.csv", 0, -1, "")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(preview.Headers).To(Equal([]string{"Header1", "Header2", "Header3"}))
 				Expect(preview.Rows[0]).To(Equal([]string{"Row1Col1", "Row1Col2", "Row1Col3"}))
@@ -64,7 +64,7 @@ Row1Col1,Row1Col2,Row1Col3`
 			It("should parse a simple file correctly", func() {
 				xlsContent := "Header1\tHeader2\tHeader3\nRow1Col1\tRow1Col2\tRow1Col3"
 				fileBytes := []byte(xlsContent)
-				preview, err := p.Preview(fileBytes, "test.xls", 0, -1)
+				preview, err := p.Preview(fileBytes, "test.xls", 0, -1, "")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(preview.Headers).To(Equal([]string{"Header1", "Header2", "Header3"}))
 				Expect(preview.Rows).To(HaveLen(1))
@@ -79,7 +79,7 @@ Row2Col1	Row2Col2	Row2Col3
 Row3Col1	Row3Col2	Row3Col3`
 				fileBytes := []byte(xlsContent)
 
-				preview, err := p.Preview(fileBytes, "test.xls", 2, 2)
+				preview, err := p.Preview(fileBytes, "test.xls", 2, 2, "")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(preview.Headers).To(Equal([]string{"Header1", "Header2", "Header3"}))
 				Expect(preview.Rows).To(HaveLen(2))
@@ -90,34 +90,34 @@ Row3Col1	Row3Col2	Row3Col3`
 
 		Context("with edge cases", func() {
 			It("should return an error for an unsupported file type", func() {
-				_, err := p.Preview([]byte("content"), "statement.pdf", 0, -1)
+				_, err := p.Preview([]byte("content"), "statement.pdf", 0, -1, "")
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("unsupported file type for preview"))
 			})
 
 			It("should handle an empty file", func() {
-				preview, err := p.Preview([]byte(""), "test.csv", 0, -1)
+				preview, err := p.Preview([]byte(""), "test.csv", 0, -1, "")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(preview.Headers).To(BeEmpty())
 				Expect(preview.Rows).To(BeEmpty())
 			})
 
 			It("should handle a file with only a header row", func() {
-				preview, err := p.Preview([]byte("Header1,Header2"), "test.csv", 0, -1)
+				preview, err := p.Preview([]byte("Header1,Header2"), "test.csv", 0, -1, "")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(preview.Headers).To(Equal([]string{"Header1", "Header2"}))
 				Expect(preview.Rows).To(BeEmpty())
 			})
 
 			It("should handle when skipRows is greater than the number of available rows", func() {
-				preview, err := p.Preview([]byte("row1\nrow2"), "test.csv", 5, -1)
+				preview, err := p.Preview([]byte("row1\nrow2"), "test.csv", 5, -1, "")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(preview.Headers).To(BeEmpty())
 				Expect(preview.Rows).To(BeEmpty())
 			})
 
 			It("should handle rowSize being zero, returning headers but no rows", func() {
-				preview, err := p.Preview([]byte("H1,H2\nR1,R2"), "test.csv", 0, 0)
+				preview, err := p.Preview([]byte("H1,H2\nR1,R2"), "test.csv", 0, 0, "")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(preview.Headers).To(Equal([]string{"H1", "H2"}))
 				Expect(preview.Rows).To(BeEmpty())
@@ -134,7 +134,7 @@ Row3Col1	Row3Col2	Row3Col3`
 					"skip_rows": 0,
 					"column_mapping": { "txn_date": "Date", "name": "Payee", "amount": "Amount" }
 				}`
-				transactions, err := p.Parse([]byte(csvContent), metadata, "test.csv")
+				transactions, err := p.Parse([]byte(csvContent), metadata, "test.csv", "")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(transactions).To(HaveLen(1))
 				Expect(transactions[0].Name).To(Equal("Supermarket"))
@@ -152,7 +152,7 @@ Row3Col1	Row3Col2	Row3Col3`
 					"skip_rows": 0,
 					"column_mapping": { "txn_date": "Date", "name": "Description", "credit": "Credit", "debit": "Debit" }
 				}`
-				transactions, err := p.Parse([]byte(csvContent), metadata, "test.csv")
+				transactions, err := p.Parse([]byte(csvContent), metadata, "test.csv", "")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(transactions).To(HaveLen(2))
 				Expect(*transactions[0].Amount).To(Equal(5000.00))
@@ -166,7 +166,7 @@ Row3Col1	Row3Col2	Row3Col3`
 					"skip_rows": 0,
 					"column_mapping": { "txn_date": "Date", "name": "Payee", "description": "Desc", "amount": "Amount" }
 				}`
-				transactions, err := p.Parse([]byte(csvWithDesc), metadata, "test.csv")
+				transactions, err := p.Parse([]byte(csvWithDesc), metadata, "test.csv", "")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(transactions).To(HaveLen(1))
 				Expect(transactions[0].Description).To(Equal("Weekly Groceries"))
@@ -181,7 +181,7 @@ Date,Payee,Amount
 					"skip_rows": 2,
 					"column_mapping": { "txn_date": "Date", "name": "Payee", "amount": "Amount" }
 				}`
-				transactions, err := p.Parse([]byte(csvContent), metadata, "test.csv")
+				transactions, err := p.Parse([]byte(csvContent), metadata, "test.csv", "")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(transactions).To(HaveLen(1))
 				Expect(transactions[0].Name).To(Equal("Supermarket"))
@@ -194,7 +194,7 @@ Date,Payee,Amount
 					"skip_rows": 0,
 					"column_mapping": { "txn_date": "Date", "name": "Payee", "amount": "Amount" }
 				}`
-				transactions, err := p.Parse([]byte(csvContent), metadata, "test.csv")
+				transactions, err := p.Parse([]byte(csvContent), metadata, "test.csv", "")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(transactions).To(HaveLen(1))
 				Expect(transactions[0].Description).To(BeEmpty())
@@ -212,7 +212,7 @@ malformed-line-without-enough-columns
 					"skip_rows": 0,
 					"column_mapping": { "txn_date": "Date", "name": "Payee", "amount": "Amount" }
 				}`
-				transactions, err := p.Parse([]byte(csvContent), metadata, "test.csv")
+				transactions, err := p.Parse([]byte(csvContent), metadata, "test.csv", "")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(transactions).To(HaveLen(2))
 				Expect(transactions[0].Name).To(Equal("Supermarket"))
@@ -222,12 +222,12 @@ malformed-line-without-enough-columns
 
 		Context("with invalid or problematic data", func() {
 			It("should return an error if metadata is an empty string", func() {
-				_, err := p.Parse([]byte(""), "", "test.csv")
+				_, err := p.Parse([]byte(""), "", "test.csv", "")
 				Expect(err).To(MatchError("metadata is required for custom parser"))
 			})
 
 			It("should return an error if metadata is not valid JSON", func() {
-				_, err := p.Parse([]byte(""), "{not-json}", "test.csv")
+				_, err := p.Parse([]byte(""), "{not-json}", "test.csv", "")
 				Expect(err.Error()).To(ContainSubstring("failed to unmarshal metadata"))
 			})
 
@@ -238,7 +238,7 @@ malformed-line-without-enough-columns
 					"skip_rows": 0,
 					"column_mapping": { "txn_date": "Date", "name": "Payee", "amount": "Amount" }
 				}`
-				_, err := p.Parse([]byte(csvContent), metadata, "test.csv")
+				_, err := p.Parse([]byte(csvContent), metadata, "test.csv", "")
 				Expect(err).To(MatchError("mapped column 'Amount' not found in statement header"))
 			})
 
@@ -249,7 +249,7 @@ malformed-line-without-enough-columns
 					"skip_rows": 0,
 					"column_mapping": { "txn_date": "Date", "name": "Payee", "credit": "Credit" }
 				}`
-				_, err := p.Parse([]byte(csvContent), metadata, "test.csv")
+				_, err := p.Parse([]byte(csvContent), metadata, "test.csv", "")
 				Expect(err).To(MatchError("insufficient amount information in metadata: map either 'amount' or both 'credit' and 'debit'"))
 			})
 
@@ -260,7 +260,7 @@ malformed-line-without-enough-columns
 					"skip_rows": 0,
 					"column_mapping": { "txn_date": "Date", "amount": "Amount" }
 				}`
-				_, err := p.Parse([]byte(csvContent), metadata, "test.csv")
+				_, err := p.Parse([]byte(csvContent), metadata, "test.csv", "")
 				Expect(err).To(MatchError("required field 'name' is not mapped in metadata"))
 			})
 
@@ -274,7 +274,7 @@ not-a-date,Supermarket,150.75
 					"skip_rows": 0,
 					"column_mapping": { "txn_date": "Date", "name": "Payee", "amount": "Amount" }
 				}`
-				transactions, err := p.Parse([]byte(csvContent), metadata, "test.csv")
+				transactions, err := p.Parse([]byte(csvContent), metadata, "test.csv", "")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(transactions).To(HaveLen(1))
 				Expect(transactions[0].Name).To(Equal("Restaurant"))

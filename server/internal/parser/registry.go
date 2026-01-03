@@ -4,7 +4,7 @@ import "expenses/internal/models"
 
 // Parser defines the interface for different bank statement parsers.
 type Parser interface {
-	Parse(fileBytes []byte, metadata string, fileName string) ([]models.CreateTransactionInput, error)
+	Parse(fileBytes []byte, metadata string, fileName string, password string) ([]models.CreateTransactionInput, error)
 }
 
 var parserRegistry = make(map[models.BankType]Parser)

@@ -15,7 +15,7 @@ import (
 type ICICICreditParser struct{}
 
 // Parse extracts transactions from an ICICI credit card statement.
-func (p *ICICICreditParser) Parse(fileBytes []byte, metadata string, fileName string) ([]models.CreateTransactionInput, error) {
+func (p *ICICICreditParser) Parse(fileBytes []byte, metadata string, fileName string, password string) ([]models.CreateTransactionInput, error) {
 	// The CSV is not standard; it has metadata at the top. We need to find the header row first.
 	// A simple way is to convert to string and find the start of the actual CSV data.
 	content := string(fileBytes)

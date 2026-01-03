@@ -42,12 +42,12 @@ func createAccount(testHelper *TestHelper, name string, balance float64) float64
 func waitForStatementDone(testHelper *TestHelper, statementId float64) map[string]any {
 	var status string
 	var data map[string]any
-	for i := 0; i < 8; i++ {
+	for i := 0; i < 20; i++ {
 		resp, response := testHelper.MakeRequest(http.MethodGet, "/statement/"+strconv.FormatFloat(statementId, 'f', 0, 64), nil)
 		Expect(resp.StatusCode).To(Equal(http.StatusOK))
 		data = response["data"].(map[string]any)
 		status = data["status"].(string)
-		if status != "processing" {
+		if status != "processing" && status != "pending" {
 			break
 		}
 		time.Sleep(5 * time.Second)

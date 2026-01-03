@@ -44,6 +44,16 @@ var _ = Describe("PostgreSQLFactory", func() {
 		})
 
 		It("should return an error if connection pool creation fails due to invalid configuration", func() {
+			// Preserve original DB_PORT and restore after test to avoid leaking env changes
+			origPort := os.Getenv("DB_PORT")
+			defer func() {
+				if origPort == "" {
+					_ = os.Unsetenv("DB_PORT")
+				} else {
+					_ = os.Setenv("DB_PORT", origPort)
+				}
+			}()
+
 			// Set an invalid port to force strconv.Atoi to fail within createConnectionPool
 			os.Setenv("DB_PORT", "this-is-not-a-port-number")
 

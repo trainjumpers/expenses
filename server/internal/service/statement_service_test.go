@@ -824,7 +824,7 @@ var _ = Describe("StatementService", func() {
 				skipRows := 0
 				rowSize := 10
 
-				preview, err := service.PreviewStatement(ctx, fileBytes, fileName, skipRows, rowSize)
+				preview, err := service.PreviewStatement(ctx, fileBytes, fileName, skipRows, rowSize, "")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(preview).NotTo(BeNil())
 				Expect(preview.Headers).To(Equal([]string{"Date", "Description", "Amount"}))
@@ -839,7 +839,7 @@ var _ = Describe("StatementService", func() {
 				skipRows := 2
 				rowSize := 10
 
-				preview, err := service.PreviewStatement(ctx, fileBytes, fileName, skipRows, rowSize)
+				preview, err := service.PreviewStatement(ctx, fileBytes, fileName, skipRows, rowSize, "")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(preview).NotTo(BeNil())
 				Expect(preview.Headers).To(Equal([]string{"Date", "Description", "Amount"}))
@@ -854,7 +854,7 @@ var _ = Describe("StatementService", func() {
 				skipRows := 0
 				rowSize := 2
 
-				preview, err := service.PreviewStatement(ctx, fileBytes, fileName, skipRows, rowSize)
+				preview, err := service.PreviewStatement(ctx, fileBytes, fileName, skipRows, rowSize, "")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(preview).NotTo(BeNil())
 				Expect(preview.Headers).To(Equal([]string{"Date", "Description", "Amount"}))
@@ -869,7 +869,7 @@ var _ = Describe("StatementService", func() {
 				skipRows := 0
 				rowSize := 1 // Use 1 instead of 0 since validator requires positive rowSize
 
-				preview, err := service.PreviewStatement(ctx, fileBytes, fileName, skipRows, rowSize)
+				preview, err := service.PreviewStatement(ctx, fileBytes, fileName, skipRows, rowSize, "")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(preview).NotTo(BeNil())
 				Expect(preview.Headers).To(Equal([]string{"Date", "Description", "Amount"}))
@@ -882,7 +882,7 @@ var _ = Describe("StatementService", func() {
 				skipRows := 0
 				rowSize := 10
 
-				preview, err := service.PreviewStatement(ctx, fileBytes, fileName, skipRows, rowSize)
+				preview, err := service.PreviewStatement(ctx, fileBytes, fileName, skipRows, rowSize, "")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(preview).NotTo(BeNil())
 				Expect(preview.Headers).To(Equal([]string{"Date", "Description", "Amount"}))
@@ -900,7 +900,7 @@ var _ = Describe("StatementService", func() {
 				rowSize := 10
 
 				// Note: This test might fail with actual XLS parsing, but validates the flow
-				_, err := service.PreviewStatement(ctx, fileBytes, fileName, skipRows, rowSize)
+				_, err := service.PreviewStatement(ctx, fileBytes, fileName, skipRows, rowSize, "")
 				// We expect this to either succeed or fail with a parsing error, not a validation error
 				if err != nil {
 					Expect(err.Error()).NotTo(ContainSubstring("file is required"))
@@ -916,7 +916,7 @@ var _ = Describe("StatementService", func() {
 				rowSize := 10
 
 				// Note: This test might fail with actual XLSX parsing, but validates the flow
-				_, err := service.PreviewStatement(ctx, fileBytes, fileName, skipRows, rowSize)
+				_, err := service.PreviewStatement(ctx, fileBytes, fileName, skipRows, rowSize, "")
 				// We expect this to either succeed or fail with a parsing error, not a validation error
 				if err != nil {
 					Expect(err.Error()).NotTo(ContainSubstring("file is required"))
@@ -932,7 +932,7 @@ var _ = Describe("StatementService", func() {
 				skipRows := 10
 				rowSize := 10
 
-				preview, err := service.PreviewStatement(ctx, fileBytes, fileName, skipRows, rowSize)
+				preview, err := service.PreviewStatement(ctx, fileBytes, fileName, skipRows, rowSize, "")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(preview).NotTo(BeNil())
 				Expect(preview.Headers).To(HaveLen(0))
@@ -945,7 +945,7 @@ var _ = Describe("StatementService", func() {
 				skipRows := 0
 				rowSize := 10
 
-				preview, err := service.PreviewStatement(ctx, fileBytes, fileName, skipRows, rowSize)
+				preview, err := service.PreviewStatement(ctx, fileBytes, fileName, skipRows, rowSize, "")
 				Expect(err).To(HaveOccurred())
 				Expect(preview).To(BeNil())
 			})
@@ -956,7 +956,7 @@ var _ = Describe("StatementService", func() {
 				skipRows := 0
 				rowSize := 10
 
-				preview, err := service.PreviewStatement(ctx, fileBytes, fileName, skipRows, rowSize)
+				preview, err := service.PreviewStatement(ctx, fileBytes, fileName, skipRows, rowSize, "")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(preview).NotTo(BeNil())
 				Expect(preview.Headers).To(Equal([]string{"Date", "Description", "Amount"}))
@@ -969,7 +969,7 @@ var _ = Describe("StatementService", func() {
 				skipRows := 0
 				rowSize := 10
 
-				preview, err := service.PreviewStatement(ctx, fileBytes, fileName, skipRows, rowSize)
+				preview, err := service.PreviewStatement(ctx, fileBytes, fileName, skipRows, rowSize, "")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(preview).NotTo(BeNil())
 				Expect(preview.Headers).To(Equal([]string{"Date", "Description", "Amount"}))
@@ -982,7 +982,7 @@ var _ = Describe("StatementService", func() {
 				skipRows := 0
 				rowSize := 10
 
-				preview, err := service.PreviewStatement(ctx, fileBytes, fileName, skipRows, rowSize)
+				preview, err := service.PreviewStatement(ctx, fileBytes, fileName, skipRows, rowSize, "")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(preview).NotTo(BeNil())
 				Expect(preview.Headers).To(Equal([]string{"Date", "Description", "Amount"}))
@@ -997,7 +997,7 @@ var _ = Describe("StatementService", func() {
 				skipRows := 0
 				rowSize := 10
 
-				_, err := service.PreviewStatement(ctx, fileBytes, fileName, skipRows, rowSize)
+				_, err := service.PreviewStatement(ctx, fileBytes, fileName, skipRows, rowSize, "")
 				Expect(err).To(HaveOccurred())
 				Expect(errors.Unwrap(err).Error()).To(ContainSubstring("file is required"))
 			})
@@ -1008,7 +1008,7 @@ var _ = Describe("StatementService", func() {
 				skipRows := 0
 				rowSize := 10
 
-				_, err := service.PreviewStatement(ctx, fileBytes, fileName, skipRows, rowSize)
+				_, err := service.PreviewStatement(ctx, fileBytes, fileName, skipRows, rowSize, "")
 				Expect(err).To(HaveOccurred())
 				Expect(errors.Unwrap(err).Error()).To(ContainSubstring("filename cannot be empty"))
 			})
@@ -1019,7 +1019,7 @@ var _ = Describe("StatementService", func() {
 				skipRows := 0
 				rowSize := 10
 
-				_, err := service.PreviewStatement(ctx, fileBytes, fileName, skipRows, rowSize)
+				_, err := service.PreviewStatement(ctx, fileBytes, fileName, skipRows, rowSize, "")
 				Expect(err).To(HaveOccurred())
 				Expect(errors.Unwrap(err).Error()).To(ContainSubstring("filename cannot be empty"))
 			})
@@ -1034,7 +1034,7 @@ var _ = Describe("StatementService", func() {
 				skipRows := 0
 				rowSize := 10
 
-				_, err := service.PreviewStatement(ctx, largeContent, fileName, skipRows, rowSize)
+				_, err := service.PreviewStatement(ctx, largeContent, fileName, skipRows, rowSize, "")
 				Expect(err).To(HaveOccurred())
 				Expect(errors.Unwrap(err).Error()).To(ContainSubstring("file size must be less than 5MB"))
 			})
@@ -1045,7 +1045,7 @@ var _ = Describe("StatementService", func() {
 				skipRows := 0
 				rowSize := 10
 
-				_, err := service.PreviewStatement(ctx, fileBytes, fileName, skipRows, rowSize)
+				_, err := service.PreviewStatement(ctx, fileBytes, fileName, skipRows, rowSize, "")
 				Expect(err).To(HaveOccurred())
 				Expect(errors.Unwrap(err).Error()).To(ContainSubstring("file must be CSV or Excel format"))
 			})
@@ -1056,7 +1056,7 @@ var _ = Describe("StatementService", func() {
 				skipRows := -1
 				rowSize := 10
 
-				_, err := service.PreviewStatement(ctx, fileBytes, fileName, skipRows, rowSize)
+				_, err := service.PreviewStatement(ctx, fileBytes, fileName, skipRows, rowSize, "")
 				Expect(err).To(HaveOccurred())
 				Expect(errors.Unwrap(err).Error()).To(ContainSubstring("skipRows cannot be negative"))
 			})
@@ -1067,7 +1067,7 @@ var _ = Describe("StatementService", func() {
 				skipRows := 0
 				rowSize := -5
 
-				_, err := service.PreviewStatement(ctx, fileBytes, fileName, skipRows, rowSize)
+				_, err := service.PreviewStatement(ctx, fileBytes, fileName, skipRows, rowSize, "")
 				Expect(err).To(HaveOccurred())
 				Expect(errors.Unwrap(err).Error()).To(ContainSubstring("rowSize must be positive"))
 			})
@@ -1078,7 +1078,7 @@ var _ = Describe("StatementService", func() {
 				skipRows := 0
 				rowSize := 0
 
-				preview, err := service.PreviewStatement(ctx, fileBytes, fileName, skipRows, rowSize)
+				preview, err := service.PreviewStatement(ctx, fileBytes, fileName, skipRows, rowSize, "")
 				Expect(err).ToNot(HaveOccurred())
 				Expect(preview).ToNot(BeNil())
 			})
@@ -1089,16 +1089,16 @@ var _ = Describe("StatementService", func() {
 				rowSize := 10
 
 				// Test CSV
-				_, err := service.PreviewStatement(ctx, fileBytes, "test.csv", skipRows, rowSize)
+				_, err := service.PreviewStatement(ctx, fileBytes, "test.csv", skipRows, rowSize, "")
 				Expect(err).NotTo(HaveOccurred())
 
 				// Test CSV with uppercase
-				_, err = service.PreviewStatement(ctx, fileBytes, "test.CSV", skipRows, rowSize)
+				_, err = service.PreviewStatement(ctx, fileBytes, "test.CSV", skipRows, rowSize, "")
 				Expect(err).NotTo(HaveOccurred())
 
 				// Test XLS (will likely fail parsing but should pass validation)
 				xlsBytes := []byte{0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1}
-				_, err = service.PreviewStatement(ctx, xlsBytes, "test.xls", skipRows, rowSize)
+				_, err = service.PreviewStatement(ctx, xlsBytes, "test.xls", skipRows, rowSize, "")
 				// Should not fail with validation error
 				if err != nil {
 					underlyingErr := errors.Unwrap(err)
@@ -1109,7 +1109,7 @@ var _ = Describe("StatementService", func() {
 
 				// Test XLSX (will likely fail parsing but should pass validation)
 				xlsxBytes := []byte{0x50, 0x4B, 0x03, 0x04}
-				_, err = service.PreviewStatement(ctx, xlsxBytes, "test.xlsx", skipRows, rowSize)
+				_, err = service.PreviewStatement(ctx, xlsxBytes, "test.xlsx", skipRows, rowSize, "")
 				// Should not fail with validation error
 				if err != nil {
 					underlyingErr := errors.Unwrap(err)
@@ -1127,7 +1127,7 @@ var _ = Describe("StatementService", func() {
 				skipRows := 0
 				rowSize := 10
 
-				preview, err := service.PreviewStatement(ctx, fileBytes, fileName, skipRows, rowSize)
+				preview, err := service.PreviewStatement(ctx, fileBytes, fileName, skipRows, rowSize, "")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(preview).NotTo(BeNil())
 				Expect(preview.Headers).To(Equal([]string{"Date", "Description", "Amount"}))
@@ -1140,7 +1140,7 @@ var _ = Describe("StatementService", func() {
 				skipRows := 0
 				rowSize := 1000
 
-				preview, err := service.PreviewStatement(ctx, fileBytes, fileName, skipRows, rowSize)
+				preview, err := service.PreviewStatement(ctx, fileBytes, fileName, skipRows, rowSize, "")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(preview).NotTo(BeNil())
 				Expect(preview.Headers).To(Equal([]string{"Date", "Description", "Amount"}))
@@ -1154,7 +1154,7 @@ var _ = Describe("StatementService", func() {
 
 				testCases := []string{"test.Csv", "test.CSV", "test.cSv", "TEST.CSV"}
 				for _, fileName := range testCases {
-					_, err := service.PreviewStatement(ctx, fileBytes, fileName, skipRows, rowSize)
+					_, err := service.PreviewStatement(ctx, fileBytes, fileName, skipRows, rowSize, "")
 					Expect(err).NotTo(HaveOccurred())
 				}
 			})

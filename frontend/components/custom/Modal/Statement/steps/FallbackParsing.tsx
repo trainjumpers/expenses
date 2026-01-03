@@ -33,6 +33,11 @@ import {
   X,
 } from "lucide-react";
 
+interface PreviewStatementError {
+  message: string;
+  isPasswordRequired: boolean;
+}
+
 interface FallbackParsingProps {
   accounts: Account[];
   selectedAccountId: number;
@@ -51,8 +56,8 @@ interface FallbackParsingProps {
   previewData: StatementPreviewResponse | null;
   previewStatementMutation: UseMutationResult<
     StatementPreviewResponse,
-    Error,
-    { file: File; skipRows: number; rowSize: number }
+    PreviewStatementError,
+    { file: File; skipRows: number; rowSize: number; password?: string }
   >;
   onStepChange: (step: number) => void;
   fileInputRef: React.RefObject<HTMLInputElement | null>;
@@ -189,13 +194,13 @@ export function FallbackParsing({
                 : "Drag & drop your bank statement here, or click to select"}
             </p>
             <p className="text-xs text-muted-foreground">
-              Supports CSV, XLS, TXT files (max 5MB)
+              Supports CSV, XLS, XLSX, TXT files (max 5MB)
             </p>
             <Input
               id="file-input-fallback"
               ref={fileInputRef}
               type="file"
-              accept=".csv,.xls,.txt"
+              accept=".csv,.xls,.txt,.xlsx"
               onChange={onFileInputChange}
               className="hidden"
             />

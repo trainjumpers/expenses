@@ -133,7 +133,7 @@ var _ = Describe("ICICICreditParser", func() {
 "08/07/2025","11571085308","BBPS Payment received","0","0","10412.40","CR"
 "04/07/2025","11500123456","UPI-929092781855-Blinkit IN","8","0","385.00",""`
 
-			txns, err := parser.Parse([]byte(input), "", "test.csv")
+			txns, err := parser.Parse([]byte(input), "", "test.csv", "")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(txns).To(HaveLen(4))
 
@@ -165,7 +165,7 @@ var _ = Describe("ICICICreditParser", func() {
 "02/08/2024","9598980587","GOOGLEPLAY MUMBAI IN","52","0","2600.00",""
 "11/08/2024","9647709815","HOTSTAR MUMBAI IN","25","0","1271.10",""`
 
-			txns, err := parser.Parse([]byte(input), "", "test.csv")
+			txns, err := parser.Parse([]byte(input), "", "test.csv", "")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(txns).To(HaveLen(2))
 
@@ -190,7 +190,7 @@ var _ = Describe("ICICICreditParser", func() {
 "[ANOTHER_CARD_NUMBER]"
 "16/07/2025","11627037259","PAYU*SWIGGY Bangalore IN","6","0","327.00",""`
 
-			txns, err := parser.Parse([]byte(input), "", "test.csv")
+			txns, err := parser.Parse([]byte(input), "", "test.csv", "")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(txns).To(HaveLen(2)) // Should skip card number rows
 		})
@@ -198,7 +198,7 @@ var _ = Describe("ICICICreditParser", func() {
 		It("should error if header row is missing", func() {
 			input := `"Accountno:","[ACCOUNT_NUMBER]"
 "Customer Name:","[CUSTOMER_NAME]"`
-			_, err := parser.Parse([]byte(input), "", "")
+			_, err := parser.Parse([]byte(input), "", "", "")
 			Expect(err).To(MatchError("transaction header row not found in ICICI credit statement"))
 		})
 
@@ -210,7 +210,7 @@ var _ = Describe("ICICICreditParser", func() {
 "Transaction Details:"
 "Date","Sr.No.","Transaction Details","Reward Point Header","Intl.Amount","Amount(in Rs)","BillingAmountSign"`
 
-			txns, err := parser.Parse([]byte(input), "", "test.csv")
+			txns, err := parser.Parse([]byte(input), "", "test.csv", "")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(txns).To(HaveLen(0))
 		})

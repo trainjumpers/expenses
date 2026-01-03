@@ -15,7 +15,7 @@ import (
 // HDFCParser parses HDFC bank statements exported as CSV-like text
 type HDFCParser struct{}
 
-func (p *HDFCParser) Parse(fileBytes []byte, metadata string, fileName string) ([]models.CreateTransactionInput, error) {
+func (p *HDFCParser) Parse(fileBytes []byte, metadata string, fileName string, password string) ([]models.CreateTransactionInput, error) {
 	scanner := bufio.NewScanner(bytes.NewReader(fileBytes))
 
 	var lines []string

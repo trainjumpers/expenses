@@ -30,6 +30,7 @@ type ParseStatementInput struct {
 	OriginalFilename string `json:"original_filename" binding:"required"`
 	BankType         string `json:"bank_type,omitempty" binding:"optional"`
 	Metadata         string `json:"metadata,omitempty" binding:"optional"`
+	Password         string `json:"password,omitempty" binding:"optional"`
 }
 
 type UpdateStatementStatusInput struct {
@@ -65,11 +66,13 @@ type ParseStatementForm struct {
 	AccountId int64                 `form:"account_id" binding:"required"`
 	BankType  string                `form:"bank_type"`
 	Metadata  string                `form:"metadata"`
+	Password  string                `form:"password"`
 	File      *multipart.FileHeader `form:"file" binding:"required"`
 }
 
 type PreviewStatementForm struct {
 	SkipRows int                   `form:"skip_rows"`
 	RowSize  int                   `form:"row_size"`
+	Password string                `form:"password"`
 	File     *multipart.FileHeader `form:"file" binding:"required"`
 }

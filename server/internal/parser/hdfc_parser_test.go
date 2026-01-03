@@ -141,7 +141,7 @@ var _ = Describe("HDFCParser", func() {
 			input := "  Date     ,Narration                                                ,Value Dat,Debit Amount       ,Credit Amount      ,Chq/Ref Number   ,Closing Balance\n" +
 				"  01/04/25  ,UPI-ABC-XYZ-UPI                                        ,01/04/25 ,         192.36     ,           0.00     ,REF123                 ,         138.00  \n" +
 				"  28/04/25  ,NEFT CR-ABCD-ORG NAME-XYZ                             ,28/04/25 ,           0.00     ,       11000.00     ,NEFTREF123             ,       11120.30  \n"
-			txns, err := parser.Parse([]byte(input), "", "")
+			txns, err := parser.Parse([]byte(input), "", "", "")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(txns).To(HaveLen(2))
 			Expect(*txns[0].Amount).To(Equal(192.36))
@@ -151,14 +151,14 @@ var _ = Describe("HDFCParser", func() {
 		It("ensures CategoryIds is empty", func() {
 			input := "Date,Narration,Value Dat,Debit Amount,Credit Amount,Chq/Ref Number,Closing Balance\n" +
 				"01/07/25,INTEREST PAID TILL 30-JUN-2025,30/06/25,0.00,1.00,000000000000000,1.00\n"
-			txns, err := parser.Parse([]byte(input), "", "")
+			txns, err := parser.Parse([]byte(input), "", "", "")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(txns).To(HaveLen(1))
 			Expect(txns[0].CategoryIds).To(BeEmpty())
 		})
 
 		It("returns error when header row is missing", func() {
-			_, err := parser.Parse([]byte("No header here\nJust text"), "", "")
+			_, err := parser.Parse([]byte("No header here\nJust text"), "", "", "")
 			Expect(err).To(HaveOccurred())
 		})
 
@@ -168,14 +168,14 @@ var _ = Describe("HDFCParser", func() {
 			for i := range veryLong {
 				veryLong[i] = 'A'
 			}
-			_, err := parser.Parse(veryLong, "", "")
+			_, err := parser.Parse(veryLong, "", "", "")
 			Expect(err).To(HaveOccurred())
 		})
 
 		It("skips empty lines between transactions", func() {
 			input := "Date,Narration,Value Dat,Debit Amount,Credit Amount,Chq/Ref Number,Closing Balance\n\n" +
 				"01/10/24,POS SOME MERCHANT,30/09/24,2.00,0.00,0,20185.00\n\n"
-			txns, err := parser.Parse([]byte(input), "", "")
+			txns, err := parser.Parse([]byte(input), "", "", "")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(txns).To(HaveLen(1))
 		})
@@ -184,7 +184,7 @@ var _ = Describe("HDFCParser", func() {
 			input := "Date,Narration,Value Dat,Debit Amount,Credit Amount,Chq/Ref Number,Closing Balance\n" +
 				"01/10/24,Short\n" +
 				"01/10/24,POS SOME MERCHANT,30/09/24,2.00,0.00,0,20185.00\n"
-			txns, err := parser.Parse([]byte(input), "", "")
+			txns, err := parser.Parse([]byte(input), "", "", "")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(txns).To(HaveLen(1))
 		})
@@ -193,7 +193,7 @@ var _ = Describe("HDFCParser", func() {
 			input := "Date,Narration,Value Dat,Debit Amount,Credit Amount,Chq/Ref Number,Closing Balance\n" +
 				"bad-date,POS SOME MERCHANT,30/09/24,2.00,0.00,0,20185.00\n" +
 				"01/10/24,POS SOME MERCHANT,30/09/24,2.00,0.00,0,20185.00\n"
-			txns, err := parser.Parse([]byte(input), "", "")
+			txns, err := parser.Parse([]byte(input), "", "", "")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(txns).To(HaveLen(1))
 		})
@@ -202,7 +202,7 @@ var _ = Describe("HDFCParser", func() {
 			input := "Date,Narration,Value Dat,Debit Amount,Credit Amount,Chq/Ref Number,Closing Balance\n" +
 				"01/10/24,POS SOME MERCHANT,30/09/24,abc,0.00,0,20185.00\n" +
 				"01/10/24,POS SOME MERCHANT,30/09/24,2.00,0.00,0,20185.00\n"
-			txns, err := parser.Parse([]byte(input), "", "")
+			txns, err := parser.Parse([]byte(input), "", "", "")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(txns).To(HaveLen(1))
 		})
@@ -210,7 +210,7 @@ var _ = Describe("HDFCParser", func() {
 		It("truncates very long narration when parsing (debit)", func() {
 			input := "Date,Narration,Value Dat,Debit Amount,Credit Amount,Chq/Ref Number,Closing Balance\n" +
 				"01/10/24,This is a very long description that should be truncated for readability,01/10/24,10.00,0.00,REF123,0.00\n"
-			txns, err := parser.Parse([]byte(input), "", "")
+			txns, err := parser.Parse([]byte(input), "", "", "")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(txns).To(HaveLen(1))
 			Expect(txns[0].Name).To(Equal("Debit: This is a very..."))

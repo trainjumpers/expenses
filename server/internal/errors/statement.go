@@ -21,3 +21,7 @@ func NewStatementUpdateError(err error) *AuthError {
 func NewStatementBadRequestError(err error) *AuthError {
 	return formatError(http.StatusBadRequest, "invalid request", err, "StatementBadRequestError")
 }
+
+func NewStatementPasswordRequiredError(err error) *AuthError {
+	return formatError(http.StatusBadRequest, "statement password required", err, "StatementPasswordRequired")
+}

@@ -11,6 +11,8 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+
+	"github.com/xuri/excelize/v2"
 )
 
 type CustomParser struct{}
@@ -19,6 +21,44 @@ type CustomParser struct{}
 type StatementMetadata struct {
 	SkipRows      int               `json:"skip_rows"`
 	ColumnMapping map[string]string `json:"column_mapping"`
+}
+
+var ErrWorkbookPasswordRequired = errors.New("workbook password required")
+
+func openWorkbook(fileBytes []byte, password string) (*excelize.File, error) {
+	f, err := excelize.OpenReader(bytes.NewReader(fileBytes), excelize.Options{Password: password})
+	if err != nil {
+		return nil, err
+	}
+	return f, nil
+}
+
+var zipHeader = []byte{0x50, 0x4B, 0x03, 0x04}
+
+// IsExcelPasswordProtected checks if an XLSX file is likely encrypted
+func IsExcelPasswordProtectedBytes(data []byte) bool {
+	if len(data) < 4 {
+		return false
+	}
+
+	for i := 0; i < 4; i++ {
+		if data[i] != zipHeader[i] {
+			return true
+		}
+	}
+	
+	return false
+}
+
+func ValidateWorkbookPassword(fileBytes []byte, password string) error {
+	f, err := openWorkbook(fileBytes, password)
+	if err != nil {
+		return err
+	}
+	if err := f.Close(); err != nil {
+		return err
+	}
+	return nil
 }
 
 // trimRecords iterates through a 2D string slice and trims whitespace from each element.
@@ -42,7 +82,7 @@ func trimRecords(records [][]string) [][]string {
 	return trimmed
 }
 
-func (p *CustomParser) Preview(fileBytes []byte, fileName string, skipRows int, rowSize int) (*models.StatementPreview, error) {
+func (p *CustomParser) Preview(fileBytes []byte, fileName string, skipRows int, rowSize int, password string) (*models.StatementPreview, error) {
 	logger.Debugf("CustomParser.Preview: Starting preview for file '%s', skipRows=%d, rowSize=%d", fileName, skipRows, rowSize)
 	logger.Debugf("CustomParser.Preview: File size: %d bytes", len(fileBytes))
 
@@ -75,6 +115,24 @@ func (p *CustomParser) Preview(fileBytes []byte, fileName string, skipRows int, 
 			return nil, fmt.Errorf("failed to read tsv from xls file: %w", err)
 		}
 		logger.Debugf("CustomParser.Preview: Successfully read %d TSV records from XLS", len(records))
+	case ".xlsx":
+		logger.Debugf("CustomParser.Preview: Processing as XLSX file")
+		f, err := openWorkbook(fileBytes, password)
+		if err != nil {
+			logger.Debugf("CustomParser.Preview: Failed to open XLSX file: %v", err)
+			return nil, fmt.Errorf("failed to open xlsx file: %w", err)
+		}
+		defer f.Close()
+		sheets := f.GetSheetList()
+		if len(sheets) == 0 {
+			return nil, errors.New("no sheets found in XLSX file")
+		}
+		records, err = f.GetRows(sheets[0])
+		if err != nil {
+			logger.Debugf("CustomParser.Preview: Failed to read rows from sheet: %v", err)
+			return nil, fmt.Errorf("failed to read rows from sheet: %w", err)
+		}
+		logger.Debugf("CustomParser.Preview: Successfully read %d XLSX records", len(records))
 	default:
 		logger.Debugf("CustomParser.Preview: Unsupported file extension: %s", extension)
 		return nil, fmt.Errorf("unsupported file type for preview: %s. Only .csv and .xls are supported", fileName)
@@ -118,7 +176,7 @@ func (p *CustomParser) Preview(fileBytes []byte, fileName string, skipRows int, 
 }
 
 // Parse processes a file using metadata to map columns and create transactions.
-func (p *CustomParser) Parse(fileBytes []byte, metadata string, fileName string) ([]models.CreateTransactionInput, error) {
+func (p *CustomParser) Parse(fileBytes []byte, metadata string, fileName string, password string) ([]models.CreateTransactionInput, error) {
 	logger.Debugf("CustomParser.Parse: Starting parse for file '%s'", fileName)
 	logger.Debugf("CustomParser.Parse: File size: %d bytes", len(fileBytes))
 	logger.Debugf("CustomParser.Parse: Metadata: %s", metadata)
@@ -135,7 +193,7 @@ func (p *CustomParser) Parse(fileBytes []byte, metadata string, fileName string)
 	}
 	logger.Debugf("CustomParser.Parse: Parsed metadata - SkipRows: %d, ColumnMapping: %v", meta.SkipRows, meta.ColumnMapping)
 
-	preview, err := p.Preview(fileBytes, fileName, meta.SkipRows, -1)
+	preview, err := p.Preview(fileBytes, fileName, meta.SkipRows, -1, password)
 	if err != nil {
 		logger.Debugf("CustomParser.Parse: Failed to preview file: %v", err)
 		return nil, fmt.Errorf("failed to preview file for parsing: %w", err)

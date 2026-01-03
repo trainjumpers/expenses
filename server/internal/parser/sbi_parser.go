@@ -1,7 +1,6 @@
 package parser
 
 import (
-	"bytes"
 	"errors"
 	"expenses/internal/models"
 	"expenses/pkg/logger"
@@ -9,14 +8,12 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
-
-	"github.com/xuri/excelize/v2"
 )
 
 type SBIParser struct{}
 
-func (p *SBIParser) Parse(fileBytes []byte, metadata string, fileName string) ([]models.CreateTransactionInput, error) {
-	f, err := excelize.OpenReader(bytes.NewReader(fileBytes))
+func (p *SBIParser) Parse(fileBytes []byte, metadata string, fileName string, password string) ([]models.CreateTransactionInput, error) {
+	f, err := openWorkbook(fileBytes, password)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open XLSX file: %w", err)
 	}
