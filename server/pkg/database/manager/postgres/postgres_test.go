@@ -3,7 +3,6 @@ package postgres_test
 import (
 	"context"
 	"errors"
-	"os"
 	"time"
 
 	"expenses/internal/config"
@@ -26,7 +25,6 @@ var _ = Describe("PostgreSQL Database Manager", Ordered, func() {
 		cfg = &config.Config{
 			DBSchema: "public",
 		}
-		os.Setenv("DB_PORT", "5432")
 
 		var err error
 		factory := postgres.NewPostgreSQLFactory()
