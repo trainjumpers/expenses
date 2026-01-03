@@ -189,7 +189,7 @@ export function FallbackParsing({
                 : "Drag & drop your bank statement here, or click to select"}
             </p>
             <p className="text-xs text-muted-foreground">
-              Supports CSV, XLS, TXT files (max 256KB)
+              Supports CSV, XLS, TXT files (max 5MB)
             </p>
             <Input
               id="file-input-fallback"

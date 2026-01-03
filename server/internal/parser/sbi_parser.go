@@ -1,7 +1,6 @@
 package parser
 
 import (
-	"bufio"
 	"bytes"
 	"errors"
 	"expenses/internal/models"
@@ -10,26 +9,36 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+
+	"github.com/xuri/excelize/v2"
 )
 
 type SBIParser struct{}
 
 func (p *SBIParser) Parse(fileBytes []byte, metadata string, fileName string) ([]models.CreateTransactionInput, error) {
-	scanner := bufio.NewScanner(bytes.NewReader(fileBytes))
+	f, err := excelize.OpenReader(bytes.NewReader(fileBytes))
+	if err != nil {
+		return nil, fmt.Errorf("failed to open XLSX file: %w", err)
+	}
+	defer f.Close()
 
-	var lines []string
-	for scanner.Scan() {
-		lines = append(lines, scanner.Text())
+	sheets := f.GetSheetList()
+	if len(sheets) == 0 {
+		return nil, errors.New("no sheets found in XLSX file")
 	}
 
-	if err := scanner.Err(); err != nil {
-		return nil, fmt.Errorf("failed to read file: %w", err)
+	rows, err := f.GetRows(sheets[0])
+	if err != nil {
+		return nil, fmt.Errorf("failed to read rows from sheet: %w", err)
 	}
 
 	headerRowIndex := -1
-	for i, line := range lines {
-		if strings.Contains(strings.ToLower(line), "txn date") &&
-			strings.Contains(strings.ToLower(line), "description") {
+	for i, row := range rows {
+		if len(row) < 2 {
+			continue
+		}
+		rowStr := strings.ToLower(row[0]) + " " + strings.ToLower(row[1])
+		if strings.Contains(rowStr, "date") && strings.Contains(rowStr, "details") {
 			headerRowIndex = i
 			break
 		}
@@ -40,28 +49,17 @@ func (p *SBIParser) Parse(fileBytes []byte, metadata string, fileName string) ([
 	}
 
 	var transactions []models.CreateTransactionInput
-	for i := headerRowIndex + 1; i < len(lines); i++ {
-		line := strings.TrimSpace(lines[i])
+	for i := headerRowIndex + 1; i < len(rows); i++ {
+		row := rows[i]
 
-		if line == "" {
+		if len(row) < 6 {
+			logger.Debugf("Skipping row %d: expected at least 6 columns, got %d", i+1, len(row))
 			continue
 		}
 
-		if strings.Contains(strings.ToLower(line), "computer generated") {
-			logger.Debugf("Breaking at line %d: found 'computer generated' text. End of statement reached", i+1)
-			break
-		}
-
-		fields := strings.Split(line, "\t")
-
-		if len(fields) < 7 {
-			logger.Debugf("Skipping line %d: expected at least 7 columns, got %d", i+1, len(fields))
-			continue
-		}
-
-		transaction, err := p.parseTransactionRow(fields)
+		transaction, err := p.parseTransactionRow(row)
 		if err != nil {
-			logger.Warnf("Failed to parse line %d: %v\n", i+1, err)
+			logger.Warnf("Failed to parse row %d: %v\n", i+1, err)
 			continue
 		}
 
@@ -74,15 +72,15 @@ func (p *SBIParser) Parse(fileBytes []byte, metadata string, fileName string) ([
 }
 
 func (p *SBIParser) parseTransactionRow(fields []string) (*models.CreateTransactionInput, error) {
-	if len(fields) < 7 {
+	if len(fields) < 6 {
 		return nil, errors.New("insufficient columns in row")
 	}
 
 	txnDateStr := strings.TrimSpace(fields[0])
-	description := strings.TrimSpace(fields[2])
-	refNo := strings.TrimSpace(fields[3])
-	debitStr := strings.TrimSpace(fields[4])
-	creditStr := strings.TrimSpace(fields[5])
+	description := strings.TrimSpace(fields[1])
+	refNo := strings.TrimSpace(fields[2])
+	debitStr := strings.TrimSpace(fields[3])
+	creditStr := strings.TrimSpace(fields[4])
 
 	txnDate, err := utils.ParseDate(txnDateStr)
 	if err != nil {
@@ -109,7 +107,6 @@ func (p *SBIParser) parseTransactionRow(fields []string) (*models.CreateTransact
 		return nil, errors.New("both debit and credit amounts are empty")
 	}
 
-	// Generate transaction name from description
 	name := p.generateTransactionName(description, isCredit)
 
 	fullDescription := description
@@ -130,13 +127,12 @@ func (p *SBIParser) parseTransactionRow(fields []string) (*models.CreateTransact
 	return transaction, nil
 }
 
-// generateTransactionName creates a readable transaction name from description
 func (p *SBIParser) generateTransactionName(description string, isCredit bool) string {
-	// Clean up the description
 	desc := strings.TrimSpace(description)
 
-	// Remove common prefixes
 	prefixes := []string{
+		"DEP TFR",
+		"WDL TFR",
 		"TO TRANSFER-",
 		"BY TRANSFER-",
 		"DEBIT-",
@@ -145,12 +141,11 @@ func (p *SBIParser) generateTransactionName(description string, isCredit bool) s
 
 	for _, prefix := range prefixes {
 		if newDesc, ok := strings.CutPrefix(desc, prefix); ok {
-			desc = newDesc
+			desc = strings.TrimSpace(newDesc)
 			break
 		}
 	}
 
-	// Extract meaningful parts using regex patterns
 	patterns := []struct {
 		regex      *regexp.Regexp
 		creditName string

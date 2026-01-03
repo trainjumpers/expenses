@@ -1,9 +1,12 @@
 package utils
 
 import (
+	"bytes"
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/xuri/excelize/v2"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -397,6 +400,46 @@ var _ = Describe("Utils", func() {
 				_, err := ParseFloat("abc123")
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("invalid amount format"))
+			})
+		})
+
+		Describe("CreateXLSXFile", func() {
+			It("should generate valid xlsx for non-empty data", func() {
+				data := [][]string{
+					{"Header1", "Header2", "Header3"},
+					{"r1c1", "r1c2", "r1c3"},
+					{"r2c1", "r2c2"},
+				}
+
+				b := CreateXLSXFile(data)
+				Expect(len(b)).To(BeNumerically(">", 0))
+
+				f, err := excelize.OpenReader(bytes.NewReader(b))
+				Expect(err).NotTo(HaveOccurred())
+				defer f.Close()
+
+				rows, err := f.GetRows("Sheet1")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(rows).To(HaveLen(3))
+
+				Expect(rows[0]).To(ContainElements("Header1", "Header2", "Header3"))
+				Expect(rows[1]).To(ContainElements("r1c1", "r1c2", "r1c3"))
+				Expect(len(rows[2])).To(Equal(2))
+				Expect(rows[2][0]).To(Equal("r2c1"))
+				Expect(rows[2][1]).To(Equal("r2c2"))
+			})
+
+			It("should generate valid xlsx for empty data", func() {
+				b := CreateXLSXFile([][]string{})
+				Expect(len(b)).To(BeNumerically(">", 0))
+
+				f, err := excelize.OpenReader(bytes.NewReader(b))
+				Expect(err).NotTo(HaveOccurred())
+				defer f.Close()
+
+				rows, err := f.GetRows("Sheet1")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(rows).To(HaveLen(0))
 			})
 		})
 	})

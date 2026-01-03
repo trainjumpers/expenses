@@ -28,11 +28,11 @@ var _ = Describe("SBIParser", func() {
 				input    string
 				expected time.Time
 			}{
+				{"01/12/2024", time.Date(2024, 12, 1, 0, 0, 0, 0, time.UTC)},
+				{"15/01/2024", time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC)},
 				{"1 Aug 2022", time.Date(2022, 8, 1, 0, 0, 0, 0, time.UTC)},
 				{"01 Aug 2022", time.Date(2022, 8, 1, 0, 0, 0, 0, time.UTC)},
-				{"15 Jan 2022", time.Date(2022, 1, 15, 0, 0, 0, 0, time.UTC)},
 				{"2 January 2022", time.Date(2022, 1, 2, 0, 0, 0, 0, time.UTC)},
-				{"02 January 2022", time.Date(2022, 1, 2, 0, 0, 0, 0, time.UTC)},
 			}
 
 			for _, tc := range testCases {
@@ -82,221 +82,228 @@ var _ = Describe("SBIParser", func() {
 			_, err := utils.ParseFloat("abc123")
 			Expect(err).To(HaveOccurred())
 		})
-		Describe("parseTransactionRow", func() {
-			It("should error on insufficient columns", func() {
-				fields := []string{"1 Aug 2022", "1 Aug 2022", "Desc", "123", "100.00"}
-				result, err := parser.parseTransactionRow(fields)
-				Expect(err).To(HaveOccurred())
-				Expect(result).To(BeNil())
-			})
+	})
 
-			It("should error on invalid date", func() {
-				fields := []string{"invalid-date", "1 Aug 2022", "Desc", "123", "100.00", "", "1000.00"}
-				result, err := parser.parseTransactionRow(fields)
-				Expect(err).To(HaveOccurred())
-				Expect(result).To(BeNil())
-			})
-
-			It("should error on invalid amount", func() {
-				fields := []string{"1 Aug 2022", "1 Aug 2022", "Desc", "123", "abc", "", "1000.00"}
-				result, err := parser.parseTransactionRow(fields)
-				Expect(err).To(HaveOccurred())
-				Expect(result).To(BeNil())
-			})
-
-			It("should error when both debit and credit are empty", func() {
-				fields := []string{"1 Aug 2022", "1 Aug 2022", "Desc", "123", "", "", "1000.00"}
-				result, err := parser.parseTransactionRow(fields)
-				Expect(err).To(HaveOccurred())
-				Expect(result).To(BeNil())
-			})
-
-			It("should parse valid debit transaction row", func() {
-				fields := []string{"1 Aug 2022", "1 Aug 2022", "TO TRANSFER-UPI/DR/123456789/JOHN DOE/SBIN/user123@/UPI--", "REF123", "100.00", "", "1000.00"}
-				result, err := parser.parseTransactionRow(fields)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(result).NotTo(BeNil())
-				Expect(result.Name).To(Equal("UPI to JOHN DOE"))
-				Expect(*result.Amount).To(Equal(100.00))
-				Expect(result.Description).To(ContainSubstring("Ref: REF123"))
-				Expect(result.CategoryIds).To(BeEmpty())
-			})
-
-			It("should parse valid credit transaction row", func() {
-				fields := []string{"2 Aug 2022", "2 Aug 2022", "BY TRANSFER-NEFT*HDFC0000001*N123456789*COMPANY NAME--", "REF456", "", "200.00", "1200.00"}
-				result, err := parser.parseTransactionRow(fields)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(result).NotTo(BeNil())
-				Expect(result.Name).To(Equal("NEFT from HDFC0000001"))
-				Expect(*result.Amount).To(Equal(-200.00))
-				Expect(result.Description).To(ContainSubstring("Ref: REF456"))
-				Expect(result.CategoryIds).To(BeEmpty())
-			})
-
-			It("should parse row with both debit and credit present (prioritizes debit)", func() {
-				fields := []string{"3 Aug 2022", "3 Aug 2022", "Desc", "REF789", "150.00", "200.00", "1300.00"}
-				result, err := parser.parseTransactionRow(fields)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(result).NotTo(BeNil())
-				Expect(*result.Amount).To(Equal(150.00))
-			})
-
-			It("should parse negative amount in debit", func() {
-				fields := []string{"4 Aug 2022", "4 Aug 2022", "Desc", "REF345", "-50.00", "", "1250.00"}
-				result, err := parser.parseTransactionRow(fields)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(result).NotTo(BeNil())
-				Expect(*result.Amount).To(Equal(-50.00))
-			})
-
-			It("should parse negative amount in credit", func() {
-				fields := []string{"5 Aug 2022", "5 Aug 2022", "Desc", "REF987", "", "-75.00", "1175.00"}
-				result, err := parser.parseTransactionRow(fields)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(result).NotTo(BeNil())
-				Expect(*result.Amount).To(Equal(75.00)) // -(-75.00)
-			})
+	Describe("parseTransactionRow", func() {
+		It("should error on insufficient columns", func() {
+			fields := []string{"01/12/2024", "Desc", "123", "100.00"}
+			result, err := parser.parseTransactionRow(fields)
+			Expect(err).To(HaveOccurred())
+			Expect(result).To(BeNil())
 		})
 
-		Describe("Parse", func() {
-			It("should parse a valid SBI statement with multiple transactions", func() {
-				input := `Txn Date	Value Date	Description	Ref No.	Debit	Credit	Balance
-1 Aug 2022	1 Aug 2022	TO TRANSFER-UPI/DR/123456789/JOHN DOE/SBIN/user123@/UPI--	REF123	100.00		1000.00
-2 Aug 2022	2 Aug 2022	BY TRANSFER-NEFT*HDFC0000001*N123456789*COMPANY NAME--	REF456		200.00	1200.00
-Computer Generated Statement`
-				txns, err := parser.Parse([]byte(input), "", "")
-				Expect(err).NotTo(HaveOccurred())
-				Expect(txns).To(HaveLen(2))
-				Expect(txns[0].Name).To(Equal("UPI to JOHN DOE"))
-				Expect(txns[1].Name).To(Equal("NEFT from HDFC0000001"))
-				Expect(txns[0].CategoryIds).To(BeEmpty())
-				Expect(txns[1].CategoryIds).To(BeEmpty())
-			})
+		It("should error on invalid date", func() {
+			fields := []string{"invalid-date", "Desc", "123", "100.00", "", "1000.00"}
+			result, err := parser.parseTransactionRow(fields)
+			Expect(err).To(HaveOccurred())
+			Expect(result).To(BeNil())
+		})
 
-			It("should parse row with both debit and credit present (prioritizes debit)", func() {
-				input := `Txn Date	Value Date	Description	Ref No.	Debit	Credit	Balance
-3 Aug 2022	3 Aug 2022	Desc	REF789	150.00	200.00	1300.00
-Computer Generated Statement`
-				txns, err := parser.Parse([]byte(input), "", "")
-				Expect(err).NotTo(HaveOccurred())
-				Expect(txns).To(HaveLen(1))
-				Expect(*txns[0].Amount).To(Equal(150.00))
-			})
+		It("should error on invalid amount", func() {
+			fields := []string{"01/12/2024", "Desc", "123", "abc", "", "1000.00"}
+			result, err := parser.parseTransactionRow(fields)
+			Expect(err).To(HaveOccurred())
+			Expect(result).To(BeNil())
+		})
 
-			It("should parse row with extra columns", func() {
-				input := `Txn Date	Value Date	Description	Ref No.	Debit	Credit	Balance	Extra
-4 Aug 2022	4 Aug 2022	Desc	REF345	100.00		1250.00	ExtraValue
-Computer Generated Statement`
-				txns, err := parser.Parse([]byte(input), "", "")
-				Expect(err).NotTo(HaveOccurred())
-				Expect(txns).To(HaveLen(1))
-			})
+		It("should error when both debit and credit are empty", func() {
+			fields := []string{"01/12/2024", "Desc", "123", "", "", "1000.00"}
+			result, err := parser.parseTransactionRow(fields)
+			Expect(err).To(HaveOccurred())
+			Expect(result).To(BeNil())
+		})
 
-			It("should parse row with spaces in description", func() {
-				input := "Txn Date	Value Date	Description	Ref No.	Debit	Credit	Balance\n" +
-					"5 Aug 2022	5 Aug 2022	Desc with spaces	REF987	100.00		1175.00\nComputer Generated Statement"
-				txns, err := parser.Parse([]byte(input), "", "")
-				Expect(err).NotTo(HaveOccurred())
-				Expect(txns).To(HaveLen(1))
-			})
+		It("should parse valid debit transaction row", func() {
+			fields := []string{"01/12/2024", "WDL TFR UPI/DR/123456789/JOHN DOE/SBIN/user123@/UPI--", "REF123", "100.00", "", "1000.00"}
+			result, err := parser.parseTransactionRow(fields)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).NotTo(BeNil())
+			Expect(result.Name).To(Equal("UPI to JOHN DOE"))
+			Expect(*result.Amount).To(Equal(100.00))
+			Expect(result.Description).To(ContainSubstring("Ref: REF123"))
+			Expect(result.CategoryIds).To(BeEmpty())
+		})
 
-			It("should parse header row with extra whitespace", func() {
-				input := "Txn Date	Value Date	Description	Ref No.	Debit	Credit	Balance\n" +
-					"7 Aug 2022	7 Aug 2022	नमस्ते	123456	100.00		1000.00\nComputer Generated Statement"
-				txns, err := parser.Parse([]byte(input), "", "")
-				Expect(err).NotTo(HaveOccurred())
-				Expect(txns).To(HaveLen(1))
-			})
+		It("should parse valid credit transaction row", func() {
+			fields := []string{"02/12/2024", "DEP TFR NEFT*HDFC0000001*N123456789*COMPANY NAME--", "REF456", "", "200.00", "1200.00"}
+			result, err := parser.parseTransactionRow(fields)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).NotTo(BeNil())
+			Expect(result.Name).To(Equal("NEFT from HDFC0000001"))
+			Expect(*result.Amount).To(Equal(-200.00))
+			Expect(result.Description).To(ContainSubstring("Ref: REF456"))
+			Expect(result.CategoryIds).To(BeEmpty())
+		})
 
-			It("should parse row with non-ASCII characters in description", func() {
-				input := "Txn Date	Value Date	Description	Ref No.	Debit	Credit	Balance\n" +
-					"7 Aug 2022	7 Aug 2022	नमस्ते	REF123	100.00		1000.00\nComputer Generated Statement"
-				txns, err := parser.Parse([]byte(input), "", "")
-				Expect(err).NotTo(HaveOccurred())
-				Expect(txns).To(HaveLen(1))
-				Expect(txns[0].Name).To(ContainSubstring("नमस्ते"))
-			})
+		It("should parse row with both debit and credit present (prioritizes debit)", func() {
+			fields := []string{"03/12/2024", "Desc", "REF789", "150.00", "200.00", "1300.00"}
+			result, err := parser.parseTransactionRow(fields)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).NotTo(BeNil())
+			Expect(*result.Amount).To(Equal(150.00))
+		})
 
-			It("should error if header row is missing", func() {
-				input := "No header here\nJust some text"
-				_, err := parser.Parse([]byte(input), "", "")
-				Expect(err).To(MatchError(ContainSubstring("transaction header row not found")))
-			})
+		It("should parse negative amount in debit", func() {
+			fields := []string{"04/12/2024", "Desc", "REF345", "-50.00", "", "1250.00"}
+			result, err := parser.parseTransactionRow(fields)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).NotTo(BeNil())
+			Expect(*result.Amount).To(Equal(-50.00))
+		})
 
-			It("should stop parsing at 'computer generated' line", func() {
-				input := `Txn Date	Value Date	Description	Ref No.	Debit	Credit	Balance
-1 Aug 2022	1 Aug 2022	Desc	REF123	100.00		1000.00
-Computer Generated Statement
-2 Aug 2022	2 Aug 2022	Desc	REF456	100.00		1000.00`
-				txns, err := parser.Parse([]byte(input), "", "")
-				Expect(err).NotTo(HaveOccurred())
-				Expect(txns).To(HaveLen(1))
-			})
+		It("should parse negative amount in credit", func() {
+			fields := []string{"05/12/2024", "Desc", "REF987", "", "-75.00", "1175.00"}
+			result, err := parser.parseTransactionRow(fields)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).NotTo(BeNil())
+			Expect(*result.Amount).To(Equal(75.00))
+		})
+	})
 
-			It("should skip empty lines between transactions", func() {
-				input := `Txn Date	Value Date	Description	Ref No.	Debit	Credit	Balance
+	Describe("Parse", func() {
+		It("should parse a valid SBI statement with multiple transactions", func() {
+			data := [][]string{
+				{"Date", "Details", "Ref No/Cheque No", "Debit", "Credit", "Balance"},
+				{"01/12/2024", "WDL TFR UPI/DR/123456789/JOHN DOE/SBIN/user123@/UPI", "REF123", "100.00", "", "1000.00"},
+				{"02/12/2024", "DEP TFR NEFT*HDFC0000001*N123456789*COMPANY NAME", "REF456", "", "200.00", "1200.00"},
+			}
+			fileBytes := utils.CreateXLSXFile(data)
+			txns, err := parser.Parse(fileBytes, "", "")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(txns).To(HaveLen(2))
+			Expect(txns[0].Name).To(Equal("UPI to JOHN DOE"))
+			Expect(txns[1].Name).To(Equal("NEFT from HDFC0000001"))
+			Expect(txns[0].CategoryIds).To(BeEmpty())
+			Expect(txns[1].CategoryIds).To(BeEmpty())
+		})
 
- 	1 Aug 2022	1 Aug 2022	Desc	REF123	100.00		1000.00
+		It("should parse row with both debit and credit present (prioritizes debit)", func() {
+			data := [][]string{
+				{"Date", "Details", "Ref No/Cheque No", "Debit", "Credit", "Balance"},
+				{"03/12/2024", "Desc", "REF789", "150.00", "200.00", "1300.00"},
+			}
+			fileBytes := utils.CreateXLSXFile(data)
+			txns, err := parser.Parse(fileBytes, "", "")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(txns).To(HaveLen(1))
+			Expect(*txns[0].Amount).To(Equal(150.00))
+		})
 
- 	2 Aug 2022	2 Aug 2022	Desc	REF456		200.00	1200.00
+		It("should parse row with extra columns", func() {
+			data := [][]string{
+				{"Date", "Details", "Ref No/Cheque No", "Debit", "Credit", "Balance", "Extra"},
+				{"04/12/2024", "Desc", "REF345", "100.00", "", "1250.00", "ExtraValue"},
+			}
+			fileBytes := utils.CreateXLSXFile(data)
+			txns, err := parser.Parse(fileBytes, "", "")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(txns).To(HaveLen(1))
+		})
 
- 	Computer Generated Statement`
-				txns, err := parser.Parse([]byte(input), "", "")
-				Expect(err).NotTo(HaveOccurred())
-				Expect(txns).To(HaveLen(2))
-			})
+		It("should parse row with spaces in description", func() {
+			data := [][]string{
+				{"Date", "Details", "Ref No/Cheque No", "Debit", "Credit", "Balance"},
+				{"05/12/2024", "Desc with spaces", "REF987", "100.00", "", "1175.00"},
+			}
+			fileBytes := utils.CreateXLSXFile(data)
+			txns, err := parser.Parse(fileBytes, "", "")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(txns).To(HaveLen(1))
+		})
 
-			It("should skip lines with insufficient columns", func() {
-				input := `Txn Date	Value Date	Description	Ref No.	Debit	Credit	Balance
-1 Aug 2022	1 Aug 2022	Short	REF123	100.00
-2 Aug 2022	2 Aug 2022	Desc	REF456		200.00	1200.00
-Computer Generated Statement`
-				txns, err := parser.Parse([]byte(input), "", "")
-				Expect(err).NotTo(HaveOccurred())
-				Expect(txns).To(HaveLen(1))
-			})
+		It("should parse header row with extra whitespace", func() {
+			data := [][]string{
+				{"  Date  ", "Details", "Ref No/Cheque No", "Debit", "Credit", "Balance"},
+				{"07/12/2024", "नमस्ते", "123456", "100.00", "", "1000.00"},
+			}
+			fileBytes := utils.CreateXLSXFile(data)
+			txns, err := parser.Parse(fileBytes, "", "")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(txns).To(HaveLen(1))
+		})
 
-			It("should skip lines with both debit and credit empty", func() {
-				input := `Txn Date	Value Date	Description	Ref No.	Debit	Credit	Balance
-1 Aug 2022	1 Aug 2022	Desc	123456	abc		1000.00
-2 Aug 2022	2 Aug 2022	Desc	123456		200.00	1200.00
-Computer Generated Statement`
-				txns, err := parser.Parse([]byte(input), "", "")
-				Expect(err).NotTo(HaveOccurred())
-				Expect(txns).To(HaveLen(1))
-			})
+		It("should parse row with non-ASCII characters in description", func() {
+			data := [][]string{
+				{"Date", "Details", "Ref No/Cheque No", "Debit", "Credit", "Balance"},
+				{"07/12/2024", "नमस्ते", "REF123", "100.00", "", "1000.00"},
+			}
+			fileBytes := utils.CreateXLSXFile(data)
+			txns, err := parser.Parse(fileBytes, "", "")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(txns).To(HaveLen(1))
+			Expect(txns[0].Name).To(ContainSubstring("नमस्ते"))
+		})
 
-			It("should skip lines with malformed amount", func() {
-				input := `Txn Date	Value Date	Description	Ref No.	Debit	Credit	Balance
- 	1 Aug 2022	1 Aug 2022	Desc	REF123	abc		1000.00
- 	2 Aug 2022	2 Aug 2022	Desc	REF456		200.00	1200.00
- 	Computer Generated Statement`
-				txns, err := parser.Parse([]byte(input), "", "")
-				Expect(err).NotTo(HaveOccurred())
-				Expect(txns).To(HaveLen(1))
-			})
+		It("should error if header row is missing", func() {
+			data := [][]string{
+				{"No header here"},
+				{"Just some text"},
+			}
+			fileBytes := utils.CreateXLSXFile(data)
+			_, err := parser.Parse(fileBytes, "", "")
+			Expect(err).To(MatchError(ContainSubstring("transaction header row not found")))
+		})
 
-			It("should handle rows with and without RefNo", func() {
-				input := `Txn Date	Value Date	Description	Ref No.	Debit	Credit	Balance
-1 Aug 2022	1 Aug 2022	Desc		100.00		1000.00
-2 Aug 2022	2 Aug 2022	Desc	REF654		200.00	1200.00
-Computer Generated Statement`
-				txns, err := parser.Parse([]byte(input), "", "")
-				Expect(err).NotTo(HaveOccurred())
-				Expect(txns).To(HaveLen(2))
-				Expect(txns[0].Description).To(Equal("Desc"))
-				Expect(txns[1].Description).To(Equal("Desc (Ref: REF654)"))
-			})
+		It("should handle rows with and without RefNo", func() {
+			data := [][]string{
+				{"Date", "Details", "Ref No/Cheque No", "Debit", "Credit", "Balance"},
+				{"01/12/2024", "Desc", "", "100.00", "", "1000.00"},
+				{"02/12/2024", "Desc", "REF654", "", "200.00", "1200.00"},
+			}
+			fileBytes := utils.CreateXLSXFile(data)
+			txns, err := parser.Parse(fileBytes, "", "")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(txns).To(HaveLen(2))
+			Expect(txns[0].Description).To(Equal("Desc"))
+			Expect(txns[1].Description).To(Equal("Desc (Ref: REF654)"))
+		})
 
-			It("should ensure CategoryIds is always empty", func() {
-				input := `Txn Date	Value Date	Description	Ref No.	Debit	Credit	Balance
- 	1 Aug 2022	1 Aug 2022	Desc	REF123	100.00		1000.00
- 	Computer Generated Statement`
-				txns, err := parser.Parse([]byte(input), "", "")
-				Expect(err).NotTo(HaveOccurred())
-				Expect(txns).To(HaveLen(1))
-				Expect(txns[0].CategoryIds).To(BeEmpty())
-			})
+		It("should ensure CategoryIds is always empty", func() {
+			data := [][]string{
+				{"Date", "Details", "Ref No/Cheque No", "Debit", "Credit", "Balance"},
+				{"01/12/2024", "Desc", "REF123", "100.00", "", "1000.00"},
+			}
+			fileBytes := utils.CreateXLSXFile(data)
+			txns, err := parser.Parse(fileBytes, "", "")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(txns).To(HaveLen(1))
+			Expect(txns[0].CategoryIds).To(BeEmpty())
+		})
+
+		It("should skip lines with insufficient columns", func() {
+			data := [][]string{
+				{"Date", "Details", "Ref No/Cheque No", "Debit", "Credit", "Balance"},
+				{"01/12/2024", "Short", "REF123", "100.00"},
+				{"02/12/2024", "Desc", "REF456", "", "200.00", "1200.00"},
+			}
+			fileBytes := utils.CreateXLSXFile(data)
+			txns, err := parser.Parse(fileBytes, "", "")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(txns).To(HaveLen(1))
+		})
+
+		It("should skip lines with both debit and credit empty", func() {
+			data := [][]string{
+				{"Date", "Details", "Ref No/Cheque No", "Debit", "Credit", "Balance"},
+				{"01/12/2024", "Desc", "123456", "abc", "", "1000.00"},
+				{"02/12/2024", "Desc", "123456", "", "200.00", "1200.00"},
+			}
+			fileBytes := utils.CreateXLSXFile(data)
+			txns, err := parser.Parse(fileBytes, "", "")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(txns).To(HaveLen(1))
+		})
+
+		It("should skip lines with malformed amount", func() {
+			data := [][]string{
+				{"Date", "Details", "Ref No/Cheque No", "Debit", "Credit", "Balance"},
+				{"01/12/2024", "Desc", "REF123", "abc", "", "1000.00"},
+				{"02/12/2024", "Desc", "REF456", "", "200.00", "1200.00"},
+			}
+			fileBytes := utils.CreateXLSXFile(data)
+			txns, err := parser.Parse(fileBytes, "", "")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(txns).To(HaveLen(1))
 		})
 	})
 
@@ -308,32 +315,32 @@ Computer Generated Statement`
 				expected    string
 			}{
 				{
-					"TO TRANSFER-UPI/DR/123456789/JOHN DOE/SBIN/user123@/UPI--",
+					"WDL TFR UPI/DR/123456789/JOHN DOE/SBIN/user123@/UPI",
 					false,
 					"UPI to JOHN DOE",
 				},
 				{
-					"BY TRANSFER-UPI/CR/123456789/JANE DOE/SBIN/user456@/UPI--",
+					"DEP TFR UPI/CR/123456789/JANE DOE/SBIN/user456@/UPI",
 					true,
 					"UPI from JANE DOE",
 				},
 				{
-					"BY TRANSFER-NEFT*HDFC0000001*N123456789*COMPANY NAME--",
+					"DEP TFR NEFT*HDFC0000001*N123456789*COMPANY NAME",
 					true,
 					"NEFT from HDFC0000001",
 				},
 				{
-					"TO TRANSFER-NEFT*ICIC0000002*N987654321*ANOTHER COMPANY--",
+					"WDL TFR NEFT*ICIC0000002*N987654321*ANOTHER COMPANY",
 					false,
 					"NEFT to ICIC0000002",
 				},
 				{
-					"DEBIT-ATMCard AMC  607431 CLASSIC--",
+					"DEBIT-ATMCard AMC  607431 CLASSIC",
 					false,
 					"ATM Card AMC 607431 (Debit)",
 				},
 				{
-					"CREDIT-ATMCard AMC  607431 CLASSIC--",
+					"CREDIT-ATMCard AMC  607431 CLASSIC",
 					true,
 					"ATM Card AMC 607431 (Credit)",
 				},
@@ -348,12 +355,12 @@ Computer Generated Statement`
 					"Term Deposit 123456789 (Credit)",
 				},
 				{
-					"TO TRANSFER-This is a very long description that should be truncated for readability",
+					"WDL TFR This is a very long description that should be truncated for readability",
 					false,
 					"Debit: This is a very...",
 				},
 				{
-					"BY TRANSFER-Short Desc",
+					"DEP TFR Short Desc",
 					true,
 					"Credit: Short Desc",
 				},
@@ -364,20 +371,19 @@ Computer Generated Statement`
 				Expect(result).To(Equal(tc.expected))
 			}
 		})
+	})
 
-		// Registry tests
-		var _ = Describe("Parser Registry", func() {
-			It("should return SBI parser for BankTypeSBI", func() {
-				p, ok := GetParser(models.BankTypeSBI)
-				Expect(ok).To(BeTrue())
-				Expect(p).NotTo(BeNil())
-			})
+	Describe("Parser Registry", func() {
+		It("should return SBI parser for BankTypeSBI", func() {
+			p, ok := GetParser(models.BankTypeSBI)
+			Expect(ok).To(BeTrue())
+			Expect(p).NotTo(BeNil())
+		})
 
-			It("should return false for unknown bank type", func() {
-				p, ok := GetParser("UNKNOWN_BANK")
-				Expect(ok).To(BeFalse())
-				Expect(p).To(BeNil())
-			})
+		It("should return false for unknown bank type", func() {
+			p, ok := GetParser("UNKNOWN_BANK")
+			Expect(ok).To(BeFalse())
+			Expect(p).To(BeNil())
 		})
 	})
 })

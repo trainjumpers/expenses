@@ -95,8 +95,8 @@ var _ = Describe("StatementValidator", func() {
 		})
 
 		Context("with edge cases", func() {
-			It("should accept file exactly at 256KB limit", func() {
-				limitFile := make([]byte, 256*1024)
+			It("should accept file exactly at 5MB limit", func() {
+				limitFile := make([]byte, 5*1024*1024)
 				err := validator.ValidateStatementUpload(accountId, limitFile, fileName)
 				Expect(err).NotTo(HaveOccurred())
 			})

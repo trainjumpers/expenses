@@ -76,8 +76,8 @@ export function ImportStatementModal({
   }, []);
 
   const validateFile = (file: File, forBank: boolean): string | null => {
-    if (file.size > 256 * 1024) {
-      return "File size must be less than 256KB";
+    if (file.size > 5 * 1024 * 1024) {
+      return "File size must be less than 5MB";
     }
     const validExtensions = forBank
       ? [".csv", ".xls", ".xlsx", ".txt"]

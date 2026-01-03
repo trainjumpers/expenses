@@ -135,7 +135,7 @@ export function ImportFromBank({
                     : "Drag & drop your bank statements here, or click to select"}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Supports CSV, XLS, XLSX, TXT files (max 256KB each, up to 10
+                  Supports CSV, XLS, XLSX, TXT files (max 5MB each, up to 10
                   files)
                 </p>
                 <Input

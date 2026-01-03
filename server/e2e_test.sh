@@ -2,7 +2,7 @@
 set -euo pipefail
 
 export DB_SCHEMA="test"
-export DB_SEED_DIR=${DB_SEED_DIR:-./internal/database/seed/test}   # ← no trailing space!
+export DB_SEED_DIR=${DB_SEED_DIR:-./internal/database/seed/test}
 export ENV="test"
 
 if [[ "$DB_SCHEMA" != "test" ]]; then

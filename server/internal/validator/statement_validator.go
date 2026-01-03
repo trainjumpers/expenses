@@ -22,8 +22,8 @@ func (v *StatementValidator) ValidateStatementUpload(accountId int64, fileBytes 
 	if strings.TrimSpace(fileName) == "" {
 		return apierrors.NewStatementBadRequestError(errors.New("filename cannot be empty"))
 	}
-	if len(fileBytes) > 256*1024 {
-		return apierrors.NewStatementBadRequestError(errors.New("file size must be less than 256KB"))
+	if len(fileBytes) > 5*1024*1024 {
+		return apierrors.NewStatementBadRequestError(errors.New("file size must be less than 5MB"))
 	}
 	trimmedFileName := strings.ToLower(strings.TrimSpace(fileName))
 	if !strings.HasSuffix(trimmedFileName, ".csv") && !strings.HasSuffix(trimmedFileName, ".xls") && !strings.HasSuffix(trimmedFileName, ".xlsx") && !strings.HasSuffix(trimmedFileName, ".txt") {
@@ -43,8 +43,8 @@ func (v *StatementValidator) ValidateStatementPreview(fileBytes []byte, fileName
 	if strings.TrimSpace(fileName) == "" {
 		return apierrors.NewStatementBadRequestError(errors.New("filename cannot be empty"))
 	}
-	if len(fileBytes) > 256*1024 {
-		return apierrors.NewStatementBadRequestError(errors.New("file size must be less than 256KB"))
+	if len(fileBytes) > 5*1024*1024 {
+		return apierrors.NewStatementBadRequestError(errors.New("file size must be less than 5MB"))
 	}
 	trimmedFileName := strings.ToLower(strings.TrimSpace(fileName))
 	if !strings.HasSuffix(trimmedFileName, ".csv") && !strings.HasSuffix(trimmedFileName, ".xls") && !strings.HasSuffix(trimmedFileName, ".xlsx") {

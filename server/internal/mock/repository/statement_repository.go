@@ -30,7 +30,7 @@ func (m *MockStatementRepository) CreateStatement(ctx context.Context, input mod
 		return models.StatementResponse{}, errors.New("filename cannot be empty")
 	}
 	fileType := input.FileType
-	if fileType != "csv" && fileType != "xls" && fileType != "xlsx" {
+	if fileType != "csv" && fileType != "excel" {
 		return models.StatementResponse{}, errors.New("invalid file type")
 	}
 	m.mu.Lock()
