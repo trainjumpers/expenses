@@ -26,7 +26,7 @@ jobs:
       - name: Setup bun
         uses: oven-sh/setup-bun@v1
         with:
-          bun-version: stable
+          bun-version: latest
       - name: Install Vercel CLI
         run: bun install --global vercel@latest
       - name: Pull Vercel Environment Information
