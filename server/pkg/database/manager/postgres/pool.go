@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"os"
 	"strconv"
 	"time"
@@ -114,22 +115,27 @@ func createConnectionPool(cfg *config.Config) (*pgxpool.Pool, error) {
 
 // buildConnectionString creates an optimized connection string
 func buildConnectionString(host, user, password, dbname string, port int, schema, sslmode string, config *PoolConfig) string {
-	connStr := fmt.Sprintf(
-		"postgresql://%s:%s@%s:%d/%s?sslmode=%s&search_path=%s&application_name=%s",
-		user, password, host, port, dbname, sslmode, schema, config.ApplicationName,
-	)
-
-	// Add pool parameters
-	connStr += fmt.Sprintf("&pool_max_conns=%d", config.MaxConns)
-	connStr += fmt.Sprintf("&pool_min_conns=%d", config.MinConns)
-	connStr += fmt.Sprintf("&pool_max_conn_lifetime=%s", config.MaxConnLifetime)
-	connStr += fmt.Sprintf("&pool_max_conn_idle_time=%s", config.MaxConnIdleTime)
-	connStr += fmt.Sprintf("&pool_health_check_period=%s", config.HealthCheckPeriod)
-
-	// Add performance parameters
-	if config.PreferSimpleProtocol {
-		connStr += "&prefer_simple_protocol=true"
+	u := &url.URL{
+		Scheme: "postgresql",
+		User:   url.UserPassword(user, password),
+		Host:   fmt.Sprintf("%s:%d", host, port),
+		Path:   "/" + dbname,
 	}
 
-	return connStr
+	q := url.Values{}
+	q.Set("sslmode", sslmode)
+	q.Set("search_path", schema)
+	q.Set("application_name", config.ApplicationName)
+	q.Set("pool_max_conns", strconv.FormatInt(int64(config.MaxConns), 10))
+	q.Set("pool_min_conns", strconv.FormatInt(int64(config.MinConns), 10))
+	q.Set("pool_max_conn_lifetime", config.MaxConnLifetime.String())
+	q.Set("pool_max_conn_idle_time", config.MaxConnIdleTime.String())
+	q.Set("pool_health_check_period", config.HealthCheckPeriod.String())
+
+	if config.PreferSimpleProtocol {
+		q.Set("prefer_simple_protocol", "true")
+	}
+
+	u.RawQuery = q.Encode()
+	return u.String()
 }
