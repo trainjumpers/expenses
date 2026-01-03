@@ -47,7 +47,7 @@ func waitForStatementDone(testHelper *TestHelper, statementId float64) map[strin
 		Expect(resp.StatusCode).To(Equal(http.StatusOK))
 		data = response["data"].(map[string]any)
 		status = data["status"].(string)
-		if status != "processing" {
+		if status != "processing" && status != "pending" {
 			break
 		}
 		time.Sleep(5 * time.Second)
