@@ -16,6 +16,20 @@ import (
 // AxisParser parses Axis bank account CSV statements
 type AxisParser struct{}
 
+// Precompiled regex patterns for Axis transaction description parsing.
+// Compiling once improves performance when parsing many rows.
+var axisPatterns = []struct {
+	regex      *regexp.Regexp
+	creditName string
+	debitName  string
+}{
+	{regexp.MustCompile(`(?i)UPI/P2[AM]/\d+/([^/]+)/`), "UPI from $1", "UPI to $1"},
+	{regexp.MustCompile(`(?i)IMPS/P2A/\d+/([^/]+)/`), "IMPS from $1", "IMPS to $1"},
+	{regexp.MustCompile(`(?i)NEFT/([^/]+)`), "NEFT from $1", "NEFT to $1"},
+	{regexp.MustCompile(`(?i)RTGS/[^/]+/([^/]+)/`), "RTGS from $1", "RTGS to $1"},
+	{regexp.MustCompile(`(?i)INT\.PD|Int\.Pd`), "Interest", "Interest"},
+}
+
 func (p *AxisParser) Parse(fileBytes []byte, metadata string, fileName string, password string) ([]models.CreateTransactionInput, error) {
 	r := csv.NewReader(bytes.NewReader(fileBytes))
 	r.FieldsPerRecord = -1
@@ -129,20 +143,8 @@ func (p *AxisParser) parseTransactionRow(fields []string) (*models.CreateTransac
 func (p *AxisParser) generateTransactionName(description string, isCredit bool) string {
 	desc := strings.TrimSpace(description)
 
-	// common patterns
-	patterns := []struct {
-		regex      *regexp.Regexp
-		creditName string
-		debitName  string
-	}{
-		{regexp.MustCompile(`(?i)UPI/P2[AM]/\d+/([^/]+)/`), "UPI from $1", "UPI to $1"},
-		{regexp.MustCompile(`(?i)IMPS/P2A/\d+/([^/]+)/`), "IMPS from $1", "IMPS to $1"},
-		{regexp.MustCompile(`(?i)NEFT/([^/]+)`), "NEFT from $1", "NEFT to $1"},
-		{regexp.MustCompile(`(?i)RTGS/[^/]+/([^/]+)/`), "RTGS from $1", "RTGS to $1"},
-		{regexp.MustCompile(`(?i)INT\.PD|Int\.Pd`), "Interest", "Interest"},
-	}
-
-	for _, pattern := range patterns {
+	// Use precompiled patterns for performance
+	for _, pattern := range axisPatterns {
 		if pattern.regex.MatchString(desc) {
 			if matches := pattern.regex.FindStringSubmatch(desc); len(matches) > 1 {
 				if isCredit {
@@ -153,7 +155,7 @@ func (p *AxisParser) generateTransactionName(description string, isCredit bool) 
 			// For patterns with no capture group (Interest), fallthrough
 			return pattern.creditName
 		}
-	}
+	} 
 
 	prefix := ""
 	if isCredit {
@@ -162,8 +164,10 @@ func (p *AxisParser) generateTransactionName(description string, isCredit bool) 
 		prefix = "Debit: "
 	}
 	n := prefix + desc
-	if len(n) > 40 {
-		return strings.TrimSpace(n[:37]) + "..."
+	// Truncate safely for unicode by slicing runes
+	runes := []rune(n)
+	if len(runes) > 40 {
+		return strings.TrimSpace(string(runes[:37])) + "..."
 	}
 	return n
 }
