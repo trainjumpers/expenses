@@ -306,7 +306,7 @@ export function ImportStatementModal({
     setRowSize(Number.isNaN(value) ? PREVIEW_SIZE : value);
   };
 
-    const handleCancel = useCallback(() => {
+  const handleCancel = useCallback(() => {
     setSelectedFiles([]);
     setCurrentFileIndex(0);
     setSelectedAccountId(accounts[0]?.id || 0);
@@ -414,7 +414,13 @@ export function ImportStatementModal({
     setUploadProgress({ current: 0, total: 0, processing: false });
     setIsUploading(false);
     handleCancel();
-  }, [selectedFiles, selectedAccountId, filePassword, uploadStatementMutation, handleCancel]);
+  }, [
+    selectedFiles,
+    selectedAccountId,
+    filePassword,
+    uploadStatementMutation,
+    handleCancel,
+  ]);
 
   const handlePasswordSubmit = () => {
     if (!filePassword.trim()) {
