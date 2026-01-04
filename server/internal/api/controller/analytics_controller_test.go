@@ -2,6 +2,7 @@ package controller_test
 
 import (
 	"net/http"
+	"strconv"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -593,6 +594,50 @@ var _ = Describe("AnalyticsController", func() {
 				Expect(firstTransaction["category_name"]).To(BeAssignableToTypeOf(""))
 				Expect(firstTransaction["total_amount"]).To(BeAssignableToTypeOf(float64(0)))
 			}
+		})
+
+		It("should filter category analytics by category_ids", func() {
+			startDate := "2023-01-01"
+			endDate := "2023-01-31"
+			baseURL := "/analytics/category?start_date=" + startDate + "&end_date=" + endDate
+
+			resp, response := testUser1.MakeRequest(http.MethodGet, baseURL, nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+			data := response["data"].(map[string]any)
+			categoryTransactions := data["category_transactions"].([]any)
+			Expect(len(categoryTransactions)).To(BeNumerically(">", 0))
+
+			var selectedCategoryID int64 = -1
+			for _, transaction := range categoryTransactions {
+				transactionMap := transaction.(map[string]any)
+				categoryID := int64(transactionMap["category_id"].(float64))
+				if categoryID != -1 {
+					selectedCategoryID = categoryID
+					break
+				}
+			}
+			Expect(selectedCategoryID).NotTo(Equal(int64(-1)))
+
+			filteredURL := baseURL + "&category_ids=" + strconv.FormatInt(selectedCategoryID, 10)
+			filteredResp, filteredResponse := testUser1.MakeRequest(http.MethodGet, filteredURL, nil)
+			Expect(filteredResp.StatusCode).To(Equal(http.StatusOK))
+
+			filteredData := filteredResponse["data"].(map[string]any)
+			filteredTransactions := filteredData["category_transactions"].([]any)
+			Expect(len(filteredTransactions)).To(BeNumerically(">=", 0))
+
+			for _, transaction := range filteredTransactions {
+				transactionMap := transaction.(map[string]any)
+				Expect(transactionMap["category_id"]).To(Equal(float64(selectedCategoryID)))
+			}
+		})
+
+		It("should return error for invalid category_ids", func() {
+			url := "/analytics/category?start_date=2023-01-01&end_date=2023-01-31&category_ids=abc"
+			resp, response := testUser1.MakeRequest(http.MethodGet, url, nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+			Expect(response["message"]).To(Equal("invalid category_ids format, expected comma-separated integers"))
 		})
 
 		It("should return empty analytics for user without transactions", func() {

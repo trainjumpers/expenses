@@ -1,10 +1,13 @@
 package controller
 
 import (
+	"errors"
 	"expenses/internal/config"
 	"expenses/internal/service"
 	"expenses/pkg/logger"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -65,7 +68,13 @@ func (a *AnalyticsController) GetCategoryAnalytics(ctx *gin.Context) {
 		return
 	}
 
-	analytics, err := a.analyticsService.GetCategoryAnalytics(ctx, userId, startDate, endDate)
+	categoryIds, err := parseCategoryIds(ctx.Query("category_ids"))
+	if err != nil {
+		a.SendError(ctx, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	analytics, err := a.analyticsService.GetCategoryAnalytics(ctx, userId, startDate, endDate, categoryIds)
 	if err != nil {
 		logger.Errorf("Error getting category analytics: %v", err)
 		a.HandleError(ctx, err)
@@ -94,4 +103,26 @@ func (a *AnalyticsController) GetMonthlyAnalytics(ctx *gin.Context) {
 
 	logger.Infof("Monthly analytics retrieved successfully for user %d", userId)
 	a.SendSuccess(ctx, http.StatusOK, "Monthly analytics retrieved successfully", analytics)
+}
+
+func parseCategoryIds(raw string) ([]int64, error) {
+	if raw == "" {
+		return nil, nil
+	}
+
+	parts := strings.Split(raw, ",")
+	categoryIds := make([]int64, 0, len(parts))
+	for _, part := range parts {
+		trimmed := strings.TrimSpace(part)
+		if trimmed == "" {
+			return nil, errors.New("invalid category_ids format, expected comma-separated integers")
+		}
+		categoryID, err := strconv.ParseInt(trimmed, 10, 64)
+		if err != nil {
+			return nil, errors.New("invalid category_ids format, expected comma-separated integers")
+		}
+		categoryIds = append(categoryIds, categoryID)
+	}
+
+	return categoryIds, nil
 }

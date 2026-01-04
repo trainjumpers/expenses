@@ -6,13 +6,14 @@ import (
 	"expenses/internal/models"
 	database "expenses/pkg/database/manager"
 	"fmt"
+	"strings"
 	"time"
 )
 
 type AnalyticsRepositoryInterface interface {
 	GetBalance(ctx context.Context, userId int64, startDate *time.Time, endDate *time.Time) (map[int64]float64, error)
 	GetNetworthTimeSeries(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) (float64, float64, float64, []map[string]any, error)
-	GetCategoryAnalytics(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) (*models.CategoryAnalyticsResponse, error)
+	GetCategoryAnalytics(ctx context.Context, userId int64, startDate time.Time, endDate time.Time, categoryIds []int64) (*models.CategoryAnalyticsResponse, error)
 	GetMonthlyAnalytics(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) (*models.MonthlyAnalyticsResponse, error)
 }
 
@@ -135,7 +136,38 @@ func (r *AnalyticsRepository) GetNetworthTimeSeries(ctx context.Context, userId 
 }
 
 // GetCategoryAnalytics retrieves the category analytics for a given user and date range
-func (r *AnalyticsRepository) GetCategoryAnalytics(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) (*models.CategoryAnalyticsResponse, error) {
+func (r *AnalyticsRepository) GetCategoryAnalytics(ctx context.Context, userId int64, startDate time.Time, endDate time.Time, categoryIds []int64) (*models.CategoryAnalyticsResponse, error) {
+	filterClause := ""
+	args := []any{userId, startDate, endDate}
+
+	if len(categoryIds) > 0 {
+		includeUncategorized := false
+		filteredIds := make([]int64, 0, len(categoryIds))
+		for _, categoryID := range categoryIds {
+			if categoryID == -1 {
+				includeUncategorized = true
+				continue
+			}
+			filteredIds = append(filteredIds, categoryID)
+		}
+
+		var conditions []string
+		if len(filteredIds) > 0 {
+			placeholders := make([]string, 0, len(filteredIds))
+			for _, categoryID := range filteredIds {
+				args = append(args, categoryID)
+				placeholders = append(placeholders, fmt.Sprintf("$%d", len(args)))
+			}
+			conditions = append(conditions, fmt.Sprintf("tcm.category_id IN (%s)", strings.Join(placeholders, ",")))
+		}
+		if includeUncategorized {
+			conditions = append(conditions, "tcm.category_id IS NULL")
+		}
+		if len(conditions) > 0 {
+			filterClause = fmt.Sprintf("AND (%s)", strings.Join(conditions, " OR "))
+		}
+	}
+
 	query := fmt.Sprintf(`
         WITH user_transactions AS (
             SELECT
@@ -150,6 +182,7 @@ func (r *AnalyticsRepository) GetCategoryAnalytics(ctx context.Context, userId i
                 AND t.deleted_at IS NULL
                 AND t.date >= $2
                 AND t.date <= $3
+                %s
         )
         SELECT
             COALESCE(c.id, -1) AS category_id,
@@ -163,9 +196,9 @@ func (r *AnalyticsRepository) GetCategoryAnalytics(ctx context.Context, userId i
             c.id, c.name
         HAVING
             SUM(ut.amount) != 0;
-    `, r.schema, r.schema, r.schema)
+    `, r.schema, r.schema, filterClause, r.schema)
 
-	rows, err := r.db.FetchAll(ctx, query, userId, startDate, endDate)
+	rows, err := r.db.FetchAll(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
