@@ -17,6 +17,46 @@ export const formatCurrency = (
   }).format(amount);
 };
 
+export const formatShortCurrency = (
+  amount: number,
+  currency: string = "INR"
+): string => {
+  const abs = Math.abs(amount);
+  const sign = amount < 0 ? "-" : "";
+
+  // Extract a narrow currency symbol (e.g., ₹)
+  const currencySymbol = new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency,
+    currencyDisplay: "narrowSymbol",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  })
+    .format(0)
+    .replace(/0/g, "")
+    .trim();
+
+  if (!isFinite(abs)) return formatCurrency(amount, currency);
+
+  if (abs >= 1e7) {
+    const v = (abs / 1e7).toFixed(1).replace(/\.0$/, "");
+    return `${sign}${currencySymbol}${v}Cr`;
+  }
+
+  if (abs >= 1e5) {
+    const v = (abs / 1e5).toFixed(1).replace(/\.0$/, "");
+    return `${sign}${currencySymbol}${v}L`;
+  }
+
+  if (abs >= 1e3) {
+    const v = (abs / 1e3).toFixed(1).replace(/\.0$/, "");
+    return `${sign}${currencySymbol}${v}K`;
+  }
+
+  // For small numbers, show the standard formatted currency
+  return formatCurrency(amount, currency);
+};
+
 export const formatPercentage = (percentage: number): string => {
   const sign = percentage > 0 ? "+" : "";
   return `${sign}${percentage.toFixed(1)}%`;
