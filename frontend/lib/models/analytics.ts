@@ -3,6 +3,9 @@ export interface AccountBalanceAnalytics {
   account_id: number;
   current_balance: number;
   balance_one_month_ago: number;
+  current_value?: number | null;
+  percentage_increase?: number | null;
+  xirr?: number | null;
 }
 
 // AccountAnalyticsListResponse represents the complete analytics response

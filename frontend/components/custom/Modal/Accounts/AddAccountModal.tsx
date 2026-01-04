@@ -40,6 +40,7 @@ export function AddAccountModal({
     bank_type: "",
     currency: "inr",
     balance: "",
+    current_value: "",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -50,16 +51,28 @@ export function AddAccountModal({
       return;
     }
 
+    const currentValue =
+      formData.bank_type === "investment" && formData.current_value !== ""
+        ? Number(formData.current_value)
+        : undefined;
+
     const input = {
       name: formData.name,
       bank_type: formData.bank_type.toLowerCase() as BankType,
       currency: formData.currency.toLowerCase() as Currency,
       balance: formData.balance ? Number(formData.balance) : undefined,
+      current_value: currentValue,
     };
 
     createAccountMutation.mutate(input, {
       onSuccess: (newAccount) => {
-        setFormData({ name: "", bank_type: "", currency: "inr", balance: "" });
+        setFormData({
+          name: "",
+          bank_type: "",
+          currency: "inr",
+          balance: "",
+          current_value: "",
+        });
         onOpenChange(false);
         if (onAccountAdded) onAccountAdded(newAccount);
       },
@@ -96,7 +109,12 @@ export function AddAccountModal({
               <Select
                 value={formData.bank_type}
                 onValueChange={(value) =>
-                  setFormData({ ...formData, bank_type: value })
+                  setFormData((prev) => ({
+                    ...prev,
+                    bank_type: value,
+                    current_value:
+                      value === "investment" ? prev.current_value : "",
+                  }))
                 }
               >
                 <SelectTrigger className="col-span-2 w-55">
@@ -154,6 +172,27 @@ export function AddAccountModal({
                 className="col-span-2 w-55"
               />
             </div>
+
+            {formData.bank_type === "investment" && (
+              <div className="grid grid-cols-3 items-center gap-4">
+                <Label htmlFor="current_value" className="text-right">
+                  Current Value
+                </Label>
+                <Input
+                  id="current_value"
+                  type="number"
+                  value={formData.current_value}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      current_value: e.target.value,
+                    })
+                  }
+                  placeholder="Enter current value"
+                  className="col-span-2 w-55"
+                />
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button

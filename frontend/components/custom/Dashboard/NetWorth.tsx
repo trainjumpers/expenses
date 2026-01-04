@@ -57,6 +57,20 @@ export function NetWorth({ dateRange, onDateRangeChange }: NetWorthProps) {
   const chartStartDate = chartData[0]?.formattedDate || "";
   const chartEndDate = chartData[chartData.length - 1]?.formattedDate || "";
 
+  // Determine Y axis domain based on data min/max with a small padding so small changes are visible
+  const yDomain = (() => {
+    const values = chartData.map((d) => d.value);
+    if (values.length === 0) return ["dataMin", "dataMax"] as [any, any];
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    if (min === max) {
+      const buffer = Math.max(Math.abs(min) * 0.05, 1);
+      return [min - buffer, max + buffer];
+    }
+    const padding = (max - min) * 0.05;
+    return [min - padding, max + padding];
+  })();
+
   if (isLoading) {
     return (
       <Card className="w-full">
@@ -72,7 +86,7 @@ export function NetWorth({ dateRange, onDateRangeChange }: NetWorthProps) {
               <Skeleton className="h-10 w-48 mb-2" />
               <Skeleton className="h-5 w-64" />
             </div>
-            <Skeleton className="h-32 w-full" />
+            <Skeleton className="h-24 w-full" />
             <div className="flex justify-between">
               <Skeleton className="h-4 w-20" />
               <Skeleton className="h-4 w-20" />
@@ -121,7 +135,7 @@ export function NetWorth({ dateRange, onDateRangeChange }: NetWorthProps) {
           </div>
 
           {/* Chart */}
-          <div className="h-32">
+          <div className="h-24">
             <ChartContainer
               config={{
                 netWorth: {
@@ -138,7 +152,7 @@ export function NetWorth({ dateRange, onDateRangeChange }: NetWorthProps) {
                   tickLine={false}
                   tick={false}
                 />
-                <YAxis hide />
+                <YAxis hide domain={yDomain} />
                 <ChartTooltip
                   content={
                     <ChartTooltipContent

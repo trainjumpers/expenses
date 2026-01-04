@@ -22,7 +22,6 @@ import type { Category } from "@/lib/models/category";
 import { formatCurrency, getTransactionColor } from "@/lib/utils";
 import { format } from "date-fns";
 import { ChevronRight, FileQuestion, Plus, Tag } from "lucide-react";
-import { useTheme } from "next-themes";
 import Link from "next/link";
 import { Fragment, useEffect, useState } from "react";
 
@@ -56,7 +55,6 @@ function CategoryTransactions({
   categoryId,
   isUncategorized,
 }: CategoryTransactionsProps) {
-  const { theme } = useTheme();
   const { data, isLoading, error } = useTransactions({
     page: 1,
     page_size: 5,
@@ -137,8 +135,7 @@ function CategoryTransactions({
                 </div>
                 <div
                   className={`text-sm font-semibold ${getTransactionColor(
-                    transaction.amount,
-                    theme
+                    transaction.amount
                   )}`}
                 >
                   {formatCurrency(Math.abs(transaction.amount))}

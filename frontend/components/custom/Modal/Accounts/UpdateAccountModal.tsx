@@ -32,13 +32,19 @@ export function UpdateAccountModal({
     bank_type: BankType;
     currency: Currency;
     balance: string;
+    current_value: string;
   }) => {
     setIsSubmitting(true);
+    const currentValue =
+      formData.bank_type === "investment" && formData.current_value !== ""
+        ? Number(formData.current_value)
+        : undefined;
     const accountData = {
       name: formData.name,
       bank_type: formData.bank_type,
       currency: formData.currency,
       balance: formData.balance ? Number(formData.balance) : undefined,
+      current_value: currentValue,
     };
     updateAccountMutation.mutate(
       { id: account.id, data: accountData },
@@ -70,6 +76,7 @@ export function UpdateAccountModal({
             bank_type: account.bank_type as BankType,
             currency: account.currency as Currency,
             balance: account.balance?.toString() || "0",
+            current_value: account.current_value?.toString() || "",
           }}
           onSubmit={handleSubmit}
           loading={isSubmitting}

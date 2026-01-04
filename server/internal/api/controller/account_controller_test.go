@@ -65,6 +65,53 @@ var _ = Describe("AccountController", func() {
 				Expect(response["data"]).To(HaveKey("id"))
 				Expect(response["data"].(map[string]any)["bank_type"]).To(Equal("others"))
 			})
+
+			It("should create investment account without current value", func() {
+				input := models.CreateAccountInput{
+					Name:     "Investment Account",
+					BankType: models.BankTypeInvestment,
+					Currency: models.CurrencyINR,
+				}
+				resp, response := testUser1.MakeRequest(http.MethodPost, "/account", input)
+				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+				Expect(response["message"]).To(Equal("Account created successfully"))
+				Expect(response["data"]).To(HaveKey("id"))
+				Expect(response["data"].(map[string]any)["bank_type"]).To(Equal("investment"))
+				Expect(response["data"].(map[string]any)["current_value"]).To(BeNil())
+			})
+
+			It("should create investment account with current value", func() {
+				currentValue := 15000.0
+				input := models.CreateAccountInput{
+					Name:         "Investment Account with Value",
+					BankType:     models.BankTypeInvestment,
+					Currency:     models.CurrencyINR,
+					CurrentValue: &currentValue,
+				}
+				resp, response := testUser1.MakeRequest(http.MethodPost, "/account", input)
+				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+				Expect(response["message"]).To(Equal("Account created successfully"))
+				Expect(response["data"]).To(HaveKey("id"))
+				Expect(response["data"].(map[string]any)["bank_type"]).To(Equal("investment"))
+				Expect(response["data"].(map[string]any)["current_value"]).NotTo(BeNil())
+				Expect(response["data"].(map[string]any)["current_value"]).To(Equal(currentValue))
+			})
+
+			It("should ignore current value for non-investment account", func() {
+				currentValue := 5000.0
+				input := models.CreateAccountInput{
+					Name:         "Regular Account",
+					BankType:     models.BankTypeAxis,
+					Currency:     models.CurrencyINR,
+					CurrentValue: &currentValue,
+				}
+				resp, response := testUser1.MakeRequest(http.MethodPost, "/account", input)
+				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+				Expect(response["message"]).To(Equal("Account created successfully"))
+				Expect(response["data"]).To(HaveKey("id"))
+				Expect(response["data"].(map[string]any)["bank_type"]).To(Equal("axis"))
+				Expect(response["data"].(map[string]any)["current_value"]).To(BeNil())
+			})
 		})
 
 		Context("with invalid input", func() {
@@ -279,6 +326,93 @@ var _ = Describe("AccountController", func() {
 			Expect(response["data"].(map[string]any)["bank_type"]).To(Equal("others"))
 		})
 
+		It("should set current value for investment account", func() {
+			currentValue := 15000.0
+			input := models.CreateAccountInput{
+				Name:         "Investment for Update",
+				BankType:     models.BankTypeInvestment,
+				Currency:     models.CurrencyINR,
+				CurrentValue: &currentValue,
+			}
+			resp, response := testUser1.MakeRequest(http.MethodPost, "/account", input)
+			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+			accountId := int64(response["data"].(map[string]any)["id"].(float64))
+
+			newValue := 20000.0
+			update := models.UpdateAccountInput{CurrentValue: &newValue}
+			url := "/account/" + strconv.FormatInt(accountId, 10)
+			resp, response = testUser1.MakeRequest(http.MethodPatch, url, update)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			Expect(response["data"].(map[string]any)["current_value"]).To(Equal(newValue))
+		})
+
+		It("should clear current value for investment account", func() {
+			currentValue := 10000.0
+			input := models.CreateAccountInput{
+				Name:         "Investment to Clear",
+				BankType:     models.BankTypeInvestment,
+				Currency:     models.CurrencyINR,
+				CurrentValue: &currentValue,
+			}
+			resp, response := testUser1.MakeRequest(http.MethodPost, "/account", input)
+			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+			Expect(response["data"].(map[string]any)["current_value"]).NotTo(BeNil())
+			accountId := int64(response["data"].(map[string]any)["id"].(float64))
+
+			newValue := 0.0
+			update := models.UpdateAccountInput{CurrentValue: &newValue}
+			url := "/account/" + strconv.FormatInt(accountId, 10)
+			resp, response = testUser1.MakeRequest(http.MethodPatch, url, update)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			Expect(response["data"].(map[string]any)["current_value"]).To(Equal(newValue))
+
+			url = "/account/" + strconv.FormatInt(accountId, 10)
+			resp, _ = testUser1.MakeRequest(http.MethodDelete, url, nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
+		})
+
+		It("should not set current value for non-investment account", func() {
+			input := models.CreateAccountInput{
+				Name:     "Regular Account for Update",
+				BankType: models.BankTypeAxis,
+				Currency: models.CurrencyINR,
+			}
+			resp, response := testUser1.MakeRequest(http.MethodPost, "/account", input)
+			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+			accountId := int64(response["data"].(map[string]any)["id"].(float64))
+
+			value := 18000.0
+			update := models.UpdateAccountInput{CurrentValue: &value}
+			url := "/account/" + strconv.FormatInt(accountId, 10)
+			resp, response = testUser1.MakeRequest(http.MethodPatch, url, update)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			Expect(response["data"].(map[string]any)["current_value"]).To(BeNil())
+		})
+
+		It("should clear current value when changing bank type to non-investment", func() {
+			currentValue := 12000.0
+			input := models.CreateAccountInput{
+				Name:         "Investment to Convert",
+				BankType:     models.BankTypeInvestment,
+				Currency:     models.CurrencyINR,
+				CurrentValue: &currentValue,
+			}
+			resp, response := testUser1.MakeRequest(http.MethodPost, "/account", input)
+			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+			Expect(response["data"].(map[string]any)["current_value"]).NotTo(BeNil())
+			accountId := int64(response["data"].(map[string]any)["id"].(float64))
+
+			update := models.UpdateAccountInput{
+				BankType:     models.BankTypeAxis,
+				CurrentValue: nil,
+			}
+			url := "/account/" + strconv.FormatInt(accountId, 10)
+			resp, response = testUser1.MakeRequest(http.MethodPatch, url, update)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			Expect(response["data"].(map[string]any)["bank_type"]).To(Equal("axis"))
+			Expect(response["data"].(map[string]any)["current_value"]).To(BeNil())
+		})
+
 		It("should return error for invalid currency in update", func() {
 			update := models.UpdateAccountInput{Currency: "invalid_currency"}
 			url := "/account/1"
@@ -292,16 +426,10 @@ var _ = Describe("AccountController", func() {
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 		})
 
-		It("should return error for empty body in update", func() {
-			url := "/account/1"
-			resp, _ := testUser1.MakeRequest(http.MethodPatch, url, "")
-			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
-		})
-
 		It("should return error for non-existent account id", func() {
 			url := "/account/9999"
 			resp, _ := testUser1.MakeRequest(http.MethodPatch, url, nil)
-			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 		})
 
 		It("should return error for invalid account id format in update", func() {

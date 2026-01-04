@@ -5,6 +5,8 @@ import (
 	"expenses/internal/models"
 	"expenses/internal/repository"
 	"fmt"
+	"math"
+	"sort"
 	"time"
 )
 
@@ -53,16 +55,45 @@ func (s *AnalyticsService) GetAccountAnalytics(ctx context.Context, userId int64
 	}
 
 	// Build analytics response ensuring all accounts are included
+	investmentAccountIds := make([]int64, 0)
+	for _, account := range accounts {
+		if account.BankType == models.BankTypeInvestment && account.CurrentValue != nil {
+			investmentAccountIds = append(investmentAccountIds, account.Id)
+		}
+	}
+
+	cashFlowsByAccount := make(map[int64][]models.AccountCashFlow)
+	if len(investmentAccountIds) > 0 {
+		cashFlows, err := s.analyticsRepo.GetAccountCashFlows(ctx, userId, investmentAccountIds)
+		if err != nil {
+			return models.AccountAnalyticsListResponse{}, err
+		}
+		for _, flow := range cashFlows {
+			cashFlowsByAccount[flow.AccountID] = append(cashFlowsByAccount[flow.AccountID], flow)
+		}
+	}
+
 	var accountAnalytics []models.AccountBalanceAnalytics
+	now := time.Now()
 	for _, account := range accounts {
 		currentBalance := currentBalances[account.Id]       // defaults to 0 if not found
 		historicalBalance := historicalBalances[account.Id] // defaults to 0 if not found
 
-		accountAnalytics = append(accountAnalytics, models.AccountBalanceAnalytics{
+		analytics := models.AccountBalanceAnalytics{
 			AccountID:          account.Id,
 			CurrentBalance:     currentBalance,
 			BalanceOneMonthAgo: historicalBalance,
-		})
+		}
+
+		if account.BankType == models.BankTypeInvestment && account.CurrentValue != nil {
+			currentValue := *account.CurrentValue
+			percentageIncrease, xirr := calculateInvestmentMetrics(cashFlowsByAccount[account.Id], currentValue, now)
+			analytics.CurrentValue = &currentValue
+			analytics.PercentageIncrease = &percentageIncrease
+			analytics.Xirr = xirr
+		}
+
+		accountAnalytics = append(accountAnalytics, analytics)
 	}
 
 	return models.AccountAnalyticsListResponse{
@@ -156,4 +187,264 @@ func (s *AnalyticsService) GetMonthlyAnalytics(ctx context.Context, userId int64
 	}
 
 	return s.analyticsRepo.GetMonthlyAnalytics(ctx, userId, startDate, endDate)
+}
+
+type investmentCashFlow struct {
+	amount float64
+	date   time.Time
+}
+
+func calculateInvestmentMetrics(flows []models.AccountCashFlow, currentValue float64, now time.Time) (float64, *float64) {
+	// If current value is zero or negative, percentage and XIRR should be zero
+	if currentValue <= 0 {
+		zero := 0.0
+		return 0, &zero
+	}
+
+	// If there are no flows, XIRR is defined as zero (no history)
+	if len(flows) == 0 {
+		zero := 0.0
+		return 0, &zero
+	}
+
+	// Build cash flows keeping the sign semantics from models: investments should be negative, inflows positive
+	cashFlows := make([]investmentCashFlow, 0, len(flows)+1)
+	totalInvested := 0.0
+	for _, flow := range flows {
+		cashAmount := flow.Amount // keep sign as-is (negative for investments)
+		if cashAmount == 0 {
+			continue
+		}
+		cashFlows = append(cashFlows, investmentCashFlow{amount: cashAmount, date: flow.Date})
+		if cashAmount < 0 {
+			totalInvested += -cashAmount
+		}
+	}
+
+	percentageIncrease := 0.0
+	if totalInvested > 0 {
+		percentageIncrease = ((currentValue - totalInvested) / totalInvested) * 100
+	}
+
+	// Append current value as the final inflow
+	cashFlows = append(cashFlows, investmentCashFlow{amount: currentValue, date: now})
+
+	// Special-case: single negative investment flow (one-time investment) -> compute analytically
+	negCount := 0
+	var negFlow investmentCashFlow
+	for _, f := range cashFlows[:len(cashFlows)-1] { // exclude the final current value
+		if f.amount < 0 {
+			negCount++
+			negFlow = f
+		}
+	}
+	if negCount == 1 && len(cashFlows) == 2 {
+		days := cashFlows[1].date.Sub(negFlow.date).Hours() / 24
+		years := days / 365.0
+		if years <= 0 {
+			zero := 0.0
+			return percentageIncrease, &zero
+		}
+		if -negFlow.amount <= 0 {
+			zero := 0.0
+			return percentageIncrease, &zero
+		}
+		ratio := currentValue / (-negFlow.amount)
+		if ratio <= 0 {
+			zero := 0.0
+			return percentageIncrease, &zero
+		}
+		rate := math.Pow(ratio, 1.0/years) - 1.0
+		// If rate is extremely small, return nil to indicate undefined
+		if math.Abs(rate) < 1e-12 {
+			return percentageIncrease, nil
+		}
+		x := rate * 100
+		return percentageIncrease, &x
+	}
+
+	// If all provided flows (excluding the current value) are on the same date and there are multiple flows, we treat XIRR as zero
+	if len(flows) > 1 {
+		firstDate := flows[0].Date
+		allSameDate := true
+		for _, f := range flows {
+			if !sameDay(firstDate, f.Date) {
+				allSameDate = false
+				break
+			}
+		}
+		if allSameDate {
+			zero := 0.0
+			return percentageIncrease, &zero
+		}
+	}
+
+	// Calculate XIRR using Newton/bisection fallback
+	xirrVal, ok := calculateXIRR(cashFlows)
+	if !ok {
+		zero := 0.0
+		return percentageIncrease, &zero
+	}
+
+	// If XIRR is extremely small, treat it as undefined (return nil)
+	if math.Abs(xirrVal) < 1e-12 {
+		return percentageIncrease, nil
+	}
+
+	x := xirrVal * 100
+	return percentageIncrease, &x
+}
+
+// sameDay compares dates ignoring the time component
+func sameDay(a, b time.Time) bool {
+	aYear, aMonth, aDay := a.Date()
+	bYear, bMonth, bDay := b.Date()
+	return aYear == bYear && aMonth == bMonth && aDay == bDay
+}
+
+func calculateXIRR(cashFlows []investmentCashFlow) (float64, bool) {
+	if len(cashFlows) < 2 {
+		return 0, false
+	}
+
+	// Sort flows by date (ascending) for deterministic behavior
+	sort.Slice(cashFlows, func(i, j int) bool {
+		return cashFlows[i].date.Before(cashFlows[j].date)
+	})
+
+	hasNegative := false
+	hasPositive := false
+	baseDate := cashFlows[0].date
+	for _, flow := range cashFlows {
+		if flow.amount < 0 {
+			hasNegative = true
+		}
+		if flow.amount > 0 {
+			hasPositive = true
+		}
+		if flow.date.Before(baseDate) {
+			baseDate = flow.date
+		}
+	}
+
+	if !hasNegative || !hasPositive {
+		return 0, false
+	}
+
+	// Try several initial guesses to improve chances of convergence
+	initialGuesses := []float64{0.1, 0.5, 1.0, 0.0, -0.5, 0.2}
+	for _, g := range initialGuesses {
+		guess := g
+		for i := 0; i < 200; i++ {
+			npv, derivative := xirrNpvAndDerivative(guess, cashFlows, baseDate)
+			if math.IsNaN(npv) || math.IsInf(npv, 0) {
+				break
+			}
+			if math.Abs(npv) < 1e-9 {
+				return guess, true
+			}
+			if derivative == 0 {
+				break
+			}
+			next := guess - npv/derivative
+			if next <= -0.999999 {
+				next = (guess - 0.999999) / 2
+			}
+			if math.IsNaN(next) || math.IsInf(next, 0) {
+				break
+			}
+			if math.Abs(next-guess) < 1e-9 {
+				return next, true
+			}
+			guess = next
+		}
+	}
+
+	// Fallback: try to find sign change across a grid and bisection
+	rates := []float64{-0.9999, -0.5, -0.1, 0.0, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0}
+	npvVals := make([]float64, len(rates))
+	for i, r := range rates {
+		npvVals[i], _ = xirrNpvAndDerivative(r, cashFlows, baseDate)
+		if math.IsNaN(npvVals[i]) || math.IsInf(npvVals[i], 0) {
+			npvVals[i] = math.NaN()
+		}
+	}
+
+	for i := 0; i < len(rates)-1; i++ {
+		aRate := rates[i]
+		bRate := rates[i+1]
+		aVal := npvVals[i]
+		bVal := npvVals[i+1]
+		if math.IsNaN(aVal) || math.IsNaN(bVal) {
+			continue
+		}
+		if aVal == 0 {
+			return aRate, true
+		}
+		if aVal*bVal < 0 {
+			low := aRate
+			high := bRate
+			for it := 0; it < 100; it++ {
+				mid := (low + high) / 2
+				npv, _ := xirrNpvAndDerivative(mid, cashFlows, baseDate)
+				if math.IsNaN(npv) || math.IsInf(npv, 0) {
+					break
+				}
+				if math.Abs(npv) < 1e-9 {
+					return mid, true
+				}
+				if npv*aVal < 0 {
+					high = mid
+				} else {
+					low = mid
+				}
+			}
+		}
+	}
+
+	// Final fallback: try secant method across adjacent rate intervals where npv values are finite
+	for i := 0; i < len(rates)-1; i++ {
+		rPrev := rates[i]
+		rCurr := rates[i+1]
+		npvPrev := npvVals[i]
+		npvCurr := npvVals[i+1]
+		if math.IsNaN(npvPrev) || math.IsNaN(npvCurr) || npvPrev == npvCurr {
+			continue
+		}
+		for iter := 0; iter < 200; iter++ {
+			// secant step
+			rNext := rCurr - npvCurr*(rCurr-rPrev)/(npvCurr-npvPrev)
+			if math.IsNaN(rNext) || math.IsInf(rNext, 0) || rNext <= -0.999999 {
+				break
+			}
+			npvNext, _ := xirrNpvAndDerivative(rNext, cashFlows, baseDate)
+			if math.IsNaN(npvNext) || math.IsInf(npvNext, 0) {
+				break
+			}
+			if math.Abs(npvNext) < 1e-9 {
+				return rNext, true
+			}
+			// shift window
+			rPrev, npvPrev = rCurr, npvCurr
+			rCurr, npvCurr = rNext, npvNext
+			if math.Abs(rCurr-rPrev) < 1e-12 {
+				return rCurr, true
+			}
+		}
+	}
+
+	return 0, false
+}
+
+func xirrNpvAndDerivative(rate float64, cashFlows []investmentCashFlow, baseDate time.Time) (float64, float64) {
+	npv := 0.0
+	derivative := 0.0
+	for _, flow := range cashFlows {
+		days := flow.date.Sub(baseDate).Hours() / 24
+		years := days / 365
+		denominator := math.Pow(1+rate, years)
+		npv += flow.amount / denominator
+		derivative -= (years * flow.amount) / (denominator * (1 + rate))
+	}
+	return npv, derivative
 }

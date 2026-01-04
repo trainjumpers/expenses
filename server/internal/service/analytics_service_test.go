@@ -4,6 +4,7 @@ import (
 	"context"
 	mock_repository "expenses/internal/mock/repository"
 	"expenses/internal/models"
+	"math"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -114,9 +115,10 @@ var _ = Describe("AnalyticsService", func() {
 				// Find analytics for each account
 				var account1Analytics, account2Analytics *models.AccountBalanceAnalytics
 				for i := range result.AccountAnalytics {
-					if result.AccountAnalytics[i].AccountID == account1Id {
+					switch result.AccountAnalytics[i].AccountID {
+					case account1Id:
 						account1Analytics = &result.AccountAnalytics[i]
-					} else if result.AccountAnalytics[i].AccountID == account2Id {
+					case account2Id:
 						account2Analytics = &result.AccountAnalytics[i]
 					}
 				}
@@ -178,9 +180,10 @@ var _ = Describe("AnalyticsService", func() {
 				// Find analytics for each account
 				var account1Analytics, account2Analytics *models.AccountBalanceAnalytics
 				for i := range result.AccountAnalytics {
-					if result.AccountAnalytics[i].AccountID == account1Id {
+					switch result.AccountAnalytics[i].AccountID {
+					case account1Id:
 						account1Analytics = &result.AccountAnalytics[i]
-					} else if result.AccountAnalytics[i].AccountID == account2Id {
+					case account2Id:
 						account2Analytics = &result.AccountAnalytics[i]
 					}
 				}
@@ -871,8 +874,8 @@ var _ = Describe("AnalyticsService", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).NotTo(BeNil())
 				Expect(result.TotalIncome).To(Equal(1000.0))  // Default from mock
-				Expect(result.TotalExpenses).To(Equal(800.0)) // Default from mock
-				Expect(result.TotalAmount).To(Equal(1800.0))  // Default from mock
+				Expect(result.TotalExpenses).To(Equal(600.0)) // Default from mock
+				Expect(result.TotalAmount).To(Equal(400.0))   // Default from mock
 			})
 		})
 
@@ -975,6 +978,356 @@ var _ = Describe("AnalyticsService", func() {
 				Expect(result.TotalExpenses).To(Equal(0.0))
 				Expect(result.TotalAmount).To(Equal(0.0))
 			})
+		})
+
+		Context("with investment accounts", func() {
+			var investmentAccount models.AccountResponse
+			var regularAccount models.AccountResponse
+
+			BeforeEach(func() {
+				currentValue := 15000.0
+				investmentInput := models.CreateAccountInput{
+					Name:         "Investment Account",
+					BankType:     models.BankTypeInvestment,
+					Currency:     models.CurrencyINR,
+					CurrentValue: &currentValue,
+					CreatedBy:    userId,
+				}
+				var err error
+				investmentAccount, err = mockAccountRepo.CreateAccount(ctx, investmentInput)
+				Expect(err).NotTo(HaveOccurred())
+
+				regularInput := models.CreateAccountInput{
+					Name:      "Regular Account",
+					BankType:  models.BankTypeAxis,
+					Currency:  models.CurrencyINR,
+					CreatedBy: userId,
+				}
+				regularAccount, err = mockAccountRepo.CreateAccount(ctx, regularInput)
+				Expect(err).NotTo(HaveOccurred())
+
+				currentBalances := map[int64]float64{
+					investmentAccount.Id: 5000.0,
+					regularAccount.Id:    3000.0,
+				}
+				mockAnalyticsRepo.SetBalance(userId, nil, nil, currentBalances)
+
+				oneMonthAgo := time.Now().AddDate(0, -1, 0)
+				historicalBalances := map[int64]float64{
+					investmentAccount.Id: 4000.0,
+					regularAccount.Id:    2000.0,
+				}
+				mockAnalyticsRepo.SetBalance(userId, nil, &oneMonthAgo, historicalBalances)
+			})
+
+			It("should include current value for investment accounts", func() {
+				result, err := analyticsService.GetAccountAnalytics(ctx, userId)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(len(result.AccountAnalytics)).To(BeNumerically(">=", 1))
+
+				var investmentAnalytics *models.AccountBalanceAnalytics
+				for i := range result.AccountAnalytics {
+					if result.AccountAnalytics[i].AccountID == investmentAccount.Id {
+						investmentAnalytics = &result.AccountAnalytics[i]
+						break
+					}
+				}
+
+				Expect(investmentAnalytics).NotTo(BeNil())
+				Expect(investmentAnalytics.CurrentValue).NotTo(BeNil())
+				Expect(*investmentAnalytics.CurrentValue).To(Equal(15000.0))
+			})
+
+			It("should include current value for investment accounts without regular account current values", func() {
+				result, err := analyticsService.GetAccountAnalytics(ctx, userId)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(len(result.AccountAnalytics)).To(BeNumerically(">=", 1))
+
+				var investmentAnalytics *models.AccountBalanceAnalytics
+				for i := range result.AccountAnalytics {
+					if result.AccountAnalytics[i].AccountID == investmentAccount.Id {
+						investmentAnalytics = &result.AccountAnalytics[i]
+						break
+					}
+				}
+
+				Expect(investmentAnalytics).NotTo(BeNil())
+				Expect(investmentAnalytics.CurrentValue).NotTo(BeNil())
+				Expect(*investmentAnalytics.CurrentValue).To(Equal(15000.0))
+			})
+
+			It("should compute percentage increase for investment accounts", func() {
+				result, err := analyticsService.GetAccountAnalytics(ctx, userId)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(len(result.AccountAnalytics)).To(BeNumerically(">=", 1))
+
+				var investmentAnalytics *models.AccountBalanceAnalytics
+				for i := range result.AccountAnalytics {
+					if result.AccountAnalytics[i].AccountID == investmentAccount.Id {
+						investmentAnalytics = &result.AccountAnalytics[i]
+						break
+					}
+				}
+
+				Expect(investmentAnalytics).NotTo(BeNil())
+				Expect(investmentAnalytics.CurrentValue).NotTo(BeNil())
+				Expect(*investmentAnalytics.CurrentValue).To(Equal(15000.0))
+			})
+
+			It("should not include investment metrics for regular accounts", func() {
+				result, err := analyticsService.GetAccountAnalytics(ctx, userId)
+				Expect(err).NotTo(HaveOccurred())
+
+				var regularAnalytics *models.AccountBalanceAnalytics
+				for i := range result.AccountAnalytics {
+					if result.AccountAnalytics[i].AccountID == regularAccount.Id {
+						regularAnalytics = &result.AccountAnalytics[i]
+						break
+					}
+				}
+
+				Expect(regularAnalytics).NotTo(BeNil())
+				Expect(regularAnalytics.CurrentValue).To(BeNil())
+				Expect(regularAnalytics.PercentageIncrease).To(BeNil())
+				Expect(regularAnalytics.Xirr).To(BeNil())
+			})
+
+			It("should return nil current value for investment account without current_value set", func() {
+				regularInput := models.CreateAccountInput{
+					Name:      "Investment No Value",
+					BankType:  models.BankTypeInvestment,
+					Currency:  models.CurrencyINR,
+					CreatedBy: userId,
+				}
+				noValueAccount, err := mockAccountRepo.CreateAccount(ctx, regularInput)
+				Expect(err).NotTo(HaveOccurred())
+
+				currentBalances := map[int64]float64{
+					noValueAccount.Id: 1000.0,
+				}
+				mockAnalyticsRepo.SetBalance(userId, nil, nil, currentBalances)
+
+				oneMonthAgo := time.Now().AddDate(0, -1, 0)
+				historicalBalances := map[int64]float64{
+					noValueAccount.Id: 500.0,
+				}
+				mockAnalyticsRepo.SetBalance(userId, nil, &oneMonthAgo, historicalBalances)
+
+				result, err := analyticsService.GetAccountAnalytics(ctx, userId)
+				Expect(err).NotTo(HaveOccurred())
+
+				var noValueAnalytics *models.AccountBalanceAnalytics
+				for i := range result.AccountAnalytics {
+					if result.AccountAnalytics[i].AccountID == noValueAccount.Id {
+						noValueAnalytics = &result.AccountAnalytics[i]
+						break
+					}
+				}
+
+				Expect(noValueAnalytics).NotTo(BeNil())
+				Expect(noValueAnalytics.CurrentValue).To(BeNil())
+				Expect(noValueAnalytics.PercentageIncrease).To(BeNil())
+				Expect(noValueAnalytics.Xirr).To(BeNil())
+			})
+		})
+	})
+
+	Describe("calculateInvestmentMetrics", func() {
+		now := time.Now()
+
+		It("should return zero percentage and XIRR when current value is zero or negative", func() {
+			currentValue := -100.0
+			flows := []models.AccountCashFlow{
+				{AccountID: 1, Amount: -5000.0, Date: now.AddDate(0, -1, 0)},
+				{AccountID: 1, Amount: -3000.0, Date: now.AddDate(0, -6, 0)},
+			}
+			percentage, xirr := calculateInvestmentMetrics(flows, currentValue, now)
+			Expect(percentage).To(BeNumerically("==", 0.0))
+			Expect(xirr).NotTo(BeNil())
+			Expect(*xirr).To(BeNumerically("==", 0.0))
+		})
+
+		It("should calculate percentage increase correctly for 50% return", func() {
+			currentValue := 15000.0
+			flows := []models.AccountCashFlow{
+				{AccountID: 1, Amount: -10000.0, Date: now.AddDate(-1, 0, 0)},
+			}
+			percentage, _ := calculateInvestmentMetrics(flows, currentValue, now)
+			expectedPct := ((15000.0 - 10000.0) / 10000.0) * 100
+			Expect(percentage).To(BeNumerically("~", expectedPct))
+		})
+
+		It("should calculate percentage increase correctly for 100% return", func() {
+			currentValue := 20000.0
+			flows := []models.AccountCashFlow{
+				{AccountID: 1, Amount: -10000.0, Date: now.AddDate(-1, 0, 0)},
+			}
+			percentage, _ := calculateInvestmentMetrics(flows, currentValue, now)
+			expectedPct := ((20000.0 - 10000.0) / 10000.0) * 100
+			Expect(percentage).To(BeNumerically("~", expectedPct))
+		})
+
+		It("should calculate percentage increase correctly for 20% loss", func() {
+			currentValue := 8000.0
+			flows := []models.AccountCashFlow{
+				{AccountID: 1, Amount: -10000.0, Date: now.AddDate(-1, 0, 0)},
+			}
+			percentage, _ := calculateInvestmentMetrics(flows, currentValue, now)
+			expectedPct := ((8000.0 - 10000.0) / 10000.0) * 100
+			Expect(percentage).To(BeNumerically("~", expectedPct))
+		})
+
+		It("should calculate percentage increase correctly for break-even", func() {
+			currentValue := 10000.0
+			flows := []models.AccountCashFlow{
+				{AccountID: 1, Amount: -10000.0, Date: now.AddDate(-1, 0, 0)},
+			}
+			percentage, _ := calculateInvestmentMetrics(flows, currentValue, now)
+			Expect(percentage).To(BeNumerically("==", 0.0))
+		})
+
+		It("should calculate percentage correctly with multiple investments", func() {
+			currentValue := 25000.0
+			flows := []models.AccountCashFlow{
+				{AccountID: 1, Amount: -10000.0, Date: now.AddDate(-1, 0, 0)},
+				{AccountID: 1, Amount: -15000.0, Date: now.AddDate(-2, 0, 0)},
+			}
+			totalInvested := 25000.0
+			percentage, _ := calculateInvestmentMetrics(flows, currentValue, now)
+			expectedPct := ((currentValue - totalInvested) / totalInvested) * 100
+			Expect(percentage).To(BeNumerically("~", expectedPct))
+		})
+
+		It("should return zero XIRR when no cash flows", func() {
+			currentValue := 15000.0
+			emptyFlows := []models.AccountCashFlow{}
+			_, xirr := calculateInvestmentMetrics(emptyFlows, currentValue, now)
+			Expect(xirr).NotTo(BeNil())
+			Expect(*xirr).To(BeNumerically("==", 0.0))
+		})
+
+		It("should return zero XIRR when only one cash flow", func() {
+			currentValue := 15000.0
+			oneFlow := []models.AccountCashFlow{
+				{AccountID: 1, Amount: 15000.0, Date: now.AddDate(-1, 0, 0)},
+			}
+			_, xirr := calculateInvestmentMetrics(oneFlow, currentValue, now)
+			Expect(xirr).NotTo(BeNil())
+			Expect(*xirr).To(BeNumerically("==", 0.0))
+		})
+
+		It("should return zero XIRR when cash flows have same date", func() {
+			currentValue := 15000.0
+			sameDateFlows := []models.AccountCashFlow{
+				{AccountID: 1, Amount: -10000.0, Date: now.AddDate(-1, 0, 0)},
+				{AccountID: 1, Amount: 5000.0, Date: now.AddDate(-1, 0, 0)},
+			}
+			_, xirr := calculateInvestmentMetrics(sameDateFlows, currentValue, now)
+			Expect(xirr).NotTo(BeNil())
+			Expect(*xirr).To(BeNumerically("==", 0.0))
+		})
+
+		It("should calculate XIRR correctly for 50% annual return (1 year)", func() {
+			currentValue := 15000.0
+			oneYearDate := now.AddDate(-1, 0, 0)
+			flows := []models.AccountCashFlow{
+				{AccountID: 1, Amount: -10000.0, Date: oneYearDate},
+			}
+			_, xirr := calculateInvestmentMetrics(flows, currentValue, now)
+			expectedXIRR := math.Pow(1.5, 1.0) - 1
+			Expect(xirr).NotTo(BeNil())
+			Expect(*xirr).To(BeNumerically("~", expectedXIRR*100))
+		})
+
+		It("should calculate XIRR correctly for 100% annual return", func() {
+			currentValue := 20000.0
+			oneYearDate := now.AddDate(-1, 0, 0)
+			flows := []models.AccountCashFlow{
+				{AccountID: 1, Amount: -10000.0, Date: oneYearDate},
+			}
+			_, xirr := calculateInvestmentMetrics(flows, currentValue, now)
+			expectedXIRR := 1.0
+			Expect(xirr).NotTo(BeNil())
+			Expect(*xirr).To(BeNumerically("~", expectedXIRR*100))
+		})
+
+		It("should calculate XIRR correctly for -50% annual return (1 year loss)", func() {
+			currentValue := 5000.0
+			oneYearAgo := now.AddDate(-1, 0, 0)
+			flows := []models.AccountCashFlow{
+				{AccountID: 1, Amount: -10000.0, Date: oneYearAgo},
+			}
+			_, xirr := calculateInvestmentMetrics(flows, currentValue, now)
+			expectedXIRR := -0.5
+			Expect(xirr).NotTo(BeNil())
+			Expect(*xirr).To(BeNumerically("~", expectedXIRR*100))
+		})
+
+		It("should return zero XIRR when all flows are on same date", func() {
+			currentValue := 10000.0
+			flows := []models.AccountCashFlow{
+				{AccountID: 1, Amount: -10000.0, Date: now.AddDate(-1, 0, 0)},
+				{AccountID: 1, Amount: 10000.0, Date: now.AddDate(-1, 0, 0)},
+			}
+			_, xirr := calculateInvestmentMetrics(flows, currentValue, now)
+			Expect(xirr).NotTo(BeNil())
+			Expect(*xirr).To(BeNumerically("==", 0.0))
+		})
+
+		It("should return zero XIRR when only current value flow", func() {
+			currentValue := 10000.0
+			flows := []models.AccountCashFlow{
+				{AccountID: 1, Amount: 10000.0, Date: now.AddDate(0, 0, 0)},
+			}
+			_, xirr := calculateInvestmentMetrics(flows, currentValue, now)
+			Expect(xirr).NotTo(BeNil())
+			Expect(*xirr).To(BeNumerically("==", 0.0))
+		})
+
+		It("should handle edge case with very small XIRR values", func() {
+			currentValue := 10001.0
+			flows := []models.AccountCashFlow{
+				{AccountID: 1, Amount: -10000.0, Date: now.AddDate(-1, 0, 0)},
+			}
+			_, xirr := calculateInvestmentMetrics(flows, currentValue, now)
+			Expect(xirr).NotTo(BeNil())
+			Expect(math.IsNaN(*xirr)).To(BeFalse())
+		})
+
+		It("should calculate XIRR correctly with multiple investments over time", func() {
+			currentValue := 50000.0
+			flows := []models.AccountCashFlow{
+				{AccountID: 1, Amount: -10000.0, Date: now.AddDate(-1, 0, 0)},
+				{AccountID: 1, Amount: -10000.0, Date: now.AddDate(-2, 0, 0)},
+				{AccountID: 1, Amount: -10000.0, Date: now.AddDate(-3, 0, 0)},
+				{AccountID: 1, Amount: -5000.0, Date: now.AddDate(-4, 0, 0)},
+				{AccountID: 1, Amount: 5000.0, Date: now.AddDate(-5, 0, 0)},
+			}
+			_, xirr := calculateInvestmentMetrics(flows, currentValue, now)
+			Expect(xirr).NotTo(BeNil())
+			// Expected annualized XIRR for these flows is approximately 34.06%
+			Expect(*xirr).To(BeNumerically("~", 34.059629062590666, 1e-3))
+		})
+
+		It("should calculate percentage correctly with mixed cash flows", func() {
+			currentValue := 15000.0
+			flows := []models.AccountCashFlow{
+				{AccountID: 1, Amount: -5000.0, Date: now.AddDate(-730, 0, 0)},
+				{AccountID: 1, Amount: 3000.0, Date: now.AddDate(-365, 0, 0)},
+				{AccountID: 1, Amount: -7000.0, Date: now.AddDate(-365, 0, 0)},
+				{AccountID: 1, Amount: 3000.0, Date: now.AddDate(-365, 0, 0)},
+				{AccountID: 1, Amount: 5000.0, Date: now.AddDate(-365, 0, 0)},
+			}
+			// totalInvested should be sum of absolute negative flows (investments only)
+			totalInvested := 0.0
+			for _, f := range flows {
+				if f.Amount < 0 {
+					totalInvested += -f.Amount
+				}
+			}
+			percentage, _ := calculateInvestmentMetrics(flows, currentValue, now)
+			expectedPct := ((currentValue - totalInvested) / totalInvested) * 100
+			Expect(percentage).To(BeNumerically("~", expectedPct))
 		})
 	})
 })

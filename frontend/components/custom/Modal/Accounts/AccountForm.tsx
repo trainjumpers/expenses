@@ -20,12 +20,14 @@ interface AccountFormProps {
     bank_type: BankType;
     currency: Currency;
     balance: string;
+    current_value: string;
   };
   onSubmit: (formData: {
     name: string;
     bank_type: BankType;
     currency: Currency;
     balance: string;
+    current_value: string;
   }) => Promise<void>;
   loading: boolean;
   submitText: string;
@@ -72,7 +74,11 @@ export function AccountForm({
           <Select
             value={formData.bank_type}
             onValueChange={(value: BankType) =>
-              setFormData({ ...formData, bank_type: value })
+              setFormData((prev) => ({
+                ...prev,
+                bank_type: value,
+                current_value: value === "investment" ? prev.current_value : "",
+              }))
             }
           >
             <SelectTrigger className="col-span-2 w-55">
@@ -130,6 +136,27 @@ export function AccountForm({
             className="col-span-2 w-55"
           />
         </div>
+
+        {formData.bank_type === "investment" && (
+          <div className="grid grid-cols-3 items-center gap-4">
+            <Label htmlFor="current_value" className="text-right">
+              Current Value
+            </Label>
+            <Input
+              id="current_value"
+              type="number"
+              value={formData.current_value}
+              onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                setFormData({
+                  ...formData,
+                  current_value: e.target.value,
+                })
+              }
+              placeholder="Enter current value"
+              className="col-span-2 w-55"
+            />
+          </div>
+        )}
       </div>
       <DialogFooter>
         <Button

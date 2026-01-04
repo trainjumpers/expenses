@@ -16,8 +16,12 @@ interface AccountData {
   id: number;
   name: string;
   balance: number;
+  txnBalance: number;
   currency: string;
   percentageChange: number;
+  bankType?: string;
+  isInvestment: boolean;
+  xirr: number;
 }
 
 interface AccountsAnalyticsSidepanelProps {
@@ -48,17 +52,29 @@ export function AccountsAnalyticsSidepanel({
       const account = accountsData?.find(
         (acc) => acc.id === analytics.account_id
       );
-      const percentageChange = calculatePercentageChange(
-        analytics.current_balance,
-        analytics.balance_one_month_ago
-      );
+      const isInvestment =
+        account?.bank_type === "investment" &&
+        analytics.current_value !== null &&
+        analytics.current_value !== undefined;
+      const percentageChange = isInvestment
+        ? (analytics.percentage_increase ?? 0)
+        : calculatePercentageChange(
+            analytics.current_balance,
+            analytics.balance_one_month_ago
+          );
 
       return {
         id: analytics.account_id,
         name: account?.name || `Account ${analytics.account_id}`,
         currency: account?.currency || "INR",
-        balance: analytics.current_balance + (account?.balance || 0),
+        balance: isInvestment
+          ? Number(analytics.current_value)
+          : analytics.current_balance + (account?.balance || 0),
+        txnBalance: -1 * analytics.current_balance + (account?.balance || 0),
         percentageChange,
+        bankType: account?.bank_type || "others",
+        isInvestment,
+        xirr: analytics.xirr ?? 0,
       };
     }) || [];
 
@@ -66,12 +82,12 @@ export function AccountsAnalyticsSidepanel({
     return (
       <div className={`w-80 flex flex-col h-full ${className}`}>
         {/* Monthly Analytics Card at the top */}
-        <div className="flex-shrink-0 mb-4">
+        <div className="shrink-0 mb-4">
           <MonthlyAnalyticsCard />
         </div>
 
         <Card className="flex-1 flex flex-col">
-          <CardHeader className="pb-4 flex-shrink-0">
+          <CardHeader className="pb-4 shrink-0">
             <div className="flex items-center justify-between">
               <Skeleton className="h-6 w-16" />
               <Skeleton className="h-8 w-8" />
@@ -79,21 +95,43 @@ export function AccountsAnalyticsSidepanel({
             <Skeleton className="h-4 w-20" />
           </CardHeader>
           <CardContent className="flex-1 overflow-y-auto space-y-1">
-            {Array.from({ length: 6 }).map((_, index) => (
-              <div
-                key={index}
-                className="flex items-center justify-between py-3 px-2"
-              >
-                <div className="flex items-center space-x-3">
-                  <Skeleton className="h-4 w-4" />
-                  <Skeleton className="h-4 w-20" />
+            <div>
+              <Skeleton className="h-3 w-24 mb-2" />
+              {Array.from({ length: 3 }).map((_, index) => (
+                <div
+                  key={`inv-${index}`}
+                  className="flex items-center justify-between py-3 px-2"
+                >
+                  <div className="flex items-center space-x-3">
+                    <Skeleton className="h-4 w-4" />
+                    <Skeleton className="h-4 w-28" />
+                  </div>
+                  <div className="text-right space-y-1">
+                    <Skeleton className="h-4 w-16" />
+                    <Skeleton className="h-3 w-10" />
+                  </div>
                 </div>
-                <div className="text-right space-y-1">
-                  <Skeleton className="h-4 w-16" />
-                  <Skeleton className="h-3 w-10" />
+              ))}
+            </div>
+
+            <div>
+              <Skeleton className="h-3 w-16 mb-2 mt-2" />
+              {Array.from({ length: 3 }).map((_, index) => (
+                <div
+                  key={`bank-${index}`}
+                  className="flex items-center justify-between py-3 px-2"
+                >
+                  <div className="flex items-center space-x-3">
+                    <Skeleton className="h-4 w-4" />
+                    <Skeleton className="h-4 w-28" />
+                  </div>
+                  <div className="text-right space-y-1">
+                    <Skeleton className="h-4 w-16" />
+                    <Skeleton className="h-3 w-10" />
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -103,12 +141,12 @@ export function AccountsAnalyticsSidepanel({
   return (
     <div className={`w-80 flex flex-col h-full ${className}`}>
       {/* Monthly Analytics Card at the top */}
-      <div className="flex-shrink-0 mb-4">
+      <div className="shrink-0 mb-4">
         <MonthlyAnalyticsCard />
       </div>
 
       <Card className="flex-1 flex flex-col">
-        <CardHeader className="pb-4 flex-shrink-0">
+        <CardHeader className="pb-4 shrink-0">
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg font-semibold">Assets</CardTitle>
             <Button
@@ -139,33 +177,114 @@ export function AccountsAnalyticsSidepanel({
               </Button>
             </div>
           ) : (
-            accounts.map((account) => (
-              <div
-                key={account.id}
-                className="flex items-center justify-between py-3 px-2 rounded-md hover:bg-muted/50 cursor-pointer group"
-              >
-                <div className="flex items-center space-x-3">
-                  <span className="font-medium text-sm">{account.name}</span>
-                </div>
+            (() => {
+              const investments = accounts.filter(
+                (a) => a.bankType === "investment"
+              );
+              const banks = accounts.filter((a) => a.bankType !== "investment");
 
-                <div className="text-right">
-                  <div className="font-semibold text-sm">
-                    {formatCurrency(account.balance, account.currency)}
-                  </div>
-                  <div
-                    className={`text-xs ${
-                      account.percentageChange > 0
-                        ? "text-green-600 dark:text-green-300"
-                        : account.percentageChange < 0
-                          ? "text-red-600 dark:text-red-300"
-                          : "text-muted-foreground"
-                    }`}
-                  >
-                    {formatPercentage(account.percentageChange)}
-                  </div>
+              return (
+                <div className="space-y-3">
+                  {investments.length > 0 && (
+                    <div>
+                      <div className="text-xs font-medium text-muted-foreground mb-1">
+                        Investments
+                      </div>
+                      <div className="space-y-1">
+                        {investments.map((account) => (
+                          <div
+                            key={account.id}
+                            className="flex items-center justify-between py-3 px-2 rounded-md hover:bg-muted/50 cursor-pointer group"
+                          >
+                            <div className="flex items-center space-x-3">
+                              <span className="font-medium text-sm">
+                                {account.name}
+                              </span>
+                            </div>
+
+                            <div className="text-right">
+                              <div className="font-semibold text-sm">
+                                {formatCurrency(
+                                  account.balance,
+                                  account.currency
+                                )}
+                                <span className="text-xs text-muted-foreground ml-2">
+                                  •{" "}
+                                  {formatCurrency(
+                                    account.txnBalance,
+                                    account.currency
+                                  )}
+                                </span>
+                              </div>
+                              <div
+                                className={`text-xs ${
+                                  account.xirr > 0
+                                    ? "text-green-600 dark:text-green-300"
+                                    : account.xirr < 0
+                                      ? "text-red-600 dark:text-red-300"
+                                      : "text-muted-foreground"
+                                }`}
+                              >
+                                {formatPercentage(account.percentageChange)}
+                                <span className="mx-1">•</span>
+                                <span className="text-xs font-medium">
+                                  XIRR
+                                </span>
+                                <span className="ml-1">
+                                  {formatPercentage(account.xirr)}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {banks.length > 0 && (
+                    <div>
+                      <div className="text-xs font-medium text-muted-foreground mb-1">
+                        Banks
+                      </div>
+                      <div className="space-y-1">
+                        {banks.map((account) => (
+                          <div
+                            key={account.id}
+                            className="flex items-center justify-between py-3 px-2 rounded-md hover:bg-muted/50 cursor-pointer group"
+                          >
+                            <div className="flex items-center space-x-3">
+                              <span className="font-medium text-sm">
+                                {account.name}
+                              </span>
+                            </div>
+
+                            <div className="text-right">
+                              <div className="font-semibold text-sm">
+                                {formatCurrency(
+                                  account.balance,
+                                  account.currency
+                                )}
+                              </div>
+                              <div
+                                className={`text-xs ${
+                                  account.percentageChange > 0
+                                    ? "text-green-600 dark:text-green-300"
+                                    : account.percentageChange < 0
+                                      ? "text-red-600 dark:text-red-300"
+                                      : "text-muted-foreground"
+                                }`}
+                              >
+                                {formatPercentage(account.percentageChange)}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))
+              );
+            })()
           )}
         </CardContent>
 

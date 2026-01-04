@@ -34,6 +34,9 @@ func (m *MockAccountRepository) CreateAccount(ctx context.Context, input models.
 	if input.Balance != nil {
 		acc.Balance = *input.Balance
 	}
+	if input.BankType == models.BankTypeInvestment && input.CurrentValue != nil {
+		acc.CurrentValue = input.CurrentValue
+	}
 	m.accounts[m.nextId] = acc
 	m.nextId++
 	return acc, nil
@@ -67,6 +70,13 @@ func (m *MockAccountRepository) UpdateAccount(ctx context.Context, accountId int
 	}
 	if input.Balance != nil {
 		acc.Balance = *input.Balance
+	}
+	if acc.BankType == models.BankTypeInvestment {
+		if input.CurrentValue != nil {
+			acc.CurrentValue = input.CurrentValue
+		}
+	} else {
+		acc.CurrentValue = nil
 	}
 	m.accounts[accountId] = acc
 	return acc, nil

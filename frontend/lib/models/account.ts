@@ -14,6 +14,7 @@ export interface CreateAccountInput {
   bank_type: BankType;
   currency: Currency;
   balance?: number;
+  current_value?: number;
 }
 
 export interface Account extends CreateAccountInput {
