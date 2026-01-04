@@ -264,11 +264,11 @@ func calculateInvestmentMetrics(flows []models.AccountCashFlow, currentValue flo
 	}
 
 	// If all provided flows (excluding the current value) are on the same date and there are multiple flows, we treat XIRR as zero
-	if len(flows) > 1 {
-		firstDate := flows[0].Date
+	if len(cashFlows) > 2 {
+		firstDate := cashFlows[0].date
 		allSameDate := true
-		for _, f := range flows {
-			if !sameDay(firstDate, f.Date) {
+		for i := 0; i < len(cashFlows)-1; i++ {
+			if !sameDay(firstDate, cashFlows[i].date) {
 				allSameDate = false
 				break
 			}
@@ -357,79 +357,6 @@ func calculateXIRR(cashFlows []investmentCashFlow) (float64, bool) {
 				return next, true
 			}
 			guess = next
-		}
-	}
-
-	// Fallback: try to find sign change across a grid and bisection
-	rates := []float64{-0.9999, -0.5, -0.1, 0.0, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0}
-	npvVals := make([]float64, len(rates))
-	for i, r := range rates {
-		npvVals[i], _ = xirrNpvAndDerivative(r, cashFlows, baseDate)
-		if math.IsNaN(npvVals[i]) || math.IsInf(npvVals[i], 0) {
-			npvVals[i] = math.NaN()
-		}
-	}
-
-	for i := 0; i < len(rates)-1; i++ {
-		aRate := rates[i]
-		bRate := rates[i+1]
-		aVal := npvVals[i]
-		bVal := npvVals[i+1]
-		if math.IsNaN(aVal) || math.IsNaN(bVal) {
-			continue
-		}
-		if aVal == 0 {
-			return aRate, true
-		}
-		if aVal*bVal < 0 {
-			low := aRate
-			high := bRate
-			for it := 0; it < 100; it++ {
-				mid := (low + high) / 2
-				npv, _ := xirrNpvAndDerivative(mid, cashFlows, baseDate)
-				if math.IsNaN(npv) || math.IsInf(npv, 0) {
-					break
-				}
-				if math.Abs(npv) < 1e-9 {
-					return mid, true
-				}
-				if npv*aVal < 0 {
-					high = mid
-				} else {
-					low = mid
-				}
-			}
-		}
-	}
-
-	// Final fallback: try secant method across adjacent rate intervals where npv values are finite
-	for i := 0; i < len(rates)-1; i++ {
-		rPrev := rates[i]
-		rCurr := rates[i+1]
-		npvPrev := npvVals[i]
-		npvCurr := npvVals[i+1]
-		if math.IsNaN(npvPrev) || math.IsNaN(npvCurr) || npvPrev == npvCurr {
-			continue
-		}
-		for iter := 0; iter < 200; iter++ {
-			// secant step
-			rNext := rCurr - npvCurr*(rCurr-rPrev)/(npvCurr-npvPrev)
-			if math.IsNaN(rNext) || math.IsInf(rNext, 0) || rNext <= -0.999999 {
-				break
-			}
-			npvNext, _ := xirrNpvAndDerivative(rNext, cashFlows, baseDate)
-			if math.IsNaN(npvNext) || math.IsInf(npvNext, 0) {
-				break
-			}
-			if math.Abs(npvNext) < 1e-9 {
-				return rNext, true
-			}
-			// shift window
-			rPrev, npvPrev = rCurr, npvCurr
-			rCurr, npvCurr = rNext, npvNext
-			if math.Abs(rCurr-rPrev) < 1e-12 {
-				return rCurr, true
-			}
 		}
 	}
 
