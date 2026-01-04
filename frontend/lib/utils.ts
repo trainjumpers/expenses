@@ -22,6 +22,22 @@ export const formatPercentage = (percentage: number): string => {
   return `${sign}${percentage.toFixed(1)}%`;
 };
 
+export const getTransactionColor = (
+  amount: number,
+  theme: string | undefined
+): string => {
+  if (amount < 0) {
+    if (theme === "dark") {
+      return "text-emerald-400";
+    }
+    return "text-emerald-600";
+  }
+  if (theme === "dark") {
+    return "text-rose-400";
+  }
+  return "text-rose-600";
+};
+
 interface ChartDataPoint {
   date: string;
   value: number;
