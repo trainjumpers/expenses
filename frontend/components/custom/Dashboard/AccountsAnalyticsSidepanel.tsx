@@ -68,7 +68,7 @@ export function AccountsAnalyticsSidepanel({
         analytics.current_value !== null &&
         analytics.current_value !== undefined;
       const percentageChange = isInvestment
-        ? (-1 * (analytics.percentage_increase ?? 0))
+        ? -1 * (analytics.percentage_increase ?? 0)
         : calculatePercentageChange(
             analytics.current_balance,
             analytics.balance_one_month_ago
