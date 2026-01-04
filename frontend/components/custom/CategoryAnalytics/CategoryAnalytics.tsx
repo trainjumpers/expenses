@@ -1,4 +1,5 @@
 import { AddCategoryModal } from "@/components/custom/Modal/Category/AddCategoryModal";
+import { useTransactions } from "@/components/hooks/useTransactions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -18,15 +19,22 @@ import {
 } from "@/components/ui/table";
 import type { CategoryAnalyticsResponse } from "@/lib/models/analytics";
 import type { Category } from "@/lib/models/category";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, getTransactionColor } from "@/lib/utils";
+import { format } from "date-fns";
 import { ChevronRight, FileQuestion, Plus, Tag } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useTheme } from "next-themes";
+import { Fragment, useEffect, useState } from "react";
 
 interface CategoryAnalyticsProps {
   data?: CategoryAnalyticsResponse["category_transactions"];
   categories?: Category[];
   selectedCategoryIds?: number[];
   onCategoryFilterChange?: (value: number[]) => void;
+}
+
+interface CategoryTransactionsProps {
+  categoryId: number;
+  isUncategorized: boolean;
 }
 
 // Color palette for different categories
@@ -42,6 +50,97 @@ const categoryColors = [
   "bg-teal-500",
   "bg-red-500",
 ];
+
+function CategoryTransactions({
+  categoryId,
+  isUncategorized,
+}: CategoryTransactionsProps) {
+  const { theme } = useTheme();
+  const { data, isLoading, error } = useTransactions({
+    page: 1,
+    page_size: 5,
+    sort_by: "date",
+    sort_order: "desc",
+    ...(isUncategorized
+      ? { uncategorized: true }
+      : { category_id: categoryId }),
+  });
+
+  if (isLoading) {
+    return (
+      <TableRow>
+        <TableCell colSpan={4} className="bg-muted/40">
+          <div className="px-4 py-3 text-sm text-muted-foreground">
+            Loading latest transactions...
+          </div>
+        </TableCell>
+      </TableRow>
+    );
+  }
+
+  if (error) {
+    return (
+      <TableRow>
+        <TableCell colSpan={4} className="bg-muted/40">
+          <div className="px-4 py-3 text-sm text-destructive">
+            Failed to load transactions.
+          </div>
+        </TableCell>
+      </TableRow>
+    );
+  }
+
+  const transactions = data?.transactions ?? [];
+
+  if (transactions.length === 0) {
+    return (
+      <TableRow>
+        <TableCell colSpan={4} className="bg-muted/40">
+          <div className="px-4 py-3 text-sm text-muted-foreground">
+            No recent transactions for this category.
+          </div>
+        </TableCell>
+      </TableRow>
+    );
+  }
+
+  return (
+    <TableRow>
+      <TableCell colSpan={4} className="bg-muted/40">
+        <div className="px-4 py-3">
+          <div className="text-xs uppercase tracking-wide text-muted-foreground">
+            Latest 5 transactions
+          </div>
+          <div className="mt-3 space-y-2">
+            {transactions.map((transaction) => (
+              <div
+                key={transaction.id}
+                className="flex items-center justify-between gap-3 rounded-md border border-border/60 bg-background px-3 py-2"
+              >
+                <div className="min-w-0">
+                  <div className="text-sm font-medium text-foreground">
+                    {transaction.name}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {format(new Date(transaction.date), "MMM d, yyyy")}
+                  </div>
+                </div>
+                <div
+                  className={`text-sm font-semibold ${getTransactionColor(
+                    transaction.amount,
+                    theme
+                  )}`}
+                >
+                  {formatCurrency(Math.abs(transaction.amount))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </TableCell>
+    </TableRow>
+  );
+}
 
 export function CategoryAnalytics({
   data,
@@ -413,63 +512,75 @@ export function CategoryAnalytics({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {categoriesWithPercentages.map((category) => (
-                  <TableRow key={category.category_id} className="border-b">
-                    <TableCell className="w-12">
-                      <button
-                        onClick={() =>
-                          toggleCategoryExpansion(category.category_id)
-                        }
-                        className="p-1 hover:bg-muted rounded transition-colors"
-                      >
-                        <ChevronRight
-                          className={`h-4 w-4 transition-transform ${
-                            expandedCategories.has(category.category_id)
-                              ? "rotate-90"
-                              : ""
-                          }`}
-                        />
-                      </button>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        {category.isUncategorized && (
-                          <FileQuestion className="w-4 h-4 text-gray-500" />
-                        )}
-                        <span className="font-medium">
-                          {category.category_name}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <div className="w-16 h-2 flex">
-                          {Array.from({ length: 5 }).map((_, i) => (
-                            <div
-                              key={i}
-                              className={`flex-1 h-full ${
-                                i < Math.floor(category.percentage / 20)
-                                  ? category.color
-                                  : "bg-gray-200"
+                {categoriesWithPercentages.map((category) => {
+                  const isExpanded = expandedCategories.has(
+                    category.category_id
+                  );
+
+                  return (
+                    <Fragment key={category.category_id}>
+                      <TableRow className="border-b">
+                        <TableCell className="w-12">
+                          <button
+                            onClick={() =>
+                              toggleCategoryExpansion(category.category_id)
+                            }
+                            className="p-1 hover:bg-muted rounded transition-colors"
+                          >
+                            <ChevronRight
+                              className={`h-4 w-4 transition-transform ${
+                                isExpanded ? "rotate-90" : ""
                               }`}
-                              style={{
-                                marginRight: i < 4 ? "1px" : "0",
-                              }}
                             />
-                          ))}
-                        </div>
-                        <span className="text-sm">
-                          {category.percentage.toFixed(2)}%
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <span className="font-medium">
-                        {formatCurrency(Math.abs(category.total_amount))}
-                      </span>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                          </button>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {category.isUncategorized && (
+                              <FileQuestion className="w-4 h-4 text-gray-500" />
+                            )}
+                            <span className="font-medium">
+                              {category.category_name}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <div className="w-16 h-2 flex">
+                              {Array.from({ length: 5 }).map((_, i) => (
+                                <div
+                                  key={i}
+                                  className={`flex-1 h-full ${
+                                    i < Math.floor(category.percentage / 20)
+                                      ? category.color
+                                      : "bg-gray-200"
+                                  }`}
+                                  style={{
+                                    marginRight: i < 4 ? "1px" : "0",
+                                  }}
+                                />
+                              ))}
+                            </div>
+                            <span className="text-sm">
+                              {category.percentage.toFixed(2)}%
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <span className="font-medium">
+                            {formatCurrency(Math.abs(category.total_amount))}
+                          </span>
+                        </TableCell>
+                      </TableRow>
+                      {isExpanded && (
+                        <CategoryTransactions
+                          categoryId={category.category_id}
+                          isUncategorized={category.isUncategorized}
+                        />
+                      )}
+                    </Fragment>
+                  );
+                })}
               </TableBody>
             </Table>
           </div>

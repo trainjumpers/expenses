@@ -154,7 +154,7 @@ export function ImportStatementModal({
     }
   }, []);
 
-  const validateFile = (file: File, forBank: boolean): string | null => {
+  const validateFile = (file: File): string | null => {
     if (file.size > 5 * 1024 * 1024) {
       return "File size must be less than 5MB";
     }
@@ -180,7 +180,7 @@ export function ImportStatementModal({
       }
 
       for (const file of files) {
-        const error = validateFile(file, forBank);
+        const error = validateFile(file);
         if (error) return `${file.name}: ${error}`;
       }
       return null;
@@ -306,6 +306,23 @@ export function ImportStatementModal({
     setRowSize(Number.isNaN(value) ? PREVIEW_SIZE : value);
   };
 
+    const handleCancel = useCallback(() => {
+    setSelectedFiles([]);
+    setCurrentFileIndex(0);
+    setSelectedAccountId(accounts[0]?.id || 0);
+    setError("");
+    setStep(ImportStep.SelectBank);
+    setPreviewData(null);
+    setSkipRows(0);
+    setRowSize(PREVIEW_SIZE);
+    setUploadProgress({ current: 0, total: 0, processing: false });
+    setFilePassword("");
+    setIsUploading(false);
+    setIsPreviewing(false);
+    setIsPasswordRequired(false);
+    onOpenChange(false);
+  }, [accounts, onOpenChange]);
+
   const handlePreview = useCallback(() => {
     if (selectedFiles.length === 0) return;
 
@@ -397,7 +414,7 @@ export function ImportStatementModal({
     setUploadProgress({ current: 0, total: 0, processing: false });
     setIsUploading(false);
     handleCancel();
-  }, [selectedFiles, selectedAccountId, filePassword, uploadStatementMutation]);
+  }, [selectedFiles, selectedAccountId, filePassword, uploadStatementMutation, handleCancel]);
 
   const handlePasswordSubmit = () => {
     if (!filePassword.trim()) {
@@ -420,23 +437,6 @@ export function ImportStatementModal({
     },
     [submitUpload]
   );
-
-  const handleCancel = useCallback(() => {
-    setSelectedFiles([]);
-    setCurrentFileIndex(0);
-    setSelectedAccountId(accounts[0]?.id || 0);
-    setError("");
-    setStep(ImportStep.SelectBank);
-    setPreviewData(null);
-    setSkipRows(0);
-    setRowSize(PREVIEW_SIZE);
-    setUploadProgress({ current: 0, total: 0, processing: false });
-    setFilePassword("");
-    setIsUploading(false);
-    setIsPreviewing(false);
-    setIsPasswordRequired(false);
-    onOpenChange(false);
-  }, [accounts, onOpenChange]);
 
   const removeFile = (index?: number) => {
     if (index !== undefined) {
