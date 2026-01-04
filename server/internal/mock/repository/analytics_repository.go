@@ -134,7 +134,8 @@ func (m *MockAnalyticsRepository) GetAccountAnalytics(ctx context.Context, userI
 	return []models.AccountBalanceAnalytics{}, nil
 }
 
-func (m *MockAnalyticsRepository) GetCategoryAnalytics(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) (*models.CategoryAnalyticsResponse, error) {
+func (m *MockAnalyticsRepository) GetCategoryAnalytics(ctx context.Context, userId int64, startDate time.Time, endDate time.Time, categoryIds []int64) (*models.CategoryAnalyticsResponse, error) {
+	_ = categoryIds
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 

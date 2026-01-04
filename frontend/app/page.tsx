@@ -8,6 +8,7 @@ import { NetWorth } from "@/components/custom/Dashboard/NetWorth";
 import { CommandCenterModal } from "@/components/custom/Modal/CommandCenterModal";
 import { InfoCenterModal } from "@/components/custom/Modal/InfoCenterModal";
 import { useAccountAnalytics } from "@/components/hooks/useAnalytics";
+import { useCategories } from "@/components/hooks/useCategories";
 import { useCategoryAnalytics } from "@/components/hooks/useCategoryAnalytics";
 import { useUser } from "@/components/hooks/useUser";
 import { Button } from "@/components/ui/button";
@@ -17,8 +18,14 @@ import { useState } from "react";
 
 export default function Page() {
   const { data: user } = useUser();
+  const { data: categories } = useCategories();
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>([]);
+
+  const categoryIds = selectedCategoryIds.length
+    ? selectedCategoryIds
+    : undefined;
 
   // Date range for category analytics (last month to now)
   const [dateRange, setDateRange] = useState({
@@ -32,7 +39,8 @@ export default function Page() {
     isError: categoryError,
   } = useCategoryAnalytics(
     format(dateRange.from, "yyyy-MM-dd"),
-    format(dateRange.to, "yyyy-MM-dd")
+    format(dateRange.to, "yyyy-MM-dd"),
+    categoryIds
   );
 
   const {
@@ -86,7 +94,12 @@ export default function Page() {
             </div>
           ) : (
             <>
-              <CategoryAnalytics data={categoryData?.category_transactions} />
+              <CategoryAnalytics
+                data={categoryData?.category_transactions}
+                categories={categories}
+                selectedCategoryIds={selectedCategoryIds}
+                onCategoryFilterChange={setSelectedCategoryIds}
+              />
               <AccountAnalytics data={accountData?.account_analytics} />
             </>
           )}

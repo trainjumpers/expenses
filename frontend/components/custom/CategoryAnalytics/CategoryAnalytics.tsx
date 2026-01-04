@@ -2,6 +2,13 @@ import { AddCategoryModal } from "@/components/custom/Modal/Category/AddCategory
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Table,
   TableBody,
   TableCell,
@@ -10,12 +17,16 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { CategoryAnalyticsResponse } from "@/lib/models/analytics";
+import type { Category } from "@/lib/models/category";
 import { formatCurrency } from "@/lib/utils";
 import { ChevronRight, FileQuestion, Plus, Tag } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 interface CategoryAnalyticsProps {
   data?: CategoryAnalyticsResponse["category_transactions"];
+  categories?: Category[];
+  selectedCategoryIds?: number[];
+  onCategoryFilterChange?: (value: number[]) => void;
 }
 
 // Color palette for different categories
@@ -32,13 +43,76 @@ const categoryColors = [
   "bg-red-500",
 ];
 
-export function CategoryAnalytics({ data }: CategoryAnalyticsProps) {
+export function CategoryAnalytics({
+  data,
+  categories,
+  selectedCategoryIds = [],
+  onCategoryFilterChange,
+}: CategoryAnalyticsProps) {
   const [expandedCategories, setExpandedCategories] = useState<Set<number>>(
     new Set()
   );
   const [isAddCategoryModalOpen, setIsAddCategoryModalOpen] = useState(false);
+  const [draftSelectedIds, setDraftSelectedIds] =
+    useState<number[]>(selectedCategoryIds);
 
-  if (!data || data.length === 0) {
+  useEffect(() => {
+    setDraftSelectedIds(selectedCategoryIds);
+  }, [selectedCategoryIds]);
+
+  const hasData = !!data && data.length > 0;
+  const hasCategoryList = !!categories && categories.length > 0;
+  const showFilter = hasCategoryList && !!onCategoryFilterChange;
+  const handleCategoryFilterChange =
+    onCategoryFilterChange ?? (() => undefined);
+  const allCategoryIds = hasCategoryList
+    ? [...categories.map((category) => category.id), -1]
+    : [-1];
+  const hasAllSelectedApplied =
+    selectedCategoryIds.length > 0 &&
+    allCategoryIds.every((categoryId) =>
+      selectedCategoryIds.includes(categoryId)
+    );
+  const hasAllSelectedDraft =
+    draftSelectedIds.length > 0 &&
+    allCategoryIds.every((categoryId) => draftSelectedIds.includes(categoryId));
+  const selectedCategoryCount = selectedCategoryIds.length;
+  const triggerLabel =
+    selectedCategoryCount === 0 || hasAllSelectedApplied
+      ? "All categories"
+      : `${selectedCategoryCount} selected`;
+  const isDirty =
+    selectedCategoryIds.length !== draftSelectedIds.length ||
+    selectedCategoryIds.some(
+      (categoryId) => !draftSelectedIds.includes(categoryId)
+    );
+
+  const toggleCategorySelection = (categoryId: number, checked: boolean) => {
+    if (checked) {
+      if (draftSelectedIds.includes(categoryId)) {
+        return;
+      }
+      setDraftSelectedIds([...draftSelectedIds, categoryId]);
+      return;
+    }
+
+    setDraftSelectedIds(draftSelectedIds.filter((id) => id !== categoryId));
+  };
+
+  const toggleSelectAll = () => {
+    if (hasAllSelectedDraft) {
+      setDraftSelectedIds([]);
+      return;
+    }
+
+    setDraftSelectedIds(allCategoryIds);
+  };
+
+  const applyCategoryFilter = () => {
+    handleCategoryFilterChange(draftSelectedIds);
+  };
+
+  if (!hasData && !hasCategoryList) {
     return (
       <>
         <Card className="h-full">
@@ -68,6 +142,101 @@ export function CategoryAnalytics({ data }: CategoryAnalyticsProps) {
                 <Plus className="h-4 w-4" />
                 Add Your First Category
               </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        <AddCategoryModal
+          isOpen={isAddCategoryModalOpen}
+          onOpenChange={setIsAddCategoryModalOpen}
+          onCategoryAdded={() => {
+            // The category list will automatically refresh due to React Query
+            setIsAddCategoryModalOpen(false);
+          }}
+        />
+      </>
+    );
+  }
+
+  if (!hasData) {
+    return (
+      <>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between gap-3">
+              <span>Categories</span>
+              <div className="flex items-center gap-2">
+                {showFilter && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm" className="h-8">
+                        {triggerLabel}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56">
+                      <div className="flex items-center justify-between px-2 py-1.5 text-xs text-muted-foreground">
+                        <span>Categories</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 px-2"
+                          onClick={toggleSelectAll}
+                        >
+                          {hasAllSelectedDraft ? "Deselect all" : "Select all"}
+                        </Button>
+                      </div>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuCheckboxItem
+                        checked={draftSelectedIds.includes(-1)}
+                        onCheckedChange={(checked) =>
+                          toggleCategorySelection(-1, Boolean(checked))
+                        }
+                        onSelect={(event) => event.preventDefault()}
+                      >
+                        Uncategorized
+                      </DropdownMenuCheckboxItem>
+                      {categories?.map((category) => (
+                        <DropdownMenuCheckboxItem
+                          key={category.id}
+                          checked={draftSelectedIds.includes(category.id)}
+                          onCheckedChange={(checked) =>
+                            toggleCategorySelection(
+                              category.id,
+                              Boolean(checked)
+                            )
+                          }
+                          onSelect={(event) => event.preventDefault()}
+                        >
+                          {category.name}
+                        </DropdownMenuCheckboxItem>
+                      ))}
+                      <DropdownMenuSeparator />
+                      <div className="flex justify-end px-2 py-2">
+                        <Button
+                          size="sm"
+                          onClick={applyCategoryFilter}
+                          disabled={!isDirty}
+                        >
+                          Apply
+                        </Button>
+                      </div>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsAddCategoryModalOpen(true)}
+                  className="h-8 w-8 p-0"
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-sm text-muted-foreground">
+              No category activity for the selected filter.
             </div>
           </CardContent>
         </Card>
@@ -122,16 +291,72 @@ export function CategoryAnalytics({ data }: CategoryAnalyticsProps) {
     <>
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center justify-between">
+          <CardTitle className="flex items-center justify-between gap-3">
             <span>Categories</span>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsAddCategoryModalOpen(true)}
-              className="h-8 w-8 p-0"
-            >
-              <Plus className="h-4 w-4" />
-            </Button>
+            <div className="flex items-center gap-2">
+              {showFilter && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-8">
+                      {triggerLabel}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <div className="flex items-center justify-between px-2 py-1.5 text-xs text-muted-foreground">
+                      <span>Categories</span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-2"
+                        onClick={toggleSelectAll}
+                      >
+                        {hasAllSelectedDraft ? "Deselect all" : "Select all"}
+                      </Button>
+                    </div>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuCheckboxItem
+                      checked={draftSelectedIds.includes(-1)}
+                      onCheckedChange={(checked) =>
+                        toggleCategorySelection(-1, Boolean(checked))
+                      }
+                      onSelect={(event) => event.preventDefault()}
+                    >
+                      Uncategorized
+                    </DropdownMenuCheckboxItem>
+                    {categories?.map((category) => (
+                      <DropdownMenuCheckboxItem
+                        key={category.id}
+                        checked={draftSelectedIds.includes(category.id)}
+                        onCheckedChange={(checked) =>
+                          toggleCategorySelection(category.id, Boolean(checked))
+                        }
+                        onSelect={(event) => event.preventDefault()}
+                      >
+                        {category.name}
+                      </DropdownMenuCheckboxItem>
+                    ))}
+                    <DropdownMenuSeparator />
+                    <div className="flex justify-end px-2 py-2">
+                      <Button
+                        size="sm"
+                        onClick={applyCategoryFilter}
+                        disabled={!isDirty}
+                      >
+                        Apply
+                      </Button>
+                    </div>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsAddCategoryModalOpen(true)}
+                className="h-8 w-8 p-0"
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">

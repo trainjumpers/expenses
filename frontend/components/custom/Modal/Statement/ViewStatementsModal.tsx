@@ -288,7 +288,7 @@ export function ViewStatementsModal({
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center space-x-2">
-                            <Calendar className="h-4 w-4 text-muted-foreground" />
+                            <CalendarIcon className="h-4 w-4 text-muted-foreground" />
                             <span className="text-sm">
                               {format(
                                 new Date(statement.created_at),
