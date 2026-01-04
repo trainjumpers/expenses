@@ -20,7 +20,7 @@ import type { CategoryAnalyticsResponse } from "@/lib/models/analytics";
 import type { Category } from "@/lib/models/category";
 import { formatCurrency } from "@/lib/utils";
 import { ChevronRight, FileQuestion, Plus, Tag } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 interface CategoryAnalyticsProps {
   data?: CategoryAnalyticsResponse["category_transactions"];
@@ -53,6 +53,12 @@ export function CategoryAnalytics({
     new Set()
   );
   const [isAddCategoryModalOpen, setIsAddCategoryModalOpen] = useState(false);
+  const [draftSelectedIds, setDraftSelectedIds] =
+    useState<number[]>(selectedCategoryIds);
+
+  useEffect(() => {
+    setDraftSelectedIds(selectedCategoryIds);
+  }, [selectedCategoryIds]);
 
   const hasData = !!data && data.length > 0;
   const hasCategoryList = !!categories && categories.length > 0;
@@ -62,38 +68,48 @@ export function CategoryAnalytics({
   const allCategoryIds = hasCategoryList
     ? [...categories.map((category) => category.id), -1]
     : [-1];
-  const hasAllSelected =
+  const hasAllSelectedApplied =
     selectedCategoryIds.length > 0 &&
     allCategoryIds.every((categoryId) =>
       selectedCategoryIds.includes(categoryId)
     );
+  const hasAllSelectedDraft =
+    draftSelectedIds.length > 0 &&
+    allCategoryIds.every((categoryId) => draftSelectedIds.includes(categoryId));
   const selectedCategoryCount = selectedCategoryIds.length;
   const triggerLabel =
-    selectedCategoryCount === 0 || hasAllSelected
+    selectedCategoryCount === 0 || hasAllSelectedApplied
       ? "All categories"
       : `${selectedCategoryCount} selected`;
+  const isDirty =
+    selectedCategoryIds.length !== draftSelectedIds.length ||
+    selectedCategoryIds.some(
+      (categoryId) => !draftSelectedIds.includes(categoryId)
+    );
 
   const toggleCategorySelection = (categoryId: number, checked: boolean) => {
     if (checked) {
-      if (selectedCategoryIds.includes(categoryId)) {
+      if (draftSelectedIds.includes(categoryId)) {
         return;
       }
-      handleCategoryFilterChange([...selectedCategoryIds, categoryId]);
+      setDraftSelectedIds([...draftSelectedIds, categoryId]);
       return;
     }
 
-    handleCategoryFilterChange(
-      selectedCategoryIds.filter((id) => id !== categoryId)
-    );
+    setDraftSelectedIds(draftSelectedIds.filter((id) => id !== categoryId));
   };
 
   const toggleSelectAll = () => {
-    if (hasAllSelected) {
-      handleCategoryFilterChange([]);
+    if (hasAllSelectedDraft) {
+      setDraftSelectedIds([]);
       return;
     }
 
-    handleCategoryFilterChange(allCategoryIds);
+    setDraftSelectedIds(allCategoryIds);
+  };
+
+  const applyCategoryFilter = () => {
+    handleCategoryFilterChange(draftSelectedIds);
   };
 
   if (!hasData && !hasCategoryList) {
@@ -166,29 +182,44 @@ export function CategoryAnalytics({
                           className="h-6 px-2"
                           onClick={toggleSelectAll}
                         >
-                          {hasAllSelected ? "Deselect all" : "Select all"}
+                          {hasAllSelectedDraft ? "Deselect all" : "Select all"}
                         </Button>
                       </div>
                       <DropdownMenuSeparator />
                       <DropdownMenuCheckboxItem
-                        checked={selectedCategoryIds.includes(-1)}
+                        checked={draftSelectedIds.includes(-1)}
                         onCheckedChange={(checked) =>
                           toggleCategorySelection(-1, Boolean(checked))
                         }
+                        onSelect={(event) => event.preventDefault()}
                       >
                         Uncategorized
                       </DropdownMenuCheckboxItem>
                       {categories?.map((category) => (
                         <DropdownMenuCheckboxItem
                           key={category.id}
-                          checked={selectedCategoryIds.includes(category.id)}
+                          checked={draftSelectedIds.includes(category.id)}
                           onCheckedChange={(checked) =>
-                            toggleCategorySelection(category.id, Boolean(checked))
+                            toggleCategorySelection(
+                              category.id,
+                              Boolean(checked)
+                            )
                           }
+                          onSelect={(event) => event.preventDefault()}
                         >
                           {category.name}
                         </DropdownMenuCheckboxItem>
                       ))}
+                      <DropdownMenuSeparator />
+                      <div className="flex justify-end px-2 py-2">
+                        <Button
+                          size="sm"
+                          onClick={applyCategoryFilter}
+                          disabled={!isDirty}
+                        >
+                          Apply
+                        </Button>
+                      </div>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 )}
@@ -279,29 +310,41 @@ export function CategoryAnalytics({
                         className="h-6 px-2"
                         onClick={toggleSelectAll}
                       >
-                        {hasAllSelected ? "Deselect all" : "Select all"}
+                        {hasAllSelectedDraft ? "Deselect all" : "Select all"}
                       </Button>
                     </div>
                     <DropdownMenuSeparator />
                     <DropdownMenuCheckboxItem
-                      checked={selectedCategoryIds.includes(-1)}
+                      checked={draftSelectedIds.includes(-1)}
                       onCheckedChange={(checked) =>
                         toggleCategorySelection(-1, Boolean(checked))
                       }
+                      onSelect={(event) => event.preventDefault()}
                     >
                       Uncategorized
                     </DropdownMenuCheckboxItem>
                     {categories?.map((category) => (
                       <DropdownMenuCheckboxItem
                         key={category.id}
-                        checked={selectedCategoryIds.includes(category.id)}
+                        checked={draftSelectedIds.includes(category.id)}
                         onCheckedChange={(checked) =>
                           toggleCategorySelection(category.id, Boolean(checked))
                         }
+                        onSelect={(event) => event.preventDefault()}
                       >
                         {category.name}
                       </DropdownMenuCheckboxItem>
                     ))}
+                    <DropdownMenuSeparator />
+                    <div className="flex justify-end px-2 py-2">
+                      <Button
+                        size="sm"
+                        onClick={applyCategoryFilter}
+                        disabled={!isDirty}
+                      >
+                        Apply
+                      </Button>
+                    </div>
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
