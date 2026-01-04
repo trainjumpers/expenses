@@ -3,16 +3,11 @@ package parser
 import (
 	"math"
 	"strings"
-	"testing"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
-func TestAxisParser(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Axis Parser Suite")
-}
 
 var _ = Describe("AxisParser", func() {
 	var parser *AxisParser
