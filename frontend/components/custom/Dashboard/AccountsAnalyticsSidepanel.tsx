@@ -6,7 +6,8 @@ import { useAccountAnalytics } from "@/components/hooks/useAnalytics";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatCurrency, formatPercentage } from "@/lib/utils";
+import { formatCurrency, formatShortCurrency, formatPercentage } from "@/lib/utils";
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 import { Plus } from "lucide-react";
 import { useState } from "react";
 
@@ -204,16 +205,28 @@ export function AccountsAnalyticsSidepanel({
 
                             <div className="text-right">
                               <div className="font-semibold text-sm">
-                                {formatCurrency(
-                                  account.balance,
-                                  account.currency
-                                )}
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <span>{formatShortCurrency(account.balance, account.currency)}</span>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top">
+                                      {formatCurrency(account.balance, account.currency)}
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
                                 <span className="text-xs text-muted-foreground ml-2">
                                   •{" "}
-                                  {formatCurrency(
-                                    account.txnBalance,
-                                    account.currency
-                                  )}
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <span>{formatShortCurrency(account.txnBalance, account.currency)}</span>
+                                      </TooltipTrigger>
+                                      <TooltipContent side="top">
+                                        {formatCurrency(account.txnBalance, account.currency)}
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
                                 </span>
                               </div>
                               <div
@@ -260,10 +273,16 @@ export function AccountsAnalyticsSidepanel({
 
                             <div className="text-right">
                               <div className="font-semibold text-sm">
-                                {formatCurrency(
-                                  account.balance,
-                                  account.currency
-                                )}
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <span>{formatShortCurrency(account.balance, account.currency)}</span>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top">
+                                      {formatCurrency(account.balance, account.currency)}
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
                               </div>
                               <div
                                 className={`text-xs ${
