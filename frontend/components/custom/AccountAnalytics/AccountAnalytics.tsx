@@ -23,6 +23,7 @@ import { formatCurrency, getTransactionColor } from "@/lib/utils";
 import { format } from "date-fns";
 import { ChevronRight, Plus, Wallet } from "lucide-react";
 import { useTheme } from "next-themes";
+import Link from "next/link";
 import { Fragment, useEffect, useState } from "react";
 
 interface AccountAnalyticsProps {
@@ -95,12 +96,19 @@ function AccountTransactions({ accountId }: AccountTransactionsProps) {
     );
   }
 
+  const transactionsUrl = `/transaction?account_id=${accountId}`;
+
   return (
     <TableRow>
       <TableCell colSpan={4} className="bg-muted/40">
         <div className="px-4 py-3">
-          <div className="text-xs uppercase tracking-wide text-muted-foreground">
-            Latest 5 transactions
+          <div className="flex items-center justify-between gap-2">
+            <div className="text-xs uppercase tracking-wide text-muted-foreground">
+              Latest 5 transactions
+            </div>
+            <Button variant="ghost" size="sm" asChild>
+              <Link href={transactionsUrl}>View all</Link>
+            </Button>
           </div>
           <div className="mt-3 space-y-2">
             {transactions.map((transaction) => (
