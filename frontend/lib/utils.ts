@@ -40,7 +40,7 @@ export const formatShortCurrency = (
 
   if (abs >= 1e7) {
     const v = (abs / 1e7).toFixed(1).replace(/\.0$/, "");
-    return `${sign}${currencySymbol}${v} Cr`;
+    return `${sign}${currencySymbol}${v}Cr`;
   }
 
   if (abs >= 1e5) {

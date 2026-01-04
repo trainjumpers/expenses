@@ -6,8 +6,18 @@ import { useAccountAnalytics } from "@/components/hooks/useAnalytics";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatCurrency, formatShortCurrency, formatPercentage } from "@/lib/utils";
-import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  formatCurrency,
+  formatPercentage,
+  formatShortCurrency,
+  getTransactionColor,
+} from "@/lib/utils";
 import { Plus } from "lucide-react";
 import { useState } from "react";
 
@@ -58,7 +68,7 @@ export function AccountsAnalyticsSidepanel({
         analytics.current_value !== null &&
         analytics.current_value !== undefined;
       const percentageChange = isInvestment
-        ? (analytics.percentage_increase ?? 0)
+        ? (-1 * (analytics.percentage_increase ?? 0))
         : calculatePercentageChange(
             analytics.current_balance,
             analytics.balance_one_month_ago
@@ -71,13 +81,15 @@ export function AccountsAnalyticsSidepanel({
         balance: isInvestment
           ? Number(analytics.current_value)
           : analytics.current_balance + (account?.balance || 0),
-        txnBalance: -1 * analytics.current_balance + (account?.balance || 0),
+        txnBalance: analytics.current_balance + (account?.balance || 0),
         percentageChange,
         bankType: account?.bank_type || "others",
         isInvestment,
         xirr: analytics.xirr ?? 0,
       };
     }) || [];
+
+  console.log("Accounts Data:", accounts);
 
   if (isLoading) {
     return (
@@ -162,149 +174,163 @@ export function AccountsAnalyticsSidepanel({
         </CardHeader>
 
         <CardContent className="flex-1 overflow-y-auto space-y-1">
-          {accounts.length === 0 ? (
-            <div className="text-center py-8 space-y-4">
-              <div className="text-muted-foreground space-y-2">
-                <p className="text-sm font-medium">No accounts yet</p>
-                <p className="text-xs">Add an account to start tracking</p>
+          <TooltipProvider>
+            {accounts.length === 0 ? (
+              <div className="text-center py-8 space-y-4">
+                <div className="text-muted-foreground space-y-2">
+                  <p className="text-sm font-medium">No accounts yet</p>
+                  <p className="text-xs">Add an account to start tracking</p>
+                </div>
+                <Button
+                  onClick={() => setIsAddAccountModalOpen(true)}
+                  size="sm"
+                  className="w-full"
+                >
+                  <Plus className="h-3 w-3 mr-2" />
+                  Add Account
+                </Button>
               </div>
-              <Button
-                onClick={() => setIsAddAccountModalOpen(true)}
-                size="sm"
-                className="w-full"
-              >
-                <Plus className="h-3 w-3 mr-2" />
-                Add Account
-              </Button>
-            </div>
-          ) : (
-            (() => {
-              const investments = accounts.filter(
-                (a) => a.bankType === "investment"
-              );
-              const banks = accounts.filter((a) => a.bankType !== "investment");
+            ) : (
+              (() => {
+                const investments = accounts.filter(
+                  (a) => a.bankType === "investment"
+                );
+                const banks = accounts.filter(
+                  (a) => a.bankType !== "investment"
+                );
 
-              return (
-                <div className="space-y-3">
-                  {investments.length > 0 && (
-                    <div>
-                      <div className="text-xs font-medium text-muted-foreground mb-1">
-                        Investments
-                      </div>
-                      <div className="space-y-1">
-                        {investments.map((account) => (
-                          <div
-                            key={account.id}
-                            className="flex items-center justify-between py-3 px-2 rounded-md hover:bg-muted/50 cursor-pointer group"
-                          >
-                            <div className="flex items-center space-x-3">
-                              <span className="font-medium text-sm">
-                                {account.name}
-                              </span>
-                            </div>
+                return (
+                  <div className="space-y-3">
+                    {investments.length > 0 && (
+                      <div>
+                        <div className="text-xs font-medium text-muted-foreground mb-1">
+                          Investments
+                        </div>
+                        <div className="space-y-1">
+                          {investments.map((account) => (
+                            <div
+                              key={account.id}
+                              className="flex items-center justify-between py-3 px-2 rounded-md hover:bg-muted/50 cursor-pointer group"
+                            >
+                              <div className="flex items-center space-x-3">
+                                <span className="font-medium text-sm">
+                                  {account.name}
+                                </span>
+                              </div>
 
-                            <div className="text-right">
-                              <div className="font-semibold text-sm">
-                                <TooltipProvider>
-                                  <Tooltip>
+                              <div className="text-right">
+                                <div className="font-semibold text-sm">
+                                  <Tooltip skipProvider>
                                     <TooltipTrigger asChild>
-                                      <span>{formatShortCurrency(account.balance, account.currency)}</span>
+                                      <span>
+                                        {formatShortCurrency(
+                                          account.balance,
+                                          account.currency
+                                        )}
+                                      </span>
                                     </TooltipTrigger>
                                     <TooltipContent side="top">
-                                      {formatCurrency(account.balance, account.currency)}
+                                      {formatCurrency(
+                                        account.balance,
+                                        account.currency
+                                      )}
                                     </TooltipContent>
                                   </Tooltip>
-                                </TooltipProvider>
-                                <span className="text-xs text-muted-foreground ml-2">
-                                  •{" "}
-                                  <TooltipProvider>
-                                    <Tooltip>
+                                  <span className="text-xs text-muted-foreground ml-2">
+                                    •{" "}
+                                    <Tooltip skipProvider>
                                       <TooltipTrigger asChild>
-                                        <span>{formatShortCurrency(account.txnBalance, account.currency)}</span>
+                                        <span>
+                                          {formatShortCurrency(
+                                            account.txnBalance,
+                                            account.currency
+                                          )}
+                                        </span>
                                       </TooltipTrigger>
                                       <TooltipContent side="top">
-                                        {formatCurrency(account.txnBalance, account.currency)}
+                                        {formatCurrency(
+                                          account.txnBalance,
+                                          account.currency
+                                        )}
                                       </TooltipContent>
                                     </Tooltip>
-                                  </TooltipProvider>
-                                </span>
-                              </div>
-                              <div
-                                className={`text-xs ${
-                                  account.xirr > 0
-                                    ? "text-green-600 dark:text-green-300"
-                                    : account.xirr < 0
-                                      ? "text-red-600 dark:text-red-300"
-                                      : "text-muted-foreground"
-                                }`}
-                              >
-                                {formatPercentage(account.percentageChange)}
-                                <span className="mx-1">•</span>
-                                <span className="text-xs font-medium">
-                                  XIRR
-                                </span>
-                                <span className="ml-1">
-                                  {formatPercentage(account.xirr)}
-                                </span>
+                                  </span>
+                                </div>
+                                <div
+                                  className={`text-xs ${getTransactionColor(
+                                    -1 * account.percentageChange
+                                  )}`}
+                                >
+                                  {formatPercentage(account.percentageChange)}
+                                  <span className="mx-1">•</span>
+                                  <span className="text-xs font-medium">
+                                    XIRR
+                                  </span>
+                                  <span className="ml-1">
+                                    {formatPercentage(account.xirr)}
+                                  </span>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
 
-                  {banks.length > 0 && (
-                    <div>
-                      <div className="text-xs font-medium text-muted-foreground mb-1">
-                        Banks
-                      </div>
-                      <div className="space-y-1">
-                        {banks.map((account) => (
-                          <div
-                            key={account.id}
-                            className="flex items-center justify-between py-3 px-2 rounded-md hover:bg-muted/50 cursor-pointer group"
-                          >
-                            <div className="flex items-center space-x-3">
-                              <span className="font-medium text-sm">
-                                {account.name}
-                              </span>
-                            </div>
+                    {banks.length > 0 && (
+                      <div>
+                        <div className="text-xs font-medium text-muted-foreground mb-1">
+                          Banks
+                        </div>
+                        <div className="space-y-1">
+                          {banks.map((account) => (
+                            <div
+                              key={account.id}
+                              className="flex items-center justify-between py-3 px-2 rounded-md hover:bg-muted/50 cursor-pointer group"
+                            >
+                              <div className="flex items-center space-x-3">
+                                <span className="font-medium text-sm">
+                                  {account.name}
+                                </span>
+                              </div>
 
-                            <div className="text-right">
-                              <div className="font-semibold text-sm">
-                                <TooltipProvider>
-                                  <Tooltip>
+                              <div className="text-right">
+                                <div className="font-semibold text-sm">
+                                  <Tooltip skipProvider>
                                     <TooltipTrigger asChild>
-                                      <span>{formatShortCurrency(account.balance, account.currency)}</span>
+                                      <span>
+                                        {formatShortCurrency(
+                                          account.balance,
+                                          account.currency
+                                        )}
+                                      </span>
                                     </TooltipTrigger>
                                     <TooltipContent side="top">
-                                      {formatCurrency(account.balance, account.currency)}
+                                      {formatCurrency(
+                                        account.balance,
+                                        account.currency
+                                      )}
                                     </TooltipContent>
                                   </Tooltip>
-                                </TooltipProvider>
-                              </div>
-                              <div
-                                className={`text-xs ${
-                                  account.percentageChange > 0
-                                    ? "text-green-600 dark:text-green-300"
-                                    : account.percentageChange < 0
-                                      ? "text-red-600 dark:text-red-300"
-                                      : "text-muted-foreground"
-                                }`}
-                              >
-                                {formatPercentage(account.percentageChange)}
+                                </div>
+                                <div
+                                  className={`text-xs ${getTransactionColor(
+                                    -1 * account.percentageChange
+                                  )}`}
+                                >
+                                  {formatPercentage(account.percentageChange)}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })()
-          )}
+                    )}
+                  </div>
+                );
+              })()
+            )}
+          </TooltipProvider>
         </CardContent>
 
         <AddAccountModal
