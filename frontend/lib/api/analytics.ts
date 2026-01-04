@@ -47,12 +47,17 @@ export async function getNetworthTimeSeries(
 export async function getCategoryAnalytics(
   startDate: string,
   endDate: string,
+  categoryIds?: number[],
   signal?: AbortSignal
 ): Promise<CategoryAnalyticsResponse> {
   const params = new URLSearchParams({
     start_date: startDate,
     end_date: endDate,
   });
+
+  if (categoryIds && categoryIds.length > 0) {
+    params.set("category_ids", categoryIds.join(","));
+  }
 
   return apiRequest<CategoryAnalyticsResponse>(
     `${API_BASE_URL}/analytics/category?${params.toString()}`,
