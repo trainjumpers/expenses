@@ -104,6 +104,9 @@ export function AddAccountModal({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="axis">Axis Bank</SelectItem>
+                  <SelectItem value="axis_credit">
+                    Axis Bank (Credit Card)
+                  </SelectItem>
                   <SelectItem value="sbi">State Bank of India</SelectItem>
                   <SelectItem value="hdfc">HDFC Bank</SelectItem>
                   <SelectItem value="icici">ICICI Bank</SelectItem>

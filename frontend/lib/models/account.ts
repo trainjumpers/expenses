@@ -1,6 +1,7 @@
 export type BankType =
   | "investment"
   | "axis"
+  | "axis_credit"
   | "sbi"
   | "hdfc"
   | "icici"
