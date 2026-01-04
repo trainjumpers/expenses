@@ -175,15 +175,16 @@ func (p *AxisCreditParser) parseTransactionRow(row []string, dateIdx int, descId
 	sign := strings.ToLower(get(signIdx))
 	if sign != "" {
 		if strings.Contains(sign, "debit") || strings.Contains(sign, "dr") {
-			amount = -math.Abs(amount)
-		} else if strings.Contains(sign, "credit") || strings.Contains(sign, "cr") {
 			amount = math.Abs(amount)
+		} else if strings.Contains(sign, "credit") || strings.Contains(sign, "cr") {
+			amount = -math.Abs(amount)
 		}
 	} else {
-		if inferredSign == "debit" {
-			amount = -math.Abs(amount)
-		} else if inferredSign == "credit" {
+		switch inferredSign {
+		case "debit":
 			amount = math.Abs(amount)
+		case "credit":
+			amount = -math.Abs(amount)
 		}
 	}
 
@@ -215,11 +216,11 @@ func (p *AxisCreditParser) parseAmount(raw string) (float64, string, error) {
 	s = strings.ReplaceAll(s, "\u00A0", " ")
 	lower := strings.ToLower(s)
 	inferred := ""
-	neg := false
 
-	// Parentheses indicate negative amount
+	// Parentheses indicate negative amount (treat as credit/payment)
 	if strings.Contains(s, "(") && strings.Contains(s, ")") {
-		neg = true
+		// don't make the numeric value negative here; infer sign as credit
+		inferred = "credit"
 	}
 
 	// Trailing CR/DR indicators
@@ -230,7 +231,6 @@ func (p *AxisCreditParser) parseAmount(raw string) (float64, string, error) {
 		inferred = "debit"
 		s = strings.TrimSpace(s[:len(s)-2])
 	}
-
 	// Remove currency symbols and words
 	replacements := []string{"₹", "rs.", "rs", "inr"}
 	for _, r := range replacements {
@@ -252,13 +252,7 @@ func (p *AxisCreditParser) parseAmount(raw string) (float64, string, error) {
 		return 0, inferred, err
 	}
 
-	if neg {
-		v = -v
-		if inferred == "" {
-			inferred = "debit"
-		}
-	}
-
+	// If parentheses were present we already set inferred to credit; keep value positive
 	return v, inferred, nil
 }
 
