@@ -8,7 +8,6 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-
 var _ = Describe("AxisParser", func() {
 	var parser *AxisParser
 

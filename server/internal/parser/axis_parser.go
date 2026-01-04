@@ -155,7 +155,7 @@ func (p *AxisParser) generateTransactionName(description string, isCredit bool) 
 			// For patterns with no capture group (Interest), fallthrough
 			return pattern.creditName
 		}
-	} 
+	}
 
 	prefix := ""
 	if isCredit {
