@@ -189,11 +189,17 @@ func (m *MockAnalyticsRepository) GetMonthlyAnalytics(ctx context.Context, userI
 	// Return default sample data if no specific data set
 	defaultAnalytics := &models.MonthlyAnalyticsResponse{
 		TotalIncome:   1000.0,
-		TotalExpenses: 800.0,
-		TotalAmount:   1800.0,
+		TotalExpenses: 600.0,
+		TotalAmount:   400.0,
 	}
 
 	return defaultAnalytics, nil
+}
+
+func (m *MockAnalyticsRepository) GetAccountCashFlows(ctx context.Context, userId int64, accountIds []int64) ([]models.AccountCashFlow, error) {
+	_ = userId
+	_ = accountIds
+	return []models.AccountCashFlow{}, nil
 }
 
 // Helper methods for testing

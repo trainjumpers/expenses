@@ -34,6 +34,7 @@ var _ = Describe("AccountService", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(acc.Name).To(Equal(input.Name))
 			Expect(acc.Balance).To(Equal(0.0))
+			Expect(acc.CurrentValue).To(BeNil())
 		})
 		It("should create a new account with provided balance", func() {
 			bal := 100.5
@@ -47,6 +48,7 @@ var _ = Describe("AccountService", func() {
 			acc, err := accountService.CreateAccount(ctx, input)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(acc.Balance).To(Equal(bal))
+			Expect(acc.CurrentValue).To(BeNil())
 		})
 		It("should create a new account with 'others' bank type", func() {
 			input := models.CreateAccountInput{
@@ -60,6 +62,48 @@ var _ = Describe("AccountService", func() {
 			Expect(acc.Name).To(Equal(input.Name))
 			Expect(acc.BankType).To(Equal(models.BankTypeOthers))
 			Expect(acc.Balance).To(Equal(0.0))
+			Expect(acc.CurrentValue).To(BeNil())
+		})
+		It("should create an investment account without current value", func() {
+			input := models.CreateAccountInput{
+				Name:      "Investment Account",
+				BankType:  models.BankTypeInvestment,
+				Currency:  models.CurrencyINR,
+				CreatedBy: 1,
+			}
+			acc, err := accountService.CreateAccount(ctx, input)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(acc.BankType).To(Equal(models.BankTypeInvestment))
+			Expect(acc.CurrentValue).To(BeNil())
+		})
+		It("should create an investment account with current value", func() {
+			currentValue := 15000.0
+			input := models.CreateAccountInput{
+				Name:         "Investment Account with Value",
+				BankType:     models.BankTypeInvestment,
+				Currency:     models.CurrencyINR,
+				CurrentValue: &currentValue,
+				CreatedBy:    2,
+			}
+			acc, err := accountService.CreateAccount(ctx, input)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(acc.BankType).To(Equal(models.BankTypeInvestment))
+			Expect(acc.CurrentValue).NotTo(BeNil())
+			Expect(*acc.CurrentValue).To(Equal(currentValue))
+		})
+		It("should ignore current value for non-investment account", func() {
+			currentValue := 5000.0
+			input := models.CreateAccountInput{
+				Name:         "Regular Account",
+				BankType:     models.BankTypeAxis,
+				Currency:     models.CurrencyINR,
+				CurrentValue: &currentValue,
+				CreatedBy:    3,
+			}
+			acc, err := accountService.CreateAccount(ctx, input)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(acc.BankType).To(Equal(models.BankTypeAxis))
+			Expect(acc.CurrentValue).To(BeNil())
 		})
 	})
 
@@ -160,6 +204,82 @@ var _ = Describe("AccountService", func() {
 			update := models.UpdateAccountInput{Name: "Updated Name"}
 			_, err := accountService.UpdateAccount(ctx, created.Id, 5, update)
 			Expect(err).To(HaveOccurred())
+		})
+	})
+
+	Describe("UpdateAccount with Investment", func() {
+		var createdInvestment models.AccountResponse
+		var createdRegular models.AccountResponse
+		BeforeEach(func() {
+			currentValue := 10000.0
+			investmentInput := models.CreateAccountInput{
+				Name:         "Investment Account",
+				BankType:     models.BankTypeInvestment,
+				Currency:     models.CurrencyINR,
+				CurrentValue: &currentValue,
+				CreatedBy:    6,
+			}
+			var err error
+			createdInvestment, err = accountService.CreateAccount(ctx, investmentInput)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(createdInvestment.CurrentValue).NotTo(BeNil())
+
+			regularInput := models.CreateAccountInput{
+				Name:      "Regular Account",
+				BankType:  models.BankTypeAxis,
+				Currency:  models.CurrencyINR,
+				CreatedBy: 6,
+			}
+			createdRegular, err = accountService.CreateAccount(ctx, regularInput)
+			Expect(err).NotTo(HaveOccurred())
+		})
+		It("should set current value for investment account", func() {
+			newValue := 15000.0
+			update := models.UpdateAccountInput{CurrentValue: &newValue}
+			acc, err := accountService.UpdateAccount(ctx, createdInvestment.Id, 6, update)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(acc.CurrentValue).NotTo(BeNil())
+			Expect(*acc.CurrentValue).To(Equal(newValue))
+		})
+		It("should update current value from initial to new value", func() {
+			initialValue := *createdInvestment.CurrentValue
+			Expect(initialValue).NotTo(Equal(0.0))
+
+			newValue := initialValue + 5000.0
+			update := models.UpdateAccountInput{CurrentValue: &newValue}
+			acc, err := accountService.UpdateAccount(ctx, createdInvestment.Id, 6, update)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(*acc.CurrentValue).To(Equal(newValue))
+			Expect(*acc.CurrentValue).NotTo(Equal(initialValue))
+		})
+		It("should not set current value for non-investment account", func() {
+			value := 20000.0
+			update := models.UpdateAccountInput{CurrentValue: &value}
+			acc, err := accountService.UpdateAccount(ctx, createdRegular.Id, 6, update)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(acc.CurrentValue).To(BeNil())
+		})
+		It("should clear current value when changing bank type from investment to regular", func() {
+			update := models.UpdateAccountInput{
+				BankType:     models.BankTypeAxis,
+				CurrentValue: nil,
+			}
+			acc, err := accountService.UpdateAccount(ctx, createdInvestment.Id, 6, update)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(acc.BankType).To(Equal(models.BankTypeAxis))
+			Expect(acc.CurrentValue).To(BeNil())
+		})
+		It("should update regular account to investment and set current value", func() {
+			value := 12000.0
+			update := models.UpdateAccountInput{
+				BankType:     models.BankTypeInvestment,
+				CurrentValue: &value,
+			}
+			acc, err := accountService.UpdateAccount(ctx, createdRegular.Id, 6, update)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(acc.BankType).To(Equal(models.BankTypeInvestment))
+			Expect(acc.CurrentValue).NotTo(BeNil())
+			Expect(*acc.CurrentValue).To(Equal(value))
 		})
 	})
 

@@ -15,6 +15,7 @@ type AnalyticsRepositoryInterface interface {
 	GetNetworthTimeSeries(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) (float64, float64, float64, []map[string]any, error)
 	GetCategoryAnalytics(ctx context.Context, userId int64, startDate time.Time, endDate time.Time, categoryIds []int64) (*models.CategoryAnalyticsResponse, error)
 	GetMonthlyAnalytics(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) (*models.MonthlyAnalyticsResponse, error)
+	GetAccountCashFlows(ctx context.Context, userId int64, accountIds []int64) ([]models.AccountCashFlow, error)
 }
 
 type AnalyticsRepository struct {
@@ -250,4 +251,43 @@ func (r *AnalyticsRepository) GetMonthlyAnalytics(ctx context.Context, userId in
 		TotalExpenses: totalExpenses,
 		TotalAmount:   totalAmount,
 	}, nil
+}
+
+func (r *AnalyticsRepository) GetAccountCashFlows(ctx context.Context, userId int64, accountIds []int64) ([]models.AccountCashFlow, error) {
+	if len(accountIds) == 0 {
+		return []models.AccountCashFlow{}, nil
+	}
+
+	args := []any{userId}
+	placeholders := make([]string, len(accountIds))
+	for i, accountId := range accountIds {
+		args = append(args, accountId)
+		placeholders[i] = fmt.Sprintf("$%d", i+2)
+	}
+
+	query := fmt.Sprintf(`
+		SELECT account_id, amount, date
+		FROM %s.%s
+		WHERE created_by = $1
+			AND deleted_at IS NULL
+			AND account_id IN (%s)
+		ORDER BY account_id, date`,
+		r.schema, r.txnTableName, strings.Join(placeholders, ", "))
+
+	rows, err := r.db.FetchAll(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	flows := make([]models.AccountCashFlow, 0)
+	for rows.Next() {
+		var flow models.AccountCashFlow
+		if err := rows.Scan(&flow.AccountID, &flow.Amount, &flow.Date); err != nil {
+			return nil, err
+		}
+		flows = append(flows, flow)
+	}
+
+	return flows, nil
 }

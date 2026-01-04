@@ -19,25 +19,28 @@ const (
 )
 
 type CreateAccountInput struct {
-	Name      string   `json:"name" binding:"required"`
-	BankType  BankType `json:"bank_type" binding:"required,oneof=investment axis axis_credit sbi hdfc icici icici_credit others"`
-	Currency  string   `json:"currency" binding:"required,oneof=inr usd"`
-	Balance   *float64 `json:"balance"`
-	CreatedBy int64    `json:"created_by" binding:"required"`
+	Name         string   `json:"name" binding:"required"`
+	BankType     BankType `json:"bank_type" binding:"required,oneof=investment axis axis_credit sbi hdfc icici icici_credit others"`
+	Currency     string   `json:"currency" binding:"required,oneof=inr usd"`
+	Balance      *float64 `json:"balance"`
+	CurrentValue *float64 `json:"current_value"`
+	CreatedBy    int64    `json:"created_by" binding:"required"`
 }
 
 type UpdateAccountInput struct {
-	Name     string   `json:"name,omitempty"`
-	BankType BankType `json:"bank_type,omitempty" binding:"omitempty,oneof=investment axis axis_credit sbi hdfc icici icici_credit others"`
-	Currency string   `json:"currency,omitempty" binding:"omitempty,oneof=inr usd"`
-	Balance  *float64 `json:"balance,omitempty"`
+	Name         string   `json:"name,omitempty"`
+	BankType     BankType `json:"bank_type,omitempty" binding:"omitempty,oneof=investment axis axis_credit sbi hdfc icici icici_credit others"`
+	Currency     string   `json:"currency,omitempty" binding:"omitempty,oneof=inr usd"`
+	Balance      *float64 `json:"balance,omitempty"`
+	CurrentValue *float64 `json:"current_value,omitempty"`
 }
 
 type AccountResponse struct {
-	Id        int64    `json:"id"`
-	Name      string   `json:"name"`
-	BankType  BankType `json:"bank_type"`
-	Currency  string   `json:"currency"`
-	Balance   float64  `json:"balance"`
-	CreatedBy int64    `json:"created_by"`
+	Id           int64    `json:"id"`
+	Name         string   `json:"name"`
+	BankType     BankType `json:"bank_type"`
+	Currency     string   `json:"currency"`
+	Balance      float64  `json:"balance"`
+	CurrentValue *float64 `json:"current_value"`
+	CreatedBy    int64    `json:"created_by"`
 }

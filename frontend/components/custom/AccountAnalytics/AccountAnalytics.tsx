@@ -19,10 +19,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { AccountAnalyticsListResponse } from "@/lib/models/analytics";
-import { formatCurrency, getTransactionColor } from "@/lib/utils";
+import {
+  formatCurrency,
+  formatPercentage,
+  getTransactionColor,
+} from "@/lib/utils";
 import { format } from "date-fns";
 import { ChevronRight, Plus, Wallet } from "lucide-react";
-import { useTheme } from "next-themes";
 import Link from "next/link";
 import { Fragment, useEffect, useState } from "react";
 
@@ -49,7 +52,6 @@ const accountColors = [
 ];
 
 function AccountTransactions({ accountId }: AccountTransactionsProps) {
-  const { theme } = useTheme();
   const { data, isLoading, error } = useTransactions({
     account_id: accountId,
     page: 1,
@@ -126,8 +128,7 @@ function AccountTransactions({ accountId }: AccountTransactionsProps) {
                 </div>
                 <div
                   className={`text-sm font-semibold ${getTransactionColor(
-                    transaction.amount,
-                    theme
+                    transaction.amount
                   )}`}
                 >
                   {formatCurrency(Math.abs(transaction.amount))}
@@ -258,10 +259,17 @@ export function AccountAnalytics({ data }: AccountAnalyticsProps) {
     );
     const accountName = accountInfo?.name || `Account ${account.account_id}`;
     const initialBalance = accountInfo?.balance || 0;
+    const isInvestment =
+      accountInfo?.bank_type === "investment" &&
+      account.current_value !== null &&
+      account.current_value !== undefined;
 
     // Calculate the actual balance including initial balance
     const actualBalance = account.current_balance + initialBalance;
     const absoluteBalance = Math.abs(actualBalance);
+    const displayValue = isInvestment
+      ? Number(account.current_value)
+      : absoluteBalance;
 
     return {
       ...account,
@@ -269,13 +277,15 @@ export function AccountAnalytics({ data }: AccountAnalyticsProps) {
       initialBalance,
       actualBalance,
       absoluteBalance,
+      displayValue,
+      isInvestment,
       color: accountColors[index % accountColors.length],
     };
   });
 
   // Calculate total balance from the actual balances
   const totalBalance = accountsWithBalances.reduce(
-    (sum, account) => sum + account.absoluteBalance,
+    (sum, account) => sum + account.displayValue,
     0
   );
 
@@ -284,7 +294,7 @@ export function AccountAnalytics({ data }: AccountAnalyticsProps) {
     .map((account) => ({
       ...account,
       percentage:
-        totalBalance > 0 ? (account.absoluteBalance / totalBalance) * 100 : 0,
+        totalBalance > 0 ? (account.displayValue / totalBalance) * 100 : 0,
     }))
     .sort((a, b) => b.percentage - a.percentage); // Sort by percentage descending
 
@@ -464,9 +474,20 @@ export function AccountAnalytics({ data }: AccountAnalyticsProps) {
                           </div>
                         </TableCell>
                         <TableCell className="text-right">
-                          <span className="font-medium">
-                            {formatCurrency(account.absoluteBalance)}
-                          </span>
+                          <div className="flex flex-col items-end">
+                            <span className="font-medium">
+                              {formatCurrency(account.displayValue)}
+                            </span>
+                            {account.isInvestment && (
+                              <span className="text-xs text-muted-foreground">
+                                {formatPercentage(
+                                  account.percentage_increase ?? 0
+                                )}
+                                <span className="mx-1">•</span>
+                                {formatPercentage(account.xirr ?? 0)}
+                              </span>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                       {isExpanded && (

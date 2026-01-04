@@ -222,6 +222,124 @@ var _ = Describe("AnalyticsController", func() {
 			Expect(found).To(BeTrue(), "Should find at least one account with zero balances")
 		})
 
+		It("should include current value for investment accounts", func() {
+			currentValue := 18000.0
+			investmentInput := map[string]any{
+				"name":          "Investment Account",
+				"bank_type":     "investment",
+				"currency":      "inr",
+				"current_value": currentValue,
+			}
+			resp, response := testUser1.MakeRequest(http.MethodPost, "/account", investmentInput)
+			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+			accountId := int64(response["data"].(map[string]any)["id"].(float64))
+
+			accountsResp, accountsResponse := testUser1.MakeRequest(http.MethodGet, "/account", nil)
+			Expect(accountsResp.StatusCode).To(Equal(http.StatusOK))
+			accounts := accountsResponse["data"].([]any)
+			var createdAccountId int64
+			for _, acc := range accounts {
+				accMap := acc.(map[string]any)
+				if accMap["name"].(string) == "Investment Account" {
+					createdAccountId = int64(accMap["id"].(float64))
+					break
+				}
+			}
+			Expect(createdAccountId).To(Equal(accountId))
+
+			analyticsResp, analyticsResponse := testUser1.MakeRequest(http.MethodGet, "/analytics/account", nil)
+			Expect(analyticsResp.StatusCode).To(Equal(http.StatusOK))
+
+			data := analyticsResponse["data"].(map[string]any)
+			accountAnalytics := data["account_analytics"].([]any)
+
+			var foundInvestment bool
+			for _, analytic := range accountAnalytics {
+				analyticMap := analytic.(map[string]any)
+				if analyticMap["account_id"].(float64) == float64(accountId) {
+					Expect(analyticMap["current_value"]).NotTo(BeNil())
+					Expect(analyticMap["current_value"]).To(Equal(currentValue))
+					foundInvestment = true
+					break
+				}
+			}
+			Expect(foundInvestment).To(BeTrue(), "Should find investment account with current value")
+
+			url := "/account/" + strconv.FormatInt(accountId, 10)
+			testUser1.MakeRequest(http.MethodDelete, url, nil)
+		})
+
+		It("should not include current value for non-investment accounts", func() {
+			analyticsResp, analyticsResponse := testUser1.MakeRequest(http.MethodGet, "/analytics/account", nil)
+			Expect(analyticsResp.StatusCode).To(Equal(http.StatusOK))
+
+			accountsResp, accountsResponse := testUser1.MakeRequest(http.MethodGet, "/account", nil)
+			Expect(accountsResp.StatusCode).To(Equal(http.StatusOK))
+
+			investmentAccountIds := make(map[float64]bool)
+			accounts := accountsResponse["data"].([]any)
+			for _, acc := range accounts {
+				accMap := acc.(map[string]any)
+				if accMap["bank_type"].(string) == "investment" {
+					investmentAccountIds[accMap["id"].(float64)] = true
+				}
+			}
+
+			data := analyticsResponse["data"].(map[string]any)
+			accountAnalytics := data["account_analytics"].([]any)
+
+			var checkedNonInvestment bool
+			for _, analytic := range accountAnalytics {
+				analyticMap := analytic.(map[string]any)
+				if !investmentAccountIds[analyticMap["account_id"].(float64)] {
+					Expect(analyticMap["current_value"]).To(BeNil())
+					checkedNonInvestment = true
+					break
+				}
+			}
+			Expect(checkedNonInvestment).To(BeTrue(), "Should find at least one non-investment account")
+		})
+
+		It("should include investment metrics for investment accounts", func() {
+			currentValue := 25000.0
+			investmentInput := map[string]any{
+				"name":          "Investment with Metrics",
+				"bank_type":     "investment",
+				"currency":      "inr",
+				"current_value": currentValue,
+			}
+			resp, response := testUser1.MakeRequest(http.MethodPost, "/account", investmentInput)
+			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+			accountId := int64(response["data"].(map[string]any)["id"].(float64))
+
+			analyticsResp, analyticsResponse := testUser1.MakeRequest(http.MethodGet, "/analytics/account", nil)
+			Expect(analyticsResp.StatusCode).To(Equal(http.StatusOK))
+
+			data := analyticsResponse["data"].(map[string]any)
+			accountAnalytics := data["account_analytics"].([]any)
+
+			var foundMetrics bool
+			for _, analytic := range accountAnalytics {
+				analyticMap := analytic.(map[string]any)
+				if analyticMap["account_id"].(float64) == float64(accountId) {
+					Expect(analyticMap["current_value"]).NotTo(BeNil())
+					Expect(analyticMap["current_value"]).To(Equal(currentValue))
+					if analyticMap["percentage_increase"] != nil {
+						Expect(analyticMap["percentage_increase"]).To(BeAssignableToTypeOf(float64(0)))
+					}
+					if analyticMap["xirr"] != nil {
+						Expect(analyticMap["xirr"]).To(BeAssignableToTypeOf(float64(0)))
+					}
+					foundMetrics = true
+					break
+				}
+			}
+			Expect(foundMetrics).To(BeTrue(), "Should find investment account metrics")
+
+			url := "/account/" + strconv.FormatInt(accountId, 10)
+			testUser1.MakeRequest(http.MethodDelete, url, nil)
+		})
+
 		It("should return consistent data structure even with no data", func() {
 			resp, response := testUser3.MakeRequest(http.MethodGet, "/analytics/account", nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
