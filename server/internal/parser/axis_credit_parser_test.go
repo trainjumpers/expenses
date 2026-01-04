@@ -3,6 +3,7 @@ package parser
 import (
 	"expenses/internal/models"
 	"expenses/pkg/utils"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -136,6 +137,45 @@ var _ = Describe("AxisCreditParser", func() {
 			Expect(err).To(HaveOccurred())
 			_, _, err = parser.parseAmount("abc123")
 			Expect(err).To(HaveOccurred())
+			_, _, err = parser.parseAmount("₹")
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("empty amount after cleaning"))
+		})
+
+		It("truncates long description to 40 chars in transaction name", func() {
+			longDesc := strings.Repeat("LONGTEXT-", 6) + "COMPANYNAME"
+			row := []string{"01 Nov '25", longDesc, "", "₹ 1,234.00", "Debit"}
+			txn, err := parser.parseTransactionRow(row, 0, 1, 3, 4)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(txn).NotTo(BeNil())
+			Expect(len(txn.Name)).To(Equal(40))
+			Expect(strings.HasSuffix(txn.Name, "...")).To(BeTrue())
+		})
+
+		It("returns error when amount string is not found in row", func() {
+			row := []string{"01 Nov '25", "ShopX", "", "", ""}
+			txn, err := parser.parseTransactionRow(row, 0, 1, 3, 4)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("amount not found"))
+			Expect(txn).To(BeNil())
+		})
+
+		It("returns nil for non-transaction/invalid rows", func() {
+			row := []string{"NotADate", "desc", "", "₹ 100.00", "Debit"}
+			txn, err := parser.parseTransactionRow(row, 0, 1, 3, 4)
+			Expect(err).To(BeNil())
+			Expect(txn).To(BeNil())
+		})
+
+		It("returns error when header exists but no valid transaction rows found", func() {
+			data := [][]string{
+				{"Date", "Transaction Details", "", "Amount (INR)", "Debit/Credit"},
+				{"", "", "", "", ""},
+				{"", "", "", "", ""},
+			}
+			b := utils.CreateXLSXFile(data)
+			_, err := parser.Parse(b, "", "test.xlsx", "")
+			Expect(err).To(MatchError("transaction header row not found in Axis credit statement"))
 		})
 	})
 

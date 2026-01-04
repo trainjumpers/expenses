@@ -83,5 +83,71 @@ Tran Date,CHQNO,PARTICULARS,DR,CR,BAL,SOL
 			Expect(foundLarge).To(BeTrue())
 			Expect(foundUPI).To(BeTrue())
 		})
+
+		It("should return error for CSV without a recognizable header", func() {
+			csvContent := `random,values,only
+31-03-2025,1,2,3,4,5`
+			fileBytes := []byte(csvContent)
+			txns, err := parser.Parse(fileBytes, "", "bad.csv", "")
+			Expect(err).To(HaveOccurred())
+			Expect(txns).To(BeNil())
+		})
+
+		It("should skip rows with fewer than 6 columns", func() {
+			csvContent := `Tran Date,CHQNO,PARTICULARS,DR,CR,BAL
+31-03-2025,-,SHORT,1.00`
+			fileBytes := []byte(csvContent)
+			txns, err := parser.Parse(fileBytes, "", "short.csv", "")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(txns).To(BeEmpty())
+		})
+
+		It("should handle very long descriptions by truncating the generated name", func() {
+			longDesc := strings.Repeat("LONGTEXT-", 10) + "COMPANY/EXTRA"
+			fields := []string{"31-03-2025", "-", longDesc, "10.00", "", "1000.00"}
+			res, err := parser.parseTransactionRow(fields)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(res).NotTo(BeNil())
+			// Name should be prefixed with Debit and truncated to 40 runes (37 + "...")
+			Expect(strings.HasPrefix(res.Name, "Debit: ")).To(BeTrue())
+			Expect(strings.HasSuffix(res.Name, "...")).To(BeTrue())
+			Expect(len([]rune(res.Name))).To(Equal(40))
+		})
+
+		It("should parse different debit patterns (NEFT, RTGS) correctly", func() {
+			neft := []string{"31-03-2025", "-", "NEFT/ICIC0000001/ACME_CORP", "5000.00", "", "127010.00"}
+			res, err := parser.parseTransactionRow(neft)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(res.Name).To(Equal("NEFT to ICIC0000001"))
+
+			rtgs := []string{"30-04-2025", "-", "RTGS/REF0001/LARGE_PAYMENT_BANK/", "1000.00", "", "248108.82"}
+			res2, err2 := parser.parseTransactionRow(rtgs)
+			Expect(err2).NotTo(HaveOccurred())
+			Expect(res2.Name).To(Equal("RTGS to LARGE_PAYMENT_BANK"))
+		})
+
+		It("should return error when transaction date is empty", func() {
+			fields := []string{"", "-", "NEFT/ICIC0000001/ACME_CORP", "5000.00", "", "127010.00"}
+			res, err := parser.parseTransactionRow(fields)
+			Expect(err).To(HaveOccurred())
+			Expect(res).To(BeNil())
+			Expect(err.Error()).To(ContainSubstring("empty transaction date"))
+		})
+
+		It("should error when credit is not a float", func() {
+			fields := []string{"31-03-2025", "-", "IMPS/P2A/509017158423/Example", "", "notanumber", "132000.00"}
+			res, err := parser.parseTransactionRow(fields)
+			Expect(err).To(HaveOccurred())
+			Expect(res).To(BeNil())
+			Expect(err.Error()).To(ContainSubstring("failed to parse credit amount"))
+		})
+
+		It("should error when both credit and debit are empty", func() {
+			fields := []string{"31-03-2025", "-", "IMPS/P2A/509017158423/Example", "", "", "132000.00"}
+			res, err := parser.parseTransactionRow(fields)
+			Expect(err).To(HaveOccurred())
+			Expect(res).To(BeNil())
+			Expect(err.Error()).To(ContainSubstring("both debit and credit amounts are empty"))
+		})
 	})
 })
