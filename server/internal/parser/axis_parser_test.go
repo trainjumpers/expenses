@@ -85,8 +85,9 @@ Tran Date,CHQNO,PARTICULARS,DR,CR,BAL,SOL
 		})
 
 		It("should return error for CSV without a recognizable header", func() {
-			csvContent := `random,values,only
-31-03-2025,1,2,3,4,5`
+			csvContent := `date,ref,description,debit,credit,balance,sol
+31-03-2025,-,TEST_DESC_1,1000.00, ,9000.00,1234
+01-04-2025,-,TEST_DESC_2, ,500.00,9500.00,1234`
 			fileBytes := []byte(csvContent)
 			txns, err := parser.Parse(fileBytes, "", "bad.csv", "")
 			Expect(err).To(HaveOccurred())
