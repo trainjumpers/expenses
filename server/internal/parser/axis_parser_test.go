@@ -108,7 +108,7 @@ Tran Date,CHQNO,PARTICULARS,DR,CR,BAL,SOL
 			res, err := parser.parseTransactionRow(fields)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(res).NotTo(BeNil())
-			// Name should be prefixed with Debit and truncated to 40 runes (37 + "...")
+			// Name should be prefixed with Debit and truncated to 37 runes, then "..." appended (37 + 3 = 40 runes total)
 			Expect(strings.HasPrefix(res.Name, "Debit: ")).To(BeTrue())
 			Expect(strings.HasSuffix(res.Name, "...")).To(BeTrue())
 			Expect(len([]rune(res.Name))).To(Equal(40))
