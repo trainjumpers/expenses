@@ -97,7 +97,6 @@ export function RuleEffectiveScope({
                   mode="single"
                   selected={effectiveFromDate}
                   onSelect={onEffectiveFromDateChange}
-                  initialFocus
                 />
               </PopoverContent>
             </Popover>

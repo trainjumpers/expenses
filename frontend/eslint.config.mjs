@@ -1,4 +1,3 @@
-import tseslint from "@typescript-eslint/eslint-plugin";
 import tsParser from "@typescript-eslint/parser";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import unusedImports from "eslint-plugin-unused-imports";
@@ -25,7 +24,6 @@ export default defineConfig([
       },
     },
     plugins: {
-      "@typescript-eslint": tseslint,
       "unused-imports": unusedImports,
     },
     rules: {
