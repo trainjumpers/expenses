@@ -1713,5 +1713,141 @@ var _ = Describe("RuleEngine", func() {
 				Expect(result).To(BeNil()) // Should not apply transfer with invalid account ID
 			})
 		})
+
+		Context("when transaction is already a transfer (duplicate prevention)", func() {
+			BeforeEach(func() {
+				// Setup categories with Transfer category
+				categories = []models.CategoryResponse{
+					{Id: 1, Name: "Food", CreatedBy: userId},
+					{Id: 2, Name: "Transfer", CreatedBy: userId}, // Transfer category
+				}
+
+				rules = []models.DescribeRuleResponse{
+					{
+						Rule: models.RuleResponse{
+							Id:            1,
+							Name:          "Transfer Rule",
+							EffectiveFrom: time.Now().Add(-24 * time.Hour),
+						},
+						Conditions: []models.RuleConditionResponse{
+							{
+								ConditionType:     models.RuleFieldName,
+								ConditionValue:    "Some Transaction",
+								ConditionOperator: models.OperatorContains,
+							},
+						},
+						Actions: []models.RuleActionResponse{
+							{
+								ActionType:  models.RuleFieldTransfer,
+								ActionValue: "2",
+							},
+						},
+					},
+				}
+			})
+
+			It("should skip transfer when all conditions are met", func() {
+				// All three conditions must be true to skip transfer:
+				// 1. Name starts with "Transfer from"
+				// 2. Description starts with "Transfer from"
+				// 3. Has Transfer category
+				transaction.Name = "Transfer from Some Transaction"
+				desc := "Transfer from original: Some Transaction"
+				transaction.Description = &desc
+				transaction.CategoryIds = []int64{2} // Transfer category
+				engine = NewRuleEngine(categories, accounts, rules)
+
+				result := engine.ProcessTransaction(transaction)
+
+				Expect(result).To(BeNil()) // Should not apply transfer to already transferred transaction
+			})
+
+			It("should apply transfer when name does not start with 'Transfer from'", func() {
+				// Missing condition 1: name doesn't start with "Transfer from"
+				transaction.Name = "Some Transaction"
+				desc := "Transfer from original: Some Transaction"
+				transaction.Description = &desc
+				transaction.CategoryIds = []int64{2} // Transfer category
+				engine = NewRuleEngine(categories, accounts, rules)
+
+				result := engine.ProcessTransaction(transaction)
+
+				Expect(result).NotTo(BeNil())
+				Expect(result.TransferInfo).NotTo(BeNil())
+			})
+
+			It("should apply transfer when description does not start with 'Transfer from'", func() {
+				// Missing condition 2: description doesn't start with "Transfer from"
+				transaction.Name = "Transfer from Some Transaction"
+				desc := "Some regular description"
+				transaction.Description = &desc
+				transaction.CategoryIds = []int64{2} // Transfer category
+				engine = NewRuleEngine(categories, accounts, rules)
+
+				result := engine.ProcessTransaction(transaction)
+
+				Expect(result).NotTo(BeNil())
+				Expect(result.TransferInfo).NotTo(BeNil())
+			})
+
+			It("should apply transfer when description is nil", func() {
+				// Missing condition 2: description is nil
+				transaction.Name = "Transfer from Some Transaction"
+				transaction.Description = nil
+				transaction.CategoryIds = []int64{2} // Transfer category
+				engine = NewRuleEngine(categories, accounts, rules)
+
+				result := engine.ProcessTransaction(transaction)
+
+				Expect(result).NotTo(BeNil())
+				Expect(result.TransferInfo).NotTo(BeNil())
+			})
+
+			It("should apply transfer when transaction does not have Transfer category", func() {
+				// Missing condition 3: no Transfer category
+				transaction.Name = "Transfer from Some Transaction"
+				desc := "Transfer from original: Some Transaction"
+				transaction.Description = &desc
+				transaction.CategoryIds = []int64{1} // Food category, not Transfer
+				engine = NewRuleEngine(categories, accounts, rules)
+
+				result := engine.ProcessTransaction(transaction)
+
+				Expect(result).NotTo(BeNil())
+				Expect(result.TransferInfo).NotTo(BeNil())
+			})
+
+			It("should skip transfer when all conditions are met with case-insensitive prefix", func() {
+				// All three conditions with case variations
+				transaction.Name = "TRANSFER FROM Some Transaction"
+				desc := "transfer FROM original: Some Transaction"
+				transaction.Description = &desc
+				transaction.CategoryIds = []int64{2} // Transfer category
+				engine = NewRuleEngine(categories, accounts, rules)
+
+				result := engine.ProcessTransaction(transaction)
+
+				Expect(result).To(BeNil()) // Should not apply transfer (case-insensitive match)
+			})
+
+			It("should not skip transfer when Transfer category belongs to different user", func() {
+				// Create Transfer category owned by different user
+				categories = []models.CategoryResponse{
+					{Id: 1, Name: "Food", CreatedBy: userId},
+					{Id: 2, Name: "Transfer", CreatedBy: userId + 1}, // Different user's Transfer category
+				}
+				transaction.Name = "Transfer from Some Transaction"
+				desc := "Transfer from original: Some Transaction"
+				transaction.Description = &desc
+				transaction.CategoryIds = []int64{2} // Other user's Transfer category
+				engine = NewRuleEngine(categories, accounts, rules)
+
+				result := engine.ProcessTransaction(transaction)
+
+				// Transfer should apply because category doesn't belong to the user
+				Expect(result).NotTo(BeNil())
+				Expect(result.TransferInfo).NotTo(BeNil())
+			})
+		})
 	})
 })

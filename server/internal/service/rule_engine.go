@@ -95,6 +95,11 @@ func (e *RuleEngine) ProcessTransaction(transaction models.TransactionResponse) 
 					hasChanges = true
 				}
 			case models.RuleFieldTransfer:
+				// Skip transfer action if transaction is already a transfer (prevent duplicates)
+				if e.isAlreadyTransferTransaction(transaction) {
+					continue
+				}
+
 				accountId, err := strconv.ParseInt(action.ActionValue, 10, 64)
 				if err != nil {
 					continue
@@ -265,4 +270,41 @@ func (e *RuleEngine) hasCategory(categoryIds []int64, categoryId int64) bool {
 		}
 	}
 	return false
+}
+
+// isAlreadyTransferTransaction checks if a transaction is already a transfer
+// to prevent creating duplicate transfer transactions.
+// All conditions must be met: name starts with "Transfer from" AND
+// description starts with "Transfer from" AND category is Transfer.
+func (e *RuleEngine) isAlreadyTransferTransaction(transaction models.TransactionResponse) bool {
+	// Check if name starts with "Transfer from"
+	if !strings.HasPrefix(strings.ToLower(transaction.Name), "transfer from") {
+		return false
+	}
+
+	// Check if description starts with "Transfer from"
+	if transaction.Description == nil {
+		return false
+	}
+	if !strings.HasPrefix(strings.ToLower(*transaction.Description), "transfer from") {
+		return false
+	}
+
+	// Check if transaction already has the Transfer category
+	transferCategoryId := e.getTransferCategoryId(transaction.CreatedBy)
+	if transferCategoryId == 0 || !e.hasCategory(transaction.CategoryIds, transferCategoryId) {
+		return false
+	}
+
+	return true
+}
+
+// getTransferCategoryId finds the Transfer category ID for a user
+func (e *RuleEngine) getTransferCategoryId(userId int64) int64 {
+	for _, category := range e.categories {
+		if category.CreatedBy == userId && strings.EqualFold(category.Name, "Transfer") {
+			return category.Id
+		}
+	}
+	return 0
 }
