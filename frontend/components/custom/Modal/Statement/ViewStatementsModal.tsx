@@ -170,7 +170,6 @@ export function ViewStatementsModal({
                       setDateFrom(date);
                       setPage(1);
                     }}
-                    initialFocus
                   />
                 </PopoverContent>
               </Popover>
@@ -192,7 +191,6 @@ export function ViewStatementsModal({
                       setDateTo(date);
                       setPage(1);
                     }}
-                    initialFocus
                   />
                 </PopoverContent>
               </Popover>
