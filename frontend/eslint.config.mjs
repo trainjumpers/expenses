@@ -27,6 +27,8 @@ export default defineConfig([
       "unused-imports": unusedImports,
     },
     rules: {
+      "react-hooks/set-state-in-effect": "off",
+      "react-hooks/refs": "off",
       "unused-imports/no-unused-imports": "error",
       "unused-imports/no-unused-vars": [
         "warn",

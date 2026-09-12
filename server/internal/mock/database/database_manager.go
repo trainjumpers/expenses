@@ -9,6 +9,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // MockDatabaseManager implements the unified DatabaseManager interface for testing
@@ -288,5 +289,9 @@ func (m *MockRows) RawValues() [][]byte {
 }
 
 func (m *MockRows) Conn() *pgx.Conn {
+	return nil
+}
+
+func (m *MockRows) TypeMap() *pgtype.Map {
 	return nil
 }

@@ -101,7 +101,7 @@ db-downgrade-reset reset=default_downgrade:
     echo ""
 
     echo "📝 Updating package.json to latest versions..."
-    bunx npm-check-updates -u --upgradeAll
+    bunx npm-check-updates -u
     echo ""
 
     echo "⬆️  Installing updated dependencies..."
