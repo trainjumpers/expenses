@@ -440,7 +440,6 @@ func (r *TransactionRepository) buildTransactionWhereClause(userId int64, q mode
 	if q.StatementId != nil {
 		where = append(where, fmt.Sprintf("t.id IN (SELECT transaction_id FROM %s.statement_transaction_mapping WHERE statement_id = $%d)", r.schema, argIdx))
 		args = append(args, *q.StatementId)
-		argIdx++
 	}
 
 	whereClause := ""
