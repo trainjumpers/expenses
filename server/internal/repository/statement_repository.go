@@ -240,7 +240,6 @@ func (r *StatementRepository) CountStatementsByUserId(ctx context.Context, userI
 	if query.Search != nil && *query.Search != "" {
 		whereClauses = append(whereClauses, fmt.Sprintf("original_filename ILIKE $%d", argIndex))
 		args = append(args, "%"+*query.Search+"%")
-		argIndex++
 	}
 
 	sqlQuery := fmt.Sprintf(`SELECT COUNT(*) FROM %s.%s WHERE %s`, r.schema, r.tableName, strings.Join(whereClauses, " AND "))

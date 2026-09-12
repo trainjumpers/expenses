@@ -1133,7 +1133,7 @@ var _ = Describe("AnalyticsService", func() {
 	})
 
 	Describe("calculateInvestmentMetrics", func() {
-		now := time.Now()
+		now := time.Date(2023, time.June, 15, 0, 0, 0, 0, time.UTC)
 
 		It("should return zero percentage and XIRR when current value is zero or negative", func() {
 			currentValue := -100.0
@@ -1305,8 +1305,8 @@ var _ = Describe("AnalyticsService", func() {
 			}
 			_, xirr := calculateInvestmentMetrics(flows, currentValue, now)
 			Expect(xirr).NotTo(BeNil())
-			// Expected annualized XIRR for these flows is approximately 34.06%
-			Expect(*xirr).To(BeNumerically("~", 34.059629062590666, 1e-3))
+			// Expected annualized XIRR for these flows is approximately 34.12%
+			Expect(*xirr).To(BeNumerically("~", 34.11777533442272, 1e-3))
 		})
 
 		It("should calculate percentage correctly with mixed cash flows", func() {

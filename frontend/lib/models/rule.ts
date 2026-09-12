@@ -4,11 +4,7 @@ export enum ConditionLogic {
 }
 
 export type RuleFieldType =
-  | "amount"
-  | "name"
-  | "description"
-  | "category"
-  | "transfer";
+  "amount" | "name" | "description" | "category" | "transfer";
 export type RuleOperator = "equals" | "contains" | "greater" | "lower";
 
 export const RULE_FIELD_TYPES: { label: string; value: RuleFieldType }[] = [
