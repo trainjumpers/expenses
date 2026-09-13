@@ -7,6 +7,7 @@ import (
 	"expenses/internal/service"
 	"expenses/pkg/logger"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -30,7 +31,7 @@ func (a *AuthController) Signup(ctx *gin.Context) {
 		logger.Errorf("Failed to bind JSON: %v", err)
 		return
 	}
-	logger.Infof("Creating new user with email %s", newUser.Email)
+	logger.Infof("Creating new user with email %s", maskEmail(newUser.Email))
 	authResponse, err := a.authService.Signup(ctx, newUser)
 	if err != nil {
 		logger.Errorf("Failed to sign up user: %v", err)
@@ -51,7 +52,7 @@ func (a *AuthController) Login(ctx *gin.Context) {
 		logger.Errorf("Failed to bind JSON: %v", err)
 		return
 	}
-	logger.Infof("User login attempt for email %s", loginInput.Email)
+	logger.Infof("User login attempt for email %s", maskEmail(loginInput.Email))
 
 	authResponse, err := a.authService.Login(ctx, loginInput)
 	if err != nil {
@@ -102,6 +103,15 @@ func (a *AuthController) Logout(ctx *gin.Context) {
 	a.setAuthCookie(ctx, "access_token", "", -1)
 	a.setAuthCookie(ctx, "refresh_token", "", -1)
 	ctx.JSON(http.StatusOK, gin.H{"message": "Logged out"})
+}
+
+// maskEmail keeps the domain for correlation but hides the local part.
+func maskEmail(email string) string {
+	at := strings.Index(email, "@")
+	if at <= 0 {
+		return "***"
+	}
+	return "***" + email[at:]
 }
 
 func (a *AuthController) setCookies(ctx *gin.Context, accessToken string, refreshToken string) {
