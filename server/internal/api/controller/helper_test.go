@@ -186,3 +186,13 @@ func checkCategoryValidation(helper *TestHelper, testCases []map[string]any) {
 		Expect(response["message"]).To(Equal(tc["expectedMessage"]))
 	}
 }
+
+// checkInsightsValidation tests validation for the analytics insights endpoint
+func checkInsightsValidation(helper *TestHelper, testCases []map[string]any) {
+	for _, tc := range testCases {
+		url := fmt.Sprintf("/analytics/insights?start_date=%s&end_date=%s", tc["startDate"], tc["endDate"])
+		resp, response := helper.MakeRequest(http.MethodGet, url, nil)
+		Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+		Expect(response["message"]).To(Equal(tc["expectedMessage"]))
+	}
+}

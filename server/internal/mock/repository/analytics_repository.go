@@ -14,6 +14,11 @@ type MockAnalyticsRepository struct {
 	networthData          map[string]networthMockData                  // key: userId_startDate_endDate, value: networth data
 	categoryAnalytics     map[string]*models.CategoryAnalyticsResponse // key: userId_startDate_endDate, value: category analytics
 	monthlyAnalytics      map[string]*models.MonthlyAnalyticsResponse  // key: userId_months, value: monthly analytics
+	insightsMonthly       map[string][]models.InsightsMonthlyPoint     // key: userId_startDate_endDate
+	insightsCategories    map[string][]models.InsightsCategory         // key: userId_startDate_endDate
+	insightsTopExpenses   map[string][]models.InsightsTopExpense       // key: userId_startDate_endDate
+	insightsUncategorized map[string]mockUncategorizedData             // key: userId_startDate_endDate
+	cashFlows             map[int64][]models.AccountCashFlow           // key: userId
 	shouldErrorOnBalance  bool                                         // simulate GetBalance errors
 	shouldErrorOnNetworth bool                                         // simulate GetNetworthTimeSeries errors
 	shouldErrorOnCategory bool                                         // simulate GetCategoryAnalytics errors
@@ -26,6 +31,11 @@ type networthMockData struct {
 	timeSeries     []map[string]any
 }
 
+type mockUncategorizedData struct {
+	count  int64
+	amount float64
+}
+
 func NewMockAnalyticsRepository() *MockAnalyticsRepository {
 	return &MockAnalyticsRepository{
 		balances:              make(map[string]map[int64]float64),
@@ -33,6 +43,11 @@ func NewMockAnalyticsRepository() *MockAnalyticsRepository {
 		networthData:          make(map[string]networthMockData),
 		categoryAnalytics:     make(map[string]*models.CategoryAnalyticsResponse),
 		monthlyAnalytics:      make(map[string]*models.MonthlyAnalyticsResponse),
+		insightsMonthly:       make(map[string][]models.InsightsMonthlyPoint),
+		insightsCategories:    make(map[string][]models.InsightsCategory),
+		insightsTopExpenses:   make(map[string][]models.InsightsTopExpense),
+		insightsUncategorized: make(map[string]mockUncategorizedData),
+		cashFlows:             make(map[int64][]models.AccountCashFlow),
 		shouldErrorOnBalance:  false,
 		shouldErrorOnNetworth: false,
 		shouldErrorOnCategory: false,
@@ -197,9 +212,54 @@ func (m *MockAnalyticsRepository) GetMonthlyAnalytics(ctx context.Context, userI
 }
 
 func (m *MockAnalyticsRepository) GetAccountCashFlows(ctx context.Context, userId int64, accountIds []int64) ([]models.AccountCashFlow, error) {
-	_ = userId
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
 	_ = accountIds
+	if flows, exists := m.cashFlows[userId]; exists {
+		return flows, nil
+	}
 	return []models.AccountCashFlow{}, nil
+}
+
+func (m *MockAnalyticsRepository) GetInsightsMonthly(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) ([]models.InsightsMonthlyPoint, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	if points, exists := m.insightsMonthly[m.createMonthlyKey(userId, startDate, endDate)]; exists {
+		return points, nil
+	}
+	return []models.InsightsMonthlyPoint{}, nil
+}
+
+func (m *MockAnalyticsRepository) GetInsightsCategories(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) ([]models.InsightsCategory, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	if categories, exists := m.insightsCategories[m.createMonthlyKey(userId, startDate, endDate)]; exists {
+		return categories, nil
+	}
+	return []models.InsightsCategory{}, nil
+}
+
+func (m *MockAnalyticsRepository) GetInsightsTopExpenses(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) ([]models.InsightsTopExpense, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	if expenses, exists := m.insightsTopExpenses[m.createMonthlyKey(userId, startDate, endDate)]; exists {
+		return expenses, nil
+	}
+	return []models.InsightsTopExpense{}, nil
+}
+
+func (m *MockAnalyticsRepository) GetInsightsUncategorized(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) (int64, float64, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	if data, exists := m.insightsUncategorized[m.createMonthlyKey(userId, startDate, endDate)]; exists {
+		return data.count, data.amount, nil
+	}
+	return 0, 0, nil
 }
 
 // Helper methods for testing
@@ -267,6 +327,36 @@ func (m *MockAnalyticsRepository) SetShouldErrorOnMonthly(shouldError bool) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.shouldErrorOnMonthly = shouldError
+}
+
+func (m *MockAnalyticsRepository) SetInsightsMonthly(userId int64, startDate time.Time, endDate time.Time, points []models.InsightsMonthlyPoint) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.insightsMonthly[m.createMonthlyKey(userId, startDate, endDate)] = points
+}
+
+func (m *MockAnalyticsRepository) SetInsightsCategories(userId int64, startDate time.Time, endDate time.Time, categories []models.InsightsCategory) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.insightsCategories[m.createMonthlyKey(userId, startDate, endDate)] = categories
+}
+
+func (m *MockAnalyticsRepository) SetInsightsTopExpenses(userId int64, startDate time.Time, endDate time.Time, expenses []models.InsightsTopExpense) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.insightsTopExpenses[m.createMonthlyKey(userId, startDate, endDate)] = expenses
+}
+
+func (m *MockAnalyticsRepository) SetInsightsUncategorized(userId int64, startDate time.Time, endDate time.Time, count int64, amount float64) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.insightsUncategorized[m.createMonthlyKey(userId, startDate, endDate)] = mockUncategorizedData{count: count, amount: amount}
+}
+
+func (m *MockAnalyticsRepository) SetAccountCashFlows(userId int64, flows []models.AccountCashFlow) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.cashFlows[userId] = flows
 }
 
 func (m *MockAnalyticsRepository) createBalanceKey(userId int64, startDate *time.Time, endDate *time.Time) string {

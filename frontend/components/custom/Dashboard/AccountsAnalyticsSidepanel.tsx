@@ -89,17 +89,17 @@ export function AccountsAnalyticsSidepanel({
       };
     }) || [];
 
-  console.log("Accounts Data:", accounts);
-
   if (isLoading) {
     return (
-      <div className={`w-80 flex flex-col h-full ${className}`}>
+      <div
+        className={`w-80 flex flex-col h-full min-h-0 overflow-hidden ${className}`}
+      >
         {/* Monthly Analytics Card at the top */}
         <div className="shrink-0 mb-4">
           <MonthlyAnalyticsCard />
         </div>
 
-        <Card className="flex-1 flex flex-col">
+        <Card className="flex-1 min-h-0 overflow-hidden flex flex-col">
           <CardHeader className="pb-4 shrink-0">
             <div className="flex items-center justify-between">
               <Skeleton className="h-6 w-16" />
@@ -107,7 +107,7 @@ export function AccountsAnalyticsSidepanel({
             </div>
             <Skeleton className="h-4 w-20" />
           </CardHeader>
-          <CardContent className="flex-1 overflow-y-auto space-y-1">
+          <CardContent className="flex-1 min-h-0 overflow-y-auto overscroll-contain space-y-1">
             <div>
               <Skeleton className="h-3 w-24 mb-2" />
               {Array.from({ length: 3 }).map((_, index) => (
@@ -152,13 +152,15 @@ export function AccountsAnalyticsSidepanel({
   }
 
   return (
-    <div className={`w-80 flex flex-col h-full ${className}`}>
+    <div
+      className={`w-80 flex flex-col h-full min-h-0 overflow-hidden ${className}`}
+    >
       {/* Monthly Analytics Card at the top */}
       <div className="shrink-0 mb-4">
         <MonthlyAnalyticsCard />
       </div>
 
-      <Card className="flex-1 flex flex-col">
+      <Card className="flex-1 min-h-0 overflow-hidden flex flex-col">
         <CardHeader className="pb-4 shrink-0">
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg font-semibold">Assets</CardTitle>
@@ -173,7 +175,7 @@ export function AccountsAnalyticsSidepanel({
           </div>
         </CardHeader>
 
-        <CardContent className="flex-1 overflow-y-auto space-y-1">
+        <CardContent className="flex-1 min-h-0 overflow-y-auto overscroll-contain space-y-1">
           <TooltipProvider>
             {accounts.length === 0 ? (
               <div className="text-center py-8 space-y-4">

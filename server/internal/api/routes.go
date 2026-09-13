@@ -138,6 +138,7 @@ func Init(
 			analytics.GET("/networth", analyticsController.GetNetworthTimeSeries)
 			analytics.GET("/category", analyticsController.GetCategoryAnalytics)
 			analytics.GET("/monthly", analyticsController.GetMonthlyAnalytics)
+			analytics.GET("/insights", analyticsController.GetInsights)
 		}
 	}
 

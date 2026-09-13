@@ -1317,4 +1317,195 @@ var _ = Describe("AnalyticsController", func() {
 			Expect(data).To(HaveKey("total_amount"))
 		})
 	})
+
+	Describe("GetInsights", func() {
+		var (
+			createdTransactionIds []int64
+			createdCategoryIds    []int64
+			createdAccountIds     []int64
+		)
+
+		firstNonInvestmentAccountId := func() int64 {
+			resp, response := testUser1.MakeRequest(http.MethodGet, "/account", nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			for _, raw := range response["data"].([]any) {
+				account := raw.(map[string]any)
+				if account["bank_type"].(string) != "investment" {
+					return int64(account["id"].(float64))
+				}
+			}
+			Fail("expected a non-investment account for user1")
+			return 0
+		}
+
+		foodCategoryId := func() int64 {
+			resp, response := testUser1.MakeRequest(http.MethodGet, "/category", nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			for _, raw := range response["data"].([]any) {
+				category := raw.(map[string]any)
+				if category["name"].(string) == "Food" {
+					return int64(category["id"].(float64))
+				}
+			}
+			Fail("expected a Food category for user1")
+			return 0
+		}
+
+		createCategory := func(name string) int64 {
+			resp, response := testUser1.MakeRequest(http.MethodPost, "/category", map[string]any{
+				"name": name,
+				"icon": "insights-icon",
+			})
+			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+			id := int64(response["data"].(map[string]any)["id"].(float64))
+			createdCategoryIds = append(createdCategoryIds, id)
+			return id
+		}
+
+		createTransaction := func(name string, amount float64, date string, accountId int64, categoryIds []int64) int64 {
+			input := map[string]any{
+				"name":       name,
+				"amount":     amount,
+				"date":       date + "T00:00:00Z",
+				"account_id": accountId,
+			}
+			if categoryIds != nil {
+				input["category_ids"] = categoryIds
+			}
+			resp, response := testUser1.MakeRequest(http.MethodPost, "/transaction", input)
+			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+			id := int64(response["data"].(map[string]any)["id"].(float64))
+			createdTransactionIds = append(createdTransactionIds, id)
+			return id
+		}
+
+		AfterEach(func() {
+			for _, id := range createdTransactionIds {
+				testUser1.MakeRequest(http.MethodDelete, "/transaction/"+strconv.FormatInt(id, 10), nil)
+			}
+			for _, id := range createdCategoryIds {
+				testUser1.MakeRequest(http.MethodDelete, "/category/"+strconv.FormatInt(id, 10), nil)
+			}
+			for _, id := range createdAccountIds {
+				testUser1.MakeRequest(http.MethodDelete, "/account/"+strconv.FormatInt(id, 10), nil)
+			}
+			createdTransactionIds = nil
+			createdCategoryIds = nil
+			createdAccountIds = nil
+		})
+
+		It("should get insights for an authenticated user", func() {
+			resp, response := testUser1.MakeRequest(http.MethodGet, "/analytics/insights?start_date=2024-01-01&end_date=2024-03-31", nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			Expect(response["message"]).To(Equal("Analytics insights retrieved successfully"))
+
+			data := response["data"].(map[string]any)
+			Expect(data).To(HaveKey("summary"))
+			Expect(data).To(HaveKey("monthly"))
+			Expect(data).To(HaveKey("categories"))
+			Expect(data).To(HaveKey("top_expenses"))
+			Expect(data).To(HaveKey("investments"))
+
+			summary := data["summary"].(map[string]any)
+			for _, key := range []string{
+				"net_worth", "investment_value", "bank_value",
+				"period_income", "period_expenses", "period_net",
+				"savings_rate", "uncategorized_count", "uncategorized_amount",
+				"realized_interest",
+			} {
+				Expect(summary).To(HaveKey(key))
+			}
+
+			// Jan-Mar inclusive is three months.
+			Expect(data["monthly"].([]any)).To(HaveLen(3))
+		})
+
+		It("should return unauthorized for unauthenticated user", func() {
+			resp, response := testHelperUnauthenticated.MakeRequest(http.MethodGet, "/analytics/insights?start_date=2024-01-01&end_date=2024-03-31", nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
+			Expect(response["message"]).To(Equal("please log in to continue"))
+		})
+
+		It("should validate the date range", func() {
+			testCases := []map[string]any{
+				{"startDate": "", "endDate": "2024-03-31", "expectedMessage": "start_date and end_date query parameters are required"},
+				{"startDate": "2024-01-01", "endDate": "", "expectedMessage": "start_date and end_date query parameters are required"},
+				{"startDate": "invalid", "endDate": "2024-03-31", "expectedMessage": "invalid start_date format, expected YYYY-MM-DD"},
+				{"startDate": "2024-01-01", "endDate": "invalid", "expectedMessage": "invalid end_date format, expected YYYY-MM-DD"},
+				{"startDate": "2024-03-31", "endDate": "2024-01-01", "expectedMessage": "start_date cannot be after end_date"},
+			}
+			checkInsightsValidation(testUser1, testCases)
+		})
+
+		It("should exclude transfers from household figures", func() {
+			accountId := firstNonInvestmentAccountId()
+			foodId := foodCategoryId()
+			transfersId := createCategory("Transfers")
+
+			createTransaction("Insights Transfer Out", 1000.0, "2019-06-05", accountId, []int64{transfersId})
+			createTransaction("Insights Food Out", 200.0, "2019-06-06", accountId, []int64{foodId})
+
+			resp, response := testUser1.MakeRequest(http.MethodGet, "/analytics/insights?start_date=2019-06-01&end_date=2019-06-30", nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+			data := response["data"].(map[string]any)
+			summary := data["summary"].(map[string]any)
+			Expect(summary["period_expenses"]).To(Equal(200.0))
+			Expect(summary["period_income"]).To(Equal(0.0))
+
+			categories := data["categories"].([]any)
+			for _, raw := range categories {
+				category := raw.(map[string]any)
+				Expect(category["category_name"]).NotTo(Equal("Transfers"))
+			}
+
+			topExpenses := data["top_expenses"].([]any)
+			names := make([]string, 0, len(topExpenses))
+			for _, raw := range topExpenses {
+				names = append(names, raw.(map[string]any)["name"].(string))
+			}
+			Expect(names).To(ContainElement("Insights Food Out"))
+			Expect(names).NotTo(ContainElement("Insights Transfer Out"))
+		})
+
+		It("should count uncategorized household debits", func() {
+			accountId := firstNonInvestmentAccountId()
+			createTransaction("Insights Uncategorized Out", 50.0, "2019-07-07", accountId, nil)
+
+			resp, response := testUser1.MakeRequest(http.MethodGet, "/analytics/insights?start_date=2019-07-01&end_date=2019-07-31", nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+			summary := response["data"].(map[string]any)["summary"].(map[string]any)
+			Expect(summary["uncategorized_count"]).To(Equal(1.0))
+			Expect(summary["uncategorized_amount"]).To(Equal(50.0))
+			Expect(summary["period_expenses"]).To(Equal(50.0))
+		})
+
+		It("should exclude investment ledger transactions from period expenses", func() {
+			resp, response := testUser1.MakeRequest(http.MethodPost, "/account", map[string]any{
+				"name":          "Insights Investment",
+				"bank_type":     "investment",
+				"currency":      "inr",
+				"current_value": 1000.0,
+			})
+			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+			accountId := int64(response["data"].(map[string]any)["id"].(float64))
+			createdAccountIds = append(createdAccountIds, accountId)
+
+			createTransaction("Insights Investment Debit", 500.0, "2019-08-05", accountId, nil)
+
+			insightsResp, insightsResponse := testUser1.MakeRequest(http.MethodGet, "/analytics/insights?start_date=2019-08-01&end_date=2019-08-31", nil)
+			Expect(insightsResp.StatusCode).To(Equal(http.StatusOK))
+
+			data := insightsResponse["data"].(map[string]any)
+			summary := data["summary"].(map[string]any)
+			Expect(summary["period_expenses"]).To(Equal(0.0))
+
+			investments := data["investments"].([]any)
+			Expect(investments).To(HaveLen(1))
+			investment := investments[0].(map[string]any)
+			Expect(investment["account_id"]).To(Equal(float64(accountId)))
+			Expect(investment["current_value"]).To(Equal(1000.0))
+		})
+	})
 })

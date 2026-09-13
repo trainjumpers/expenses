@@ -57,5 +57,7 @@ export const queryKeys = {
       ["analytics", "networth", startDate, endDate] as const,
     monthlyAnalytics: (startDate: string, endDate: string) =>
       ["analytics", "monthly", startDate, endDate] as const,
+    insights: (startDate: string, endDate: string) =>
+      ["analytics", "insights", startDate, endDate] as const,
   },
 } as const;

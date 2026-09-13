@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"strings"
 	"time"
 )
 
@@ -15,6 +16,7 @@ type AnalyticsServiceInterface interface {
 	GetNetworthTimeSeries(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) (models.NetworthTimeSeriesResponse, error)
 	GetCategoryAnalytics(ctx context.Context, userId int64, startDate time.Time, endDate time.Time, categoryIds []int64) (*models.CategoryAnalyticsResponse, error)
 	GetMonthlyAnalytics(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) (*models.MonthlyAnalyticsResponse, error)
+	GetInsights(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) (*models.AnalyticsInsightsResponse, error)
 }
 
 type AnalyticsService struct {
@@ -189,9 +191,206 @@ func (s *AnalyticsService) GetMonthlyAnalytics(ctx context.Context, userId int64
 	return s.analyticsRepo.GetMonthlyAnalytics(ctx, userId, startDate, endDate)
 }
 
+// GetInsights returns a household-scoped view of the ledger: transfers and
+// investment ledgers are excluded from the period figures, while the hero
+// net worth is a point-in-time mark of every account.
+func (s *AnalyticsService) GetInsights(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) (*models.AnalyticsInsightsResponse, error) {
+	if endDate.Before(startDate) {
+		return nil, fmt.Errorf("end date must be after or equal to start date")
+	}
+
+	accounts, err := s.accountRepo.ListAccounts(ctx, userId)
+	if err != nil {
+		return nil, err
+	}
+
+	currentBalances, err := s.analyticsRepo.GetBalance(ctx, userId, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	netWorth := 0.0
+	investmentValue := 0.0
+	bankValue := 0.0
+	investmentAccountIds := make([]int64, 0)
+	for _, account := range accounts {
+		if account.BankType == models.BankTypeInvestment && account.CurrentValue != nil {
+			value := *account.CurrentValue
+			netWorth += value
+			investmentValue += value
+			investmentAccountIds = append(investmentAccountIds, account.Id)
+			continue
+		}
+
+		balance := currentBalances[account.Id] + account.Balance
+		netWorth += balance
+		if account.BankType != models.BankTypeInvestment {
+			bankValue += balance
+		}
+	}
+
+	monthly, err := s.analyticsRepo.GetInsightsMonthly(ctx, userId, startDate, endDate)
+	if err != nil {
+		return nil, err
+	}
+	monthly = fillInsightsMonths(monthly, startDate, endDate)
+
+	periodIncome := 0.0
+	periodExpenses := 0.0
+	for _, point := range monthly {
+		periodIncome += point.Income
+		periodExpenses += point.Expenses
+	}
+	periodNet := periodIncome - periodExpenses
+	savingsRate := 0.0
+	if periodIncome > 0 {
+		savingsRate = periodNet / periodIncome
+	}
+
+	categories, err := s.analyticsRepo.GetInsightsCategories(ctx, userId, startDate, endDate)
+	if err != nil {
+		return nil, err
+	}
+
+	topExpenses, err := s.analyticsRepo.GetInsightsTopExpenses(ctx, userId, startDate, endDate)
+	if err != nil {
+		return nil, err
+	}
+
+	uncategorizedCount, uncategorizedAmount, err := s.analyticsRepo.GetInsightsUncategorized(ctx, userId, startDate, endDate)
+	if err != nil {
+		return nil, err
+	}
+
+	flowsByAccount := make(map[int64][]models.AccountCashFlow)
+	realizedInterest := 0.0
+	if len(investmentAccountIds) > 0 {
+		cashFlows, err := s.analyticsRepo.GetAccountCashFlows(ctx, userId, investmentAccountIds)
+		if err != nil {
+			return nil, err
+		}
+		for _, flow := range cashFlows {
+			flowsByAccount[flow.AccountID] = append(flowsByAccount[flow.AccountID], flow)
+			if flow.Amount > 0 && isRealizedInterest(flow.Name) && isInDateRange(flow.Date, startDate, endDate) {
+				realizedInterest += flow.Amount
+			}
+		}
+	}
+
+	now := time.Now()
+	investments := make([]models.InsightsInvestment, 0, len(investmentAccountIds))
+	for _, account := range accounts {
+		if account.BankType != models.BankTypeInvestment || account.CurrentValue == nil {
+			continue
+		}
+		collected := collectInvestmentCashFlows(flowsByAccount[account.Id])
+		percentageIncrease, xirr := calculateInvestmentMetrics(flowsByAccount[account.Id], *account.CurrentValue, now)
+		investments = append(investments, models.InsightsInvestment{
+			AccountID:          account.Id,
+			Name:               account.Name,
+			CurrentValue:       *account.CurrentValue,
+			Contributed:        collected.contributed,
+			Distributed:        collected.distributed,
+			RealizedInterest:   collected.realizedInterest,
+			Xirr:               xirr,
+			PercentageIncrease: &percentageIncrease,
+		})
+	}
+
+	return &models.AnalyticsInsightsResponse{
+		Summary: models.InsightsSummary{
+			NetWorth:            netWorth,
+			InvestmentValue:     investmentValue,
+			BankValue:           bankValue,
+			PeriodIncome:        periodIncome,
+			PeriodExpenses:      periodExpenses,
+			PeriodNet:           periodNet,
+			SavingsRate:         savingsRate,
+			UncategorizedCount:  uncategorizedCount,
+			UncategorizedAmount: uncategorizedAmount,
+			RealizedInterest:    realizedInterest,
+		},
+		Monthly:     monthly,
+		Categories:  categories,
+		TopExpenses: topExpenses,
+		Investments: investments,
+	}, nil
+}
+
+// fillInsightsMonths inserts zero months so the chart axis stays continuous.
+func fillInsightsMonths(points []models.InsightsMonthlyPoint, startDate, endDate time.Time) []models.InsightsMonthlyPoint {
+	byMonth := make(map[string]models.InsightsMonthlyPoint, len(points))
+	for _, point := range points {
+		byMonth[point.Month] = point
+	}
+
+	result := make([]models.InsightsMonthlyPoint, 0)
+	cursor := time.Date(startDate.Year(), startDate.Month(), 1, 0, 0, 0, 0, time.UTC)
+	last := time.Date(endDate.Year(), endDate.Month(), 1, 0, 0, 0, 0, time.UTC)
+	for !cursor.After(last) {
+		key := cursor.Format("2006-01")
+		if point, ok := byMonth[key]; ok {
+			result = append(result, point)
+		} else {
+			result = append(result, models.InsightsMonthlyPoint{Month: key})
+		}
+		cursor = cursor.AddDate(0, 1, 0)
+	}
+	return result
+}
+
+func isInDateRange(date, startDate, endDate time.Time) bool {
+	return !date.Before(startDate) && !date.After(endDate)
+}
+
 type investmentCashFlow struct {
 	amount float64
 	date   time.Time
+}
+
+// collectedInvestmentCashFlows holds the XIRR inputs together with the
+// aggregates derived from the exact same rows, so contributed, distributed
+// and realized interest cannot drift from what XIRR sees.
+type collectedInvestmentCashFlows struct {
+	flows            []investmentCashFlow
+	contributed      float64
+	distributed      float64
+	realizedInterest float64
+}
+
+// isInterestCredit matches the FD bookkeeping row that mirrors a positive
+// interest exit. Keeping it would cancel the realized coupon in XIRR.
+func isInterestCredit(name string) bool {
+	return strings.Contains(strings.ToLower(name), "interest credit")
+}
+
+// isRealizedInterest matches coupon rows, including the FD interest exit
+// rows, but never the interest-credit bookkeeping counterpart.
+func isRealizedInterest(name string) bool {
+	lower := strings.ToLower(name)
+	return strings.Contains(lower, "interest") && !strings.Contains(lower, "interest credit")
+}
+
+func collectInvestmentCashFlows(flows []models.AccountCashFlow) collectedInvestmentCashFlows {
+	result := collectedInvestmentCashFlows{flows: make([]investmentCashFlow, 0, len(flows))}
+	for _, flow := range flows {
+		if isInterestCredit(flow.Name) {
+			continue
+		}
+		if flow.Amount == 0 {
+			continue
+		}
+		result.flows = append(result.flows, investmentCashFlow{amount: flow.Amount, date: flow.Date})
+		if flow.Amount < 0 {
+			result.contributed += -flow.Amount
+			continue
+		}
+		result.distributed += flow.Amount
+		if isRealizedInterest(flow.Name) {
+			result.realizedInterest += flow.Amount
+		}
+	}
+	return result
 }
 
 func calculateInvestmentMetrics(flows []models.AccountCashFlow, currentValue float64, now time.Time) (float64, *float64) {
@@ -208,18 +407,9 @@ func calculateInvestmentMetrics(flows []models.AccountCashFlow, currentValue flo
 	}
 
 	// Build cash flows keeping the sign semantics from models: investments should be negative, inflows positive
-	cashFlows := make([]investmentCashFlow, 0, len(flows)+1)
-	totalInvested := 0.0
-	for _, flow := range flows {
-		cashAmount := flow.Amount // keep sign as-is (negative for investments)
-		if cashAmount == 0 {
-			continue
-		}
-		cashFlows = append(cashFlows, investmentCashFlow{amount: cashAmount, date: flow.Date})
-		if cashAmount < 0 {
-			totalInvested += -cashAmount
-		}
-	}
+	collected := collectInvestmentCashFlows(flows)
+	cashFlows := collected.flows
+	totalInvested := collected.contributed
 
 	percentageIncrease := 0.0
 	if totalInvested > 0 {
