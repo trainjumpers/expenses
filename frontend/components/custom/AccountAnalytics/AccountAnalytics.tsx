@@ -200,11 +200,37 @@ export function AccountAnalytics({ data }: AccountAnalyticsProps) {
     );
   }
 
-  const hasAccountList = !!accountsData && accountsData.length > 0;
+  // Investment accounts and accounts with a negative balance are hidden by
+  // default; selecting them in the filter opts them back in. Balances keep
+  // their real sign instead of being normalised to an absolute value.
+  const accountRows = data.map((account, index) => {
+    const accountInfo = accountsData?.find(
+      (acc) => acc.id === account.account_id
+    );
+    const isInvestment = accountInfo?.bank_type === "investment";
+    const actualBalance = account.current_balance + (accountInfo?.balance || 0);
+    return {
+      ...account,
+      accountName: accountInfo?.name || `Account ${account.account_id}`,
+      isInvestment,
+      actualBalance,
+      displayValue:
+        isInvestment &&
+        account.current_value !== null &&
+        account.current_value !== undefined
+          ? Number(account.current_value)
+          : actualBalance,
+      color: accountColors[index % accountColors.length],
+    };
+  });
+
+  const defaultRows = accountRows.filter(
+    (account) => !account.isInvestment && account.actualBalance >= 0
+  );
+
+  const hasAccountList = accountRows.length > 0;
   const showFilter = hasAccountList;
-  const allAccountIds = hasAccountList
-    ? accountsData.map((account) => account.id)
-    : [];
+  const allAccountIds = accountRows.map((account) => account.account_id);
   const hasAllSelectedApplied =
     selectedAccountIds.length > 0 &&
     allAccountIds.every((accountId) => selectedAccountIds.includes(accountId));
@@ -213,9 +239,11 @@ export function AccountAnalytics({ data }: AccountAnalyticsProps) {
     allAccountIds.every((accountId) => draftSelectedIds.includes(accountId));
   const selectedAccountCount = selectedAccountIds.length;
   const triggerLabel =
-    selectedAccountCount === 0 || hasAllSelectedApplied
-      ? "All accounts"
-      : `${selectedAccountCount} selected`;
+    selectedAccountCount === 0
+      ? "Default accounts"
+      : hasAllSelectedApplied
+        ? "All accounts"
+        : `${selectedAccountCount} selected`;
   const isDirty =
     selectedAccountIds.length !== draftSelectedIds.length ||
     selectedAccountIds.some(
@@ -247,50 +275,18 @@ export function AccountAnalytics({ data }: AccountAnalyticsProps) {
     setSelectedAccountIds(draftSelectedIds);
   };
 
-  const filteredData = selectedAccountIds.length
-    ? data.filter((account) => selectedAccountIds.includes(account.account_id))
-    : data;
+  const visibleRows = selectedAccountIds.length
+    ? accountRows.filter((account) =>
+        selectedAccountIds.includes(account.account_id)
+      )
+    : defaultRows;
 
-  // Calculate percentages and prepare data with account names and initial balances
-  const accountsWithBalances = filteredData.map((account, index) => {
-    // Find the account info from accounts data
-    const accountInfo = accountsData?.find(
-      (acc) => acc.id === account.account_id
-    );
-    const accountName = accountInfo?.name || `Account ${account.account_id}`;
-    const initialBalance = accountInfo?.balance || 0;
-    const isInvestment =
-      accountInfo?.bank_type === "investment" &&
-      account.current_value !== null &&
-      account.current_value !== undefined;
-
-    // Calculate the actual balance including initial balance
-    const actualBalance = account.current_balance + initialBalance;
-    const absoluteBalance = Math.abs(actualBalance);
-    const displayValue = isInvestment
-      ? Number(account.current_value)
-      : absoluteBalance;
-
-    return {
-      ...account,
-      accountName,
-      initialBalance,
-      actualBalance,
-      absoluteBalance,
-      displayValue,
-      isInvestment,
-      color: accountColors[index % accountColors.length],
-    };
-  });
-
-  // Calculate total balance from the actual balances
-  const totalBalance = accountsWithBalances.reduce(
+  const totalBalance = visibleRows.reduce(
     (sum, account) => sum + account.displayValue,
     0
   );
 
-  // Calculate percentages and sort
-  const accountsWithPercentages = accountsWithBalances
+  const accountsWithPercentages = visibleRows
     .map((account) => ({
       ...account,
       percentage:
@@ -339,16 +335,19 @@ export function AccountAnalytics({ data }: AccountAnalyticsProps) {
                       </Button>
                     </div>
                     <DropdownMenuSeparator />
-                    {accountsData?.map((account) => (
+                    {accountRows.map((account) => (
                       <DropdownMenuCheckboxItem
-                        key={account.id}
-                        checked={draftSelectedIds.includes(account.id)}
+                        key={account.account_id}
+                        checked={draftSelectedIds.includes(account.account_id)}
                         onCheckedChange={(checked) =>
-                          toggleAccountSelection(account.id, Boolean(checked))
+                          toggleAccountSelection(
+                            account.account_id,
+                            Boolean(checked)
+                          )
                         }
                         onSelect={(event) => event.preventDefault()}
                       >
-                        {account.name}
+                        {account.accountName}
                       </DropdownMenuCheckboxItem>
                     ))}
                     <DropdownMenuSeparator />
@@ -377,124 +376,139 @@ export function AccountAnalytics({ data }: AccountAnalyticsProps) {
         </CardHeader>
 
         <CardContent className="space-y-6">
-          {/* Horizontal Progress Bar */}
-          <div className="space-y-4">
-            <div className="h-4 rounded-full overflow-hidden">
-              {accountsWithPercentages.map((account) => (
-                <div
-                  key={account.account_id}
-                  className={`h-full ${account.color} inline-block`}
-                  style={{ width: `${account.percentage}%` }}
-                />
-              ))}
+          {accountsWithPercentages.length === 0 ? (
+            <div className="text-sm text-muted-foreground">
+              No accounts shown by default. Investment accounts and negative
+              balances are hidden; select them from the filter to include them.
             </div>
-
-            {/* Legend */}
-            <div className="flex flex-wrap gap-4 text-sm">
-              {accountsWithPercentages.map((account) => (
-                <div
-                  key={account.account_id}
-                  className="flex items-center gap-2"
-                >
-                  <div className={`w-3 h-3 rounded-full ${account.color}`} />
-                  <span className="text-muted-foreground">
-                    {account.accountName}:
-                  </span>
-                  <span className="font-medium">
-                    {account.percentage.toFixed(1)}%
-                  </span>
+          ) : (
+            <>
+              {/* Horizontal Progress Bar */}
+              <div className="space-y-4">
+                <div className="h-4 rounded-full overflow-hidden">
+                  {accountsWithPercentages.map((account) => (
+                    <div
+                      key={account.account_id}
+                      className={`h-full ${account.color} inline-block`}
+                      style={{ width: `${account.percentage}%` }}
+                    />
+                  ))}
                 </div>
-              ))}
-            </div>
-          </div>
 
-          {/* Detailed Table */}
-          <div className="border rounded-lg">
-            <Table>
-              <TableHeader>
-                <TableRow className="border-b">
-                  <TableHead className="w-12"></TableHead>
-                  <TableHead className="text-left text-sm font-medium text-muted-foreground">
-                    NAME
-                  </TableHead>
-                  <TableHead className="text-left text-sm font-medium text-muted-foreground">
-                    WEIGHT
-                  </TableHead>
-                  <TableHead className="text-right text-sm font-medium text-muted-foreground">
-                    VALUE
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {accountsWithPercentages.map((account) => {
-                  const isExpanded = expandedAccounts.has(account.account_id);
+                {/* Legend */}
+                <div className="flex flex-wrap gap-4 text-sm">
+                  {accountsWithPercentages.map((account) => (
+                    <div
+                      key={account.account_id}
+                      className="flex items-center gap-2"
+                    >
+                      <div
+                        className={`w-3 h-3 rounded-full ${account.color}`}
+                      />
+                      <span className="text-muted-foreground">
+                        {account.accountName}:
+                      </span>
+                      <span className="font-medium">
+                        {account.percentage.toFixed(1)}%
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
 
-                  return (
-                    <Fragment key={account.account_id}>
-                      <TableRow className="border-b">
-                        <TableCell className="w-12">
-                          <button
-                            onClick={() =>
-                              toggleAccountExpansion(account.account_id)
-                            }
-                            className="p-1 hover:bg-muted rounded transition-colors"
-                          >
-                            <ChevronRight
-                              className={`h-4 w-4 transition-transform ${
-                                isExpanded ? "rotate-90" : ""
-                              }`}
-                            />
-                          </button>
-                        </TableCell>
-                        <TableCell>
-                          <span className="font-medium">
-                            {account.accountName}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <div className="w-16 h-2 flex">
-                              {Array.from({ length: 5 }).map((_, i) => (
-                                <div
-                                  key={i}
-                                  className={`flex-1 h-full ${
-                                    i < Math.floor(account.percentage / 20)
-                                      ? account.color
-                                      : "bg-gray-200"
+              {/* Detailed Table */}
+              <div className="border rounded-lg">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-b">
+                      <TableHead className="w-12"></TableHead>
+                      <TableHead className="text-left text-sm font-medium text-muted-foreground">
+                        NAME
+                      </TableHead>
+                      <TableHead className="text-left text-sm font-medium text-muted-foreground">
+                        WEIGHT
+                      </TableHead>
+                      <TableHead className="text-right text-sm font-medium text-muted-foreground">
+                        VALUE
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {accountsWithPercentages.map((account) => {
+                      const isExpanded = expandedAccounts.has(
+                        account.account_id
+                      );
+
+                      return (
+                        <Fragment key={account.account_id}>
+                          <TableRow className="border-b">
+                            <TableCell className="w-12">
+                              <button
+                                onClick={() =>
+                                  toggleAccountExpansion(account.account_id)
+                                }
+                                className="p-1 hover:bg-muted rounded transition-colors"
+                              >
+                                <ChevronRight
+                                  className={`h-4 w-4 transition-transform ${
+                                    isExpanded ? "rotate-90" : ""
                                   }`}
-                                  style={{
-                                    marginRight: i < 4 ? "1px" : "0",
-                                  }}
                                 />
-                              ))}
-                            </div>
-                            <span className="text-sm">
-                              {account.percentage.toFixed(2)}%
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex flex-col items-end">
-                            <span className="font-medium">
-                              {formatCurrency(account.displayValue)}
-                            </span>
-                            {account.isInvestment && (
-                              <span className="text-xs text-muted-foreground">
-                                XIRR {formatPercentage(account.xirr ?? 0)}
+                              </button>
+                            </TableCell>
+                            <TableCell>
+                              <span className="font-medium">
+                                {account.accountName}
                               </span>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                      {isExpanded && (
-                        <AccountTransactions accountId={account.account_id} />
-                      )}
-                    </Fragment>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <div className="w-16 h-2 flex">
+                                  {Array.from({ length: 5 }).map((_, i) => (
+                                    <div
+                                      key={i}
+                                      className={`flex-1 h-full ${
+                                        i < Math.floor(account.percentage / 20)
+                                          ? account.color
+                                          : "bg-gray-200"
+                                      }`}
+                                      style={{
+                                        marginRight: i < 4 ? "1px" : "0",
+                                      }}
+                                    />
+                                  ))}
+                                </div>
+                                <span className="text-sm">
+                                  {account.percentage.toFixed(2)}%
+                                </span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex flex-col items-end">
+                                <span className="font-medium">
+                                  {formatCurrency(account.displayValue)}
+                                </span>
+                                {account.isInvestment && (
+                                  <span className="text-xs text-muted-foreground">
+                                    XIRR {formatPercentage(account.xirr ?? 0)}
+                                  </span>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                          {isExpanded && (
+                            <AccountTransactions
+                              accountId={account.account_id}
+                            />
+                          )}
+                        </Fragment>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
 

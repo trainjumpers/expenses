@@ -166,14 +166,17 @@ export function CategoryAnalytics({
     setDraftSelectedIds(selectedCategoryIds);
   }, [selectedCategoryIds]);
 
-  const hasData = !!data && data.length > 0;
+  const visibleData = (data ?? []).filter(
+    (category) => category.category_id !== -1
+  );
+  const hasData = visibleData.length > 0;
   const hasCategoryList = !!categories && categories.length > 0;
   const showFilter = hasCategoryList && !!onCategoryFilterChange;
   const handleCategoryFilterChange =
     onCategoryFilterChange ?? (() => undefined);
   const allCategoryIds = hasCategoryList
-    ? [...categories.map((category) => category.id), -1]
-    : [-1];
+    ? categories.map((category) => category.id)
+    : [];
   const hasAllSelectedApplied =
     selectedCategoryIds.length > 0 &&
     allCategoryIds.every((categoryId) =>
@@ -292,15 +295,6 @@ export function CategoryAnalytics({
                         </Button>
                       </div>
                       <DropdownMenuSeparator />
-                      <DropdownMenuCheckboxItem
-                        checked={draftSelectedIds.includes(-1)}
-                        onCheckedChange={(checked) =>
-                          toggleCategorySelection(-1, Boolean(checked))
-                        }
-                        onSelect={(event) => event.preventDefault()}
-                      >
-                        Uncategorized
-                      </DropdownMenuCheckboxItem>
                       {categories?.map((category) => (
                         <DropdownMenuCheckboxItem
                           key={category.id}
@@ -360,13 +354,13 @@ export function CategoryAnalytics({
   }
 
   // Calculate total amount - use absolute values to handle negative amounts
-  const totalAmount = data.reduce(
+  const totalAmount = visibleData.reduce(
     (sum, category) => sum + Math.abs(category.total_amount),
     0
   );
 
   // Calculate percentages and prepare data
-  const categoriesWithPercentages = data
+  const categoriesWithPercentages = visibleData
     .map((category, index) => {
       const absoluteAmount = Math.abs(category.total_amount);
       const percentage =
@@ -420,15 +414,6 @@ export function CategoryAnalytics({
                       </Button>
                     </div>
                     <DropdownMenuSeparator />
-                    <DropdownMenuCheckboxItem
-                      checked={draftSelectedIds.includes(-1)}
-                      onCheckedChange={(checked) =>
-                        toggleCategorySelection(-1, Boolean(checked))
-                      }
-                      onSelect={(event) => event.preventDefault()}
-                    >
-                      Uncategorized
-                    </DropdownMenuCheckboxItem>
                     {categories?.map((category) => (
                       <DropdownMenuCheckboxItem
                         key={category.id}
