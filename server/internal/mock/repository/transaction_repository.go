@@ -20,6 +20,7 @@ type MockTransactionRepository struct {
 	categoryMap                  map[int64][]int64
 	mu                           sync.RWMutex
 	statementTransactionMappings []statementTxnMapping // Use local struct for statement_id filtering
+	failures                     map[string]error
 }
 
 func NewMockTransactionRepository() *MockTransactionRepository {
@@ -31,9 +32,23 @@ func NewMockTransactionRepository() *MockTransactionRepository {
 	}
 }
 
+// FailOn makes the named method return err, so service tests can exercise
+// failure paths.
+func (m *MockTransactionRepository) FailOn(method string, err error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.failures == nil {
+		m.failures = make(map[string]error)
+	}
+	m.failures[method] = err
+}
+
 func (m *MockTransactionRepository) CreateTransaction(ctx context.Context, input models.CreateBaseTransactionInput, categoryIds []int64) (models.TransactionResponse, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if err := m.failures["CreateTransaction"]; err != nil {
+		return models.TransactionResponse{}, err
+	}
 	// Check for duplicate transaction based on composite uniqueness: created_by + date + name + description + amount
 	for _, tx := range m.transactions {
 		if tx.CreatedBy == input.CreatedBy &&
@@ -135,6 +150,9 @@ func (m *MockTransactionRepository) CreateTransactions(ctx context.Context, inpu
 func (m *MockTransactionRepository) UpdateCategoryMapping(ctx context.Context, transactionId int64, userId int64, categoryIds []int64) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if err := m.failures["UpdateCategoryMapping"]; err != nil {
+		return err
+	}
 	tx, ok := m.transactions[transactionId]
 	if !ok || tx.CreatedBy != userId {
 		return customErrors.NewTransactionNotFoundError(nil)
@@ -148,6 +166,9 @@ func (m *MockTransactionRepository) UpdateCategoryMapping(ctx context.Context, t
 func (m *MockTransactionRepository) GetTransactionById(ctx context.Context, transactionId int64, userId int64) (models.TransactionResponse, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
+	if err := m.failures["GetTransactionById"]; err != nil {
+		return models.TransactionResponse{}, err
+	}
 	tx, ok := m.transactions[transactionId]
 	if !ok || tx.CreatedBy != userId {
 		return models.TransactionResponse{}, customErrors.NewTransactionNotFoundError(nil)
@@ -159,6 +180,9 @@ func (m *MockTransactionRepository) GetTransactionsByIds(ctx context.Context, tr
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
+	if err := m.failures["GetTransactionsByIds"]; err != nil {
+		return nil, err
+	}
 	var transactions []models.TransactionResponse
 	for _, id := range transactionIds {
 		tx, ok := m.transactions[id]
@@ -170,6 +194,9 @@ func (m *MockTransactionRepository) GetTransactionsByIds(ctx context.Context, tr
 }
 
 func (m *MockTransactionRepository) UpdateTransaction(ctx context.Context, transactionId int64, userId int64, input models.UpdateBaseTransactionInput) error {
+	if err := m.failures["UpdateTransaction"]; err != nil {
+		return err
+	}
 	tx, ok := m.transactions[transactionId]
 	if !ok || tx.CreatedBy != userId {
 		return customErrors.NewTransactionNotFoundError(nil)
@@ -247,6 +274,9 @@ func (m *MockTransactionRepository) DeleteTransaction(ctx context.Context, trans
 }
 
 func (m *MockTransactionRepository) ListTransactions(ctx context.Context, userId int64, query models.TransactionListQuery) (models.PaginatedTransactionsResponse, error) {
+	if err := m.failures["ListTransactions"]; err != nil {
+		return models.PaginatedTransactionsResponse{}, err
+	}
 	var result []models.TransactionResponse
 
 	// Filter transactions by user Id and apply other filters

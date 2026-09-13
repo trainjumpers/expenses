@@ -10,6 +10,7 @@ import (
 type MockCategoryRepository struct {
 	categories map[int64]models.CategoryResponse
 	nextId     int64
+	failures   map[string]error
 	mu         sync.RWMutex
 }
 
@@ -18,6 +19,17 @@ func NewMockCategoryRepository() *MockCategoryRepository {
 		categories: make(map[int64]models.CategoryResponse),
 		nextId:     1,
 	}
+}
+
+// FailOn makes the named method return err, so service tests can exercise
+// failure paths.
+func (m *MockCategoryRepository) FailOn(method string, err error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.failures == nil {
+		m.failures = make(map[string]error)
+	}
+	m.failures[method] = err
 }
 
 func (m *MockCategoryRepository) CreateCategory(ctx context.Context, input models.CreateCategoryInput) (models.CategoryResponse, error) {
@@ -59,6 +71,9 @@ func (m *MockCategoryRepository) GetCategoryById(ctx context.Context, categoryId
 func (m *MockCategoryRepository) ListCategories(ctx context.Context, userId int64) ([]models.CategoryResponse, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
+	if err := m.failures["ListCategories"]; err != nil {
+		return nil, err
+	}
 	var result []models.CategoryResponse
 	for _, cat := range m.categories {
 		if cat.CreatedBy == userId {
