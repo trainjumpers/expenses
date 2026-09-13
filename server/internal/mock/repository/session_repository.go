@@ -12,6 +12,7 @@ type MockSessionRepository struct {
 	sessions map[string]models.Session
 	nextId   int64
 	mu       sync.RWMutex
+	failures map[string]error
 }
 
 func NewMockSessionRepository() *MockSessionRepository {
@@ -21,9 +22,23 @@ func NewMockSessionRepository() *MockSessionRepository {
 	}
 }
 
+// FailOn makes Create, RevokeAllForUser, ExpireByHash or DeleteExpired return err,
+// so service tests can exercise failure paths.
+func (m *MockSessionRepository) FailOn(method string, err error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.failures == nil {
+		m.failures = make(map[string]error)
+	}
+	m.failures[method] = err
+}
+
 func (m *MockSessionRepository) Create(_ context.Context, userId int64, tokenHash string, expiresAt time.Time) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if err := m.failures["Create"]; err != nil {
+		return err
+	}
 	m.sessions[tokenHash] = models.Session{
 		Id:        m.nextId,
 		UserId:    userId,
@@ -45,9 +60,7 @@ func (m *MockSessionRepository) GetActiveByHash(_ context.Context, tokenHash str
 }
 
 func (m *MockSessionRepository) Rotate(ctx context.Context, userId int64, oldHash, newHash string, expiresAt time.Time) error {
-	if _, err := m.RevokeByHash(ctx, oldHash); err != nil {
-		return err
-	}
+	m.RevokeByHash(ctx, oldHash)
 	return m.Create(ctx, userId, newHash, expiresAt)
 }
 
@@ -67,6 +80,9 @@ func (m *MockSessionRepository) RevokeByHash(_ context.Context, tokenHash string
 func (m *MockSessionRepository) RevokeAllForUser(_ context.Context, userId int64) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if err := m.failures["RevokeAllForUser"]; err != nil {
+		return err
+	}
 	now := time.Now()
 	for hash, session := range m.sessions {
 		if session.UserId == userId && session.RevokedAt == nil {
@@ -80,6 +96,9 @@ func (m *MockSessionRepository) RevokeAllForUser(_ context.Context, userId int64
 func (m *MockSessionRepository) ExpireByHash(_ context.Context, tokenHash string) (int64, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if err := m.failures["ExpireByHash"]; err != nil {
+		return 0, err
+	}
 	session, ok := m.sessions[tokenHash]
 	if !ok {
 		return 0, nil
@@ -92,6 +111,9 @@ func (m *MockSessionRepository) ExpireByHash(_ context.Context, tokenHash string
 func (m *MockSessionRepository) DeleteExpired(_ context.Context) (int64, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if err := m.failures["DeleteExpired"]; err != nil {
+		return 0, err
+	}
 	var deleted int64
 	for hash, session := range m.sessions {
 		if session.ExpiresAt.Before(time.Now()) {

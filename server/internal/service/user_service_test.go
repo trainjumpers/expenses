@@ -5,6 +5,7 @@ import (
 	"expenses/internal/errors"
 	mock "expenses/internal/mock/repository"
 	"expenses/internal/models"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -138,6 +139,22 @@ var _ = Describe("UserService", func() {
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(BeAssignableToTypeOf(&errors.AuthError{}))
 			Expect(err.(*errors.AuthError).ErrorType).To(Equal("UserNotFound"))
+		})
+
+		It("should revoke active sessions before deleting the user", func() {
+			Expect(sessionRepo.Create(ctx, createdUser.Id, "session-token", time.Now().Add(time.Hour))).To(Succeed())
+
+			Expect(userService.DeleteUser(ctx, createdUser.Id)).To(Succeed())
+
+			_, err := sessionRepo.GetActiveByHash(ctx, "session-token")
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("should return error when revoking sessions fails", func() {
+			sessionRepo.FailOn("RevokeAllForUser", errors.New("session store down"))
+
+			err := userService.DeleteUser(ctx, createdUser.Id)
+			Expect(err).To(HaveOccurred())
 		})
 	})
 

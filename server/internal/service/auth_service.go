@@ -24,7 +24,6 @@ type AuthServiceInterface interface {
 	Login(ctx context.Context, loginInput models.LoginInput) (models.AuthResponse, error)
 	RefreshToken(ctx context.Context, refreshToken string) (models.AuthResponse, error)
 	Logout(ctx context.Context, refreshToken string) error
-	LogoutAllSessions(ctx context.Context, userId int64) error
 	UpdateUserPassword(ctx context.Context, userId int64, updatedUser models.UpdateUserPasswordInput) (models.UserResponse, error)
 	// ExpireRefreshToken is a helper method for testing purposes only.
 	// DO NOT USE IN PRODUCTION.
@@ -157,11 +156,6 @@ func (a *AuthService) Logout(ctx context.Context, refreshToken string) error {
 	}
 	_, err := a.sessionRepo.RevokeByHash(ctx, hashRefreshToken(refreshToken))
 	return err
-}
-
-// LogoutAllSessions revokes every active session for a user.
-func (a *AuthService) LogoutAllSessions(ctx context.Context, userId int64) error {
-	return a.sessionRepo.RevokeAllForUser(ctx, userId)
 }
 
 func (a *AuthService) UpdateUserPassword(ctx context.Context, userId int64, updatedUser models.UpdateUserPasswordInput) (models.UserResponse, error) {
