@@ -27,6 +27,12 @@ type limiterEntry struct {
 	lastSeen time.Time
 }
 
+// maxLoginBodyBytes caps how much of a login body is read to extract the email key.
+// Login payloads are tiny, and the request is unauthenticated, so an unbounded read
+// would be a memory-exhaustion vector.
+const maxLoginBodyBytes = 1 << 20
+
+// NewKeyedLimiter returns a limiter allowing perMinute requests per key, with the given burst.
 func NewKeyedLimiter(perMinute, burst int) *KeyedLimiter {
 	limiter := &KeyedLimiter{
 		limiters: make(map[string]*limiterEntry),
@@ -54,13 +60,17 @@ func (l *KeyedLimiter) evictStale() {
 	ticker := time.NewTicker(time.Minute)
 	defer ticker.Stop()
 	for range ticker.C {
-		l.mu.Lock()
-		for key, entry := range l.limiters {
-			if time.Since(entry.lastSeen) > l.ttl {
-				delete(l.limiters, key)
-			}
+		l.evictStaleOnce()
+	}
+}
+
+func (l *KeyedLimiter) evictStaleOnce() {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	for key, entry := range l.limiters {
+		if time.Since(entry.lastSeen) > l.ttl {
+			delete(l.limiters, key)
 		}
-		l.mu.Unlock()
 	}
 }
 
@@ -89,7 +99,7 @@ func LoginEmailKey(ctx *gin.Context) string {
 	if ctx.Request.Body == nil {
 		return ClientIPKey(ctx)
 	}
-	bodyBytes, err := io.ReadAll(ctx.Request.Body)
+	bodyBytes, err := io.ReadAll(io.LimitReader(ctx.Request.Body, maxLoginBodyBytes))
 	if err != nil {
 		return ClientIPKey(ctx)
 	}
