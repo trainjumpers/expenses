@@ -26,6 +26,7 @@ type Config struct {
 	CookieDomain         string
 	LoggingLevel         string
 	TrustedProxies       []string
+	CORSAllowedOrigins   []string
 }
 
 func GetEnvironment() string {
@@ -64,7 +65,17 @@ func NewConfig() (*Config, error) {
 	config.CookieDomain = os.Getenv("COOKIE_DOMAIN")
 	config.LoggingLevel = os.Getenv("LOGGING_LEVEL")
 	config.TrustedProxies = getEnvList("TRUSTED_PROXIES")
+	config.CORSAllowedOrigins = getEnvListWithDefault("CORS_ALLOWED_ORIGINS", []string{"http://localhost:3000", "https://neurospend.vercel.app"})
 	return config, nil
+}
+
+// getEnvListWithDefault reads a comma-separated environment variable into a
+// slice, falling back to defaultValue when unset or empty.
+func getEnvListWithDefault(key string, defaultValue []string) []string {
+	if items := getEnvList(key); len(items) > 0 {
+		return items
+	}
+	return defaultValue
 }
 
 // String returns a human-readable string representation of the Config

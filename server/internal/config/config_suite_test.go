@@ -25,6 +25,7 @@ var _ = Describe("Config", func() {
 		os.Unsetenv("ACCESS_TOKEN_HOURS")
 		os.Unsetenv("REFRESH_TOKEN_DAYS")
 		os.Unsetenv("TRUSTED_PROXIES")
+		os.Unsetenv("CORS_ALLOWED_ORIGINS")
 	})
 
 	Context("when creating a new config", func() {
@@ -190,6 +191,26 @@ var _ = Describe("Config", func() {
 			os.Setenv("JWT_SECRET", "test-secret")
 			_, err := NewConfig()
 			Expect(err).NotTo(HaveOccurred())
+		})
+	})
+
+	Context("CORS allowed origins", func() {
+		BeforeEach(func() {
+			os.Setenv("JWT_SECRET", "test-secret")
+			os.Setenv("DB_SCHEMA", "test_schema")
+		})
+
+		It("should default to the dev and production frontends", func() {
+			cfg, err := NewConfig()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(cfg.CORSAllowedOrigins).To(Equal([]string{"http://localhost:3000", "https://neurospend.vercel.app"}))
+		})
+
+		It("should parse an override list", func() {
+			os.Setenv("CORS_ALLOWED_ORIGINS", "https://app.example.com, https://staging.example.com")
+			cfg, err := NewConfig()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(cfg.CORSAllowedOrigins).To(Equal([]string{"https://app.example.com", "https://staging.example.com"}))
 		})
 	})
 })

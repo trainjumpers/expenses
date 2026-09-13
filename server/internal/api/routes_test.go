@@ -12,15 +12,19 @@ import (
 func TestInitRegistersAuthRoutesOutsideTest(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	router := Init(&config.Config{Environment: config.EnvironmentDev}, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+	router := Init(&config.Config{
+		Environment:        config.EnvironmentDev,
+		CORSAllowedOrigins: []string{"http://localhost:3000"},
+	}, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 	if !hasRoute(router, http.MethodPost, "/api/v1/login") {
 		t.Fatal("expected login route to be registered")
 	}
 
 	// An invalid proxy list must not abort startup; proxy headers are ignored instead.
 	router = Init(&config.Config{
-		Environment:    config.EnvironmentDev,
-		TrustedProxies: []string{"not-an-ip"},
+		Environment:        config.EnvironmentDev,
+		TrustedProxies:     []string{"not-an-ip"},
+		CORSAllowedOrigins: []string{"http://localhost:3000"},
 	}, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 	if !hasRoute(router, http.MethodPost, "/api/v1/login") {
 		t.Fatal("expected login route to be registered with invalid trusted proxies")
