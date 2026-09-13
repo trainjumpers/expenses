@@ -29,6 +29,7 @@ func (a *AccountController) CreateAccount(ctx *gin.Context) {
 		logger.Errorf("Failed to bind JSON: %v", err)
 		return
 	}
+	input.CreatedBy = a.GetAuthenticatedUserId(ctx)
 	logger.Infof("Creating new account for user %d", input.CreatedBy)
 	account, err := a.accountService.CreateAccount(ctx, input)
 	if err != nil {

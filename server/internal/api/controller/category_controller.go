@@ -29,6 +29,7 @@ func (c *CategoryController) CreateCategory(ctx *gin.Context) {
 		logger.Errorf("Failed to bind JSON: %v", err)
 		return
 	}
+	input.CreatedBy = c.GetAuthenticatedUserId(ctx)
 	logger.Infof("Creating new category for user %d", input.CreatedBy)
 	category, err := c.categoryService.CreateCategory(ctx, input)
 	if err != nil {

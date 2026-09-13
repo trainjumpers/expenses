@@ -29,6 +29,7 @@ func (t *TransactionController) CreateTransaction(ctx *gin.Context) {
 		logger.Errorf("Failed to bind JSON: %v", err)
 		return
 	}
+	input.CreatedBy = t.GetAuthenticatedUserId(ctx)
 	logger.Infof("Creating new transaction for user %d", input.CreatedBy)
 	transaction, err := t.transactionService.CreateTransaction(ctx, input)
 	if err != nil {

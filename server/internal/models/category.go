@@ -27,7 +27,7 @@ func TransferCategoryNames() []string {
 type CreateCategoryInput struct {
 	Name      string `json:"name" binding:"required" maxlength:"100"`
 	Icon      string `json:"icon"`
-	CreatedBy int64  `json:"created_by" binding:"required"`
+	CreatedBy int64  `json:"-"`
 }
 
 // UpdateCategoryInput is used for updating an existing category
