@@ -1,18 +1,32 @@
 package service
 
 import (
+	"archive/zip"
+	"bytes"
 	"context"
 	"errors"
+	customErrors "expenses/internal/errors"
 	mockDatabase "expenses/internal/mock/database"
 	repository "expenses/internal/mock/repository"
 	"expenses/internal/models"
 	"expenses/internal/validator"
 	"expenses/pkg/utils"
+	"hash/crc32"
+	"net/http"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
+
+type createFailingStatementRepository struct {
+	*repository.MockStatementRepository
+	err error
+}
+
+func (r *createFailingStatementRepository) CreateStatement(context.Context, models.CreateStatementInput) (models.StatementResponse, error) {
+	return models.StatementResponse{}, r.err
+}
 
 var _ = Describe("StatementService", func() {
 	var (
@@ -43,6 +57,8 @@ var _ = Describe("StatementService", func() {
 			txService:          txnService,
 			accountService:     accountService,
 			ruleEngineService:  ruleEngineService,
+			workerSlots:        make(chan struct{}, maxConcurrentParses),
+			parseTimeout:       parseTimeout,
 		}
 		userId = 42
 	})
@@ -1158,6 +1174,109 @@ var _ = Describe("StatementService", func() {
 					Expect(err).NotTo(HaveOccurred())
 				}
 			})
+		})
+	})
+
+	Describe("ParseStatement limits", func() {
+		It("should return a busy error when all parse slots are held", func() {
+			balance := 1000.0
+			acc, err := accountService.CreateAccount(ctx, models.CreateAccountInput{
+				Name:      "Busy Account",
+				BankType:  models.BankTypeAxis,
+				Currency:  models.CurrencyINR,
+				Balance:   &balance,
+				CreatedBy: userId,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			for i := 0; i < maxConcurrentParses; i++ {
+				service.workerSlots <- struct{}{}
+			}
+
+			input := models.ParseStatementInput{
+				FileBytes:        []byte("Date,Description,Amount\n2023-01-01,Test Transaction,100.00"),
+				FileName:         "statement.csv",
+				AccountId:        acc.Id,
+				OriginalFilename: "statement.csv",
+			}
+			_, err = service.ParseStatement(ctx, input, userId)
+			Expect(err).To(HaveOccurred())
+			var apiErr *customErrors.AuthError
+			Expect(errors.As(err, &apiErr)).To(BeTrue())
+			Expect(apiErr.Status).To(Equal(http.StatusServiceUnavailable))
+			Expect(apiErr.ErrorType).To(Equal("StatementBusy"))
+		})
+
+		It("should release the parse slot when statement creation fails", func() {
+			balance := 1000.0
+			acc, err := accountService.CreateAccount(ctx, models.CreateAccountInput{
+				Name:      "Failing Account",
+				BankType:  models.BankTypeAxis,
+				Currency:  models.CurrencyINR,
+				Balance:   &balance,
+				CreatedBy: userId,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			service.repo = &createFailingStatementRepository{
+				MockStatementRepository: mockRepo,
+				err:                     errors.New("create failed"),
+			}
+
+			input := models.ParseStatementInput{
+				FileBytes:        []byte("Date,Description,Amount\n2023-01-01,Test Transaction,100.00"),
+				FileName:         "statement.csv",
+				AccountId:        acc.Id,
+				OriginalFilename: "statement.csv",
+			}
+			_, err = service.ParseStatement(ctx, input, userId)
+			Expect(err).To(HaveOccurred())
+			Expect(service.workerSlots).To(HaveLen(0))
+		})
+
+		It("should mark the statement as error when the workbook exceeds the size limit", func() {
+			acc, err := accountService.CreateAccount(ctx, models.CreateAccountInput{
+				Name:      "Oversized Account",
+				BankType:  models.BankTypeSBI,
+				Currency:  models.CurrencyINR,
+				CreatedBy: userId,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			statement, err := mockRepo.CreateStatement(ctx, models.CreateStatementInput{
+				AccountId:        acc.Id,
+				CreatedBy:        userId,
+				OriginalFilename: "statement.xlsx",
+				FileType:         "excel",
+				Status:           models.StatementStatusPending,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			var buf bytes.Buffer
+			zipWriter := zip.NewWriter(&buf)
+			payload := []byte("PK")
+			raw, err := zipWriter.CreateRaw(&zip.FileHeader{
+				Name:               "xl/oversized.bin",
+				Method:             zip.Store,
+				CRC32:              crc32.ChecksumIEEE(payload),
+				CompressedSize64:   uint64(len(payload)),
+				UncompressedSize64: 200 << 20,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			_, err = raw.Write(payload)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(zipWriter.Close()).To(Succeed())
+
+			input := models.ParseStatementInput{
+				AccountId:        acc.Id,
+				OriginalFilename: "statement.xlsx",
+				FileBytes:        buf.Bytes(),
+			}
+			service.processStatementAsync(ctx, statement.Id, input, userId)
+
+			result, err := service.GetStatementStatus(ctx, statement.Id, userId)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result.Status).To(Equal(models.StatementStatusError))
+			Expect(result.Message).NotTo(BeNil())
+			Expect(*result.Message).To(ContainSubstring("workbook expands beyond"))
 		})
 	})
 })

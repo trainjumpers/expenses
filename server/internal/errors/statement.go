@@ -25,3 +25,7 @@ func NewStatementBadRequestError(err error) *AuthError {
 func NewStatementPasswordRequiredError(err error) *AuthError {
 	return formatError(http.StatusBadRequest, "statement password required", err, "StatementPasswordRequired")
 }
+
+func NewStatementBusyError(err error) *AuthError {
+	return formatError(http.StatusServiceUnavailable, "statement processing is busy, please retry", err, "StatementBusy")
+}
