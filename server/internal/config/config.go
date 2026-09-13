@@ -13,6 +13,8 @@ const (
 	EnvironmentDev  = "dev"
 	EnvironmentProd = "prod"
 	EnvironmentTest = "test"
+
+	minProdJWTSecretLength = 32
 )
 
 type Config struct {
@@ -39,6 +41,9 @@ func NewConfig() (*Config, error) {
 	jwtSecret := os.Getenv("JWT_SECRET")
 	if jwtSecret == "" {
 		return nil, errors.New("JWT_SECRET environment variable is not set")
+	}
+	if config.IsProd() && len(jwtSecret) < minProdJWTSecretLength {
+		return nil, fmt.Errorf("JWT_SECRET must be at least %d bytes in production", minProdJWTSecretLength)
 	}
 	config.JWTSecret = []byte(jwtSecret)
 	config.DBSchema = strings.ToLower(os.Getenv("DB_SCHEMA"))

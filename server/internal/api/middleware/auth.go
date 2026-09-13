@@ -66,7 +66,7 @@ func Protected(cfg *config.Config) gin.HandlerFunc {
 func verifyAuthToken(tokenString string, cfg *config.Config) (jwt.MapClaims, error) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
 		return cfg.JWTSecret, nil
-	})
+	}, jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}), jwt.WithExpirationRequired())
 	if err != nil {
 		return nil, err
 	}

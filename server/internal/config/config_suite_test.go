@@ -49,6 +49,7 @@ var _ = Describe("Config", func() {
 
 		It("should create a config with custom environment and token durations", func() {
 			os.Setenv("ENV", "prod")
+			os.Setenv("JWT_SECRET", "a-production-secret-that-is-long-enough")
 			os.Setenv("ACCESS_TOKEN_HOURS", "24")
 			os.Setenv("REFRESH_TOKEN_DAYS", "30")
 
@@ -127,6 +128,7 @@ var _ = Describe("Config", func() {
 
 		It("should correctly identify prod environment", func() {
 			os.Setenv("ENV", "prod")
+			os.Setenv("JWT_SECRET", "a-production-secret-that-is-long-enough")
 			cfg, err := NewConfig()
 			Expect(err).NotTo(HaveOccurred())
 			Expect(cfg.IsDev()).To(BeFalse())
@@ -139,6 +141,34 @@ var _ = Describe("Config", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(cfg.IsDev()).To(BeFalse())
 			Expect(cfg.IsProd()).To(BeFalse())
+		})
+	})
+
+	Context("JWT secret strength", func() {
+		BeforeEach(func() {
+			os.Setenv("DB_SCHEMA", "test_schema")
+		})
+
+		It("should reject a short secret in production", func() {
+			os.Setenv("ENV", "prod")
+			os.Setenv("JWT_SECRET", "test-secret")
+			_, err := NewConfig()
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("at least 32 bytes"))
+		})
+
+		It("should accept a 32 byte secret in production", func() {
+			os.Setenv("ENV", "prod")
+			os.Setenv("JWT_SECRET", "01234567890123456789012345678901")
+			_, err := NewConfig()
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should allow a short secret outside production", func() {
+			os.Setenv("ENV", "dev")
+			os.Setenv("JWT_SECRET", "test-secret")
+			_, err := NewConfig()
+			Expect(err).NotTo(HaveOccurred())
 		})
 	})
 })
