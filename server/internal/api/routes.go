@@ -5,6 +5,7 @@ import (
 	"expenses/internal/api/middleware"
 	"expenses/internal/config"
 	"expenses/internal/service"
+	"expenses/pkg/logger"
 	"time"
 
 	"github.com/gin-contrib/cors"
@@ -28,6 +29,10 @@ func Init(
 		router.Use(gin.Logger()) // Disable logger when running tests and logging level is not set
 	}
 	router.Use(gin.Recovery())
+	if err := router.SetTrustedProxies(cfg.TrustedProxies); err != nil {
+		logger.Warnf("invalid TRUSTED_PROXIES, disabling proxy header trust: %v", err)
+		_ = router.SetTrustedProxies(nil)
+	}
 	router.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"http://localhost:3000", "https://neurospend.vercel.app"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
@@ -62,10 +67,29 @@ func Init(
 	api := router.Group("/api/v1")
 	{
 		base := api.Group("")
+
+		// Auth endpoints are the most exposed surface. They are rate limited per
+		// email (login, the brute-force target) and per IP. The in-process e2e
+		// suite hammers these routes from a single address, so throttling is off
+		// in the test environment; the middleware itself is unit tested.
+		authRateLimiters := map[string][]gin.HandlerFunc{}
+		if !cfg.IsTest() {
+			authRateLimiters["login"] = []gin.HandlerFunc{
+				middleware.RateLimit(middleware.NewKeyedLimiter(60, 20), middleware.ClientIPKey),
+				middleware.RateLimit(middleware.NewKeyedLimiter(10, 5), middleware.LoginEmailKey),
+			}
+			authRateLimiters["signup"] = []gin.HandlerFunc{
+				middleware.RateLimit(middleware.NewKeyedLimiter(20, 10), middleware.ClientIPKey),
+			}
+			authRateLimiters["refresh"] = []gin.HandlerFunc{
+				middleware.RateLimit(middleware.NewKeyedLimiter(30, 15), middleware.ClientIPKey),
+			}
+		}
+
 		// Auth related routes
-		base.POST("/signup", authController.Signup)
-		base.POST("/login", authController.Login)
-		base.POST("/refresh", authController.RefreshToken)
+		base.POST("/signup", append(authRateLimiters["signup"], authController.Signup)...)
+		base.POST("/login", append(authRateLimiters["login"], authController.Login)...)
+		base.POST("/refresh", append(authRateLimiters["refresh"], authController.RefreshToken)...)
 		base.POST("/logout", authController.Logout)
 
 		// User related routes

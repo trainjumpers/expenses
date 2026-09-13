@@ -28,6 +28,14 @@ export const handleApiError = (status: number, resource: string) => {
         `${resource.charAt(0).toUpperCase() + resource.slice(1)} already exists`
       );
       break;
+    case 413:
+      toast.error("File is too large", { id: "file-too-large" });
+      break;
+    case 429:
+      toast.error("Too many attempts. Please try again later", {
+        id: "rate-limited",
+      });
+      break;
     default:
       toast.error(
         "Something went wrong. Contact support if the problem persists",
