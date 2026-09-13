@@ -213,4 +213,17 @@ var _ = Describe("Config", func() {
 			Expect(cfg.CORSAllowedOrigins).To(Equal([]string{"https://app.example.com", "https://staging.example.com"}))
 		})
 	})
+
+	Context("String representation", func() {
+		It("should mask the JWT secret", func() {
+			os.Setenv("JWT_SECRET", "super-secret-value")
+			os.Setenv("DB_SCHEMA", "test_schema")
+
+			cfg, err := NewConfig()
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(cfg.String()).To(ContainSubstring(`JWTSecret: "***"`))
+			Expect(cfg.String()).NotTo(ContainSubstring("super-secret-value"))
+		})
+	})
 })

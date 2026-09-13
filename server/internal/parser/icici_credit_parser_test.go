@@ -214,6 +214,16 @@ var _ = Describe("ICICICreditParser", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(txns).To(HaveLen(0))
 		})
+
+		It("should skip rows with an unparseable amount", func() {
+			input := `"Date","Sr.No.","Transaction Details","Reward Point Header","Intl.Amount","Amount(in Rs)","BillingAmountSign"
+"12/07/2025","1","Desc","0","0","bad",""
+"13/07/2025","2","Good","0","0","100.00",""`
+			txns, err := parser.Parse([]byte(input), "", "test.csv", "")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(txns).To(HaveLen(1))
+			Expect(txns[0].Name).To(Equal("Good"))
+		})
 	})
 
 	Describe("Parser Registry", func() {

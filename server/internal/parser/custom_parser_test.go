@@ -1,13 +1,54 @@
 package parser
 
 import (
+	"archive/zip"
+	"bytes"
+	"io"
 	"time"
 
 	"expenses/internal/models"
+	"expenses/pkg/utils"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
+
+func rewriteXLSX(src []byte, replace map[string][]byte, drop map[string]bool) ([]byte, error) {
+	zr, err := zip.NewReader(bytes.NewReader(src), int64(len(src)))
+	if err != nil {
+		return nil, err
+	}
+	var out bytes.Buffer
+	zw := zip.NewWriter(&out)
+	for _, f := range zr.File {
+		if drop[f.Name] {
+			continue
+		}
+		rc, err := f.Open()
+		if err != nil {
+			return nil, err
+		}
+		data, err := io.ReadAll(rc)
+		rc.Close()
+		if err != nil {
+			return nil, err
+		}
+		if r, ok := replace[f.Name]; ok {
+			data = r
+		}
+		w, err := zw.Create(f.Name)
+		if err != nil {
+			return nil, err
+		}
+		if _, err := w.Write(data); err != nil {
+			return nil, err
+		}
+	}
+	if err := zw.Close(); err != nil {
+		return nil, err
+	}
+	return out.Bytes(), nil
+}
 
 var _ = Describe("CustomParser", func() {
 	var p *CustomParser
@@ -293,6 +334,113 @@ not-a-date,Supermarket,150.75
 				Expect(transactions[0].Name).To(Equal("Restaurant"))
 				Expect(*transactions[0].Amount).To(Equal(120.00))
 			})
+		})
+	})
+
+	Describe("IsExcelPasswordProtectedBytes", func() {
+		It("returns false for data shorter than the zip header", func() {
+			Expect(IsExcelPasswordProtectedBytes([]byte{0x50, 0x4B})).To(BeFalse())
+		})
+
+		It("returns false for a valid zip header", func() {
+			Expect(IsExcelPasswordProtectedBytes([]byte{0x50, 0x4B, 0x03, 0x04, 0x00})).To(BeFalse())
+		})
+
+		It("returns true when the leading bytes are not a zip header", func() {
+			Expect(IsExcelPasswordProtectedBytes([]byte("not a zip"))).To(BeTrue())
+		})
+	})
+
+	Describe("ValidateWorkbookPassword", func() {
+		It("returns the open error for invalid bytes", func() {
+			Expect(ValidateWorkbookPassword([]byte("not a workbook"), "")).To(HaveOccurred())
+		})
+
+		It("returns nil for a valid workbook", func() {
+			xlsx := utils.CreateXLSXFile([][]string{{"a", "b"}, {"1", "2"}})
+			Expect(ValidateWorkbookPassword(xlsx, "")).To(Succeed())
+		})
+	})
+
+	Describe("Preview edge cases", func() {
+		It("returns an error for malformed CSV", func() {
+			_, err := p.Preview([]byte("Header\n\"unclosed"), "test.csv", 0, -1, "")
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("failed to read csv"))
+		})
+
+		It("returns an error for malformed TSV in an xls file", func() {
+			_, err := p.Preview([]byte("Header\n\"unclosed"), "test.xls", 0, -1, "")
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("failed to read tsv from xls file"))
+		})
+
+		It("returns an error for invalid xlsx bytes", func() {
+			_, err := p.Preview([]byte("not a workbook"), "test.xlsx", 0, -1, "")
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("failed to open xlsx file"))
+		})
+
+		It("previews a valid xlsx file", func() {
+			xlsx := utils.CreateXLSXFile([][]string{{"H1", "H2"}, {"a", "b"}})
+			preview, err := p.Preview(xlsx, "test.xlsx", 0, -1, "")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(preview.Headers).To(Equal([]string{"H1", "H2"}))
+			Expect(preview.Rows).To(HaveLen(1))
+		})
+
+		It("returns an error for an xlsx file with no sheets", func() {
+			emptyWorkbook := []byte(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheets></sheets></workbook>`)
+			xlsx, err := rewriteXLSX(utils.CreateXLSXFile([][]string{{"a"}}), map[string][]byte{"xl/workbook.xml": emptyWorkbook}, nil)
+			Expect(err).NotTo(HaveOccurred())
+			_, err = p.Preview(xlsx, "test.xlsx", 0, -1, "")
+			Expect(err).To(MatchError("no sheets found in XLSX file"))
+		})
+
+		It("returns an error when a referenced sheet is missing", func() {
+			xlsx, err := rewriteXLSX(utils.CreateXLSXFile([][]string{{"a"}}), nil, map[string]bool{"xl/worksheets/sheet1.xml": true})
+			Expect(err).NotTo(HaveOccurred())
+			_, err = p.Preview(xlsx, "test.xlsx", 0, -1, "")
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("failed to read rows from sheet"))
+		})
+	})
+
+	Describe("Parse edge cases", func() {
+		It("wraps preview errors when the file type is unsupported", func() {
+			metadata := `{"skip_rows":0,"column_mapping":{"txn_date":"Date","name":"Payee","amount":"Amount"}}`
+			_, err := p.Parse([]byte("content"), metadata, "statement.pdf", "")
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("failed to preview file for parsing"))
+		})
+
+		It("skips an unmapped optional description column", func() {
+			csvContent := `Date,Payee,Amount
+2024-01-15,Supermarket,150.75`
+			metadata := `{"skip_rows":0,"column_mapping":{"txn_date":"Date","name":"Payee","description":"Desc","amount":"Amount"}}`
+			transactions, err := p.Parse([]byte(csvContent), metadata, "test.csv", "")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(transactions).To(HaveLen(1))
+			Expect(transactions[0].Description).To(BeEmpty())
+		})
+	})
+
+	Describe("parseRow and getAmount", func() {
+		It("returns an error when txn_date is not mapped", func() {
+			_, err := p.parseRow([]string{"2024-01-15"}, map[string]int{})
+			Expect(err).To(MatchError("field 'txn_date' is not mapped"))
+		})
+
+		It("returns an error when the credit value is not numeric", func() {
+			_, err := p.getAmount([]string{"abc", ""}, map[string]int{"credit": 0, "debit": 1})
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("failed to parse credit"))
+		})
+
+		It("returns an error when the debit value is not numeric", func() {
+			_, err := p.getAmount([]string{"", "abc"}, map[string]int{"credit": 0, "debit": 1})
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("failed to parse debit"))
 		})
 	})
 })

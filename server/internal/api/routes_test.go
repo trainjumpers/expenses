@@ -2,6 +2,8 @@ package api
 
 import (
 	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"expenses/internal/config"
@@ -38,4 +40,23 @@ func hasRoute(router *gin.Engine, method, path string) bool {
 		}
 	}
 	return false
+}
+
+func TestRootRouteResponds(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	router := Init(&config.Config{
+		Environment:        config.EnvironmentDev,
+		CORSAllowedOrigins: []string{"http://localhost:3000"},
+	}, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/", nil))
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", recorder.Code)
+	}
+	if !strings.Contains(recorder.Body.String(), "Welcome to the expense tracker server") {
+		t.Fatalf("unexpected response body: %s", recorder.Body.String())
+	}
 }

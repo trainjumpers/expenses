@@ -443,4 +443,25 @@ var _ = Describe("Utils", func() {
 			})
 		})
 	})
+
+	Describe("invalid struct types", func() {
+		It("should reject a pointer to a non-struct in ExtractFields", func() {
+			values := []string{"a"}
+
+			ptrs, vals, fields, err := ExtractFields(&values, false)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("pointer to a struct"))
+			Expect(ptrs).To(BeNil())
+			Expect(vals).To(BeNil())
+			Expect(fields).To(BeNil())
+		})
+
+		It("should ignore non-struct pointers in ConvertStruct", func() {
+			src := []string{"a"}
+			dst := []string{"b"}
+
+			Expect(func() { ConvertStruct(&src, &dst) }).ToNot(Panic())
+			Expect(dst).To(Equal([]string{"b"}))
+		})
+	})
 })
