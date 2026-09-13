@@ -32,6 +32,19 @@ export function useTransactions(params: TransactionQueryParams = {}) {
   });
 }
 
+// The earliest transaction date bounds the "All time" range so it does not
+// query from an arbitrary epoch.
+export function useFirstTransactionDate(): string | undefined {
+  const { data } = useTransactions({
+    page: 1,
+    page_size: 1,
+    sort_by: "date",
+    sort_order: "asc",
+  });
+
+  return data?.transactions?.[0]?.date;
+}
+
 export function useTransaction(id: number) {
   const queryClient = useQueryClient();
 

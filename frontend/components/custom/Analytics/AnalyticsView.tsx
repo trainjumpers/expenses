@@ -19,6 +19,7 @@ import {
   useCashBalanceHistory,
   useInsights,
 } from "@/components/hooks/useAnalytics";
+import { useFirstTransactionDate } from "@/components/hooks/useTransactions";
 import { Button } from "@/components/ui/button";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -124,6 +125,7 @@ export function AnalyticsView() {
     isError: cashError,
     refetch: refetchCash,
   } = useCashBalanceHistory(startDate, endDate);
+  const firstTransactionDate = useFirstTransactionDate();
 
   const hasActivity =
     data !== undefined &&
@@ -153,6 +155,7 @@ export function AnalyticsView() {
           align="end"
           locale="en-GB"
           showCompare={false}
+          allTimeStart={firstTransactionDate}
         />
       </div>
 
