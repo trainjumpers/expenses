@@ -10,6 +10,7 @@ import (
 	"expenses/pkg/logger"
 	"fmt"
 	"strings"
+	"time"
 
 	"context"
 )
@@ -27,7 +28,14 @@ type StatementService struct {
 	txService          TransactionServiceInterface
 	statementValidator *validator.StatementValidator
 	ruleEngineService  RuleEngineServiceInterface
+	workerSlots        chan struct{}
+	parseTimeout       time.Duration
 }
+
+const (
+	maxConcurrentParses = 2
+	parseTimeout        = 60 * time.Second
+)
 
 func NewStatementService(
 	repo repository.StatementRepositoryInterface,
@@ -42,6 +50,8 @@ func NewStatementService(
 		txService:          txService,
 		statementValidator: statementValidator,
 		ruleEngineService:  ruleEngineService,
+		workerSlots:        make(chan struct{}, maxConcurrentParses),
+		parseTimeout:       parseTimeout,
 	}
 }
 
@@ -69,6 +79,14 @@ func (s *StatementService) ParseStatement(ctx context.Context, input models.Pars
 		return models.StatementResponse{}, err
 	}
 
+	// Bound how many statements are parsed at once so a burst of uploads
+	// cannot exhaust CPU or memory. A slot is held until the parse finishes.
+	select {
+	case s.workerSlots <- struct{}{}:
+	default:
+		return models.StatementResponse{}, customErrors.NewStatementBusyError(errors.New("too many statements are being processed"))
+	}
+
 	// Create a statement record in the database.
 	createStatement := models.CreateStatementInput{
 		AccountId:        account.Id,
@@ -80,16 +98,23 @@ func (s *StatementService) ParseStatement(ctx context.Context, input models.Pars
 
 	statement, err := s.repo.CreateStatement(ctx, createStatement)
 	if err != nil {
+		<-s.workerSlots
 		return models.StatementResponse{}, err
 	}
 
 	// Process the statement asynchronously.
-	go s.processStatementAsync(context.Background(), statement.Id, input, userId)
+	go func() {
+		defer func() { <-s.workerSlots }()
+		s.processStatementAsync(context.Background(), statement.Id, input, userId)
+	}()
 	return statement, nil
 }
 
 // processStatementAsync processes the statement in a separate goroutine.
 func (s *StatementService) processStatementAsync(ctx context.Context, statementId int64, input models.ParseStatementInput, userId int64) {
+	ctx, cancel := context.WithTimeout(ctx, s.parseTimeout)
+	defer cancel()
+
 	logger.Debugf("Processing statement ID %d for account ID %d by user ID %d", statementId, input.AccountId, userId)
 	_, _ = s.repo.UpdateStatementStatus(ctx, statementId, models.UpdateStatementStatusInput{
 		Status: models.StatementStatusProcessing,
@@ -122,6 +147,18 @@ func (s *StatementService) processStatementAsync(ctx context.Context, statementI
 	}
 
 	logger.Debugf("Using parser: %T for bank type: %s", parserImpl, parserType)
+
+	if strings.HasSuffix(strings.ToLower(input.OriginalFilename), ".xlsx") {
+		if err := parser.ValidateWorkbookSize(input.FileBytes); err != nil {
+			errMsg := fmt.Sprintf("failed to parse statement: %v", err)
+			_, _ = s.repo.UpdateStatementStatus(ctx, statementId, models.UpdateStatementStatusInput{
+				Status:  models.StatementStatusError,
+				Message: &errMsg,
+			})
+			return
+		}
+	}
+
 	parsedTxs, err := parserImpl.Parse(input.FileBytes, input.Metadata, input.OriginalFilename, input.Password)
 	if err != nil {
 		errMsg := fmt.Sprintf("Failed to parse statement: %v", err)
@@ -229,6 +266,9 @@ func (s *StatementService) PreviewStatement(ctx context.Context, fileBytes []byt
 	if strings.HasSuffix(strings.ToLower(fileName), ".xlsx") {
 		if protected := parser.IsExcelPasswordProtectedBytes(fileBytes); protected && password == "" {
 			return nil, customErrors.NewStatementPasswordRequiredError(errors.New("statement password required"))
+		}
+		if err := parser.ValidateWorkbookSize(fileBytes); err != nil {
+			return nil, customErrors.NewStatementBadRequestError(err)
 		}
 	}
 

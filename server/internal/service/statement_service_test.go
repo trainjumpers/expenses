@@ -43,6 +43,8 @@ var _ = Describe("StatementService", func() {
 			txService:          txnService,
 			accountService:     accountService,
 			ruleEngineService:  ruleEngineService,
+			workerSlots:        make(chan struct{}, maxConcurrentParses),
+			parseTimeout:       parseTimeout,
 		}
 		userId = 42
 	})
