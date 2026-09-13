@@ -39,24 +39,24 @@ func (a *AnalyticsController) GetAccountAnalytics(ctx *gin.Context) {
 	a.SendSuccess(ctx, http.StatusOK, "Account analytics retrieved successfully", analytics)
 }
 
-func (a *AnalyticsController) GetNetworthTimeSeries(ctx *gin.Context) {
+func (a *AnalyticsController) GetCashBalanceHistory(ctx *gin.Context) {
 	userId := a.GetAuthenticatedUserId(ctx)
-	logger.Infof("Fetching networth time series for user %d", userId)
+	logger.Infof("Fetching cash balance history for user %d", userId)
 
 	startDate, endDate, err := a.ParseDateRange(ctx)
 	if err != nil {
 		return
 	}
 
-	timeSeries, err := a.analyticsService.GetNetworthTimeSeries(ctx, userId, startDate, endDate)
+	timeSeries, err := a.analyticsService.GetCashBalanceHistory(ctx, userId, startDate, endDate)
 	if err != nil {
-		logger.Errorf("Error getting networth time series: %v", err)
+		logger.Errorf("Error getting cash balance history: %v", err)
 		a.HandleError(ctx, err)
 		return
 	}
 
-	logger.Infof("Networth time series retrieved successfully for user %d", userId)
-	a.SendSuccess(ctx, http.StatusOK, "Networth time series retrieved successfully", timeSeries)
+	logger.Infof("Cash balance history retrieved successfully for user %d", userId)
+	a.SendSuccess(ctx, http.StatusOK, "Cash balance history retrieved successfully", timeSeries)
 }
 
 func (a *AnalyticsController) GetCategoryAnalytics(ctx *gin.Context) {

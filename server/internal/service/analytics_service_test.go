@@ -310,7 +310,7 @@ var _ = Describe("AnalyticsService", func() {
 		})
 	})
 
-	Describe("GetNetworthTimeSeries", func() {
+	Describe("GetCashBalanceHistory", func() {
 		var startDate, endDate time.Time
 
 		BeforeEach(func() {
@@ -332,11 +332,11 @@ var _ = Describe("AnalyticsService", func() {
 						"daily_change": -50.0,
 					},
 				}
-				mockAnalyticsRepo.SetNetworthTimeSeries(userId, startDate, endDate, initialBalance, timeSeries)
+				mockAnalyticsRepo.SetCashBalanceHistory(userId, startDate, endDate, initialBalance, timeSeries)
 			})
 
-			It("should return networth time series with negated values", func() {
-				result, err := analyticsService.GetNetworthTimeSeries(ctx, userId, startDate, endDate)
+			It("should return cash balance time series with negated values", func() {
+				result, err := analyticsService.GetCashBalanceHistory(ctx, userId, startDate, endDate)
 				Expect(err).NotTo(HaveOccurred())
 
 				// Initial balance should be negated
@@ -347,15 +347,15 @@ var _ = Describe("AnalyticsService", func() {
 
 				// Verify first day: -1000 (initial) + (-100) (daily change) = -1100
 				Expect(result.TimeSeries[0].Date).To(Equal("2023-01-01"))
-				Expect(result.TimeSeries[0].Networth).To(Equal(-1100.0))
+				Expect(result.TimeSeries[0].CashBalance).To(Equal(-1100.0))
 
 				// Verify second day: -1100 + (50) (daily change) = -1050
 				Expect(result.TimeSeries[1].Date).To(Equal("2023-01-02"))
-				Expect(result.TimeSeries[1].Networth).To(Equal(-1050.0))
+				Expect(result.TimeSeries[1].CashBalance).To(Equal(-1050.0))
 
 				// Verify third day (no transaction, same balance)
 				Expect(result.TimeSeries[2].Date).To(Equal("2023-01-03"))
-				Expect(result.TimeSeries[2].Networth).To(Equal(-1050.0))
+				Expect(result.TimeSeries[2].CashBalance).To(Equal(-1050.0))
 			})
 		})
 
@@ -364,11 +364,11 @@ var _ = Describe("AnalyticsService", func() {
 				// Set up mock data with only initial balance, no daily changes
 				initialBalance := 500.0
 				timeSeries := []map[string]any{} // Empty time series
-				mockAnalyticsRepo.SetNetworthTimeSeries(userId, startDate, endDate, initialBalance, timeSeries)
+				mockAnalyticsRepo.SetCashBalanceHistory(userId, startDate, endDate, initialBalance, timeSeries)
 			})
 
-			It("should return flat networth time series", func() {
-				result, err := analyticsService.GetNetworthTimeSeries(ctx, userId, startDate, endDate)
+			It("should return flat cash balance time series", func() {
+				result, err := analyticsService.GetCashBalanceHistory(ctx, userId, startDate, endDate)
 				Expect(err).NotTo(HaveOccurred())
 
 				// Initial balance should be negated
@@ -377,9 +377,9 @@ var _ = Describe("AnalyticsService", func() {
 				// Should have data points for each day in range
 				Expect(result.TimeSeries).To(HaveLen(3)) // Jan 1, 2, 3
 
-				// All days should have the same networth
+				// All days should have the same cash balance
 				for _, point := range result.TimeSeries {
-					Expect(point.Networth).To(Equal(-500.0))
+					Expect(point.CashBalance).To(Equal(-500.0))
 				}
 
 				// Verify dates are correct
@@ -403,11 +403,11 @@ var _ = Describe("AnalyticsService", func() {
 						"daily_change": -150.0, // Credit (stored as negative)
 					},
 				}
-				mockAnalyticsRepo.SetNetworthTimeSeries(userId, startDate, endDate, initialBalance, timeSeries)
+				mockAnalyticsRepo.SetCashBalanceHistory(userId, startDate, endDate, initialBalance, timeSeries)
 			})
 
 			It("should handle gaps in daily data correctly", func() {
-				result, err := analyticsService.GetNetworthTimeSeries(ctx, userId, startDate, endDate)
+				result, err := analyticsService.GetCashBalanceHistory(ctx, userId, startDate, endDate)
 				Expect(err).NotTo(HaveOccurred())
 
 				// Initial balance should be negated
@@ -418,15 +418,15 @@ var _ = Describe("AnalyticsService", func() {
 
 				// Jan 1: has transaction (debit 200 -> credit -200 for frontend)
 				Expect(result.TimeSeries[0].Date).To(Equal("2023-01-01"))
-				Expect(result.TimeSeries[0].Networth).To(Equal(-2200.0)) // -2000 + (-200)
+				Expect(result.TimeSeries[0].CashBalance).To(Equal(-2200.0)) // -2000 + (-200)
 
 				// Jan 2: no transaction, same as previous day
 				Expect(result.TimeSeries[1].Date).To(Equal("2023-01-02"))
-				Expect(result.TimeSeries[1].Networth).To(Equal(-2200.0)) // Same as Jan 1
+				Expect(result.TimeSeries[1].CashBalance).To(Equal(-2200.0)) // Same as Jan 1
 
 				// Jan 3: has transaction (credit -150 -> debit +150 for frontend)
 				Expect(result.TimeSeries[2].Date).To(Equal("2023-01-03"))
-				Expect(result.TimeSeries[2].Networth).To(Equal(-2050.0)) // -2200 + 150
+				Expect(result.TimeSeries[2].CashBalance).To(Equal(-2050.0)) // -2200 + 150
 			})
 		})
 
@@ -442,18 +442,18 @@ var _ = Describe("AnalyticsService", func() {
 						"daily_change": 75.0,
 					},
 				}
-				mockAnalyticsRepo.SetNetworthTimeSeries(userId, startDate, endDate, initialBalance, timeSeries)
+				mockAnalyticsRepo.SetCashBalanceHistory(userId, startDate, endDate, initialBalance, timeSeries)
 			})
 
-			It("should return single day networth", func() {
-				result, err := analyticsService.GetNetworthTimeSeries(ctx, userId, startDate, endDate)
+			It("should return single day cash balance", func() {
+				result, err := analyticsService.GetCashBalanceHistory(ctx, userId, startDate, endDate)
 				Expect(err).NotTo(HaveOccurred())
 
 				// Should have exactly one data point
 				Expect(result.TimeSeries).To(HaveLen(1))
 
 				Expect(result.TimeSeries[0].Date).To(Equal("2023-01-01"))
-				Expect(result.TimeSeries[0].Networth).To(Equal(-1575.0)) // -1500 + (-75)
+				Expect(result.TimeSeries[0].CashBalance).To(Equal(-1575.0)) // -1500 + (-75)
 			})
 		})
 
@@ -470,31 +470,31 @@ var _ = Describe("AnalyticsService", func() {
 						"daily_change": -50.0,
 					},
 				}
-				mockAnalyticsRepo.SetNetworthTimeSeries(userId, startDate, endDate, initialBalance, timeSeries)
+				mockAnalyticsRepo.SetCashBalanceHistory(userId, startDate, endDate, initialBalance, timeSeries)
 			})
 
 			It("should handle zero initial balance correctly", func() {
-				result, err := analyticsService.GetNetworthTimeSeries(ctx, userId, startDate, endDate)
+				result, err := analyticsService.GetCashBalanceHistory(ctx, userId, startDate, endDate)
 				Expect(err).NotTo(HaveOccurred())
 
 				// Initial balance should be zero (negated)
 				Expect(result.InitialBalance).To(Equal(0.0))
 
 				// Verify cumulative calculation from zero
-				Expect(result.TimeSeries[0].Networth).To(Equal(-100.0)) // 0 + (-100)
-				Expect(result.TimeSeries[1].Networth).To(Equal(-50.0))  // -100 + 50
-				Expect(result.TimeSeries[2].Networth).To(Equal(-50.0))  // Same as previous day
+				Expect(result.TimeSeries[0].CashBalance).To(Equal(-100.0)) // 0 + (-100)
+				Expect(result.TimeSeries[1].CashBalance).To(Equal(-50.0))  // -100 + 50
+				Expect(result.TimeSeries[2].CashBalance).To(Equal(-50.0))  // Same as previous day
 			})
 		})
 
-		Context("when different users request networth", func() {
+		Context("when different users request cash balance", func() {
 			var user1Id, user2Id int64
 
 			BeforeEach(func() {
 				user1Id = 1
 				user2Id = 2
 
-				// Set up different networth data for each user
+				// Set up different cash balance data for each user
 				user1InitialBalance := 1000.0
 				user1TimeSeries := []map[string]any{
 					{
@@ -502,7 +502,7 @@ var _ = Describe("AnalyticsService", func() {
 						"daily_change": 100.0,
 					},
 				}
-				mockAnalyticsRepo.SetNetworthTimeSeries(user1Id, startDate, endDate, user1InitialBalance, user1TimeSeries)
+				mockAnalyticsRepo.SetCashBalanceHistory(user1Id, startDate, endDate, user1InitialBalance, user1TimeSeries)
 
 				user2InitialBalance := 2000.0
 				user2TimeSeries := []map[string]any{
@@ -511,40 +511,40 @@ var _ = Describe("AnalyticsService", func() {
 						"daily_change": 200.0,
 					},
 				}
-				mockAnalyticsRepo.SetNetworthTimeSeries(user2Id, startDate, endDate, user2InitialBalance, user2TimeSeries)
+				mockAnalyticsRepo.SetCashBalanceHistory(user2Id, startDate, endDate, user2InitialBalance, user2TimeSeries)
 			})
 
-			It("should return networth data only for the requesting user", func() {
-				// Test user1 networth
-				result1, err := analyticsService.GetNetworthTimeSeries(ctx, user1Id, startDate, endDate)
+			It("should return cash balance data only for the requesting user", func() {
+				// Test user1 cash balance
+				result1, err := analyticsService.GetCashBalanceHistory(ctx, user1Id, startDate, endDate)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result1.InitialBalance).To(Equal(-1000.0))
-				Expect(result1.TimeSeries[0].Networth).To(Equal(-1100.0)) // -1000 - 100
+				Expect(result1.TimeSeries[0].CashBalance).To(Equal(-1100.0)) // -1000 - 100
 
-				// Test user2 networth
-				result2, err := analyticsService.GetNetworthTimeSeries(ctx, user2Id, startDate, endDate)
+				// Test user2 cash balance
+				result2, err := analyticsService.GetCashBalanceHistory(ctx, user2Id, startDate, endDate)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result2.InitialBalance).To(Equal(-2000.0))
-				Expect(result2.TimeSeries[0].Networth).To(Equal(-2200.0)) // -2000 - 200
+				Expect(result2.TimeSeries[0].CashBalance).To(Equal(-2200.0)) // -2000 - 200
 			})
 		})
 
 		Context("when repository returns error", func() {
 			BeforeEach(func() {
 				// Configure mock to return error
-				mockAnalyticsRepo.SetShouldErrorOnNetworth(true)
+				mockAnalyticsRepo.SetShouldErrorOnCashBalance(true)
 			})
 
 			AfterEach(func() {
 				// Reset error simulation
-				mockAnalyticsRepo.SetShouldErrorOnNetworth(false)
+				mockAnalyticsRepo.SetShouldErrorOnCashBalance(false)
 			})
 
 			It("should return the repository error", func() {
-				result, err := analyticsService.GetNetworthTimeSeries(ctx, userId, startDate, endDate)
+				result, err := analyticsService.GetCashBalanceHistory(ctx, userId, startDate, endDate)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(Equal("simulated GetNetworthTimeSeries error"))
-				Expect(result).To(Equal(models.NetworthTimeSeriesResponse{}))
+				Expect(err.Error()).To(Equal("simulated GetCashBalanceHistory error"))
+				Expect(result).To(Equal(models.CashBalanceHistoryResponse{}))
 			})
 		})
 
@@ -563,24 +563,24 @@ var _ = Describe("AnalyticsService", func() {
 						"daily_change": -150.0, // Credit transaction (stored negative)
 					},
 				}
-				mockAnalyticsRepo.SetNetworthTimeSeries(userId, startDate, endDate, initialBalance, timeSeries)
+				mockAnalyticsRepo.SetCashBalanceHistory(userId, startDate, endDate, initialBalance, timeSeries)
 			})
 
 			It("should correctly negate all values for frontend consumption", func() {
-				result, err := analyticsService.GetNetworthTimeSeries(ctx, userId, startDate, endDate)
+				result, err := analyticsService.GetCashBalanceHistory(ctx, userId, startDate, endDate)
 				Expect(err).NotTo(HaveOccurred())
 
 				// Initial balance: 1000 (debit) -> -1000 (for frontend)
 				Expect(result.InitialBalance).To(Equal(-1000.0))
 
 				// Day 1: -1000 + (-200) = -1200 (debit transaction becomes negative for frontend)
-				Expect(result.TimeSeries[0].Networth).To(Equal(-1200.0))
+				Expect(result.TimeSeries[0].CashBalance).To(Equal(-1200.0))
 
 				// Day 2: -1200 + 150 = -1050 (credit transaction becomes positive for frontend)
-				Expect(result.TimeSeries[1].Networth).To(Equal(-1050.0))
+				Expect(result.TimeSeries[1].CashBalance).To(Equal(-1050.0))
 
 				// Day 3: Same as day 2 (no transaction)
-				Expect(result.TimeSeries[2].Networth).To(Equal(-1050.0))
+				Expect(result.TimeSeries[2].CashBalance).To(Equal(-1050.0))
 			})
 		})
 
@@ -598,15 +598,15 @@ var _ = Describe("AnalyticsService", func() {
 						"daily_change": 100.0,
 					},
 				}
-				mockAnalyticsRepo.SetNetworthTimeSeries(userId, startDate, endDate, initialBalance, timeSeries)
+				mockAnalyticsRepo.SetCashBalanceHistory(userId, startDate, endDate, initialBalance, timeSeries)
 
-				result, err := analyticsService.GetNetworthTimeSeries(ctx, userId, startDate, endDate)
+				result, err := analyticsService.GetCashBalanceHistory(ctx, userId, startDate, endDate)
 				Expect(err).NotTo(HaveOccurred())
 
 				// Should have exactly one data point
 				Expect(result.TimeSeries).To(HaveLen(1))
 				Expect(result.TimeSeries[0].Date).To(Equal("2023-01-01"))
-				Expect(result.TimeSeries[0].Networth).To(Equal(-1100.0)) // -1000 + (-100)
+				Expect(result.TimeSeries[0].CashBalance).To(Equal(-1100.0)) // -1000 + (-100)
 			})
 
 			It("should handle very large date ranges", func() {
@@ -615,17 +615,17 @@ var _ = Describe("AnalyticsService", func() {
 
 				initialBalance := 1000.0
 				timeSeries := []map[string]any{} // No daily changes
-				mockAnalyticsRepo.SetNetworthTimeSeries(userId, startDate, endDate, initialBalance, timeSeries)
+				mockAnalyticsRepo.SetCashBalanceHistory(userId, startDate, endDate, initialBalance, timeSeries)
 
-				result, err := analyticsService.GetNetworthTimeSeries(ctx, userId, startDate, endDate)
+				result, err := analyticsService.GetCashBalanceHistory(ctx, userId, startDate, endDate)
 				Expect(err).NotTo(HaveOccurred())
 
 				// Should have 365 data points for 2023 (not a leap year)
 				Expect(result.TimeSeries).To(HaveLen(365))
 
-				// All should have the same networth (no changes)
+				// All should have the same cash balance (no changes)
 				for _, point := range result.TimeSeries {
-					Expect(point.Networth).To(Equal(-1000.0))
+					Expect(point.CashBalance).To(Equal(-1000.0))
 				}
 			})
 
@@ -635,9 +635,9 @@ var _ = Describe("AnalyticsService", func() {
 
 				initialBalance := 500.0
 				timeSeries := []map[string]any{} // No daily changes
-				mockAnalyticsRepo.SetNetworthTimeSeries(userId, startDate, endDate, initialBalance, timeSeries)
+				mockAnalyticsRepo.SetCashBalanceHistory(userId, startDate, endDate, initialBalance, timeSeries)
 
-				result, err := analyticsService.GetNetworthTimeSeries(ctx, userId, startDate, endDate)
+				result, err := analyticsService.GetCashBalanceHistory(ctx, userId, startDate, endDate)
 				Expect(err).NotTo(HaveOccurred())
 
 				// Should have 3 data points: Feb 28, Feb 29, Mar 1
@@ -662,9 +662,9 @@ var _ = Describe("AnalyticsService", func() {
 						"daily_change": -50.0,
 					},
 				}
-				mockAnalyticsRepo.SetNetworthTimeSeries(userId, startDate, endDate, initialBalance, timeSeries)
+				mockAnalyticsRepo.SetCashBalanceHistory(userId, startDate, endDate, initialBalance, timeSeries)
 
-				result, err := analyticsService.GetNetworthTimeSeries(ctx, userId, startDate, endDate)
+				result, err := analyticsService.GetCashBalanceHistory(ctx, userId, startDate, endDate)
 				Expect(err).NotTo(HaveOccurred())
 
 				// Should have 4 data points
@@ -672,16 +672,16 @@ var _ = Describe("AnalyticsService", func() {
 
 				// Verify year boundary crossing
 				Expect(result.TimeSeries[0].Date).To(Equal("2023-12-30"))
-				Expect(result.TimeSeries[0].Networth).To(Equal(-2000.0)) // No change
+				Expect(result.TimeSeries[0].CashBalance).To(Equal(-2000.0)) // No change
 
 				Expect(result.TimeSeries[1].Date).To(Equal("2023-12-31"))
-				Expect(result.TimeSeries[1].Networth).To(Equal(-2100.0)) // -2000 + (-100)
+				Expect(result.TimeSeries[1].CashBalance).To(Equal(-2100.0)) // -2000 + (-100)
 
 				Expect(result.TimeSeries[2].Date).To(Equal("2024-01-01"))
-				Expect(result.TimeSeries[2].Networth).To(Equal(-2050.0)) // -2100 + 50
+				Expect(result.TimeSeries[2].CashBalance).To(Equal(-2050.0)) // -2100 + 50
 
 				Expect(result.TimeSeries[3].Date).To(Equal("2024-01-02"))
-				Expect(result.TimeSeries[3].Networth).To(Equal(-2050.0)) // No change
+				Expect(result.TimeSeries[3].CashBalance).To(Equal(-2050.0)) // No change
 			})
 
 			It("should handle very large transaction amounts", func() {
@@ -692,14 +692,14 @@ var _ = Describe("AnalyticsService", func() {
 						"daily_change": 888888888.88,
 					},
 				}
-				mockAnalyticsRepo.SetNetworthTimeSeries(userId, startDate, endDate, initialBalance, timeSeries)
+				mockAnalyticsRepo.SetCashBalanceHistory(userId, startDate, endDate, initialBalance, timeSeries)
 
-				result, err := analyticsService.GetNetworthTimeSeries(ctx, userId, startDate, endDate)
+				result, err := analyticsService.GetCashBalanceHistory(ctx, userId, startDate, endDate)
 				Expect(err).NotTo(HaveOccurred())
 
 				// Should handle large numbers correctly
 				Expect(result.InitialBalance).To(Equal(-999999999.99))
-				Expect(result.TimeSeries[0].Networth).To(BeNumerically("~", -1888888888.87, 0.01))
+				Expect(result.TimeSeries[0].CashBalance).To(BeNumerically("~", -1888888888.87, 0.01))
 			})
 
 			It("should handle negative initial balance", func() {
@@ -710,27 +710,27 @@ var _ = Describe("AnalyticsService", func() {
 						"daily_change": 100.0,
 					},
 				}
-				mockAnalyticsRepo.SetNetworthTimeSeries(userId, startDate, endDate, initialBalance, timeSeries)
+				mockAnalyticsRepo.SetCashBalanceHistory(userId, startDate, endDate, initialBalance, timeSeries)
 
-				result, err := analyticsService.GetNetworthTimeSeries(ctx, userId, startDate, endDate)
+				result, err := analyticsService.GetCashBalanceHistory(ctx, userId, startDate, endDate)
 				Expect(err).NotTo(HaveOccurred())
 
 				// Negative initial balance should become positive for frontend
 				Expect(result.InitialBalance).To(Equal(500.0))
-				Expect(result.TimeSeries[0].Networth).To(Equal(400.0)) // 500 + (-100)
+				Expect(result.TimeSeries[0].CashBalance).To(Equal(400.0)) // 500 + (-100)
 			})
 
 			It("should handle empty daily data gracefully", func() {
 				initialBalance := 1000.0
 				timeSeries := []map[string]any{} // Empty
-				mockAnalyticsRepo.SetNetworthTimeSeries(userId, startDate, endDate, initialBalance, timeSeries)
+				mockAnalyticsRepo.SetCashBalanceHistory(userId, startDate, endDate, initialBalance, timeSeries)
 
-				result, err := analyticsService.GetNetworthTimeSeries(ctx, userId, startDate, endDate)
+				result, err := analyticsService.GetCashBalanceHistory(ctx, userId, startDate, endDate)
 				Expect(err).NotTo(HaveOccurred())
 
 				// Should still generate time series with flat values
 				Expect(result.TimeSeries).To(HaveLen(1))
-				Expect(result.TimeSeries[0].Networth).To(Equal(-1000.0))
+				Expect(result.TimeSeries[0].CashBalance).To(Equal(-1000.0))
 			})
 
 			It("should handle malformed daily data gracefully", func() {
@@ -741,10 +741,10 @@ var _ = Describe("AnalyticsService", func() {
 						"daily_change": "invalid", // Invalid type
 					},
 				}
-				mockAnalyticsRepo.SetNetworthTimeSeries(userId, startDate, endDate, initialBalance, timeSeries)
+				mockAnalyticsRepo.SetCashBalanceHistory(userId, startDate, endDate, initialBalance, timeSeries)
 
 				// Testing the new behavior
-				_, err := analyticsService.GetNetworthTimeSeries(ctx, userId, startDate, endDate)
+				_, err := analyticsService.GetCashBalanceHistory(ctx, userId, startDate, endDate)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(Equal("invalid type for daily_change in daily data"))
 			})
@@ -766,13 +766,13 @@ var _ = Describe("AnalyticsService", func() {
 						"daily_change": 50.0,
 					},
 				}
-				mockAnalyticsRepo.SetNetworthTimeSeries(userId, startDate, endDate, initialBalance, timeSeries)
+				mockAnalyticsRepo.SetCashBalanceHistory(userId, startDate, endDate, initialBalance, timeSeries)
 
-				result, err := analyticsService.GetNetworthTimeSeries(ctx, userId, startDate, endDate)
+				result, err := analyticsService.GetCashBalanceHistory(ctx, userId, startDate, endDate)
 				Expect(err).NotTo(HaveOccurred())
 
 				// The service uses a map, so the last value should win
-				Expect(result.TimeSeries[0].Networth).To(Equal(-1050.0)) // -1000 + (-50)
+				Expect(result.TimeSeries[0].CashBalance).To(Equal(-1050.0)) // -1000 + (-50)
 			})
 
 			It("should handle dates outside the requested range", func() {
@@ -794,14 +794,50 @@ var _ = Describe("AnalyticsService", func() {
 						"daily_change": 25.0,
 					},
 				}
-				mockAnalyticsRepo.SetNetworthTimeSeries(userId, startDate, endDate, initialBalance, timeSeries)
+				mockAnalyticsRepo.SetCashBalanceHistory(userId, startDate, endDate, initialBalance, timeSeries)
 
-				result, err := analyticsService.GetNetworthTimeSeries(ctx, userId, startDate, endDate)
+				result, err := analyticsService.GetCashBalanceHistory(ctx, userId, startDate, endDate)
 				Expect(err).NotTo(HaveOccurred())
 
 				// Should only use the date within range
-				Expect(result.TimeSeries[0].Networth).To(Equal(-1050.0)) // -1000 + (-50)
-				Expect(result.TimeSeries[1].Networth).To(Equal(-1050.0)) // No change for Jan 2
+				Expect(result.TimeSeries[0].CashBalance).To(Equal(-1050.0)) // -1000 + (-50)
+				Expect(result.TimeSeries[1].CashBalance).To(Equal(-1050.0)) // No change for Jan 2
+			})
+		})
+
+		Context("when investment accounts hold balances", func() {
+			It("should exclude investment ledgers from the cash history", func() {
+				startDate, _ = time.Parse("2006-01-02", "2023-01-01")
+				endDate, _ = time.Parse("2006-01-02", "2023-01-03")
+
+				bankBalance := 1000.0
+				_, err := mockAccountRepo.CreateAccount(ctx, models.CreateAccountInput{
+					Name:      "Bank",
+					BankType:  models.BankTypeSBI,
+					Currency:  models.CurrencyINR,
+					Balance:   &bankBalance,
+					CreatedBy: userId,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				investmentBalance := 5000.0
+				currentValue := 5000.0
+				_, err = mockAccountRepo.CreateAccount(ctx, models.CreateAccountInput{
+					Name:         "FD",
+					BankType:     models.BankTypeInvestment,
+					Currency:     models.CurrencyINR,
+					Balance:      &investmentBalance,
+					CurrentValue: &currentValue,
+					CreatedBy:    userId,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				mockAnalyticsRepo.SetCashBalanceHistory(userId, startDate, endDate, 0, []map[string]any{})
+
+				result, err := analyticsService.GetCashBalanceHistory(ctx, userId, startDate, endDate)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result.InitialBalance).To(Equal(1000.0))
+				Expect(result.TimeSeries[0].CashBalance).To(Equal(1000.0))
 			})
 		})
 	})
@@ -1578,6 +1614,79 @@ var _ = Describe("AnalyticsService", func() {
 					time.Date(2024, 4, 30, 0, 0, 0, 0, time.UTC))
 				Expect(err).NotTo(HaveOccurred())
 				Expect(outOfRange.Summary.RealizedInterest).To(Equal(0.0))
+			})
+		})
+
+		Context("when spending behavior datasets exist", func() {
+			BeforeEach(func() {
+				mockAnalyticsRepo.SetInsightsMonthly(userId, startDate, endDate, []models.InsightsMonthlyPoint{
+					{Month: "2024-01", Expenses: 100.0, Net: -100.0},
+					{Month: "2024-02", Expenses: 300.0, Net: -300.0},
+					{Month: "2024-03", Expenses: 200.0, Net: -200.0},
+				})
+				mockAnalyticsRepo.SetInsightsSpendingSummary(userId, startDate, endDate, models.InsightsSpendingSummary{
+					ExpenseCount:       10,
+					AverageTransaction: 60.0,
+					MedianTransaction:  50.0,
+					LargestExpense:     300.0,
+					ActiveSpendingDays: 6,
+				})
+				mockAnalyticsRepo.SetInsightsCategoryMonths(userId,
+					time.Date(2024, 2, 1, 0, 0, 0, 0, time.UTC),
+					time.Date(2024, 3, 31, 0, 0, 0, 0, time.UTC),
+					[]models.InsightsCategoryMonth{
+						{Month: "2024-03", CategoryID: 1, CategoryName: "Food", Total: 200.0},
+						{Month: "2024-02", CategoryID: 1, CategoryName: "Food", Total: 120.0},
+						{Month: "2024-02", CategoryID: 2, CategoryName: "Travel", Total: 180.0},
+					})
+				mockAnalyticsRepo.SetInsightsWeekday(userId, startDate, endDate, []models.InsightsWeekday{
+					{Weekday: 6, Total: 300.0, Count: 3, ActiveDays: 2},
+					{Weekday: 1, Total: 100.0, Count: 1, ActiveDays: 1},
+				})
+				mockAnalyticsRepo.SetInsightsMultiCategoryCount(userId, startDate, endDate, 2)
+				latest := time.Date(2024, 3, 20, 0, 0, 0, 0, time.UTC)
+				mockAnalyticsRepo.SetInsightsLatestTransactionDate(userId, &latest)
+			})
+
+			It("should compute the spending summary and weekday behavior", func() {
+				result, err := analyticsService.GetInsights(ctx, userId, startDate, endDate)
+				Expect(err).NotTo(HaveOccurred())
+				// Jan 1 to Mar 31 inclusive is 91 days, 6 of them active.
+				Expect(result.SpendingSummary.NoSpendDays).To(Equal(int64(85)))
+				Expect(result.WeekdayBehavior.Days).To(HaveLen(7))
+				Expect(result.WeekdayBehavior.Days[6].Total).To(Equal(300.0))
+				Expect(result.WeekdayBehavior.Days[6].Average).To(Equal(150.0))
+				Expect(result.WeekdayBehavior.Days[6].Share).To(BeNumerically("~", 0.75))
+				Expect(result.WeekdayBehavior.WeekendShare).To(BeNumerically("~", 0.75))
+			})
+
+			It("should compare complete months and rank category movement", func() {
+				result, err := analyticsService.GetInsights(ctx, userId, startDate, endDate)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result.Trend.RecentMonth).To(Equal("2024-03"))
+				Expect(result.Trend.PriorMonth).To(Equal("2024-02"))
+				Expect(result.Trend.RecentExpenses).To(Equal(200.0))
+				Expect(result.Trend.PriorExpenses).To(Equal(300.0))
+				Expect(result.Trend.Change).To(Equal(-100.0))
+				Expect(result.Trend.TrailingThreeMonthAverage).To(BeNumerically("~", 200.0))
+
+				Expect(result.CategoryMovement).To(HaveLen(2))
+				Expect(result.CategoryMovement[0].CategoryName).To(Equal("Travel"))
+				Expect(result.CategoryMovement[0].Change).To(Equal(-180.0))
+				Expect(result.CategoryMovement[0].PriorShare).To(BeNumerically("~", 0.6))
+				Expect(result.CategoryMovement[1].CategoryName).To(Equal("Food"))
+				Expect(result.CategoryMovement[1].Change).To(Equal(80.0))
+				Expect(result.CategoryMovement[1].RecentShare).To(Equal(1.0))
+			})
+
+			It("should flag data confidence limitations", func() {
+				result, err := analyticsService.GetInsights(ctx, userId, startDate, endDate)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result.DataConfidence.MultiCategoryCount).To(Equal(int64(2)))
+				Expect(result.DataConfidence.MultiCategoryShare).To(BeNumerically("~", 0.2))
+				Expect(result.DataConfidence.LatestTransactionDate).NotTo(BeNil())
+				Expect(*result.DataConfidence.LatestTransactionDate).To(Equal("2024-03-20"))
+				Expect(result.DataConfidence.StaleDays).To(BeNumerically(">", 0))
 			})
 		})
 	})

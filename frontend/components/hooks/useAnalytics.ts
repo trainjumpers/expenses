@@ -2,15 +2,15 @@
 
 import {
   getAccountAnalytics,
+  getCashBalanceHistory,
   getInsights,
   getMonthlyAnalytics,
-  getNetworthTimeSeries,
 } from "@/lib/api/analytics";
 import type {
   AccountAnalyticsListResponse,
   AnalyticsInsightsResponse,
+  CashBalanceHistoryResponse,
   MonthlyAnalyticsResponse,
-  NetworthTimeSeriesResponse,
 } from "@/lib/models/analytics";
 import { queryKeys } from "@/lib/query-client";
 import { useQuery } from "@tanstack/react-query";
@@ -23,10 +23,10 @@ export function useAccountAnalytics() {
   });
 }
 
-export function useNetworthTimeSeries(startDate: string, endDate: string) {
-  return useQuery<NetworthTimeSeriesResponse>({
-    queryKey: queryKeys.analytics.networthTimeSeries(startDate, endDate),
-    queryFn: ({ signal }) => getNetworthTimeSeries(startDate, endDate, signal),
+export function useCashBalanceHistory(startDate: string, endDate: string) {
+  return useQuery<CashBalanceHistoryResponse>({
+    queryKey: queryKeys.analytics.cashBalanceHistory(startDate, endDate),
+    queryFn: ({ signal }) => getCashBalanceHistory(startDate, endDate, signal),
     staleTime: 5 * 60 * 1000, // 5 minutes
     enabled: !!startDate && !!endDate, // Only run query when dates are provided
   });

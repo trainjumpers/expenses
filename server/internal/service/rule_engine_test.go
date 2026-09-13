@@ -1830,6 +1830,22 @@ var _ = Describe("RuleEngine", func() {
 				Expect(result).To(BeNil()) // Should not apply transfer (case-insensitive match)
 			})
 
+			It("should skip transfer when the category uses the canonical Transfers name", func() {
+				categories = []models.CategoryResponse{
+					{Id: 1, Name: "Food", CreatedBy: userId},
+					{Id: 2, Name: "Transfers", CreatedBy: userId},
+				}
+				transaction.Name = "Transfer from Some Transaction"
+				desc := "Transfer from original: Some Transaction"
+				transaction.Description = &desc
+				transaction.CategoryIds = []int64{2}
+				engine = NewRuleEngine(categories, accounts, rules)
+
+				result := engine.ProcessTransaction(transaction)
+
+				Expect(result).To(BeNil())
+			})
+
 			It("should not skip transfer when Transfer category belongs to different user", func() {
 				// Create Transfer category owned by different user
 				categories = []models.CategoryResponse{

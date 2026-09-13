@@ -135,7 +135,7 @@ func Init(
 		analytics := base.Group("/analytics", middleware.ProtectedWithCreatedBy(cfg)...)
 		{
 			analytics.GET("/account", analyticsController.GetAccountAnalytics)
-			analytics.GET("/networth", analyticsController.GetNetworthTimeSeries)
+			analytics.GET("/cash-balance", analyticsController.GetCashBalanceHistory)
 			analytics.GET("/category", analyticsController.GetCategoryAnalytics)
 			analytics.GET("/monthly", analyticsController.GetMonthlyAnalytics)
 			analytics.GET("/insights", analyticsController.GetInsights)

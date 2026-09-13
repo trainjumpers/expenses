@@ -362,12 +362,13 @@ func (p *CustomParser) getAmount(row []string, columnIndex map[string]int) (*flo
 
 		logger.Debugf("CustomParser.getAmount: Parsed values - credit: %f, debit: %f", credit, debit)
 
-		if credit > 0 {
-			amount = credit
-			logger.Debugf("CustomParser.getAmount: Using credit amount: %f", amount)
+		// Debit is stored positive and credit negative, matching the other parsers.
+		if debit > 0 {
+			amount = debit
+			logger.Debugf("CustomParser.getAmount: Using debit amount: %f", amount)
 		} else {
-			amount = -debit
-			logger.Debugf("CustomParser.getAmount: Using negative debit amount: %f", amount)
+			amount = -credit
+			logger.Debugf("CustomParser.getAmount: Using negative credit amount: %f", amount)
 		}
 	} else {
 		logger.Debugf("CustomParser.getAmount: Insufficient amount information available")

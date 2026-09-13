@@ -68,7 +68,7 @@ export function AccountsAnalyticsSidepanel({
         analytics.current_value !== null &&
         analytics.current_value !== undefined;
       const percentageChange = isInvestment
-        ? -1 * (analytics.percentage_increase ?? 0)
+        ? 0
         : calculatePercentageChange(
             analytics.current_balance,
             analytics.balance_one_month_ago
@@ -258,17 +258,9 @@ export function AccountsAnalyticsSidepanel({
                                     </Tooltip>
                                   </span>
                                 </div>
-                                <div
-                                  className={`text-xs ${getTransactionColor(
-                                    -1 * account.percentageChange
-                                  )}`}
-                                >
-                                  {formatPercentage(account.percentageChange)}
-                                  <span className="mx-1">•</span>
-                                  <span className="text-xs font-medium">
-                                    XIRR
-                                  </span>
-                                  <span className="ml-1">
+                                <div className="text-xs text-muted-foreground">
+                                  <span className="font-medium">XIRR</span>
+                                  <span className="ml-1 tabular-nums">
                                     {formatPercentage(account.xirr)}
                                   </span>
                                 </div>

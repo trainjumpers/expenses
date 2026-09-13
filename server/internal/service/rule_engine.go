@@ -299,10 +299,11 @@ func (e *RuleEngine) isAlreadyTransferTransaction(transaction models.Transaction
 	return true
 }
 
-// getTransferCategoryId finds the Transfer category ID for a user
+// getTransferCategoryId finds the Transfer category ID for a user. Both the
+// canonical "Transfers" name and the legacy singular "Transfer" are accepted.
 func (e *RuleEngine) getTransferCategoryId(userId int64) int64 {
 	for _, category := range e.categories {
-		if category.CreatedBy == userId && strings.EqualFold(category.Name, "Transfer") {
+		if category.CreatedBy == userId && models.IsTransferCategoryName(category.Name) {
 			return category.Id
 		}
 	}

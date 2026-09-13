@@ -32,18 +32,20 @@ type AccountAnalyticsListResponse struct {
 	AccountAnalytics []AccountBalanceAnalytics `json:"account_analytics"`
 }
 
-// NetworthDataPoint represents a single point in the networth time series
-type NetworthDataPoint struct {
-	Date     string  `json:"date"`
-	Networth float64 `json:"networth"`
+// CashBalanceDataPoint represents a single point in the cash-balance history.
+// Investment ledgers are excluded because historical investment valuation is
+// unavailable, so this is not a net-worth series.
+type CashBalanceDataPoint struct {
+	Date        string  `json:"date"`
+	CashBalance float64 `json:"cash_balance"`
 }
 
-// NetworthTimeSeriesResponse represents the networth over time response
-type NetworthTimeSeriesResponse struct {
-	InitialBalance float64             `json:"initial_balance"`
-	TotalIncome    float64             `json:"total_income"`
-	TotalExpenses  float64             `json:"total_expenses"`
-	TimeSeries     []NetworthDataPoint `json:"time_series"`
+// CashBalanceHistoryResponse is the cash-only balance history over time.
+type CashBalanceHistoryResponse struct {
+	InitialBalance float64                `json:"initial_balance"`
+	TotalIncome    float64                `json:"total_income"`
+	TotalExpenses  float64                `json:"total_expenses"`
+	TimeSeries     []CashBalanceDataPoint `json:"time_series"`
 }
 
 // CategoryAnalytics represents the category analytics for a given period
@@ -98,9 +100,79 @@ type InsightsCategory struct {
 
 // InsightsTopExpense is a payee aggregated from household debits
 type InsightsTopExpense struct {
-	Name   string  `json:"name"`
-	Amount float64 `json:"amount"`
-	Count  int64   `json:"count"`
+	Name    string  `json:"name"`
+	Amount  float64 `json:"amount"`
+	Count   int64   `json:"count"`
+	Share   float64 `json:"share"`
+	Average float64 `json:"average"`
+}
+
+// InsightsSpendingSummary describes expense behavior in the period
+type InsightsSpendingSummary struct {
+	ExpenseCount       int64   `json:"expense_count"`
+	AverageTransaction float64 `json:"average_transaction"`
+	MedianTransaction  float64 `json:"median_transaction"`
+	LargestExpense     float64 `json:"largest_expense"`
+	ActiveSpendingDays int64   `json:"active_spending_days"`
+	NoSpendDays        int64   `json:"no_spend_days"`
+}
+
+// InsightsCategoryMonth is an expense-only category total for one month
+type InsightsCategoryMonth struct {
+	Month        string  `json:"month"`
+	CategoryID   int64   `json:"category_id"`
+	CategoryName string  `json:"category_name"`
+	Total        float64 `json:"total"`
+}
+
+// InsightsCategoryMovement compares expense-only category totals between the
+// latest complete month and the month before it
+type InsightsCategoryMovement struct {
+	CategoryID   int64   `json:"category_id"`
+	CategoryName string  `json:"category_name"`
+	RecentTotal  float64 `json:"recent_total"`
+	PriorTotal   float64 `json:"prior_total"`
+	RecentShare  float64 `json:"recent_share"`
+	PriorShare   float64 `json:"prior_share"`
+	Change       float64 `json:"change"`
+}
+
+// InsightsWeekday is one weekday's expense behavior. ActiveDays is an
+// intermediate value used to derive the average and is not serialized.
+type InsightsWeekday struct {
+	Weekday    int     `json:"weekday"`
+	Total      float64 `json:"total"`
+	Count      int64   `json:"count"`
+	Average    float64 `json:"average"`
+	Share      float64 `json:"share"`
+	ActiveDays int64   `json:"-"`
+}
+
+// InsightsWeekdayBehavior groups weekday expenses
+type InsightsWeekdayBehavior struct {
+	Days         []InsightsWeekday `json:"days"`
+	WeekendShare float64           `json:"weekend_share"`
+}
+
+// InsightsTrend describes spending over complete months
+type InsightsTrend struct {
+	RecentMonth               string  `json:"recent_month"`
+	PriorMonth                string  `json:"prior_month"`
+	RecentExpenses            float64 `json:"recent_expenses"`
+	PriorExpenses             float64 `json:"prior_expenses"`
+	Change                    float64 `json:"change"`
+	TrailingThreeMonthAverage float64 `json:"trailing_three_month_average"`
+}
+
+// InsightsDataConfidence flags limitations that affect the metrics above
+type InsightsDataConfidence struct {
+	UncategorizedShare    float64  `json:"uncategorized_share"`
+	MultiCategoryCount    int64    `json:"multi_category_count"`
+	MultiCategoryShare    float64  `json:"multi_category_share"`
+	LatestTransactionDate *string  `json:"latest_transaction_date"`
+	StaleDays             int64    `json:"stale_days"`
+	MultipleCurrencies    bool     `json:"multiple_currencies"`
+	Currencies            []string `json:"currencies"`
 }
 
 // InsightsInvestment is a per-vehicle breakdown of the investment portfolio
@@ -117,9 +189,14 @@ type InsightsInvestment struct {
 
 // AnalyticsInsightsResponse is the payload of GET /analytics/insights
 type AnalyticsInsightsResponse struct {
-	Summary     InsightsSummary        `json:"summary"`
-	Monthly     []InsightsMonthlyPoint `json:"monthly"`
-	Categories  []InsightsCategory     `json:"categories"`
-	TopExpenses []InsightsTopExpense   `json:"top_expenses"`
-	Investments []InsightsInvestment   `json:"investments"`
+	Summary          InsightsSummary            `json:"summary"`
+	Monthly          []InsightsMonthlyPoint     `json:"monthly"`
+	Categories       []InsightsCategory         `json:"categories"`
+	TopExpenses      []InsightsTopExpense       `json:"top_expenses"`
+	Investments      []InsightsInvestment       `json:"investments"`
+	SpendingSummary  InsightsSpendingSummary    `json:"spending_summary"`
+	CategoryMovement []InsightsCategoryMovement `json:"category_movement"`
+	WeekdayBehavior  InsightsWeekdayBehavior    `json:"weekday_behavior"`
+	Trend            InsightsTrend              `json:"trend"`
+	DataConfidence   InsightsDataConfidence     `json:"data_confidence"`
 }

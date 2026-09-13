@@ -1,6 +1,6 @@
 "use client";
 
-import { useNetworthTimeSeries } from "@/components/hooks/useAnalytics";
+import { useCashBalanceHistory } from "@/components/hooks/useAnalytics";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   ChartContainer,
@@ -12,7 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   cn,
   formatCurrency,
-  formatPercentage,
+  formatShortCurrency,
   transformToChartData,
 } from "@/lib/utils";
 import { format } from "date-fns";
@@ -40,43 +40,33 @@ export function NetWorth({
   showDatePicker = true,
   className,
 }: NetWorthProps) {
-  const { data: networthData, isLoading } = useNetworthTimeSeries(
+  const { data: history, isLoading } = useCashBalanceHistory(
     format(dateRange.from, "yyyy-MM-dd"),
     format(dateRange.to, "yyyy-MM-dd")
   );
 
-  // Transform data for chart
-  const chartData = networthData?.time_series
-    ? transformToChartData(networthData.time_series)
+  const chartData = history?.time_series
+    ? transformToChartData(history.time_series)
     : [];
 
-  // Get current and initial values
-  const currentNetWorth = chartData[chartData.length - 1]?.value || 0;
-  const initialNetWorth = networthData?.initial_balance || 0;
+  const currentBalance = chartData[chartData.length - 1]?.value ?? 0;
+  const initialBalance = chartData[0]?.value ?? 0;
+  const absoluteChange = currentBalance - initialBalance;
 
-  // Calculate percentage change over the period
-  const percentageChange =
-    initialNetWorth === 0
-      ? 0
-      : ((currentNetWorth - initialNetWorth) / Math.abs(initialNetWorth)) * 100;
+  const chartStartDate = chartData[0]?.formattedDate ?? "";
+  const chartEndDate = chartData[chartData.length - 1]?.formattedDate ?? "";
 
-  const absoluteChange = currentNetWorth - initialNetWorth;
-
-  const chartStartDate = chartData[0]?.formattedDate || "";
-  const chartEndDate = chartData[chartData.length - 1]?.formattedDate || "";
-
-  // Determine Y axis domain based on data min/max with a small padding so small changes are visible
   const yDomain = (() => {
-    const values = chartData.map((d) => d.value);
-    if (values.length === 0) return ["dataMin", "dataMax"] as [any, any];
+    const values = chartData.map((point) => point.value);
+    if (values.length === 0) return ["dataMin", "dataMax"] as [string, string];
     const min = Math.min(...values);
     const max = Math.max(...values);
     if (min === max) {
       const buffer = Math.max(Math.abs(min) * 0.05, 1);
-      return [min - buffer, max + buffer];
+      return [min - buffer, max + buffer] as [number, number];
     }
     const padding = (max - min) * 0.05;
-    return [min - padding, max + padding];
+    return [min - padding, max + padding] as [number, number];
   })();
 
   if (isLoading) {
@@ -84,21 +74,17 @@ export function NetWorth({
       <Card className={cn("w-full", className)}>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <Skeleton className="h-6 w-20" />
+            <Skeleton className="h-6 w-28" />
             {showDatePicker ? <Skeleton className="h-6 w-12" /> : null}
           </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             <div>
-              <Skeleton className="h-10 w-48 mb-2" />
-              <Skeleton className="h-5 w-64" />
+              <Skeleton className="mb-2 h-10 w-48" />
+              <Skeleton className="h-5 w-40" />
             </div>
             <Skeleton className="h-24 w-full" />
-            <div className="flex justify-between">
-              <Skeleton className="h-4 w-20" />
-              <Skeleton className="h-4 w-20" />
-            </div>
           </div>
         </CardContent>
       </Card>
@@ -110,7 +96,7 @@ export function NetWorth({
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg font-semibold text-muted-foreground">
-            Net Worth
+            Cash balance
           </CardTitle>
           {showDatePicker && onDateRangeChange ? (
             <DateRangePicker
@@ -131,29 +117,27 @@ export function NetWorth({
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
-          {/* Net Worth Value and Change */}
           <div>
-            <div className="text-3xl font-bold mb-2">
-              {formatCurrency(currentNetWorth)}
+            <div className="mb-2 text-3xl font-bold tabular-nums">
+              {formatCurrency(currentBalance)}
             </div>
-            <div
-              className={`text-sm ${percentageChange >= 0 ? "text-green-600 dark:text-green-300" : "text-red-600 dark:text-red-300"}`}
-            >
-              {formatCurrency(absoluteChange)} (
-              {formatPercentage(percentageChange)})
+            <div className="text-sm text-muted-foreground">
+              {formatShortCurrency(absoluteChange)} across this range. Bank and
+              cash accounts only.
             </div>
           </div>
 
-          {/* Chart */}
           <div className="h-24">
             <ChartContainer
               config={{
-                netWorth: {
-                  label: "Net Worth",
-                  color: "hsl(142, 76%, 36%)",
+                balance: {
+                  label: "Cash balance",
+                  color: "var(--chart-1)",
                 },
               }}
               className="aspect-auto h-full w-full"
+              role="img"
+              aria-label="Cash balance over time"
             >
               <LineChart data={chartData}>
                 <XAxis
@@ -168,11 +152,12 @@ export function NetWorth({
                     <ChartTooltipContent
                       formatter={(value) => [
                         formatCurrency(value as number),
-                        " Net Worth",
+                        "Cash balance",
                       ]}
-                      labelFormatter={(label, payload) => {
-                        const data = payload?.[0]?.payload as ChartDataPoint;
-                        return data?.formattedDate || label;
+                      labelFormatter={(_, payload) => {
+                        const point = payload?.[0]?.payload as
+                          ChartDataPoint | undefined;
+                        return point?.formattedDate ?? "";
                       }}
                     />
                   }
@@ -180,7 +165,7 @@ export function NetWorth({
                 <Line
                   type="monotone"
                   dataKey="value"
-                  stroke="var(--color-netWorth)"
+                  stroke="var(--color-balance)"
                   strokeWidth={2}
                   dot={false}
                 />
@@ -188,7 +173,6 @@ export function NetWorth({
             </ChartContainer>
           </div>
 
-          {/* Date Range */}
           <div className="flex justify-between text-xs text-muted-foreground">
             <span>{chartStartDate}</span>
             <span>{chartEndDate}</span>

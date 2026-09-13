@@ -9,24 +9,29 @@ import (
 )
 
 type MockAnalyticsRepository struct {
-	balances              map[string]map[int64]float64                 // key: userId_startDate_endDate, value: accountId -> balance
-	analytics             map[int64][]models.AccountBalanceAnalytics   // key: userId, value: analytics
-	networthData          map[string]networthMockData                  // key: userId_startDate_endDate, value: networth data
-	categoryAnalytics     map[string]*models.CategoryAnalyticsResponse // key: userId_startDate_endDate, value: category analytics
-	monthlyAnalytics      map[string]*models.MonthlyAnalyticsResponse  // key: userId_months, value: monthly analytics
-	insightsMonthly       map[string][]models.InsightsMonthlyPoint     // key: userId_startDate_endDate
-	insightsCategories    map[string][]models.InsightsCategory         // key: userId_startDate_endDate
-	insightsTopExpenses   map[string][]models.InsightsTopExpense       // key: userId_startDate_endDate
-	insightsUncategorized map[string]mockUncategorizedData             // key: userId_startDate_endDate
-	cashFlows             map[int64][]models.AccountCashFlow           // key: userId
-	shouldErrorOnBalance  bool                                         // simulate GetBalance errors
-	shouldErrorOnNetworth bool                                         // simulate GetNetworthTimeSeries errors
-	shouldErrorOnCategory bool                                         // simulate GetCategoryAnalytics errors
-	shouldErrorOnMonthly  bool                                         // simulate GetMonthlyAnalytics errors
-	mu                    sync.RWMutex
+	balances                 map[string]map[int64]float64                 // key: userId_startDate_endDate, value: accountId -> balance
+	analytics                map[int64][]models.AccountBalanceAnalytics   // key: userId, value: analytics
+	cashBalanceData          map[string]cashBalanceMockData               // key: userId_startDate_endDate, value: cash balance data
+	categoryAnalytics        map[string]*models.CategoryAnalyticsResponse // key: userId_startDate_endDate, value: category analytics
+	monthlyAnalytics         map[string]*models.MonthlyAnalyticsResponse  // key: userId_months, value: monthly analytics
+	insightsMonthly          map[string][]models.InsightsMonthlyPoint     // key: userId_startDate_endDate
+	insightsCategories       map[string][]models.InsightsCategory         // key: userId_startDate_endDate
+	insightsTopExpenses      map[string][]models.InsightsTopExpense       // key: userId_startDate_endDate
+	insightsUncategorized    map[string]mockUncategorizedData             // key: userId_startDate_endDate
+	insightsSpendingSummary  map[string]models.InsightsSpendingSummary    // key: userId_startDate_endDate
+	insightsCategoryMonths   map[string][]models.InsightsCategoryMonth    // key: userId_startDate_endDate
+	insightsWeekday          map[string][]models.InsightsWeekday          // key: userId_startDate_endDate
+	insightsMultiCategory    map[string]int64                             // key: userId_startDate_endDate
+	insightsLatestTxnDate    map[int64]*time.Time                         // key: userId
+	cashFlows                map[int64][]models.AccountCashFlow           // key: userId
+	shouldErrorOnBalance     bool                                         // simulate GetBalance errors
+	shouldErrorOnCashBalance bool                                         // simulate GetCashBalanceHistory errors
+	shouldErrorOnCategory    bool                                         // simulate GetCategoryAnalytics errors
+	shouldErrorOnMonthly     bool                                         // simulate GetMonthlyAnalytics errors
+	mu                       sync.RWMutex
 }
 
-type networthMockData struct {
+type cashBalanceMockData struct {
 	initialBalance float64
 	timeSeries     []map[string]any
 }
@@ -38,20 +43,25 @@ type mockUncategorizedData struct {
 
 func NewMockAnalyticsRepository() *MockAnalyticsRepository {
 	return &MockAnalyticsRepository{
-		balances:              make(map[string]map[int64]float64),
-		analytics:             make(map[int64][]models.AccountBalanceAnalytics),
-		networthData:          make(map[string]networthMockData),
-		categoryAnalytics:     make(map[string]*models.CategoryAnalyticsResponse),
-		monthlyAnalytics:      make(map[string]*models.MonthlyAnalyticsResponse),
-		insightsMonthly:       make(map[string][]models.InsightsMonthlyPoint),
-		insightsCategories:    make(map[string][]models.InsightsCategory),
-		insightsTopExpenses:   make(map[string][]models.InsightsTopExpense),
-		insightsUncategorized: make(map[string]mockUncategorizedData),
-		cashFlows:             make(map[int64][]models.AccountCashFlow),
-		shouldErrorOnBalance:  false,
-		shouldErrorOnNetworth: false,
-		shouldErrorOnCategory: false,
-		shouldErrorOnMonthly:  false,
+		balances:                 make(map[string]map[int64]float64),
+		analytics:                make(map[int64][]models.AccountBalanceAnalytics),
+		cashBalanceData:          make(map[string]cashBalanceMockData),
+		categoryAnalytics:        make(map[string]*models.CategoryAnalyticsResponse),
+		monthlyAnalytics:         make(map[string]*models.MonthlyAnalyticsResponse),
+		insightsMonthly:          make(map[string][]models.InsightsMonthlyPoint),
+		insightsCategories:       make(map[string][]models.InsightsCategory),
+		insightsTopExpenses:      make(map[string][]models.InsightsTopExpense),
+		insightsUncategorized:    make(map[string]mockUncategorizedData),
+		insightsSpendingSummary:  make(map[string]models.InsightsSpendingSummary),
+		insightsCategoryMonths:   make(map[string][]models.InsightsCategoryMonth),
+		insightsWeekday:          make(map[string][]models.InsightsWeekday),
+		insightsMultiCategory:    make(map[string]int64),
+		insightsLatestTxnDate:    make(map[int64]*time.Time),
+		cashFlows:                make(map[int64][]models.AccountCashFlow),
+		shouldErrorOnBalance:     false,
+		shouldErrorOnCashBalance: false,
+		shouldErrorOnCategory:    false,
+		shouldErrorOnMonthly:     false,
 	}
 }
 
@@ -80,19 +90,19 @@ func (m *MockAnalyticsRepository) GetBalance(ctx context.Context, userId int64, 
 	return make(map[int64]float64), nil
 }
 
-func (m *MockAnalyticsRepository) GetNetworthTimeSeries(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) (float64, float64, float64, []map[string]any, error) {
+func (m *MockAnalyticsRepository) GetCashBalanceHistory(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) (float64, float64, float64, []map[string]any, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
 	// Simulate error if configured
-	if m.shouldErrorOnNetworth {
-		return 0, 0, 0, nil, fmt.Errorf("simulated GetNetworthTimeSeries error")
+	if m.shouldErrorOnCashBalance {
+		return 0, 0, 0, nil, fmt.Errorf("simulated GetCashBalanceHistory error")
 	}
 
 	// Create a key based on parameters
-	key := m.createNetworthKey(userId, startDate, endDate)
+	key := m.createCashBalanceKey(userId, startDate, endDate)
 
-	if data, exists := m.networthData[key]; exists {
+	if data, exists := m.cashBalanceData[key]; exists {
 		// Negate values to mimic real repository's `* -1`
 		negatedInitialBalance := -data.initialBalance
 		var negatedTimeSeries []map[string]any
@@ -262,6 +272,50 @@ func (m *MockAnalyticsRepository) GetInsightsUncategorized(ctx context.Context, 
 	return 0, 0, nil
 }
 
+func (m *MockAnalyticsRepository) GetInsightsSpendingSummary(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) (models.InsightsSpendingSummary, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	if summary, exists := m.insightsSpendingSummary[m.createMonthlyKey(userId, startDate, endDate)]; exists {
+		return summary, nil
+	}
+	return models.InsightsSpendingSummary{}, nil
+}
+
+func (m *MockAnalyticsRepository) GetInsightsCategoryMonths(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) ([]models.InsightsCategoryMonth, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	if months, exists := m.insightsCategoryMonths[m.createMonthlyKey(userId, startDate, endDate)]; exists {
+		return months, nil
+	}
+	return []models.InsightsCategoryMonth{}, nil
+}
+
+func (m *MockAnalyticsRepository) GetInsightsWeekday(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) ([]models.InsightsWeekday, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	if days, exists := m.insightsWeekday[m.createMonthlyKey(userId, startDate, endDate)]; exists {
+		return days, nil
+	}
+	return []models.InsightsWeekday{}, nil
+}
+
+func (m *MockAnalyticsRepository) GetInsightsLatestTransactionDate(ctx context.Context, userId int64) (*time.Time, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	return m.insightsLatestTxnDate[userId], nil
+}
+
+func (m *MockAnalyticsRepository) GetInsightsMultiCategoryCount(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) (int64, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	return m.insightsMultiCategory[m.createMonthlyKey(userId, startDate, endDate)], nil
+}
+
 // Helper methods for testing
 func (m *MockAnalyticsRepository) SetBalance(userId int64, startDate *time.Time, endDate *time.Time, balances map[int64]float64) {
 	m.mu.Lock()
@@ -278,12 +332,12 @@ func (m *MockAnalyticsRepository) SetAnalytics(userId int64, analytics []models.
 	m.analytics[userId] = analytics
 }
 
-func (m *MockAnalyticsRepository) SetNetworthTimeSeries(userId int64, startDate time.Time, endDate time.Time, initialBalance float64, timeSeries []map[string]any) {
+func (m *MockAnalyticsRepository) SetCashBalanceHistory(userId int64, startDate time.Time, endDate time.Time, initialBalance float64, timeSeries []map[string]any) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	key := m.createNetworthKey(userId, startDate, endDate)
-	m.networthData[key] = networthMockData{
+	key := m.createCashBalanceKey(userId, startDate, endDate)
+	m.cashBalanceData[key] = cashBalanceMockData{
 		initialBalance: initialBalance,
 		timeSeries:     timeSeries,
 	}
@@ -295,10 +349,10 @@ func (m *MockAnalyticsRepository) SetShouldErrorOnBalance(shouldError bool) {
 	m.shouldErrorOnBalance = shouldError
 }
 
-func (m *MockAnalyticsRepository) SetShouldErrorOnNetworth(shouldError bool) {
+func (m *MockAnalyticsRepository) SetShouldErrorOnCashBalance(shouldError bool) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.shouldErrorOnNetworth = shouldError
+	m.shouldErrorOnCashBalance = shouldError
 }
 
 func (m *MockAnalyticsRepository) SetCategoryAnalytics(userId int64, startDate time.Time, endDate time.Time, analytics *models.CategoryAnalyticsResponse) {
@@ -353,6 +407,36 @@ func (m *MockAnalyticsRepository) SetInsightsUncategorized(userId int64, startDa
 	m.insightsUncategorized[m.createMonthlyKey(userId, startDate, endDate)] = mockUncategorizedData{count: count, amount: amount}
 }
 
+func (m *MockAnalyticsRepository) SetInsightsSpendingSummary(userId int64, startDate time.Time, endDate time.Time, summary models.InsightsSpendingSummary) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.insightsSpendingSummary[m.createMonthlyKey(userId, startDate, endDate)] = summary
+}
+
+func (m *MockAnalyticsRepository) SetInsightsCategoryMonths(userId int64, startDate time.Time, endDate time.Time, months []models.InsightsCategoryMonth) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.insightsCategoryMonths[m.createMonthlyKey(userId, startDate, endDate)] = months
+}
+
+func (m *MockAnalyticsRepository) SetInsightsWeekday(userId int64, startDate time.Time, endDate time.Time, days []models.InsightsWeekday) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.insightsWeekday[m.createMonthlyKey(userId, startDate, endDate)] = days
+}
+
+func (m *MockAnalyticsRepository) SetInsightsLatestTransactionDate(userId int64, latest *time.Time) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.insightsLatestTxnDate[userId] = latest
+}
+
+func (m *MockAnalyticsRepository) SetInsightsMultiCategoryCount(userId int64, startDate time.Time, endDate time.Time, count int64) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.insightsMultiCategory[m.createMonthlyKey(userId, startDate, endDate)] = count
+}
+
 func (m *MockAnalyticsRepository) SetAccountCashFlows(userId int64, flows []models.AccountCashFlow) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -375,7 +459,7 @@ func (m *MockAnalyticsRepository) createBalanceKey(userId int64, startDate *time
 	return key
 }
 
-func (m *MockAnalyticsRepository) createNetworthKey(userId int64, startDate time.Time, endDate time.Time) string {
+func (m *MockAnalyticsRepository) createCashBalanceKey(userId int64, startDate time.Time, endDate time.Time) string {
 	return fmt.Sprintf("%d_%s_%s", userId, startDate.Format("2006-01-02"), endDate.Format("2006-01-02"))
 }
 

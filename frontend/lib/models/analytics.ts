@@ -13,18 +13,18 @@ export interface AccountAnalyticsListResponse {
   account_analytics: AccountBalanceAnalytics[];
 }
 
-// NetworthDataPoint represents a single point in the networth time series
-export interface NetworthDataPoint {
+// CashBalanceDataPoint is one day of the cash-only balance history
+export interface CashBalanceDataPoint {
   date: string;
-  networth: number;
+  cash_balance: number;
 }
 
-// NetworthTimeSeriesResponse represents the networth over time response
-export interface NetworthTimeSeriesResponse {
+// CashBalanceHistoryResponse is the cash-only balance history over time
+export interface CashBalanceHistoryResponse {
   initial_balance: number;
   total_income: number;
   total_expenses: number;
-  time_series: NetworthDataPoint[];
+  time_series: CashBalanceDataPoint[];
 }
 
 // CategoryAnalyticsResponse represents the category analytics for a given period
@@ -80,6 +80,8 @@ export interface InsightsTopExpense {
   name: string;
   amount: number;
   count: number;
+  share: number;
+  average: number;
 }
 
 // InsightsInvestment is a per-vehicle breakdown of the investment portfolio
@@ -94,6 +96,64 @@ export interface InsightsInvestment {
   percentage_increase?: number | null;
 }
 
+// InsightsSpendingSummary describes expense behavior in the requested range
+export interface InsightsSpendingSummary {
+  expense_count: number;
+  average_transaction: number;
+  median_transaction: number;
+  largest_expense: number;
+  active_spending_days: number;
+  no_spend_days: number;
+}
+
+// InsightsCategoryMovement compares expense-only category totals between the
+// latest complete month and the month before it
+export interface InsightsCategoryMovement {
+  category_id: number;
+  category_name: string;
+  recent_total: number;
+  prior_total: number;
+  recent_share: number;
+  prior_share: number;
+  change: number;
+}
+
+// InsightsWeekday is one weekday's expense behavior
+export interface InsightsWeekday {
+  weekday: number;
+  total: number;
+  count: number;
+  average: number;
+  share: number;
+}
+
+// InsightsWeekdayBehavior groups weekday spending
+export interface InsightsWeekdayBehavior {
+  days: InsightsWeekday[];
+  weekend_share: number;
+}
+
+// InsightsTrend describes the spend trajectory over complete months
+export interface InsightsTrend {
+  recent_month: string;
+  prior_month: string;
+  recent_expenses: number;
+  prior_expenses: number;
+  change: number;
+  trailing_three_month_average: number;
+}
+
+// InsightsDataConfidence flags limitations that affect the metrics above
+export interface InsightsDataConfidence {
+  uncategorized_share: number;
+  multi_category_count: number;
+  multi_category_share: number;
+  latest_transaction_date?: string | null;
+  stale_days: number;
+  multiple_currencies: boolean;
+  currencies: string[];
+}
+
 // AnalyticsInsightsResponse is the payload of GET /analytics/insights
 export interface AnalyticsInsightsResponse {
   summary: InsightsSummary;
@@ -101,4 +161,9 @@ export interface AnalyticsInsightsResponse {
   categories: InsightsCategory[];
   top_expenses: InsightsTopExpense[];
   investments: InsightsInvestment[];
+  spending_summary: InsightsSpendingSummary;
+  category_movement: InsightsCategoryMovement[];
+  weekday_behavior: InsightsWeekdayBehavior;
+  trend: InsightsTrend;
+  data_confidence: InsightsDataConfidence;
 }

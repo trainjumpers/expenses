@@ -53,8 +53,8 @@ export const queryKeys = {
     accountAnalytics: ["analytics", "account"] as const,
     categoryAnalytics: (startDate: string, endDate: string) =>
       ["analytics", "category", startDate, endDate] as const,
-    networthTimeSeries: (startDate: string, endDate: string) =>
-      ["analytics", "networth", startDate, endDate] as const,
+    cashBalanceHistory: (startDate: string, endDate: string) =>
+      ["analytics", "cash-balance", startDate, endDate] as const,
     monthlyAnalytics: (startDate: string, endDate: string) =>
       ["analytics", "monthly", startDate, endDate] as const,
     insights: (startDate: string, endDate: string) =>

@@ -1,6 +1,10 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  AnalyticsSection,
+  InlineNote,
+  Money,
+} from "@/components/custom/Analytics/AnalyticsShared";
 import {
   Table,
   TableBody,
@@ -15,41 +19,37 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import type { InsightsInvestment } from "@/lib/models/analytics";
-import { formatPercentage, formatShortCurrency } from "@/lib/utils";
+import { formatPercentage } from "@/lib/utils";
 import Link from "next/link";
 
-interface InvestmentTableProps {
+export function InvestmentTable({
+  investments,
+}: {
   investments: InsightsInvestment[];
-}
-
-export function InvestmentTable({ investments }: InvestmentTableProps) {
+}) {
   const rows = [...investments].sort(
     (a, b) => b.current_value - a.current_value
   );
 
   return (
-    <Card className="min-w-0 overflow-hidden rounded-none border-x-0 border-t-0 shadow-none">
-      <CardHeader className="px-0 pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">
-          Investments
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="px-0">
-        {rows.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            No investment accounts with a current value.
-          </p>
-        ) : (
+    <AnalyticsSection
+      title="Investments"
+      description="Current value is the latest recorded valuation. XIRR is the money-weighted return."
+    >
+      {rows.length === 0 ? (
+        <InlineNote>No investment accounts with a current value.</InlineNote>
+      ) : (
+        <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead className="text-right">Current</TableHead>
                 <TableHead className="hidden text-right sm:table-cell">
-                  In
+                  Invested
                 </TableHead>
                 <TableHead className="hidden text-right md:table-cell">
-                  Out
+                  Withdrawn
                 </TableHead>
                 <TableHead className="text-right">XIRR</TableHead>
               </TableRow>
@@ -70,16 +70,16 @@ export function InvestmentTable({ investments }: InvestmentTableProps) {
                       <TooltipContent>{investment.name}</TooltipContent>
                     </Tooltip>
                   </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {formatShortCurrency(investment.current_value)}
+                  <TableCell className="text-right text-sm font-medium">
+                    <Money value={investment.current_value} />
                   </TableCell>
-                  <TableCell className="hidden text-right tabular-nums sm:table-cell">
-                    {formatShortCurrency(investment.contributed)}
+                  <TableCell className="hidden text-right text-sm sm:table-cell">
+                    <Money value={investment.contributed} />
                   </TableCell>
-                  <TableCell className="hidden text-right tabular-nums md:table-cell">
-                    {formatShortCurrency(investment.distributed)}
+                  <TableCell className="hidden text-right text-sm md:table-cell">
+                    <Money value={investment.distributed} />
                   </TableCell>
-                  <TableCell className="text-right tabular-nums">
+                  <TableCell className="text-right text-sm tabular-nums">
                     {investment.xirr === null || investment.xirr === undefined
                       ? "-"
                       : formatPercentage(investment.xirr)}
@@ -88,8 +88,8 @@ export function InvestmentTable({ investments }: InvestmentTableProps) {
               ))}
             </TableBody>
           </Table>
-        )}
-      </CardContent>
-    </Card>
+        </div>
+      )}
+    </AnalyticsSection>
   );
 }

@@ -480,11 +480,7 @@ export function AccountAnalytics({ data }: AccountAnalyticsProps) {
                             </span>
                             {account.isInvestment && (
                               <span className="text-xs text-muted-foreground">
-                                {formatPercentage(
-                                  account.percentage_increase ?? 0
-                                )}
-                                <span className="mx-1">•</span>
-                                {formatPercentage(account.xirr ?? 0)}
+                                XIRR {formatPercentage(account.xirr ?? 0)}
                               </span>
                             )}
                           </div>
