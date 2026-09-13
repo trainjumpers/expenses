@@ -15,7 +15,7 @@ import {
   isValidationError,
 } from "./errors";
 
-function httpError(status: number, data?: unknown): HttpError {
+function httpError(status: number, data?: HttpError["data"]): HttpError {
   return Object.assign(new Error("boom"), {
     status,
     statusText: "Boom",
