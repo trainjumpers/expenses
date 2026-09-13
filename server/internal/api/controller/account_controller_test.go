@@ -444,7 +444,7 @@ var _ = Describe("AccountController", func() {
 
 		It("should return error for non-existent account id", func() {
 			url := "/account/9999"
-			resp, _ := testUser1.MakeRequest(http.MethodPatch, url, nil)
+			resp, _ := testUser1.MakeRequest(http.MethodPatch, url, models.UpdateAccountInput{})
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 		})
 
