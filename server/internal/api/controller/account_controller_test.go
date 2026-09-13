@@ -28,6 +28,22 @@ var _ = Describe("AccountController", func() {
 				Expect(response["data"].(map[string]any)["balance"]).To(Equal(balance))
 			})
 
+			It("should ignore created_by supplied in the request body", func() {
+				input := map[string]any{
+					"name":       "Forged Owner Account",
+					"bank_type":  "sbi",
+					"currency":   "inr",
+					"balance":    100.0,
+					"created_by": 999999,
+				}
+				resp, response := testUser1.MakeRequest(http.MethodPost, "/account", input)
+				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+
+				_, userResponse := testUser1.MakeRequest(http.MethodGet, "/user", nil)
+				userId := userResponse["data"].(map[string]any)["id"]
+				Expect(response["data"].(map[string]any)["created_by"]).To(Equal(userId))
+			})
+
 			It("should create account for duplicate account name", func() {
 				input := models.CreateAccountInput{
 					Name:     "Integration Account",
@@ -428,7 +444,7 @@ var _ = Describe("AccountController", func() {
 
 		It("should return error for non-existent account id", func() {
 			url := "/account/9999"
-			resp, _ := testUser1.MakeRequest(http.MethodPatch, url, nil)
+			resp, _ := testUser1.MakeRequest(http.MethodPatch, url, models.UpdateAccountInput{})
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 		})
 

@@ -24,7 +24,7 @@ type CreateAccountInput struct {
 	Currency     string   `json:"currency" binding:"required,oneof=inr usd"`
 	Balance      *float64 `json:"balance"`
 	CurrentValue *float64 `json:"current_value"`
-	CreatedBy    int64    `json:"created_by" binding:"required"`
+	CreatedBy    int64    `json:"-"`
 }
 
 type UpdateAccountInput struct {

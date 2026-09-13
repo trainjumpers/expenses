@@ -97,7 +97,7 @@ func Init(
 		base.POST("/logout", authController.Logout)
 
 		// User related routes
-		user := base.Group("/user", middleware.ProtectedWithCreatedBy(cfg)...)
+		user := base.Group("/user", middleware.Protected(cfg))
 		{
 			user.GET("", userController.GetUserById)
 			user.DELETE("", userController.DeleteUser)
@@ -106,7 +106,7 @@ func Init(
 		}
 
 		// Account routes
-		account := base.Group("/account", middleware.ProtectedWithCreatedBy(cfg)...)
+		account := base.Group("/account", middleware.Protected(cfg))
 		{
 			account.GET("", accountController.ListAccounts)
 			account.POST("", accountController.CreateAccount)
@@ -116,7 +116,7 @@ func Init(
 		}
 
 		// Category routes
-		category := base.Group("/category", middleware.ProtectedWithCreatedBy(cfg)...)
+		category := base.Group("/category", middleware.Protected(cfg))
 		{
 			category.GET("", categoryController.ListCategories)
 			category.POST("", categoryController.CreateCategory)
@@ -126,7 +126,7 @@ func Init(
 		}
 
 		// Transaction routes
-		transaction := base.Group("/transaction", middleware.ProtectedWithCreatedBy(cfg)...)
+		transaction := base.Group("/transaction", middleware.Protected(cfg))
 		{
 			transaction.GET("", transactionController.ListTransactions)
 			transaction.POST("", transactionController.CreateTransaction)
@@ -145,7 +145,7 @@ func Init(
 		}
 
 		// Rule routes
-		rule := base.Group("/rule", middleware.ProtectedWithCreatedBy(cfg)...)
+		rule := base.Group("/rule", middleware.Protected(cfg))
 		{
 			rule.GET("", ruleController.ListRules)
 			rule.POST("", ruleController.CreateRule)
@@ -160,7 +160,7 @@ func Init(
 		}
 
 		// Analytics routes
-		analytics := base.Group("/analytics", middleware.ProtectedWithCreatedBy(cfg)...)
+		analytics := base.Group("/analytics", middleware.Protected(cfg))
 		{
 			analytics.GET("/account", analyticsController.GetAccountAnalytics)
 			analytics.GET("/cash-balance", analyticsController.GetCashBalanceHistory)

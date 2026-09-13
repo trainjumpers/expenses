@@ -33,7 +33,7 @@ type CreateBaseRuleRequest struct {
 	Description    *string         `json:"description,omitempty" binding:"omitempty,max=255"`
 	ConditionLogic *ConditionLogic `json:"condition_logic" binding:"omitempty,oneof=AND OR"`
 	EffectiveFrom  time.Time       `json:"effective_from" binding:"required"`
-	CreatedBy      int64           `json:"created_by"`
+	CreatedBy      int64           `json:"-"`
 }
 
 type CreateRuleRequest struct {
