@@ -24,6 +24,7 @@ var _ = Describe("Config", func() {
 		os.Unsetenv("DB_SCHEMA")
 		os.Unsetenv("ACCESS_TOKEN_HOURS")
 		os.Unsetenv("REFRESH_TOKEN_DAYS")
+		os.Unsetenv("TRUSTED_PROXIES")
 	})
 
 	Context("when creating a new config", func() {
@@ -141,6 +142,26 @@ var _ = Describe("Config", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(cfg.IsDev()).To(BeFalse())
 			Expect(cfg.IsProd()).To(BeFalse())
+		})
+	})
+
+	Context("trusted proxies", func() {
+		BeforeEach(func() {
+			os.Setenv("JWT_SECRET", "test-secret")
+			os.Setenv("DB_SCHEMA", "test_schema")
+		})
+
+		It("should parse a comma separated list", func() {
+			os.Setenv("TRUSTED_PROXIES", "10.0.0.1, 10.0.0.2")
+			cfg, err := NewConfig()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(cfg.TrustedProxies).To(Equal([]string{"10.0.0.1", "10.0.0.2"}))
+		})
+
+		It("should be empty when unset", func() {
+			cfg, err := NewConfig()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(cfg.TrustedProxies).To(BeEmpty())
 		})
 	})
 

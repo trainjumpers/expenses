@@ -25,6 +25,7 @@ type Config struct {
 	RefreshTokenDuration time.Duration
 	CookieDomain         string
 	LoggingLevel         string
+	TrustedProxies       []string
 }
 
 func GetEnvironment() string {
@@ -62,6 +63,7 @@ func NewConfig() (*Config, error) {
 	config.RefreshTokenDuration = time.Duration(refreshTokenDays) * 24 * time.Hour
 	config.CookieDomain = os.Getenv("COOKIE_DOMAIN")
 	config.LoggingLevel = os.Getenv("LOGGING_LEVEL")
+	config.TrustedProxies = getEnvList("TRUSTED_PROXIES")
 	return config, nil
 }
 
@@ -89,6 +91,22 @@ func (cfg *Config) IsProd() bool {
 
 func (cfg *Config) IsTest() bool {
 	return cfg.Environment == EnvironmentTest
+}
+
+// getEnvList reads a comma-separated environment variable into a slice, dropping blanks.
+func getEnvList(key string) []string {
+	value := os.Getenv(key)
+	if value == "" {
+		return nil
+	}
+	parts := strings.Split(value, ",")
+	items := make([]string, 0, len(parts))
+	for _, part := range parts {
+		if trimmed := strings.TrimSpace(part); trimmed != "" {
+			items = append(items, trimmed)
+		}
+	}
+	return items
 }
 
 // getEnvInt is a helper function to get an integer from environment variables
