@@ -103,8 +103,9 @@ func (s *StatementService) ParseStatement(ctx context.Context, input models.Pars
 	}
 
 	// Process the statement asynchronously.
+	slots := s.workerSlots
 	go func() {
-		defer func() { <-s.workerSlots }()
+		defer func() { <-slots }()
 		s.processStatementAsync(context.Background(), statement.Id, input, userId)
 	}()
 	return statement, nil
