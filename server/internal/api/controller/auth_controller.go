@@ -91,8 +91,13 @@ func (a *AuthController) RefreshToken(ctx *gin.Context) {
 	})
 }
 
-// Logout endpoint clears the auth cookies
+// Logout endpoint clears the auth cookies and revokes the refresh session
 func (a *AuthController) Logout(ctx *gin.Context) {
+	refreshToken, _ := ctx.Cookie("refresh_token")
+	if err := a.authService.Logout(ctx, refreshToken); err != nil {
+		logger.Errorf("Failed to revoke refresh token: %v", err)
+	}
+
 	// Set cookies to expire in the past
 	a.setAuthCookie(ctx, "access_token", "", -1)
 	a.setAuthCookie(ctx, "refresh_token", "", -1)
