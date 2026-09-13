@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"errors"
 	"expenses/internal/config"
 	"expenses/internal/models"
 	"expenses/internal/service"
@@ -31,6 +32,15 @@ func NewStatementController(cfg *config.Config, statementService service.Stateme
 	}
 }
 
+func (s *StatementController) handleFormBindError(ctx *gin.Context, err error) {
+	var maxBytesErr *http.MaxBytesError
+	if errors.As(err, &maxBytesErr) {
+		s.SendError(ctx, http.StatusRequestEntityTooLarge, "file exceeds the maximum allowed size")
+		return
+	}
+	s.SendError(ctx, http.StatusBadRequest, fmt.Sprintf("Failed to parse form data: %v", err))
+}
+
 func (s *StatementController) readFileFromRequest(fileHeader *multipart.FileHeader) ([]byte, string, error) {
 	if fileHeader == nil {
 		return nil, "", fmt.Errorf("file header is nil")
@@ -55,7 +65,7 @@ func (s *StatementController) CreateStatement(ctx *gin.Context) {
 
 	var form models.ParseStatementForm
 	if err := ctx.ShouldBindWith(&form, binding.FormMultipart); err != nil {
-		s.SendError(ctx, http.StatusBadRequest, fmt.Sprintf("Failed to parse form data: %v", err))
+		s.handleFormBindError(ctx, err)
 		return
 	}
 
@@ -90,7 +100,7 @@ func (s *StatementController) PreviewStatement(ctx *gin.Context) {
 
 	var form models.PreviewStatementForm
 	if err := ctx.ShouldBindWith(&form, binding.FormMultipart); err != nil {
-		s.SendError(ctx, http.StatusBadRequest, fmt.Sprintf("Failed to parse form data: %v", err))
+		s.handleFormBindError(ctx, err)
 		return
 	}
 

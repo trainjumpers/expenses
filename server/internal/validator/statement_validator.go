@@ -8,6 +8,11 @@ import (
 
 type StatementValidator struct{}
 
+// MaxStatementFileBytes is the maximum accepted statement upload size. The
+// request body cap in the routes is derived from it, so keep this the single
+// source of truth for the limit.
+const MaxStatementFileBytes = 5 * 1024 * 1024
+
 func NewStatementValidator() *StatementValidator {
 	return &StatementValidator{}
 }
@@ -22,7 +27,7 @@ func (v *StatementValidator) ValidateStatementUpload(accountId int64, fileBytes 
 	if strings.TrimSpace(fileName) == "" {
 		return apierrors.NewStatementBadRequestError(errors.New("filename cannot be empty"))
 	}
-	if len(fileBytes) > 5*1024*1024 {
+	if len(fileBytes) > MaxStatementFileBytes {
 		return apierrors.NewStatementBadRequestError(errors.New("file size must be less than 5MB"))
 	}
 	trimmedFileName := strings.ToLower(strings.TrimSpace(fileName))
@@ -43,7 +48,7 @@ func (v *StatementValidator) ValidateStatementPreview(fileBytes []byte, fileName
 	if strings.TrimSpace(fileName) == "" {
 		return apierrors.NewStatementBadRequestError(errors.New("filename cannot be empty"))
 	}
-	if len(fileBytes) > 5*1024*1024 {
+	if len(fileBytes) > MaxStatementFileBytes {
 		return apierrors.NewStatementBadRequestError(errors.New("file size must be less than 5MB"))
 	}
 	trimmedFileName := strings.ToLower(strings.TrimSpace(fileName))
