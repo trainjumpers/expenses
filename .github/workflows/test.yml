@@ -62,7 +62,7 @@ jobs:
             PGPASSWORD=${{ env.DB_PASSWORD }} psql -U postgres -h 127.0.0.1 -p ${{ job.services.postgres.ports[5432] }} -d ${{ env.DB_NAME }} -tc "CREATE SCHEMA IF NOT EXISTS ${{ env.DB_SCHEMA }};"
 
       - name: Install Just
-        uses: extractions/setup-just@v3
+        uses: extractions/setup-just@v4
 
       - name: Detect GOBIN
         id: gobin
