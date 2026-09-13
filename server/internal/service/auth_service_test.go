@@ -18,6 +18,7 @@ var _ = Describe("AuthService", func() {
 		authService AuthServiceInterface
 		userService UserServiceInterface
 		mockRepo    *mock.MockUserRepository
+		sessionRepo *mock.MockSessionRepository
 		cfg         *config.Config
 		ctx         context.Context
 	)
@@ -36,11 +37,12 @@ var _ = Describe("AuthService", func() {
 
 		ctx = context.Background()
 		mockRepo = mock.NewMockUserRepository()
-		userService = NewUserService(mockRepo)
+		sessionRepo = mock.NewMockSessionRepository()
+		userService = NewUserService(mockRepo, sessionRepo)
 		var err error
 		cfg, err = config.NewConfig()
 		Expect(err).NotTo(HaveOccurred())
-		authService = NewAuthService(userService, cfg)
+		authService = NewAuthService(userService, sessionRepo, cfg)
 	})
 
 	Describe("Signup", func() {
@@ -196,6 +198,32 @@ var _ = Describe("AuthService", func() {
 		})
 	})
 
+	Describe("Logout", func() {
+		var authResponse models.AuthResponse
+
+		BeforeEach(func() {
+			user := models.CreateUserInput{
+				Email:    "logout@example.com",
+				Name:     "Logout User",
+				Password: "password123",
+			}
+			var err error
+			authResponse, err = authService.Signup(ctx, user)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("revokes the refresh token so it can no longer be used", func() {
+			Expect(authService.Logout(ctx, authResponse.RefreshToken)).To(Succeed())
+
+			_, err := authService.RefreshToken(ctx, authResponse.RefreshToken)
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("does nothing for an empty refresh token", func() {
+			Expect(authService.Logout(ctx, "")).To(Succeed())
+		})
+	})
+
 	Describe("UpdateUserPassword", func() {
 		var (
 			user         models.CreateUserInput
@@ -293,7 +321,7 @@ var _ = Describe("AuthService", func() {
 			defer os.Setenv("JWT_SECRET", origJwt)
 			cfg, err := config.NewConfig()
 			Expect(err).NotTo(HaveOccurred())
-			service := NewAuthService(userService, cfg)
+			service := NewAuthService(userService, sessionRepo, cfg)
 			err = service.ExpireRefreshToken("sometoken")
 			Expect(err).To(HaveOccurred())
 		})

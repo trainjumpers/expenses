@@ -14,13 +14,15 @@ var _ = Describe("UserService", func() {
 	var (
 		userService UserServiceInterface
 		mockRepo    *mock.MockUserRepository
+		sessionRepo *mock.MockSessionRepository
 		ctx         context.Context
 	)
 
 	BeforeEach(func() {
 		ctx = context.Background()
 		mockRepo = mock.NewMockUserRepository()
-		userService = NewUserService(mockRepo)
+		sessionRepo = mock.NewMockSessionRepository()
+		userService = NewUserService(mockRepo, sessionRepo)
 	})
 
 	Describe("CreateUser", func() {

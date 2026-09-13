@@ -25,29 +25,30 @@ func InitializeApplication() (*Provider, error) {
 	if err != nil {
 		return nil, err
 	}
-	databaseManager, err := manager.NewDatabaseManager(configConfig)
+	v, err := manager.NewDatabaseManager(configConfig)
 	if err != nil {
 		return nil, err
 	}
-	userRepositoryInterface := repository.NewUserRepository(databaseManager, configConfig)
-	userServiceInterface := service.NewUserService(userRepositoryInterface)
-	authServiceInterface := service.NewAuthService(userServiceInterface, configConfig)
-	accountRepositoryInterface := repository.NewAccountRepository(databaseManager, configConfig)
+	userRepositoryInterface := repository.NewUserRepository(v, configConfig)
+	sessionRepositoryInterface := repository.NewSessionRepository(v, configConfig)
+	userServiceInterface := service.NewUserService(userRepositoryInterface, sessionRepositoryInterface)
+	authServiceInterface := service.NewAuthService(userServiceInterface, sessionRepositoryInterface, configConfig)
+	accountRepositoryInterface := repository.NewAccountRepository(v, configConfig)
 	accountServiceInterface := service.NewAccountService(accountRepositoryInterface)
-	categoryRepositoryInterface := repository.NewCategoryRepository(databaseManager, configConfig)
+	categoryRepositoryInterface := repository.NewCategoryRepository(v, configConfig)
 	categoryServiceInterface := service.NewCategoryService(categoryRepositoryInterface)
-	transactionRepositoryInterface := repository.NewTransactionRepository(databaseManager, configConfig)
-	transactionServiceInterface := service.NewTransactionService(transactionRepositoryInterface, categoryRepositoryInterface, accountRepositoryInterface, databaseManager)
-	ruleRepositoryInterface := repository.NewRuleRepository(databaseManager, configConfig)
-	ruleServiceInterface := service.NewRuleService(ruleRepositoryInterface, transactionRepositoryInterface, databaseManager)
+	transactionRepositoryInterface := repository.NewTransactionRepository(v, configConfig)
+	transactionServiceInterface := service.NewTransactionService(transactionRepositoryInterface, categoryRepositoryInterface, accountRepositoryInterface, v)
+	ruleRepositoryInterface := repository.NewRuleRepository(v, configConfig)
+	ruleServiceInterface := service.NewRuleService(ruleRepositoryInterface, transactionRepositoryInterface, v)
 	ruleEngineServiceInterface := service.NewRuleEngineService(ruleRepositoryInterface, transactionRepositoryInterface, categoryRepositoryInterface, accountRepositoryInterface)
-	statementRepositoryInterface := repository.NewStatementRepository(databaseManager, configConfig)
+	statementRepositoryInterface := repository.NewStatementRepository(v, configConfig)
 	statementValidator := validator.NewStatementValidator()
 	statementServiceInterface := service.NewStatementService(statementRepositoryInterface, accountServiceInterface, ruleEngineServiceInterface, statementValidator, transactionServiceInterface)
-	analyticsRepositoryInterface := repository.NewAnalyticsRepository(databaseManager, configConfig)
+	analyticsRepositoryInterface := repository.NewAnalyticsRepository(v, configConfig)
 	analyticsServiceInterface := service.NewAnalyticsService(analyticsRepositoryInterface, accountRepositoryInterface)
 	engine := api.Init(configConfig, authServiceInterface, userServiceInterface, accountServiceInterface, categoryServiceInterface, transactionServiceInterface, ruleServiceInterface, ruleEngineServiceInterface, statementServiceInterface, analyticsServiceInterface)
-	provider := NewProvider(engine, databaseManager)
+	provider := NewProvider(engine, v)
 	return provider, nil
 }
 
@@ -79,7 +80,7 @@ var ProviderSet = wire.NewSet(
 
 var controllerSet = wire.NewSet(controller.NewAccountController, controller.NewAnalyticsController, controller.NewAuthController, controller.NewCategoryController, controller.NewRuleController, controller.NewStatementController, controller.NewTransactionController)
 
-var repositorySet = wire.NewSet(repository.NewAccountRepository, repository.NewAnalyticsRepository, repository.NewCategoryRepository, repository.NewRuleRepository, repository.NewStatementRepository, repository.NewTransactionRepository, repository.NewUserRepository)
+var repositorySet = wire.NewSet(repository.NewAccountRepository, repository.NewAnalyticsRepository, repository.NewCategoryRepository, repository.NewRuleRepository, repository.NewSessionRepository, repository.NewStatementRepository, repository.NewTransactionRepository, repository.NewUserRepository)
 
 var serviceSet = wire.NewSet(service.NewAccountService, service.NewAnalyticsService, service.NewAuthService, service.NewCategoryService, service.NewRuleEngineService, service.NewRuleService, service.NewStatementService, service.NewTransactionService, service.NewUserService)
 

@@ -19,12 +19,13 @@ type UserServiceInterface interface {
 
 // UserService implements UserServiceInterface
 type UserService struct {
-	repo repository.UserRepositoryInterface
+	repo        repository.UserRepositoryInterface
+	sessionRepo repository.SessionRepositoryInterface
 }
 
 // NewUserService creates a new UserService instance that implements UserServiceInterface
-func NewUserService(repo repository.UserRepositoryInterface) UserServiceInterface {
-	return &UserService{repo: repo}
+func NewUserService(repo repository.UserRepositoryInterface, sessionRepo repository.SessionRepositoryInterface) UserServiceInterface {
+	return &UserService{repo: repo, sessionRepo: sessionRepo}
 }
 
 func (u *UserService) CreateUser(ctx context.Context, newUser models.CreateUserInput) (models.UserResponse, error) {
@@ -44,6 +45,9 @@ func (u *UserService) GetUserById(ctx context.Context, userId int64) (models.Use
 }
 
 func (u *UserService) DeleteUser(ctx context.Context, userId int64) error {
+	if err := u.sessionRepo.RevokeAllForUser(ctx, userId); err != nil {
+		return err
+	}
 	return u.repo.DeleteUser(ctx, userId)
 }
 

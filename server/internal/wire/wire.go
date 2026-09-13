@@ -64,6 +64,7 @@ var repositorySet = wire.NewSet(
 	repository.NewAnalyticsRepository,
 	repository.NewCategoryRepository,
 	repository.NewRuleRepository,
+	repository.NewSessionRepository,
 	repository.NewStatementRepository,
 	repository.NewTransactionRepository,
 	repository.NewUserRepository,

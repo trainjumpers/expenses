@@ -3,12 +3,15 @@ package service
 import (
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"expenses/internal/config"
 	"expenses/internal/errors"
 	"expenses/internal/models"
+	"expenses/internal/repository"
+	"expenses/pkg/logger"
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -20,6 +23,8 @@ type AuthServiceInterface interface {
 	Signup(ctx context.Context, newUser models.CreateUserInput) (models.AuthResponse, error)
 	Login(ctx context.Context, loginInput models.LoginInput) (models.AuthResponse, error)
 	RefreshToken(ctx context.Context, refreshToken string) (models.AuthResponse, error)
+	Logout(ctx context.Context, refreshToken string) error
+	LogoutAllSessions(ctx context.Context, userId int64) error
 	UpdateUserPassword(ctx context.Context, userId int64, updatedUser models.UpdateUserPasswordInput) (models.UserResponse, error)
 	// ExpireRefreshToken is a helper method for testing purposes only.
 	// DO NOT USE IN PRODUCTION.
@@ -28,24 +33,16 @@ type AuthServiceInterface interface {
 
 // AuthService implements AuthServiceInterface
 type AuthService struct {
-	refreshTokenStore struct {
-		sync.RWMutex
-		Tokens map[string]models.RefreshTokenData
-	}
 	userService UserServiceInterface
+	sessionRepo repository.SessionRepositoryInterface
 	cfg         *config.Config
 }
 
 // NewAuthService creates a new AuthService instance that implements AuthServiceInterface
-func NewAuthService(userService UserServiceInterface, cfg *config.Config) AuthServiceInterface {
+func NewAuthService(userService UserServiceInterface, sessionRepo repository.SessionRepositoryInterface, cfg *config.Config) AuthServiceInterface {
 	return &AuthService{
-		refreshTokenStore: struct {
-			sync.RWMutex
-			Tokens map[string]models.RefreshTokenData
-		}{
-			Tokens: make(map[string]models.RefreshTokenData),
-		},
 		userService: userService,
+		sessionRepo: sessionRepo,
 		cfg:         cfg,
 	}
 }
@@ -73,11 +70,9 @@ func (a *AuthService) Signup(ctx context.Context, newUser models.CreateUserInput
 	if err != nil {
 		return models.AuthResponse{}, err
 	}
-	a.saveRefreshToken(refreshToken, models.RefreshTokenData{
-		UserId: createdUser.Id,
-		Email:  createdUser.Email,
-		Expiry: time.Now().Add(a.cfg.RefreshTokenDuration),
-	})
+	if err := a.createSession(ctx, createdUser.Id, refreshToken); err != nil {
+		return models.AuthResponse{}, err
+	}
 	return models.AuthResponse{
 		User:         createdUser,
 		AccessToken:  accessToken,
@@ -106,11 +101,9 @@ func (a *AuthService) Login(ctx context.Context, loginInput models.LoginInput) (
 		return models.AuthResponse{}, errors.NewTokenGenerationError(err)
 	}
 
-	a.saveRefreshToken(refreshToken, models.RefreshTokenData{
-		UserId: user.Id,
-		Email:  user.Email,
-		Expiry: time.Now().Add(a.cfg.RefreshTokenDuration),
-	})
+	if err := a.createSession(ctx, user.Id, refreshToken); err != nil {
+		return models.AuthResponse{}, errors.NewTokenGenerationError(err)
+	}
 
 	return models.AuthResponse{
 		User: models.UserResponse{
@@ -123,14 +116,14 @@ func (a *AuthService) Login(ctx context.Context, loginInput models.LoginInput) (
 	}, nil
 }
 
-// RefreshToken issues new auth tokens using a valid refresh token
+// RefreshToken issues new auth tokens using a valid refresh token, rotating the session
 func (a *AuthService) RefreshToken(ctx context.Context, refreshToken string) (models.AuthResponse, error) {
-	data, ok := a.getRefreshTokenData(refreshToken)
-	if !ok {
+	session, err := a.sessionRepo.GetActiveByHash(ctx, hashRefreshToken(refreshToken))
+	if err != nil {
 		return models.AuthResponse{}, errors.NewInvalidTokenError(fmt.Errorf("refresh token not found or expired"))
 	}
 
-	user, err := a.userService.GetUserById(ctx, data.UserId)
+	user, err := a.userService.GetUserById(ctx, session.UserId)
 	if err != nil {
 		return models.AuthResponse{}, errors.NewUserNotFoundError(err)
 	}
@@ -145,18 +138,30 @@ func (a *AuthService) RefreshToken(ctx context.Context, refreshToken string) (mo
 		return models.AuthResponse{}, errors.NewTokenGenerationError(err)
 	}
 
-	a.saveRefreshToken(newRefreshToken, models.RefreshTokenData{
-		UserId: user.Id,
-		Email:  user.Email,
-		Expiry: time.Now().Add(a.cfg.RefreshTokenDuration),
-	})
+	err = a.sessionRepo.Rotate(ctx, user.Id, session.TokenHash, hashRefreshToken(newRefreshToken), time.Now().Add(a.cfg.RefreshTokenDuration))
+	if err != nil {
+		return models.AuthResponse{}, errors.NewTokenGenerationError(err)
+	}
 
-	a.deleteRefreshToken(refreshToken)
 	return models.AuthResponse{
 		User:         user,
 		AccessToken:  accessToken,
 		RefreshToken: newRefreshToken,
 	}, nil
+}
+
+// Logout revokes the session for the given refresh token. An empty token is a no-op.
+func (a *AuthService) Logout(ctx context.Context, refreshToken string) error {
+	if refreshToken == "" {
+		return nil
+	}
+	_, err := a.sessionRepo.RevokeByHash(ctx, hashRefreshToken(refreshToken))
+	return err
+}
+
+// LogoutAllSessions revokes every active session for a user.
+func (a *AuthService) LogoutAllSessions(ctx context.Context, userId int64) error {
+	return a.sessionRepo.RevokeAllForUser(ctx, userId)
 }
 
 func (a *AuthService) UpdateUserPassword(ctx context.Context, userId int64, updatedUser models.UpdateUserPasswordInput) (models.UserResponse, error) {
@@ -174,26 +179,16 @@ func (a *AuthService) UpdateUserPassword(ctx context.Context, userId int64, upda
 	return a.userService.UpdateUserPassword(ctx, userId, hashedPassword)
 }
 
-func (a *AuthService) saveRefreshToken(token string, data models.RefreshTokenData) {
-	a.refreshTokenStore.Lock()
-	defer a.refreshTokenStore.Unlock()
-	a.refreshTokenStore.Tokens[token] = data
-}
-
-func (a *AuthService) getRefreshTokenData(token string) (models.RefreshTokenData, bool) {
-	a.refreshTokenStore.RLock()
-	defer a.refreshTokenStore.RUnlock()
-	data, ok := a.refreshTokenStore.Tokens[token]
-	if !ok || data.Expiry.Before(time.Now()) {
-		return models.RefreshTokenData{}, false
+func (a *AuthService) createSession(ctx context.Context, userId int64, refreshToken string) error {
+	if _, err := a.sessionRepo.DeleteExpired(ctx); err != nil {
+		logger.Warnf("failed to prune expired sessions: %v", err)
 	}
-	return data, true
+	return a.sessionRepo.Create(ctx, userId, hashRefreshToken(refreshToken), time.Now().Add(a.cfg.RefreshTokenDuration))
 }
 
-func (a *AuthService) deleteRefreshToken(token string) {
-	a.refreshTokenStore.Lock()
-	defer a.refreshTokenStore.Unlock()
-	delete(a.refreshTokenStore.Tokens, token)
+func hashRefreshToken(token string) string {
+	sum := sha256.Sum256([]byte(token))
+	return hex.EncodeToString(sum[:])
 }
 
 func (a *AuthService) generateRefreshToken() (string, error) {
@@ -233,16 +228,12 @@ func (a *AuthService) ExpireRefreshToken(refreshToken string) error {
 		return errors.New("expiring refresh token is allowed only in test environment")
 	}
 
-	a.refreshTokenStore.Lock()
-	defer a.refreshTokenStore.Unlock()
-
-	data, exists := a.refreshTokenStore.Tokens[refreshToken]
-	if !exists {
+	affected, err := a.sessionRepo.ExpireByHash(context.Background(), hashRefreshToken(refreshToken))
+	if err != nil {
+		return errors.NewInvalidTokenError(err)
+	}
+	if affected == 0 {
 		return errors.NewInvalidTokenError(fmt.Errorf("refresh token not found"))
 	}
-
-	// Set expiry to past time
-	data.Expiry = time.Now().Add(-time.Hour)
-	a.refreshTokenStore.Tokens[refreshToken] = data
 	return nil
 }

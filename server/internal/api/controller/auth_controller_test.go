@@ -228,4 +228,17 @@ var _ = Describe("AuthController", func() {
 			})
 		})
 	})
+
+	Describe("Logout", func() {
+		It("revokes the refresh token so it cannot be reused", func() {
+			helper := NewTestHelper(baseURL)
+			helper.Login("test2@example.com", "password")
+
+			resp, _ := helper.MakeRequest(http.MethodPost, "/logout", nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+			refreshResp, _ := helper.MakeRequest(http.MethodPost, "/refresh", nil)
+			Expect(refreshResp.StatusCode).To(Equal(http.StatusUnauthorized))
+		})
+	})
 })
