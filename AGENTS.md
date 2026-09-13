@@ -17,8 +17,11 @@ just db-create <name> # Create migration
 just db-upgrade       # Apply migrations
 just db-seed          # Seed database
 
-just test             # Run all tests
-just test "TestName"  # Run single test (Ginkgo focus string)
+just test             # Run backend tests
+just test "TestName"  # Run single backend test (Ginkgo focus string)
+
+just test-frontend    # Frontend unit & integration tests (Vitest)
+just test-e2e         # Frontend E2E tests (Playwright)
 
 just format           # Format all code (Go + TS)
 ```

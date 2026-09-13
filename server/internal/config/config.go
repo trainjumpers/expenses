@@ -65,7 +65,7 @@ func NewConfig() (*Config, error) {
 	config.CookieDomain = os.Getenv("COOKIE_DOMAIN")
 	config.LoggingLevel = os.Getenv("LOGGING_LEVEL")
 	config.TrustedProxies = getEnvList("TRUSTED_PROXIES")
-	config.CORSAllowedOrigins = getEnvListWithDefault("CORS_ALLOWED_ORIGINS", []string{"http://localhost:3000", "https://neurospend.vercel.app"})
+	config.CORSAllowedOrigins = getEnvListWithDefault("CORS_ALLOWED_ORIGINS", []string{"http://localhost:3000", "http://localhost:3100", "https://neurospend.vercel.app"})
 	return config, nil
 }
 

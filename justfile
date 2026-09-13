@@ -81,6 +81,16 @@ db-downgrade-reset reset=default_downgrade:
 
 @test test_file="":
   cd server && bash e2e_test.sh "{{test_file}}"
+
+# Runs frontend unit and integration tests with Vitest
+[working-directory: 'frontend']
+@test-frontend filter="":
+  bun run test:run {{filter}}
+
+# Runs frontend e2e tests with Playwright (requires the backend on :8080)
+[working-directory: 'frontend']
+@test-e2e filter="":
+  bun run test:e2e {{filter}}
   
 # Start the frontend development server
 [working-directory: 'frontend']

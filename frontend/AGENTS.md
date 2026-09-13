@@ -183,11 +183,25 @@ import { formatCurrency } from "@/lib/utils";
 
 ## Testing
 
-No test framework is currently configured. Consider adding:
+### Commands
 
-- Vitest for unit tests
-- Testing Library for component tests
-- Playwright for E2E tests
+- `bun run test` - Vitest in watch mode
+- `bun run test:run` - Run unit & integration tests once
+- `bun run test:coverage` - Run once with V8 coverage (text + lcov)
+- `bun run test:e2e` - Playwright E2E (auto-starts Next; expects backend on :8080)
+
+From the repo root: `just test-frontend`, `just test-e2e`.
+
+### Layers
+
+- **Unit & integration** (`*.test.ts(x)`, colocated): Vitest + React Testing Library + MSW.
+  Mock the API at the network layer with handlers in `test/msw/handlers.ts`, render with
+  `renderWithProviders` from `test/render.tsx`.
+- **E2E** (`e2e/*.spec.ts`): Playwright against a running app and a real backend.
+  `E2E_API_BASE_URL` (default `http://localhost:8080`) and `E2E_BASE_URL` (default
+  `http://localhost:3100`) point tests elsewhere. `e2e/global-setup.ts` ensures the
+  `e2e@neurospend.test` user exists via signup.
+- Playwright agents (planner, generator, healer) run as OpenCode subagents, test plans go in `specs/`.
 
 ## Development Workflow
 

@@ -203,7 +203,7 @@ var _ = Describe("Config", func() {
 		It("should default to the dev and production frontends", func() {
 			cfg, err := NewConfig()
 			Expect(err).NotTo(HaveOccurred())
-			Expect(cfg.CORSAllowedOrigins).To(Equal([]string{"http://localhost:3000", "https://neurospend.vercel.app"}))
+			Expect(cfg.CORSAllowedOrigins).To(Equal([]string{"http://localhost:3000", "http://localhost:3100", "https://neurospend.vercel.app"}))
 		})
 
 		It("should parse an override list", func() {
