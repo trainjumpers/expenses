@@ -674,6 +674,22 @@ var _ = Describe("StatementController", func() {
 			Expect(response).To(HaveKey("message"))
 		})
 
+		It("should return 413 for a file beyond the request cap", func() {
+			oversized := make([]byte, 7*1024*1024)
+			for i := range oversized {
+				oversized[i] = 'A'
+			}
+
+			previewInput := map[string]any{
+				"file":      oversized,
+				"skip_rows": 0,
+				"row_size":  10,
+			}
+			resp, response := testUser1.MakeMultipartRequest(http.MethodPost, "/statement/preview", previewInput)
+			Expect(resp.StatusCode).To(Equal(http.StatusRequestEntityTooLarge))
+			Expect(response).To(HaveKey("message"))
+		})
+
 		It("should error out invalid skip_rows parameter gracefully", func() {
 			fileContent := []byte(
 				"Txn Date\tValue Date\tDescription\tRef No.\tDebit\tCredit\tBalance\n" +

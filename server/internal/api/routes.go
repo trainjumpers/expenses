@@ -5,12 +5,15 @@ import (
 	"expenses/internal/api/middleware"
 	"expenses/internal/config"
 	"expenses/internal/service"
+	"expenses/internal/validator"
 	"expenses/pkg/logger"
 	"time"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
+
+const multipartOverheadBytes = 1 << 20
 
 func Init(
 	cfg *config.Config,
@@ -33,6 +36,7 @@ func Init(
 		logger.Warnf("invalid TRUSTED_PROXIES, disabling proxy header trust: %v", err)
 		_ = router.SetTrustedProxies(nil)
 	}
+	router.MaxMultipartMemory = 1 << 20 // spill uploads to disk past 1MB; the body cap bounds total size
 	router.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"http://localhost:3000", "https://neurospend.vercel.app"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
@@ -134,8 +138,8 @@ func Init(
 		// Statement routes
 		statement := base.Group("/statement", middleware.Protected(cfg))
 		{
-			statement.POST("", statementController.CreateStatement)
-			statement.POST("/preview", statementController.PreviewStatement)
+			statement.POST("", middleware.MaxBodySize(validator.MaxStatementFileBytes+multipartOverheadBytes), statementController.CreateStatement)
+			statement.POST("/preview", middleware.MaxBodySize(validator.MaxStatementFileBytes+multipartOverheadBytes), statementController.PreviewStatement)
 			statement.GET("", statementController.GetStatements)
 			statement.GET("/:id", statementController.GetStatementStatus)
 		}
