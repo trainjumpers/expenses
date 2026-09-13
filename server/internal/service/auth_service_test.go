@@ -286,11 +286,15 @@ var _ = Describe("AuthService", func() {
 
 		It("should error when expiring refresh token in non-test env", func() {
 			origEnv := os.Getenv("ENV")
+			origJwt := os.Getenv("JWT_SECRET")
 			os.Setenv("ENV", "prod")
+			os.Setenv("JWT_SECRET", "a-production-secret-that-is-long-enough")
 			defer os.Setenv("ENV", origEnv)
-			cfg, _ := config.NewConfig()
+			defer os.Setenv("JWT_SECRET", origJwt)
+			cfg, err := config.NewConfig()
+			Expect(err).NotTo(HaveOccurred())
 			service := NewAuthService(userService, cfg)
-			err := service.ExpireRefreshToken("sometoken")
+			err = service.ExpireRefreshToken("sometoken")
 			Expect(err).To(HaveOccurred())
 		})
 
