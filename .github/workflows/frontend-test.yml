@@ -1,0 +1,145 @@
+name: Frontend Test
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/frontend-test.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/frontend-test.yml'
+
+env:
+  DB_HOST: localhost
+  DB_PORT: 5432
+  DB_USER: postgres
+  DB_PASSWORD: postgres
+  DB_NAME: "expenses_db_${{ github.run_id }}"
+  DB_SEED_DIR: ./internal/database/seed/test
+  DB_SSL_MODE: disable
+  ENV: test
+  DB_SCHEMA: test
+  SERVER_PORT: 8080
+  JWT_SECRET: "test-secret"
+
+jobs:
+  unit:
+    name: Unit & Integration
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: bun install
+
+      - name: Run tests with coverage
+        working-directory: ./frontend
+        run: bun run test:coverage
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v7
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          slug: ${{ github.repository }}
+          flags: frontend
+          directory: ./frontend
+          fail_ci_if_error: true
+
+  e2e:
+    name: E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      E2E_API_BASE_URL: http://localhost:8080
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: ${{ env.DB_USER }}
+          POSTGRES_PASSWORD: ${{ env.DB_PASSWORD }}
+          POSTGRES_DB: ${{ env.DB_NAME }}
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version: '1.27'
+          cache: true
+
+      - name: Create schema for tests
+        run: |
+          PGPASSWORD=${{ env.DB_PASSWORD }} psql -U postgres -h 127.0.0.1 -p ${{ job.services.postgres.ports[5432] }} -d ${{ env.DB_NAME }} -tc "CREATE SCHEMA IF NOT EXISTS ${{ env.DB_SCHEMA }};"
+
+      - name: Install Just
+        uses: extractions/setup-just@v4
+
+      - name: Install goose
+        run: go install github.com/pressly/goose/v3/cmd/goose@latest
+
+      - name: Run migrations
+        working-directory: ./server
+        run: just db-upgrade
+
+      - name: Run seed
+        working-directory: ./server
+        run: just db-seed
+
+      - name: Start backend
+        working-directory: ./server
+        run: |
+          go run ./cmd/neurospend > /tmp/backend.log 2>&1 &
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8080/health > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Backend did not become healthy"
+          cat /tmp/backend.log
+          exit 1
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: bun install
+
+      - name: Install Playwright browsers
+        working-directory: ./frontend
+        run: bunx playwright install --with-deps chromium
+
+      - name: Run E2E tests
+        working-directory: ./frontend
+        run: bun run test:e2e
+
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: frontend/playwright-report/
+          retention-days: 7

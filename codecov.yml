@@ -5,11 +5,20 @@ coverage:
   status:
     project:
       default:
+        flags: [backend]
         target: 85%
+        threshold: 1%
+      frontend:
+        flags: [frontend]
+        target: auto
         threshold: 1%
     patch:
       default:
+        flags: [backend]
         target: 90%
+      frontend:
+        flags: [frontend]
+        informational: true
 
 fixes:
   - "expenses/::server/"
