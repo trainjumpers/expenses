@@ -13,10 +13,11 @@ import {
   cn,
   formatCurrency,
   formatShortCurrency,
+  getSurplusTone,
   transformToChartData,
 } from "@/lib/utils";
 import { format } from "date-fns";
-import { Line, LineChart, XAxis, YAxis } from "recharts";
+import { Area, AreaChart, XAxis, YAxis } from "recharts";
 
 interface ChartDataPoint {
   date: string;
@@ -122,8 +123,11 @@ export function NetWorth({
               {formatCurrency(currentBalance)}
             </div>
             <div className="text-sm text-muted-foreground">
-              {formatShortCurrency(absoluteChange)} across this range. Bank and
-              cash accounts only.
+              <span className={getSurplusTone(absoluteChange)}>
+                {absoluteChange >= 0 ? "Up" : "Down"}{" "}
+                {formatShortCurrency(Math.abs(absoluteChange))}
+              </span>{" "}
+              over this range. Bank and cash accounts only.
             </div>
           </div>
 
@@ -132,14 +136,34 @@ export function NetWorth({
               config={{
                 balance: {
                   label: "Cash balance",
-                  color: "var(--chart-1)",
+                  color: "var(--chart-2)",
                 },
               }}
               className="aspect-auto h-full w-full"
               role="img"
               aria-label="Cash balance over time"
             >
-              <LineChart data={chartData}>
+              <AreaChart data={chartData}>
+                <defs>
+                  <linearGradient
+                    id="cash-balance-fill"
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2="1"
+                  >
+                    <stop
+                      offset="5%"
+                      stopColor="var(--color-balance)"
+                      stopOpacity={0.35}
+                    />
+                    <stop
+                      offset="95%"
+                      stopColor="var(--color-balance)"
+                      stopOpacity={0.02}
+                    />
+                  </linearGradient>
+                </defs>
                 <XAxis
                   dataKey="date"
                   axisLine={false}
@@ -162,14 +186,14 @@ export function NetWorth({
                     />
                   }
                 />
-                <Line
+                <Area
                   type="monotone"
                   dataKey="value"
                   stroke="var(--color-balance)"
                   strokeWidth={2}
-                  dot={false}
+                  fill="url(#cash-balance-fill)"
                 />
-              </LineChart>
+              </AreaChart>
             </ChartContainer>
           </div>
 
