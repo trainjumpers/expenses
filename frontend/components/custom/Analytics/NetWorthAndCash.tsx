@@ -5,6 +5,7 @@ import {
   InlineNote,
   Money,
 } from "@/components/custom/Analytics/AnalyticsShared";
+import { Button } from "@/components/ui/button";
 import {
   ChartContainer,
   ChartTooltip,
@@ -52,9 +53,13 @@ export function NetWorthSnapshot({ summary }: { summary: InsightsSummary }) {
 export function CashBalanceHistory({
   history,
   isLoading,
+  isError,
+  onRetry,
 }: {
   history?: CashBalanceHistoryResponse;
   isLoading: boolean;
+  isError: boolean;
+  onRetry: () => void;
 }) {
   const chartData = history ? transformToChartData(history.time_series) : [];
   const current = chartData[chartData.length - 1]?.value ?? 0;
@@ -80,7 +85,19 @@ export function CashBalanceHistory({
       title="Cash balance history"
       description="Balance across bank and cash accounts only. Investment ledgers are excluded, so this is not comparable with current net worth."
     >
-      {isLoading ? (
+      {isError ? (
+        <div>
+          <InlineNote>Could not load cash balance history.</InlineNote>
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-3"
+            onClick={onRetry}
+          >
+            Try again
+          </Button>
+        </div>
+      ) : isLoading ? (
         <Skeleton className="h-40 w-full" />
       ) : chartData.length === 0 ? (
         <InlineNote>No cash activity in this range.</InlineNote>

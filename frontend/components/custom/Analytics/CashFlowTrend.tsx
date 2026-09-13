@@ -54,10 +54,14 @@ function TrendExplanation({
     );
   }
 
-  const drivers = movement
-    .filter((item) => item.change !== 0)
-    .sort((a, b) => Math.abs(b.change) - Math.abs(a.change))
-    .slice(0, 2);
+  const hasComparison = trend.prior_month !== "";
+
+  const drivers = hasComparison
+    ? movement
+        .filter((item) => item.change !== 0)
+        .sort((a, b) => Math.abs(b.change) - Math.abs(a.change))
+        .slice(0, 2)
+    : [];
 
   const percentage =
     trend.prior_expenses > 0
@@ -66,27 +70,38 @@ function TrendExplanation({
 
   return (
     <div className="space-y-2">
-      <InlineNote>
-        {monthName(trend.recent_month)} spending was{" "}
-        <span className="font-medium text-foreground">
-          {formatShortCurrency(trend.recent_expenses)}
-        </span>
-        , {changeDirection(trend.change)}{" "}
-        <span className="font-medium text-foreground">
-          {formatShortCurrency(Math.abs(trend.change))}
-        </span>
-        {percentage !== null
-          ? ` (${formatPercentage(Math.abs(percentage))})`
-          : ""}{" "}
-        versus {monthName(trend.prior_month)}.
-      </InlineNote>
+      {hasComparison ? (
+        <InlineNote>
+          {monthName(trend.recent_month)} spending was{" "}
+          <span className="font-medium text-foreground">
+            {formatShortCurrency(trend.recent_expenses)}
+          </span>
+          , {changeDirection(trend.change)}{" "}
+          <span className="font-medium text-foreground">
+            {formatShortCurrency(Math.abs(trend.change))}
+          </span>
+          {percentage !== null
+            ? ` (${formatPercentage(Math.abs(percentage))})`
+            : ""}{" "}
+          versus {monthName(trend.prior_month)}.
+        </InlineNote>
+      ) : (
+        <InlineNote>
+          {monthName(trend.recent_month)} spending was{" "}
+          <span className="font-medium text-foreground">
+            {formatShortCurrency(trend.recent_expenses)}
+          </span>
+          . The range does not include an earlier complete month to compare
+          against.
+        </InlineNote>
+      )}
       {drivers.length > 0 ? (
         <InlineNote>
           Biggest moves:{" "}
           {drivers
             .map(
               (driver) =>
-                `${driver.category_name} ${driver.change > 0 ? "+" : ""}${formatShortCurrency(driver.change)}`
+                `${driver.category_name} ${driver.change > 0 ? "up" : "down"} ${formatShortCurrency(Math.abs(driver.change))}`
             )
             .join(", ")}
           .

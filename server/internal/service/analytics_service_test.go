@@ -1512,6 +1512,27 @@ var _ = Describe("AnalyticsService", func() {
 				Expect(investmentAccountId).To(BeNumerically(">", 0))
 			})
 
+			It("should keep the breakdown equal to net worth for an unpriced investment", func() {
+				ledgerBalance := 700.0
+				_, err := mockAccountRepo.CreateAccount(ctx, models.CreateAccountInput{
+					Name:      "Unpriced FD",
+					BankType:  models.BankTypeInvestment,
+					Currency:  models.CurrencyINR,
+					Balance:   &ledgerBalance,
+					CreatedBy: userId,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				result, err := analyticsService.GetInsights(ctx, userId, startDate, endDate)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result.Summary.InvestmentValue).To(Equal(15700.0))
+				Expect(result.Summary.BankValue).To(Equal(500.0))
+				Expect(result.Summary.NetWorth).To(Equal(16200.0))
+				Expect(
+					result.Summary.BankValue + result.Summary.InvestmentValue,
+				).To(Equal(result.Summary.NetWorth))
+			})
+
 			It("should zero-fill the missing months and total the period", func() {
 				result, err := analyticsService.GetInsights(ctx, userId, startDate, endDate)
 				Expect(err).NotTo(HaveOccurred())
@@ -1687,6 +1708,42 @@ var _ = Describe("AnalyticsService", func() {
 				Expect(result.DataConfidence.LatestTransactionDate).NotTo(BeNil())
 				Expect(*result.DataConfidence.LatestTransactionDate).To(Equal("2024-03-20"))
 				Expect(result.DataConfidence.StaleDays).To(BeNumerically(">", 0))
+			})
+		})
+
+		Context("when the range covers a single complete month", func() {
+			var singleStart, singleEnd time.Time
+
+			BeforeEach(func() {
+				singleStart = time.Date(2024, 8, 1, 0, 0, 0, 0, time.UTC)
+				singleEnd = time.Date(2024, 8, 31, 23, 59, 59, 0, time.UTC)
+
+				mockAnalyticsRepo.SetInsightsMonthly(userId, singleStart, singleEnd, []models.InsightsMonthlyPoint{
+					{Month: "2024-08", Expenses: 250.0, Net: -250.0},
+				})
+				mockAnalyticsRepo.SetInsightsCategoryMonths(userId, singleStart, singleEnd, []models.InsightsCategoryMonth{
+					{Month: "2024-08", CategoryID: 1, CategoryName: "Food", Total: 150.0},
+					{Month: "2024-08", CategoryID: 2, CategoryName: "Travel", Total: 100.0},
+				})
+			})
+
+			It("should not reach before the range for the comparison", func() {
+				result, err := analyticsService.GetInsights(ctx, userId, singleStart, singleEnd)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result.Trend.RecentMonth).To(Equal("2024-08"))
+				Expect(result.Trend.PriorMonth).To(BeEmpty())
+				Expect(result.Trend.RecentExpenses).To(Equal(250.0))
+				Expect(result.Trend.PriorExpenses).To(Equal(0.0))
+				Expect(result.Trend.Change).To(Equal(0.0))
+				Expect(result.Trend.TrailingThreeMonthAverage).To(Equal(250.0))
+
+				Expect(result.CategoryMovement).To(HaveLen(2))
+				Expect(result.CategoryMovement[0].CategoryName).To(Equal("Food"))
+				for _, item := range result.CategoryMovement {
+					Expect(item.Change).To(Equal(0.0))
+					Expect(item.PriorTotal).To(Equal(0.0))
+					Expect(item.PriorShare).To(Equal(0.0))
+				}
 			})
 		})
 	})

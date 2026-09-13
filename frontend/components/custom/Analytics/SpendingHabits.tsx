@@ -5,6 +5,14 @@ import {
   InlineNote,
   Money,
 } from "@/components/custom/Analytics/AnalyticsShared";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import type {
   InsightsSpendingSummary,
   InsightsWeekdayBehavior,
@@ -49,7 +57,6 @@ export function SpendingHabits({
       share: day?.share ?? 0,
     };
   });
-  const maxTotal = Math.max(...ordered.map((day) => day.total), 0);
 
   return (
     <AnalyticsSection
@@ -76,38 +83,42 @@ export function SpendingHabits({
           <InlineNote>No spending in this range.</InlineNote>
         ) : (
           <div>
-            <ul className="space-y-2">
-              {ordered.map((day) => {
-                const share = day.share;
-                return (
-                  <li
-                    key={day.label}
-                    className="grid grid-cols-[2.5rem_1fr_auto] items-center gap-3"
-                  >
-                    <span className="text-xs font-medium text-muted-foreground">
-                      {day.label}
-                    </span>
-                    <span
-                      className="h-2 overflow-hidden rounded-full bg-muted"
-                      title={`${day.label}: ${formatPercentage(share * 100)} of spending`}
-                    >
-                      <span
-                        className="block h-full rounded-full bg-(--chart-4)"
-                        style={{
-                          width:
-                            maxTotal > 0
-                              ? `${(day.total / maxTotal) * 100}%`
-                              : "0%",
-                        }}
-                      />
-                    </span>
-                    <span className="text-xs tabular-nums text-muted-foreground">
-                      {formatPercentage(share * 100)}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Day</TableHead>
+                    <TableHead className="text-right">Transactions</TableHead>
+                    <TableHead className="hidden text-right sm:table-cell">
+                      Average
+                    </TableHead>
+                    <TableHead className="text-right">Total</TableHead>
+                    <TableHead className="hidden text-right sm:table-cell">
+                      Share
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {ordered.map((day) => (
+                    <TableRow key={day.label}>
+                      <TableCell className="font-medium">{day.label}</TableCell>
+                      <TableCell className="text-right text-sm tabular-nums">
+                        {day.count}
+                      </TableCell>
+                      <TableCell className="hidden text-right text-sm sm:table-cell">
+                        <Money value={day.average} />
+                      </TableCell>
+                      <TableCell className="text-right text-sm">
+                        <Money value={day.total} />
+                      </TableCell>
+                      <TableCell className="hidden text-right text-sm tabular-nums text-muted-foreground sm:table-cell">
+                        {formatPercentage(day.share * 100)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
             <p className="mt-3 text-xs text-muted-foreground">
               Weekends are {formatPercentage(weekday.weekend_share * 100)} of
               spending.

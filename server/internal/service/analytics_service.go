@@ -115,7 +115,6 @@ func (s *AnalyticsService) GetCashBalanceHistory(ctx context.Context, userId int
 
 	// Get initial balance and daily changes from repository
 	initialBalance, totalIncome, totalExpenses, dailyData, err := s.analyticsRepo.GetCashBalanceHistory(ctx, userId, startDate, endDate)
-	totalAccountBalance := 0.0
 	if err != nil {
 		return models.CashBalanceHistoryResponse{}, err
 	}
@@ -125,7 +124,6 @@ func (s *AnalyticsService) GetCashBalanceHistory(ctx context.Context, userId int
 			continue
 		}
 		initialBalance += account.Balance
-		totalAccountBalance += account.Balance
 	}
 
 	var timeSeries []models.CashBalanceDataPoint
@@ -153,12 +151,6 @@ func (s *AnalyticsService) GetCashBalanceHistory(ctx context.Context, userId int
 		// Add daily change if it exists
 		if dailyChange, exists := dailyChanges[dateStr]; exists {
 			runningBalance += dailyChange
-		}
-
-		if runningBalance == totalAccountBalance {
-			// Txn has not changed yet, so we can skip adding this point
-			currentDate = currentDate.AddDate(0, 0, 1)
-			continue
 		}
 
 		timeSeries = append(timeSeries, models.CashBalanceDataPoint{
@@ -234,7 +226,9 @@ func (s *AnalyticsService) GetInsights(ctx context.Context, userId int64, startD
 
 		balance := currentBalances[account.Id] + account.Balance
 		netWorth += balance
-		if account.BankType != models.BankTypeInvestment {
+		if account.BankType == models.BankTypeInvestment {
+			investmentValue += balance
+		} else {
 			bankValue += balance
 		}
 	}
@@ -480,19 +474,30 @@ func (s *AnalyticsService) buildTrendAndMovement(ctx context.Context, userId int
 	movement := make([]models.InsightsCategoryMovement, 0)
 
 	recentMonth := latestCompleteMonth(endDate)
-	startMonth := time.Date(startDate.Year(), startDate.Month(), 1, 0, 0, 0, 0, time.UTC)
-	if recentMonth.Before(startMonth) {
+	if recentMonth.Before(startDate) {
 		return trend, movement, nil
 	}
 
+	recentKey := recentMonth.Format("2006-01")
+	recentEnd := recentMonth.AddDate(0, 1, -1)
+
+	// The prior month is only used when it is fully inside the range, so the
+	// comparison never reaches back before the selected start date.
 	priorMonth := recentMonth.AddDate(0, -1, 0)
-	months, err := s.analyticsRepo.GetInsightsCategoryMonths(ctx, userId, priorMonth, recentMonth.AddDate(0, 1, -1))
+	hasPrior := !priorMonth.Before(startDate)
+
+	queryStart := recentMonth
+	priorKey := ""
+	if hasPrior {
+		queryStart = priorMonth
+		priorKey = priorMonth.Format("2006-01")
+	}
+
+	months, err := s.analyticsRepo.GetInsightsCategoryMonths(ctx, userId, queryStart, recentEnd)
 	if err != nil {
 		return trend, nil, err
 	}
 
-	recentKey := recentMonth.Format("2006-01")
-	priorKey := priorMonth.Format("2006-01")
 	movement = buildCategoryMovement(months, recentKey, priorKey)
 
 	expensesByMonth := make(map[string]float64, len(monthly))
@@ -502,17 +507,19 @@ func (s *AnalyticsService) buildTrendAndMovement(ctx context.Context, userId int
 
 	trend = models.InsightsTrend{
 		RecentMonth:    recentKey,
-		PriorMonth:     priorKey,
 		RecentExpenses: expensesByMonth[recentKey],
-		PriorExpenses:  expensesByMonth[priorKey],
 	}
-	trend.Change = trend.RecentExpenses - trend.PriorExpenses
+	if hasPrior {
+		trend.PriorMonth = priorKey
+		trend.PriorExpenses = expensesByMonth[priorKey]
+		trend.Change = trend.RecentExpenses - trend.PriorExpenses
+	}
 
 	trailingTotal := 0.0
 	trailingCount := 0
 	for offset := 0; offset < 3; offset++ {
 		month := recentMonth.AddDate(0, -offset, 0)
-		if month.Before(startMonth) {
+		if month.Before(startDate) {
 			break
 		}
 		trailingTotal += expensesByMonth[month.Format("2006-01")]
@@ -556,6 +563,10 @@ func buildCategoryMovement(months []models.InsightsCategoryMonth, recentKey, pri
 		if entry.recent == 0 && entry.prior == 0 {
 			continue
 		}
+		change := 0.0
+		if priorKey != "" {
+			change = entry.recent - entry.prior
+		}
 		movement = append(movement, models.InsightsCategoryMovement{
 			CategoryID:   entry.id,
 			CategoryName: entry.name,
@@ -563,13 +574,16 @@ func buildCategoryMovement(months []models.InsightsCategoryMonth, recentKey, pri
 			PriorTotal:   entry.prior,
 			RecentShare:  ratio(entry.recent, totalRecent),
 			PriorShare:   ratio(entry.prior, totalPrior),
-			Change:       entry.recent - entry.prior,
+			Change:       change,
 		})
 	}
 
 	sort.Slice(movement, func(i, j int) bool {
-		if math.Abs(movement[i].Change) != math.Abs(movement[j].Change) {
+		if priorKey != "" && math.Abs(movement[i].Change) != math.Abs(movement[j].Change) {
 			return math.Abs(movement[i].Change) > math.Abs(movement[j].Change)
+		}
+		if priorKey == "" && movement[i].RecentTotal != movement[j].RecentTotal {
+			return movement[i].RecentTotal > movement[j].RecentTotal
 		}
 		return movement[i].CategoryName < movement[j].CategoryName
 	})

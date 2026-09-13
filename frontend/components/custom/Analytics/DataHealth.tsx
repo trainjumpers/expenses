@@ -36,8 +36,10 @@ export function DataHealth({
   if (confidence.multi_category_count > 0) {
     notes.push(
       <>
-        {confidence.multi_category_count} transactions are split across several
-        categories, so category totals allocate their amount evenly.
+        {confidence.multi_category_count} transactions (
+        {formatPercentage(confidence.multi_category_share * 100)}) are split
+        across several categories, so category totals allocate their amount
+        evenly.
       </>
     );
   }

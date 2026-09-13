@@ -50,7 +50,7 @@ export function NetWorth({
     : [];
 
   const currentBalance = chartData[chartData.length - 1]?.value ?? 0;
-  const initialBalance = chartData[0]?.value ?? 0;
+  const initialBalance = history?.initial_balance ?? 0;
   const absoluteChange = currentBalance - initialBalance;
 
   const chartStartDate = chartData[0]?.formattedDate ?? "";

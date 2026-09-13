@@ -44,15 +44,24 @@ export function CategoryMovement({
   recentMonth: string;
   priorMonth: string;
 }) {
+  const hasComparison = priorMonth !== "";
   const rows = movement
     .filter((item) => item.recent_total !== 0 || item.prior_total !== 0)
-    .sort((a, b) => Math.abs(b.change) - Math.abs(a.change))
+    .sort((a, b) =>
+      hasComparison
+        ? Math.abs(b.change) - Math.abs(a.change)
+        : b.recent_total - a.recent_total
+    )
     .slice(0, 8);
 
   return (
     <AnalyticsSection
       title="Category movement"
-      description={`Expense totals for ${monthName(recentMonth)} compared with ${monthName(priorMonth)}.`}
+      description={
+        hasComparison
+          ? `Expense totals for ${monthName(recentMonth)} compared with ${monthName(priorMonth)}.`
+          : `Expense totals for ${monthName(recentMonth)}.`
+      }
     >
       {rows.length === 0 ? (
         <InlineNote>No categorized spending to compare yet.</InlineNote>
@@ -74,7 +83,9 @@ export function CategoryMovement({
                 </Link>
                 <span className="flex items-baseline gap-3">
                   <Money value={item.recent_total} className="text-sm" />
-                  <CategoryChange change={item.change} />
+                  {hasComparison ? (
+                    <CategoryChange change={item.change} />
+                  ) : null}
                 </span>
               </div>
               <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
@@ -87,7 +98,7 @@ export function CategoryMovement({
               </div>
               <p className="text-xs text-muted-foreground">
                 {formatPercentage(item.recent_share * 100)} of recent spending
-                {item.prior_share > 0
+                {hasComparison && item.prior_share > 0
                   ? `, ${formatPercentage(item.prior_share * 100)} prior`
                   : ""}
               </p>

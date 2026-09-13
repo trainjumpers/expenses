@@ -52,13 +52,16 @@ function Headline({
 }
 
 function HeadlineStrip({ summary }: { summary: InsightsSummary }) {
-  const hasActivity =
-    summary.period_income !== 0 || summary.period_expenses !== 0;
-  const netLabel = !hasActivity
-    ? "Net"
-    : summary.period_net < 0
+  const netLabel =
+    summary.period_net < 0
       ? "Deficit"
-      : "Surplus";
+      : summary.period_net > 0
+        ? "Surplus"
+        : "Net";
+  const netTone =
+    summary.period_net === 0
+      ? "text-foreground"
+      : getSurplusTone(summary.period_net);
 
   return (
     <dl className="grid grid-cols-2 gap-x-6 gap-y-5 border-b pb-6 sm:grid-cols-4">
@@ -69,7 +72,7 @@ function HeadlineStrip({ summary }: { summary: InsightsSummary }) {
         <Money value={summary.period_expenses} />
       </Headline>
       <Headline label={netLabel}>
-        <span className={cn(getSurplusTone(summary.period_net))}>
+        <span className={cn(netTone)}>
           <Money value={summary.period_net} />
         </span>
       </Headline>
@@ -94,10 +97,17 @@ function LoadingSkeleton() {
         <Skeleton className="h-4 w-32" />
         <Skeleton className="h-64 w-full" />
       </div>
-      <div className="grid gap-8 lg:grid-cols-2">
+      <div className="grid gap-8 lg:grid-cols-[1.3fr_1fr]">
         <Skeleton className="h-64 w-full" />
         <Skeleton className="h-64 w-full" />
       </div>
+      <div className="grid gap-8 lg:grid-cols-[1.3fr_1fr]">
+        <Skeleton className="h-64 w-full" />
+        <Skeleton className="h-64 w-full" />
+      </div>
+      <Skeleton className="h-40 w-full" />
+      <Skeleton className="h-48 w-full" />
+      <Skeleton className="h-32 w-full" />
     </div>
   );
 }
@@ -108,10 +118,12 @@ export function AnalyticsView() {
   const startDate = format(dateRange.from, "yyyy-MM-dd");
   const endDate = format(dateRange.to, "yyyy-MM-dd");
   const { data, isLoading, isError, refetch } = useInsights(startDate, endDate);
-  const { data: cashHistory, isLoading: cashLoading } = useCashBalanceHistory(
-    startDate,
-    endDate
-  );
+  const {
+    data: cashHistory,
+    isLoading: cashLoading,
+    isError: cashError,
+    refetch: refetchCash,
+  } = useCashBalanceHistory(startDate, endDate);
 
   const hasActivity =
     data !== undefined &&
@@ -192,7 +204,12 @@ export function AnalyticsView() {
             <InvestmentTable investments={data.investments} />
           </div>
           <NetWorthSnapshot summary={data.summary} />
-          <CashBalanceHistory history={cashHistory} isLoading={cashLoading} />
+          <CashBalanceHistory
+            history={cashHistory}
+            isLoading={cashLoading}
+            isError={cashError}
+            onRetry={() => refetchCash()}
+          />
           <DataHealth
             summary={data.summary}
             confidence={data.data_confidence}

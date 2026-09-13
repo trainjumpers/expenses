@@ -13,11 +13,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import type { InsightsInvestment } from "@/lib/models/analytics";
 import { formatPercentage } from "@/lib/utils";
 import Link from "next/link";
@@ -57,18 +52,13 @@ export function InvestmentTable({
             <TableBody>
               {rows.map((investment) => (
                 <TableRow key={investment.account_id}>
-                  <TableCell className="max-w-[10rem]">
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Link
-                          href={`/transaction?account_id=${investment.account_id}`}
-                          className="block truncate font-medium hover:underline"
-                        >
-                          {investment.name}
-                        </Link>
-                      </TooltipTrigger>
-                      <TooltipContent>{investment.name}</TooltipContent>
-                    </Tooltip>
+                  <TableCell>
+                    <Link
+                      href={`/transaction?account_id=${investment.account_id}`}
+                      className="font-medium hover:underline"
+                    >
+                      {investment.name}
+                    </Link>
                   </TableCell>
                   <TableCell className="text-right text-sm font-medium">
                     <Money value={investment.current_value} />
