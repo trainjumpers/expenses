@@ -106,6 +106,13 @@ var _ = Describe("SBIParser", func() {
 			Expect(result).To(BeNil())
 		})
 
+		It("should error on invalid credit amount", func() {
+			fields := []string{"01/12/2024", "Desc", "123", "", "abc", "1000.00"}
+			result, err := parser.parseTransactionRow(fields)
+			Expect(err).To(HaveOccurred())
+			Expect(result).To(BeNil())
+		})
+
 		It("should error when both debit and credit are empty", func() {
 			fields := []string{"01/12/2024", "Desc", "123", "", "", "1000.00"}
 			result, err := parser.parseTransactionRow(fields)
@@ -161,6 +168,11 @@ var _ = Describe("SBIParser", func() {
 	})
 
 	Describe("Parse", func() {
+		It("should error on invalid workbook bytes", func() {
+			_, err := parser.Parse([]byte("not a workbook"), "", "test.xlsx", "")
+			Expect(err).To(MatchError(ContainSubstring("failed to open XLSX file")))
+		})
+
 		It("should parse a valid SBI statement with multiple transactions", func() {
 			data := [][]string{
 				{"Date", "Details", "Ref No/Cheque No", "Debit", "Credit", "Balance"},
@@ -242,6 +254,23 @@ var _ = Describe("SBIParser", func() {
 			fileBytes := utils.CreateXLSXFile(data)
 			_, err := parser.Parse(fileBytes, "", "", "")
 			Expect(err).To(MatchError(ContainSubstring("transaction header row not found")))
+		})
+
+		It("should error when the workbook has no sheets", func() {
+			emptyWorkbook := []byte(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheets></sheets></workbook>`)
+			fileBytes, err := rewriteXLSX(utils.CreateXLSXFile([][]string{{"a"}}), map[string][]byte{"xl/workbook.xml": emptyWorkbook}, nil)
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = parser.Parse(fileBytes, "", "", "")
+			Expect(err).To(MatchError("no sheets found in XLSX file"))
+		})
+
+		It("should error when a referenced sheet is missing", func() {
+			fileBytes, err := rewriteXLSX(utils.CreateXLSXFile([][]string{{"a"}}), nil, map[string]bool{"xl/worksheets/sheet1.xml": true})
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = parser.Parse(fileBytes, "", "", "")
+			Expect(err).To(MatchError(ContainSubstring("failed to read rows from sheet")))
 		})
 
 		It("should handle rows with and without RefNo", func() {

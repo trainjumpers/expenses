@@ -180,6 +180,13 @@ var _ = Describe("AnalyticsService coverage gaps", func() {
 			Expect(err).To(HaveOccurred())
 		})
 
+		It("propagates balance repository errors", func() {
+			mockAnalyticsRepo.FailOn("GetBalance", errors.New("balance down"))
+
+			_, err := analyticsService.GetInsights(ctx, userId, startDate, endDate)
+			Expect(err).To(HaveOccurred())
+		})
+
 		It("propagates investment cash flow errors", func() {
 			currentValue := 1000.0
 			_, err := mockAccountRepo.CreateAccount(ctx, models.CreateAccountInput{Name: "FD", BankType: models.BankTypeInvestment, Currency: models.CurrencyINR, CurrentValue: &currentValue, CreatedBy: userId})
@@ -638,6 +645,16 @@ var _ = Describe("TransactionService coverage gaps", func() {
 		Expect(err).To(HaveOccurred())
 	})
 
+	It("propagates account lookup errors during validation", func() {
+		accountMockRepo.FailOn("GetAccountById", errors.New("account down"))
+		amount := 10.0
+
+		_, err := transactionService.CreateTransaction(ctx, models.CreateTransactionInput{
+			CreateBaseTransactionInput: models.CreateBaseTransactionInput{Name: "Tx", Amount: &amount, Date: testDate, CreatedBy: userId, AccountId: acc.Id},
+		})
+		Expect(err).To(HaveOccurred())
+	})
+
 	It("rejects a future date on create", func() {
 		amount := 10.0
 
@@ -839,6 +856,22 @@ var _ = Describe("StatementService coverage gaps", func() {
 			OriginalFilename: "statement.xlsx",
 			AccountId:        1,
 			Password:         "wrong",
+		}, userId)
+		Expect(err).To(HaveOccurred())
+	})
+
+	It("propagates statement creation errors", func() {
+		balance := 1000.0
+		acc, err := accountService.CreateAccount(ctx, models.CreateAccountInput{
+			Name: "Test", BankType: models.BankTypeSBI, Currency: models.CurrencyINR, Balance: &balance, CreatedBy: userId,
+		})
+		Expect(err).NotTo(HaveOccurred())
+		mockRepo.FailOn("CreateStatement", errors.New("create down"))
+
+		_, err = service.ParseStatement(ctx, models.ParseStatementInput{
+			AccountId:        acc.Id,
+			OriginalFilename: "statement.csv",
+			FileBytes:        []byte("Date,Details,Debit,Credit\n01/12/2024,Desc,100.00,\n"),
 		}, userId)
 		Expect(err).To(HaveOccurred())
 	})
