@@ -16,6 +16,7 @@ import {
   formatCurrency,
   formatPercentage,
   formatShortCurrency,
+  getSurplusTone,
   getTransactionColor,
 } from "@/lib/utils";
 import { Plus } from "lucide-react";
@@ -260,7 +261,9 @@ export function AccountsAnalyticsSidepanel({
                                 </div>
                                 <div className="text-xs text-muted-foreground">
                                   <span className="font-medium">XIRR</span>
-                                  <span className="ml-1 tabular-nums">
+                                  <span
+                                    className={`ml-1 tabular-nums ${getSurplusTone(account.xirr)}`}
+                                  >
                                     {formatPercentage(account.xirr)}
                                   </span>
                                 </div>
