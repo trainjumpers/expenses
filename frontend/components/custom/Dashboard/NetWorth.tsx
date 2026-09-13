@@ -1,6 +1,7 @@
 "use client";
 
 import { useCashBalanceHistory } from "@/components/hooks/useAnalytics";
+import { useFirstTransactionDate } from "@/components/hooks/useTransactions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   ChartContainer,
@@ -45,6 +46,7 @@ export function NetWorth({
     format(dateRange.from, "yyyy-MM-dd"),
     format(dateRange.to, "yyyy-MM-dd")
   );
+  const firstTransactionDate = useFirstTransactionDate();
 
   const chartData = history?.time_series
     ? transformToChartData(history.time_series)
@@ -112,6 +114,7 @@ export function NetWorth({
               align="start"
               locale="en-GB"
               showCompare={false}
+              allTimeStart={firstTransactionDate}
             />
           ) : null}
         </div>
