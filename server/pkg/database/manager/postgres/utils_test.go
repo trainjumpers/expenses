@@ -110,6 +110,19 @@ var _ = Describe("Postgres Utilities", func() {
 					// 500ms * 2^(2-1) = 1000ms, which is > 800ms, so it should be capped
 					Expect(dm.calculateBackoffDelay(2, policy)).To(Equal(800 * time.Millisecond))
 				})
+
+				It("should use a fixed default delay when no policy is provided", func() {
+					Expect(dm.calculateBackoffDelay(3, nil)).To(Equal(100 * time.Millisecond))
+				})
+
+				It("should fall back to the base delay for an unknown backoff strategy", func() {
+					policy := &base.RetryPolicy{
+						BaseDelay: 150 * time.Millisecond,
+						MaxDelay:  time.Second,
+						Backoff:   base.BackoffStrategy(99),
+					}
+					Expect(dm.calculateBackoffDelay(1, policy)).To(Equal(150 * time.Millisecond))
+				})
 			})
 
 			Describe("executeWithCleanup", func() {

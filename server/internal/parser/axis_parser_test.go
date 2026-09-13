@@ -150,5 +150,29 @@ Tran Date,CHQNO,PARTICULARS,DR,CR,BAL,SOL
 			Expect(res).To(BeNil())
 			Expect(err.Error()).To(ContainSubstring("both debit and credit amounts are empty"))
 		})
+
+		It("should error when debit is not a float", func() {
+			fields := []string{"31-03-2025", "-", "NEFT/ICIC0000001/ACME_CORP", "notanumber", "", "132000.00"}
+			res, err := parser.parseTransactionRow(fields)
+			Expect(err).To(HaveOccurred())
+			Expect(res).To(BeNil())
+			Expect(err.Error()).To(ContainSubstring("failed to parse debit amount"))
+		})
+
+		It("should use the pattern label as name for interest entries", func() {
+			fields := []string{"31-03-2025", "-", "INT.PD CHARGES", "10.00", "", "1000.00"}
+			res, err := parser.parseTransactionRow(fields)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(res.Name).To(Equal("Interest"))
+		})
+
+		It("should skip rows with an unparseable date and keep valid rows", func() {
+			csvContent := `Tran Date,CHQNO,PARTICULARS,DR,CR,BAL
+invalid,-,TEST_DESC,100.00,,1000.00
+31-03-2025,-,NEFT/ICIC0000001/ACME_CORP,5000.00,,127010.00`
+			txns, err := parser.Parse([]byte(csvContent), "", "test.csv", "")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(txns).To(HaveLen(1))
+		})
 	})
 })

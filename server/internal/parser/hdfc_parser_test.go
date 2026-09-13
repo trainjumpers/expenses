@@ -134,6 +134,13 @@ var _ = Describe("HDFCParser", func() {
 			Expect(err).To(HaveOccurred())
 			Expect(result).To(BeNil())
 		})
+
+		It("errors on malformed credit amount", func() {
+			fields := []string{"01/04/25", "Bad Credit", "01/04/25", "0.00", "abc", "REFBAD", "0.00"}
+			result, err := parser.parseTransactionRow(fields)
+			Expect(err).To(HaveOccurred())
+			Expect(result).To(BeNil())
+		})
 	})
 
 	Describe("Parse", func() {

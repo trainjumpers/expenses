@@ -12,6 +12,7 @@ type MockStatementRepository struct {
 	nextId               int64
 	mu                   sync.RWMutex
 	statementTxnMappings []statementTxnMapping
+	failures             map[string]error
 }
 
 func NewMockStatementRepository() *MockStatementRepository {
@@ -22,7 +23,21 @@ func NewMockStatementRepository() *MockStatementRepository {
 	}
 }
 
+// FailOn makes the named method return err, so service tests can exercise
+// failure paths.
+func (m *MockStatementRepository) FailOn(method string, err error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.failures == nil {
+		m.failures = make(map[string]error)
+	}
+	m.failures[method] = err
+}
+
 func (m *MockStatementRepository) CreateStatement(ctx context.Context, input models.CreateStatementInput) (models.StatementResponse, error) {
+	if err := m.failures["CreateStatement"]; err != nil {
+		return models.StatementResponse{}, err
+	}
 	if input.AccountId <= 0 {
 		return models.StatementResponse{}, errors.New("invalid account id")
 	}
@@ -65,6 +80,9 @@ func (m *MockStatementRepository) CreateStatementTxn(ctx context.Context, statem
 func (m *MockStatementRepository) CreateStatementTxns(ctx context.Context, statementId int64, transactionIds []int64) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if err := m.failures["CreateStatementTxns"]; err != nil {
+		return err
+	}
 	for _, txId := range transactionIds {
 		m.statementTxnMappings = append(m.statementTxnMappings, statementTxnMapping{
 			StatementId:   statementId,
@@ -77,6 +95,9 @@ func (m *MockStatementRepository) CreateStatementTxns(ctx context.Context, state
 func (m *MockStatementRepository) UpdateStatementStatus(ctx context.Context, statementId int64, input models.UpdateStatementStatusInput) (models.StatementResponse, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if err := m.failures["UpdateStatementStatus"]; err != nil {
+		return models.StatementResponse{}, err
+	}
 	statement, ok := m.statements[statementId]
 	if !ok {
 		return models.StatementResponse{}, errors.New("statement not found")
@@ -103,6 +124,9 @@ func (m *MockStatementRepository) GetStatementByID(ctx context.Context, statemen
 func (m *MockStatementRepository) ListStatementByUserId(ctx context.Context, userId int64, limit, offset int, query models.StatementListQuery) ([]models.StatementResponse, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
+	if err := m.failures["ListStatementByUserId"]; err != nil {
+		return nil, err
+	}
 	var result []models.StatementResponse
 	for _, s := range m.statements {
 		if s.CreatedBy == userId {
@@ -151,6 +175,9 @@ func (m *MockStatementRepository) ListStatementByUserId(ctx context.Context, use
 }
 
 func (m *MockStatementRepository) CountStatementsByUserId(ctx context.Context, userId int64, query models.StatementListQuery) (int, error) {
+	if err := m.failures["CountStatementsByUserId"]; err != nil {
+		return 0, err
+	}
 	count := 0
 	for _, s := range m.statements {
 		if s.CreatedBy == userId {

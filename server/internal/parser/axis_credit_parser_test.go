@@ -179,6 +179,44 @@ var _ = Describe("AxisCreditParser", func() {
 		})
 	})
 
+	Describe("Parse edge cases", func() {
+		It("errors when the workbook bytes are not a valid xlsx", func() {
+			_, err := parser.Parse([]byte("not a workbook"), "", "test.xlsx", "")
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("failed to open xlsx"))
+		})
+
+		It("returns nil when the date or description column is missing", func() {
+			row := []string{"01 Nov '25", "Desc", "", "100.00", "Debit"}
+			txn, err := parser.parseTransactionRow(row, -1, 1, 3, 4)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(txn).To(BeNil())
+		})
+
+		It("returns nil for a row whose date cell is blank", func() {
+			row := []string{"", "Desc", "", "100.00", "Debit"}
+			txn, err := parser.parseTransactionRow(row, 0, 1, 3, 4)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(txn).To(BeNil())
+		})
+
+		It("skips empty rows and normalizes short rows", func() {
+			data := [][]string{
+				{"Date", "Transaction Details", "", "Amount (INR)", "Debit/Credit"},
+				{"03 Nov '25", "Shop", "", "₹ 10.00", "Debit"},
+				{"", "", "", "", ""},
+				{"04 Nov '25"},
+				{"05 Nov '25", "Cafe", "", "₹ 20.00", "Debit"},
+			}
+			b := utils.CreateXLSXFile(data)
+			txns, err := parser.Parse(b, "", "test.xlsx", "")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(txns).To(HaveLen(2))
+			Expect(txns[0].Name).To(Equal("Shop"))
+			Expect(txns[1].Name).To(Equal("Cafe"))
+		})
+	})
+
 	Describe("Parser Registry", func() {
 		It("should return axis credit parser for BankTypeAxisCredit", func() {
 			p, ok := GetParser(models.BankTypeAxisCredit)

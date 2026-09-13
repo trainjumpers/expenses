@@ -16,6 +16,7 @@ type MockRuleRepository struct {
 	actions         map[int64]models.RuleActionResponse
 	conditions      map[int64]models.RuleConditionResponse
 	mappings        map[string]bool // key: "ruleId:transactionId"
+	failures        map[string]error
 	nextRuleId      int64
 	nextActionId    int64
 	nextConditionId int64
@@ -33,9 +34,23 @@ func NewMockRuleRepository() *MockRuleRepository {
 	}
 }
 
+// FailOn makes the named method return err, so service tests can exercise
+// failure paths.
+func (m *MockRuleRepository) FailOn(method string, err error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.failures == nil {
+		m.failures = make(map[string]error)
+	}
+	m.failures[method] = err
+}
+
 func (m *MockRuleRepository) CreateRule(ctx context.Context, req models.CreateBaseRuleRequest) (models.RuleResponse, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if err := m.failures["CreateRule"]; err != nil {
+		return models.RuleResponse{}, err
+	}
 	rule := models.RuleResponse{
 		Id:            m.nextRuleId,
 		Name:          req.Name,
@@ -51,6 +66,9 @@ func (m *MockRuleRepository) CreateRule(ctx context.Context, req models.CreateBa
 func (m *MockRuleRepository) CreateRuleActions(ctx context.Context, actions []models.CreateRuleActionRequest) ([]models.RuleActionResponse, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if err := m.failures["CreateRuleActions"]; err != nil {
+		return nil, err
+	}
 	var result []models.RuleActionResponse
 	for _, a := range actions {
 		action := models.RuleActionResponse{
@@ -69,6 +87,9 @@ func (m *MockRuleRepository) CreateRuleActions(ctx context.Context, actions []mo
 func (m *MockRuleRepository) CreateRuleConditions(ctx context.Context, conditions []models.CreateRuleConditionRequest) ([]models.RuleConditionResponse, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if err := m.failures["CreateRuleConditions"]; err != nil {
+		return nil, err
+	}
 	var result []models.RuleConditionResponse
 	for _, cond := range conditions {
 		condition := models.RuleConditionResponse{
@@ -99,6 +120,9 @@ func (m *MockRuleRepository) ListRules(ctx context.Context, userId int64, query 
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
+	if err := m.failures["ListRules"]; err != nil {
+		return models.PaginatedRulesResponse{}, err
+	}
 	var filteredRules []models.RuleResponse
 	for _, rule := range m.rules {
 		if rule.CreatedBy != userId {
@@ -158,6 +182,9 @@ func (m *MockRuleRepository) ListRules(ctx context.Context, userId int64, query 
 func (m *MockRuleRepository) ListRuleActionsByRuleId(ctx context.Context, ruleId int64) ([]models.RuleActionResponse, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if err := m.failures["ListRuleActionsByRuleId"]; err != nil {
+		return nil, err
+	}
 	var result []models.RuleActionResponse
 	for _, action := range m.actions {
 		if action.RuleId == ruleId {
@@ -170,6 +197,9 @@ func (m *MockRuleRepository) ListRuleActionsByRuleId(ctx context.Context, ruleId
 func (m *MockRuleRepository) ListRuleConditionsByRuleId(ctx context.Context, ruleId int64) ([]models.RuleConditionResponse, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if err := m.failures["ListRuleConditionsByRuleId"]; err != nil {
+		return nil, err
+	}
 	var result []models.RuleConditionResponse
 	for _, cond := range m.conditions {
 		if cond.RuleId == ruleId {
@@ -239,6 +269,9 @@ func (m *MockRuleRepository) UpdateRuleCondition(ctx context.Context, id int64, 
 func (m *MockRuleRepository) DeleteRuleActionsByRuleId(ctx context.Context, ruleId int64) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if err := m.failures["DeleteRuleActionsByRuleId"]; err != nil {
+		return err
+	}
 	for id, action := range m.actions {
 		if action.RuleId == ruleId {
 			delete(m.actions, id)
@@ -250,6 +283,9 @@ func (m *MockRuleRepository) DeleteRuleActionsByRuleId(ctx context.Context, rule
 func (m *MockRuleRepository) DeleteRuleConditionsByRuleId(ctx context.Context, ruleId int64) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if err := m.failures["DeleteRuleConditionsByRuleId"]; err != nil {
+		return err
+	}
 	for id, cond := range m.conditions {
 		if cond.RuleId == ruleId {
 			delete(m.conditions, id)
@@ -283,6 +319,9 @@ func (m *MockRuleRepository) DeleteRule(ctx context.Context, id int64, userId in
 func (m *MockRuleRepository) CreateRuleTransactionMapping(ctx context.Context, ruleId int64, transactionId int64) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if err := m.failures["CreateRuleTransactionMapping"]; err != nil {
+		return err
+	}
 	key := fmt.Sprintf("%d:%d", ruleId, transactionId)
 	m.mappings[key] = true
 	return nil
@@ -292,6 +331,9 @@ func (m *MockRuleRepository) PutRuleActions(ctx context.Context, ruleId int64, a
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
+	if err := m.failures["PutRuleActions"]; err != nil {
+		return nil, err
+	}
 	// Delete existing actions for this rule
 	for id, action := range m.actions {
 		if action.RuleId == ruleId {
@@ -319,6 +361,9 @@ func (m *MockRuleRepository) PutRuleConditions(ctx context.Context, ruleId int64
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
+	if err := m.failures["PutRuleConditions"]; err != nil {
+		return nil, err
+	}
 	// Delete existing conditions for this rule
 	for id, cond := range m.conditions {
 		if cond.RuleId == ruleId {

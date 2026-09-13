@@ -158,4 +158,27 @@ var _ = Describe("Database Helper Utils", func() {
 			Expect(helper.ToSnakeCase(" some string")).To(Equal("some_string"))
 		})
 	})
+
+	Describe("CreateInsertQuery output object validation", func() {
+		It("should return an error when the output object is not a struct pointer", func() {
+			insertObj := &TestStruct{FirstName: "John"}
+
+			_, _, _, err := helper.CreateInsertQuery(insertObj, "not-a-struct", "test_table", "public")
+			Expect(err).To(HaveOccurred())
+		})
+	})
+
+	Describe("GetDbFieldsFromObject invalid inputs", func() {
+		It("should return an error for a non-pointer", func() {
+			_, _, err := helper.GetDbFieldsFromObject(TestStruct{})
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("should return an error for a pointer to a non-struct", func() {
+			values := []string{"a", "b"}
+
+			_, _, err := helper.GetDbFieldsFromObject(&values)
+			Expect(err).To(HaveOccurred())
+		})
+	})
 })

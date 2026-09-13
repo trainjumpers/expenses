@@ -78,3 +78,16 @@ func TestVerifyOriginIgnoresSafeMethods(t *testing.T) {
 		t.Fatalf("expected 200, got %d", recorder.Code)
 	}
 }
+
+func TestVerifyOriginAllowsRefererWithoutHost(t *testing.T) {
+	router := originTestRouter()
+	req := httptest.NewRequest(http.MethodPost, "/x", nil)
+	req.Header.Set("Referer", "/relative/path")
+	recorder := httptest.NewRecorder()
+
+	router.ServeHTTP(recorder, req)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", recorder.Code)
+	}
+}

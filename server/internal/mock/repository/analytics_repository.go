@@ -28,6 +28,7 @@ type MockAnalyticsRepository struct {
 	shouldErrorOnCashBalance bool                                         // simulate GetCashBalanceHistory errors
 	shouldErrorOnCategory    bool                                         // simulate GetCategoryAnalytics errors
 	shouldErrorOnMonthly     bool                                         // simulate GetMonthlyAnalytics errors
+	failures                 map[string]error                             // per-method injected errors
 	mu                       sync.RWMutex
 }
 
@@ -65,6 +66,17 @@ func NewMockAnalyticsRepository() *MockAnalyticsRepository {
 	}
 }
 
+// FailOn makes the named method return err, so service tests can exercise
+// failure paths.
+func (m *MockAnalyticsRepository) FailOn(method string, err error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.failures == nil {
+		m.failures = make(map[string]error)
+	}
+	m.failures[method] = err
+}
+
 func (m *MockAnalyticsRepository) GetBalance(ctx context.Context, userId int64, startDate *time.Time, endDate *time.Time) (map[int64]float64, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -72,6 +84,14 @@ func (m *MockAnalyticsRepository) GetBalance(ctx context.Context, userId int64, 
 	// Simulate error if configured
 	if m.shouldErrorOnBalance {
 		return nil, fmt.Errorf("simulated GetBalance error")
+	}
+	if err := m.failures["GetBalance"]; err != nil {
+		return nil, err
+	}
+	if endDate != nil {
+		if err := m.failures["GetBalanceEndDate"]; err != nil {
+			return nil, err
+		}
 	}
 
 	// Create a key based on parameters
@@ -225,6 +245,9 @@ func (m *MockAnalyticsRepository) GetAccountCashFlows(ctx context.Context, userI
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
+	if err := m.failures["GetAccountCashFlows"]; err != nil {
+		return nil, err
+	}
 	_ = accountIds
 	if flows, exists := m.cashFlows[userId]; exists {
 		return flows, nil
@@ -236,6 +259,9 @@ func (m *MockAnalyticsRepository) GetInsightsMonthly(ctx context.Context, userId
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
+	if err := m.failures["GetInsightsMonthly"]; err != nil {
+		return nil, err
+	}
 	if points, exists := m.insightsMonthly[m.createMonthlyKey(userId, startDate, endDate)]; exists {
 		return points, nil
 	}
@@ -246,6 +272,9 @@ func (m *MockAnalyticsRepository) GetInsightsCategories(ctx context.Context, use
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
+	if err := m.failures["GetInsightsCategories"]; err != nil {
+		return nil, err
+	}
 	if categories, exists := m.insightsCategories[m.createMonthlyKey(userId, startDate, endDate)]; exists {
 		return categories, nil
 	}
@@ -256,6 +285,9 @@ func (m *MockAnalyticsRepository) GetInsightsTopExpenses(ctx context.Context, us
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
+	if err := m.failures["GetInsightsTopExpenses"]; err != nil {
+		return nil, err
+	}
 	if expenses, exists := m.insightsTopExpenses[m.createMonthlyKey(userId, startDate, endDate)]; exists {
 		return expenses, nil
 	}
@@ -266,6 +298,9 @@ func (m *MockAnalyticsRepository) GetInsightsUncategorized(ctx context.Context, 
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
+	if err := m.failures["GetInsightsUncategorized"]; err != nil {
+		return 0, 0, err
+	}
 	if data, exists := m.insightsUncategorized[m.createMonthlyKey(userId, startDate, endDate)]; exists {
 		return data.count, data.amount, nil
 	}
@@ -276,6 +311,9 @@ func (m *MockAnalyticsRepository) GetInsightsSpendingSummary(ctx context.Context
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
+	if err := m.failures["GetInsightsSpendingSummary"]; err != nil {
+		return models.InsightsSpendingSummary{}, err
+	}
 	if summary, exists := m.insightsSpendingSummary[m.createMonthlyKey(userId, startDate, endDate)]; exists {
 		return summary, nil
 	}
@@ -286,6 +324,9 @@ func (m *MockAnalyticsRepository) GetInsightsCategoryMonths(ctx context.Context,
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
+	if err := m.failures["GetInsightsCategoryMonths"]; err != nil {
+		return nil, err
+	}
 	if months, exists := m.insightsCategoryMonths[m.createMonthlyKey(userId, startDate, endDate)]; exists {
 		return months, nil
 	}
@@ -296,6 +337,9 @@ func (m *MockAnalyticsRepository) GetInsightsWeekday(ctx context.Context, userId
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
+	if err := m.failures["GetInsightsWeekday"]; err != nil {
+		return nil, err
+	}
 	if days, exists := m.insightsWeekday[m.createMonthlyKey(userId, startDate, endDate)]; exists {
 		return days, nil
 	}
@@ -306,6 +350,9 @@ func (m *MockAnalyticsRepository) GetInsightsLatestTransactionDate(ctx context.C
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
+	if err := m.failures["GetInsightsLatestTransactionDate"]; err != nil {
+		return nil, err
+	}
 	return m.insightsLatestTxnDate[userId], nil
 }
 
@@ -313,6 +360,9 @@ func (m *MockAnalyticsRepository) GetInsightsMultiCategoryCount(ctx context.Cont
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
+	if err := m.failures["GetInsightsMultiCategoryCount"]; err != nil {
+		return 0, err
+	}
 	return m.insightsMultiCategory[m.createMonthlyKey(userId, startDate, endDate)], nil
 }
 

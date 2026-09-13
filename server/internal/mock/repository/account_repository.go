@@ -10,6 +10,7 @@ import (
 type MockAccountRepository struct {
 	accounts map[int64]models.AccountResponse
 	nextId   int64
+	failures map[string]error
 	mu       sync.RWMutex
 }
 
@@ -18,6 +19,17 @@ func NewMockAccountRepository() *MockAccountRepository {
 		accounts: make(map[int64]models.AccountResponse),
 		nextId:   1,
 	}
+}
+
+// FailOn makes the named method return err, so service tests can exercise
+// failure paths.
+func (m *MockAccountRepository) FailOn(method string, err error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.failures == nil {
+		m.failures = make(map[string]error)
+	}
+	m.failures[method] = err
 }
 
 func (m *MockAccountRepository) CreateAccount(ctx context.Context, input models.CreateAccountInput) (models.AccountResponse, error) {
@@ -45,6 +57,9 @@ func (m *MockAccountRepository) CreateAccount(ctx context.Context, input models.
 func (m *MockAccountRepository) GetAccountById(ctx context.Context, accountId int64, userId int64) (models.AccountResponse, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
+	if err := m.failures["GetAccountById"]; err != nil {
+		return models.AccountResponse{}, err
+	}
 	acc, ok := m.accounts[accountId]
 	if !ok || acc.CreatedBy != userId {
 		return models.AccountResponse{}, customErrors.NewAccountNotFoundError(nil)
@@ -96,6 +111,9 @@ func (m *MockAccountRepository) DeleteAccount(ctx context.Context, accountId int
 func (m *MockAccountRepository) ListAccounts(ctx context.Context, userId int64) ([]models.AccountResponse, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
+	if err := m.failures["ListAccounts"]; err != nil {
+		return nil, err
+	}
 	var result []models.AccountResponse
 	for _, acc := range m.accounts {
 		if acc.CreatedBy == userId {

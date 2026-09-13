@@ -533,4 +533,228 @@ var _ = Describe("PostgreSQL Database Manager", Ordered, func() {
 			Expect(err.Error()).To(Equal("not in a transaction"))
 		})
 	})
+
+	Describe("Advanced Error and Cleanup Paths", Ordered, func() {
+		var (
+			closedManager   base.DatabaseManager
+			disabledManager base.DatabaseManager
+		)
+
+		BeforeAll(func() {
+			factory := postgres.NewPostgreSQLFactory()
+			var err error
+			closedManager, err = factory.CreateDatabaseManager(cfg, base.DefaultConfig())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(closedManager).NotTo(BeNil())
+			Expect(closedManager.Close()).To(Succeed())
+
+			disabledManager, err = factory.CreateDatabaseManager(cfg, base.BasicConfig())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(disabledManager).NotTo(BeNil())
+			Expect(disabledManager.Close()).To(Succeed())
+		})
+
+		It("should return an error when a FetchAll query fails", func() {
+			rows, err := dbManager.FetchAll(ctx, `SELECT * FROM table_that_does_not_exist`)
+			Expect(err).To(HaveOccurred())
+			Expect(rows).To(BeNil())
+		})
+
+		It("should return an error when an ExecuteQuery query fails", func() {
+			_, err := dbManager.ExecuteQuery(ctx, `INSERT INTO table_that_does_not_exist (id) VALUES (1)`)
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("should use default transaction options when none are provided", func() {
+			err := dbManager.WithTxnOptions(ctx, nil, func(txCtx context.Context) error {
+				return nil
+			})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should retry retryable errors and return the last error", func() {
+			opts := &base.TransactionOptions{
+				RetryPolicy: &base.RetryPolicy{
+					MaxRetries: 1,
+					BaseDelay:  time.Millisecond,
+					MaxDelay:   time.Millisecond,
+					Backoff:    base.BackoffFixed,
+				},
+			}
+
+			err := dbManager.WithTxnOptions(ctx, opts, func(txCtx context.Context) error {
+				return errors.New("deadlock detected")
+			})
+
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("transaction failed after 2 attempts"))
+		})
+
+		It("should stop retrying when the error is not retryable", func() {
+			err := dbManager.WithTxnOptions(ctx, base.DefaultTransactionOptions(), func(txCtx context.Context) error {
+				return errors.New("syntax error at or near")
+			})
+
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("syntax error at or near"))
+		})
+
+		It("should return an error when creating a savepoint fails", func() {
+			err := dbManager.WithTxn(ctx, func(txCtx context.Context) error {
+				return dbManager.WithSavepoint(txCtx, "", func(spCtx context.Context) error {
+					return nil
+				})
+			})
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("failed to create savepoint"))
+		})
+
+		It("should return the original error when rolling back to the savepoint fails", func() {
+			err := dbManager.WithTxn(ctx, func(txCtx context.Context) error {
+				return dbManager.WithSavepoint(txCtx, "sp_rollback_fail", func(spCtx context.Context) error {
+					_, releaseErr := dbManager.ExecuteQuery(spCtx, `RELEASE SAVEPOINT sp_rollback_fail`)
+					if releaseErr != nil {
+						return releaseErr
+					}
+					return errors.New("force savepoint rollback")
+				})
+			})
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(Equal("force savepoint rollback"))
+		})
+
+		It("should return an error when releasing the savepoint fails", func() {
+			err := dbManager.WithTxn(ctx, func(txCtx context.Context) error {
+				return dbManager.WithSavepoint(txCtx, "sp_release_fail", func(spCtx context.Context) error {
+					_, releaseErr := dbManager.ExecuteQuery(spCtx, `RELEASE SAVEPOINT sp_release_fail`)
+					return releaseErr
+				})
+			})
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("failed to release savepoint"))
+		})
+
+		It("should return an error when a pool batch operation fails", func() {
+			batch := &pgx.Batch{}
+			batch.Queue(`INSERT INTO table_that_does_not_exist (name) VALUES ($1)`, "value")
+
+			err := dbManager.ExecuteBatch(ctx, batch)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("batch operation 0 failed"))
+		})
+
+		It("should return an error when acquiring a connection from a closed pool", func() {
+			err := closedManager.WithConnection(ctx, func(conn *pgx.Conn) error {
+				return nil
+			})
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("failed to acquire connection"))
+		})
+
+		It("should return empty monitoring metrics when monitoring is disabled", func() {
+			Expect(disabledManager.GetMonitoringMetrics()).To(Equal(base.TransactionMetrics{}))
+		})
+
+		It("should report the metrics feature and unknown features", func() {
+			Expect(dbManager.IsFeatureEnabled(base.FeatureMetrics)).To(BeTrue())
+			Expect(dbManager.IsFeatureEnabled("unknown-feature")).To(BeFalse())
+		})
+
+		It("should return an error when beginning a transaction on a closed pool", func() {
+			err := closedManager.WithTxn(ctx, func(txCtx context.Context) error {
+				return nil
+			})
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("failed to begin transaction"))
+		})
+
+		It("should roll back and re-panic when the transaction function panics", func() {
+			Expect(func() {
+				_ = dbManager.WithTxn(ctx, func(txCtx context.Context) error {
+					panic("transaction panic")
+				})
+			}).To(PanicWith("transaction panic"))
+		})
+
+		It("should re-panic when the rollback after a panic fails", func() {
+			Expect(func() {
+				_ = dbManager.WithTxn(ctx, func(txCtx context.Context) error {
+					txContext, ok := base.GetTransactionContext(txCtx)
+					Expect(ok).To(BeTrue())
+					_ = txContext.Tx.Rollback(ctx)
+					panic("rollback failure panic")
+				})
+			}).To(PanicWith("rollback failure panic"))
+		})
+
+		It("should return a combined error when rollback after a failed function fails", func() {
+			err := dbManager.WithTxn(ctx, func(txCtx context.Context) error {
+				txContext, ok := base.GetTransactionContext(txCtx)
+				Expect(ok).To(BeTrue())
+				_ = txContext.Tx.Rollback(ctx)
+				return errors.New("transaction body failed")
+			})
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("transaction failed and rollback failed"))
+		})
+
+		It("should return an error when committing the transaction fails", func() {
+			err := dbManager.WithTxn(ctx, func(txCtx context.Context) error {
+				txContext, ok := base.GetTransactionContext(txCtx)
+				Expect(ok).To(BeTrue())
+				return txContext.Tx.Commit(ctx)
+			})
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("failed to commit transaction"))
+		})
+
+		It("should return an error when beginning a transaction with options on a closed pool", func() {
+			err := closedManager.WithTxnOptions(ctx, nil, func(txCtx context.Context) error {
+				return nil
+			})
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("failed to begin transaction"))
+		})
+
+		It("should re-panic when the rollback after a panic fails using transaction options", func() {
+			opts := &base.TransactionOptions{
+				RetryPolicy: &base.RetryPolicy{MaxRetries: 0},
+			}
+
+			Expect(func() {
+				_ = dbManager.WithTxnOptions(ctx, opts, func(txCtx context.Context) error {
+					txContext, ok := base.GetTransactionContext(txCtx)
+					Expect(ok).To(BeTrue())
+					_ = txContext.Tx.Rollback(ctx)
+					panic("options rollback failure panic")
+				})
+			}).To(PanicWith("options rollback failure panic"))
+		})
+
+		It("should return a combined error when rollback after a failed function fails using transaction options", func() {
+			opts := &base.TransactionOptions{
+				RetryPolicy: &base.RetryPolicy{MaxRetries: 0},
+			}
+
+			err := dbManager.WithTxnOptions(ctx, opts, func(txCtx context.Context) error {
+				txContext, ok := base.GetTransactionContext(txCtx)
+				Expect(ok).To(BeTrue())
+				_ = txContext.Tx.Rollback(ctx)
+				return errors.New("options body failed")
+			})
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("transaction failed and rollback failed"))
+		})
+
+		It("should record rolled back transactions in the monitor", func() {
+			monitor := postgres.NewTransactionMonitor()
+			monitor.StartTransaction("txn-rolled-back")
+			monitor.EndTransaction("txn-rolled-back", time.Millisecond, false, nil)
+
+			metrics := monitor.GetMetrics()
+			Expect(metrics.RolledBackTransactions).To(Equal(int64(1)))
+			Expect(metrics.CommittedTransactions).To(Equal(int64(0)))
+			Expect(metrics.FailedTransactions).To(Equal(int64(0)))
+		})
+	})
 })

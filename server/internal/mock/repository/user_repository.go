@@ -8,9 +8,10 @@ import (
 )
 
 type MockUserRepository struct {
-	users  map[string]models.UserWithPassword
-	nextId int64
-	mu     sync.RWMutex
+	users    map[string]models.UserWithPassword
+	nextId   int64
+	failures map[string]error
+	mu       sync.RWMutex
 }
 
 func NewMockUserRepository() *MockUserRepository {
@@ -20,9 +21,23 @@ func NewMockUserRepository() *MockUserRepository {
 	}
 }
 
+// FailOn makes the named method return err, so service tests can exercise
+// failure paths.
+func (m *MockUserRepository) FailOn(method string, err error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.failures == nil {
+		m.failures = make(map[string]error)
+	}
+	m.failures[method] = err
+}
+
 func (m *MockUserRepository) CreateUser(ctx context.Context, newUser models.CreateUserInput) (models.UserResponse, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if err := m.failures["CreateUser"]; err != nil {
+		return models.UserResponse{}, err
+	}
 	if _, exists := m.users[newUser.Email]; exists {
 		return models.UserResponse{}, errors.NewUserAlreadyExistsError(nil)
 	}
