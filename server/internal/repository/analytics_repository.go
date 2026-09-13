@@ -16,6 +16,11 @@ type AnalyticsRepositoryInterface interface {
 	GetCategoryAnalytics(ctx context.Context, userId int64, startDate time.Time, endDate time.Time, categoryIds []int64) (*models.CategoryAnalyticsResponse, error)
 	GetMonthlyAnalytics(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) (*models.MonthlyAnalyticsResponse, error)
 	GetAccountCashFlows(ctx context.Context, userId int64, accountIds []int64) ([]models.AccountCashFlow, error)
+
+	GetInsightsMonthly(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) ([]models.InsightsMonthlyPoint, error)
+	GetInsightsCategories(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) ([]models.InsightsCategory, error)
+	GetInsightsTopExpenses(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) ([]models.InsightsTopExpense, error)
+	GetInsightsUncategorized(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) (int64, float64, error)
 }
 
 type AnalyticsRepository struct {
@@ -266,7 +271,7 @@ func (r *AnalyticsRepository) GetAccountCashFlows(ctx context.Context, userId in
 	}
 
 	query := fmt.Sprintf(`
-		SELECT account_id, amount, date
+		SELECT account_id, amount, date, name
 		FROM %s.%s
 		WHERE created_by = $1
 			AND deleted_at IS NULL
@@ -283,11 +288,159 @@ func (r *AnalyticsRepository) GetAccountCashFlows(ctx context.Context, userId in
 	flows := make([]models.AccountCashFlow, 0)
 	for rows.Next() {
 		var flow models.AccountCashFlow
-		if err := rows.Scan(&flow.AccountID, &flow.Amount, &flow.Date); err != nil {
+		if err := rows.Scan(&flow.AccountID, &flow.Amount, &flow.Date, &flow.Name); err != nil {
 			return nil, err
 		}
 		flows = append(flows, flow)
 	}
 
 	return flows, nil
+}
+
+// householdPredicate is the single definition of a household transaction:
+// non-deleted, on a non-investment account, and not mapped to a Transfers
+// category. It is shared by every insights query so the definition cannot
+// drift between them.
+func (r *AnalyticsRepository) householdPredicate() string {
+	return fmt.Sprintf(`
+			t.deleted_at IS NULL
+			AND a.bank_type <> 'investment'
+			AND NOT EXISTS (
+				SELECT 1
+				FROM %s.transaction_category_mapping tcm
+				JOIN %s.categories c ON c.id = tcm.category_id
+				WHERE tcm.transaction_id = t.id
+					AND LOWER(c.name) = 'transfers'
+			)`, r.schema, r.schema)
+}
+
+func (r *AnalyticsRepository) householdFrom() string {
+	return fmt.Sprintf("%s.transaction t JOIN %s.account a ON a.id = t.account_id", r.schema, r.schema)
+}
+
+func (r *AnalyticsRepository) GetInsightsMonthly(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) ([]models.InsightsMonthlyPoint, error) {
+	query := fmt.Sprintf(`
+		SELECT
+			to_char(date_trunc('month', t.date), 'YYYY-MM') AS month,
+			COALESCE(SUM(CASE WHEN t.amount < 0 THEN t.amount * -1 ELSE 0 END), 0) AS income,
+			COALESCE(SUM(CASE WHEN t.amount > 0 THEN t.amount ELSE 0 END), 0) AS expenses
+		FROM %s
+		WHERE t.created_by = $1
+			AND t.date >= $2
+			AND t.date <= $3
+			AND %s
+		GROUP BY month
+		ORDER BY month`,
+		r.householdFrom(), r.householdPredicate())
+
+	rows, err := r.db.FetchAll(ctx, query, userId, startDate, endDate)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	points := make([]models.InsightsMonthlyPoint, 0)
+	for rows.Next() {
+		var point models.InsightsMonthlyPoint
+		if err := rows.Scan(&point.Month, &point.Income, &point.Expenses); err != nil {
+			return nil, err
+		}
+		point.Net = point.Income - point.Expenses
+		points = append(points, point)
+	}
+
+	return points, nil
+}
+
+func (r *AnalyticsRepository) GetInsightsCategories(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) ([]models.InsightsCategory, error) {
+	query := fmt.Sprintf(`
+		SELECT
+			COALESCE(c.id, -1) AS category_id,
+			COALESCE(c.name, 'Uncategorized') AS category_name,
+			COALESCE(SUM(t.amount), 0) AS total_amount
+		FROM %s
+		LEFT JOIN %s.transaction_category_mapping tcm ON tcm.transaction_id = t.id
+		LEFT JOIN %s.categories c ON c.id = tcm.category_id
+		WHERE t.created_by = $1
+			AND t.date >= $2
+			AND t.date <= $3
+			AND %s
+		GROUP BY c.id, c.name
+		HAVING SUM(t.amount) != 0
+		ORDER BY ABS(SUM(t.amount)) DESC`,
+		r.householdFrom(), r.schema, r.schema, r.householdPredicate())
+
+	rows, err := r.db.FetchAll(ctx, query, userId, startDate, endDate)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	categories := make([]models.InsightsCategory, 0)
+	for rows.Next() {
+		var category models.InsightsCategory
+		if err := rows.Scan(&category.CategoryID, &category.CategoryName, &category.TotalAmount); err != nil {
+			return nil, err
+		}
+		categories = append(categories, category)
+	}
+
+	return categories, nil
+}
+
+func (r *AnalyticsRepository) GetInsightsTopExpenses(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) ([]models.InsightsTopExpense, error) {
+	query := fmt.Sprintf(`
+		SELECT t.name, COALESCE(SUM(t.amount), 0) AS amount, COUNT(*) AS count
+		FROM %s
+		WHERE t.created_by = $1
+			AND t.date >= $2
+			AND t.date <= $3
+			AND t.amount > 0
+			AND %s
+		GROUP BY t.name
+		ORDER BY amount DESC
+		LIMIT 15`,
+		r.householdFrom(), r.householdPredicate())
+
+	rows, err := r.db.FetchAll(ctx, query, userId, startDate, endDate)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	expenses := make([]models.InsightsTopExpense, 0)
+	for rows.Next() {
+		var expense models.InsightsTopExpense
+		if err := rows.Scan(&expense.Name, &expense.Amount, &expense.Count); err != nil {
+			return nil, err
+		}
+		expenses = append(expenses, expense)
+	}
+
+	return expenses, nil
+}
+
+func (r *AnalyticsRepository) GetInsightsUncategorized(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) (int64, float64, error) {
+	query := fmt.Sprintf(`
+		SELECT COUNT(*), COALESCE(SUM(t.amount), 0)
+		FROM %s
+		WHERE t.created_by = $1
+			AND t.date >= $2
+			AND t.date <= $3
+			AND NOT EXISTS (
+				SELECT 1
+				FROM %s.transaction_category_mapping tcm
+				WHERE tcm.transaction_id = t.id
+			)
+			AND %s`,
+		r.householdFrom(), r.schema, r.householdPredicate())
+
+	var count int64
+	var amount float64
+	row := r.db.FetchOne(ctx, query, userId, startDate, endDate)
+	if err := row.Scan(&count, &amount); err != nil {
+		return 0, 0, err
+	}
+
+	return count, amount, nil
 }

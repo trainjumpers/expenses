@@ -2,11 +2,13 @@
 
 import {
   getAccountAnalytics,
+  getInsights,
   getMonthlyAnalytics,
   getNetworthTimeSeries,
 } from "@/lib/api/analytics";
 import type {
   AccountAnalyticsListResponse,
+  AnalyticsInsightsResponse,
   MonthlyAnalyticsResponse,
   NetworthTimeSeriesResponse,
 } from "@/lib/models/analytics";
@@ -34,6 +36,15 @@ export function useMonthlyAnalytics(startDate: string, endDate: string) {
   return useQuery<MonthlyAnalyticsResponse>({
     queryKey: queryKeys.analytics.monthlyAnalytics(startDate, endDate),
     queryFn: ({ signal }) => getMonthlyAnalytics(startDate, endDate, signal),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    enabled: !!startDate && !!endDate, // Only run query when dates are provided
+  });
+}
+
+export function useInsights(startDate: string, endDate: string) {
+  return useQuery<AnalyticsInsightsResponse>({
+    queryKey: queryKeys.analytics.insights(startDate, endDate),
+    queryFn: ({ signal }) => getInsights(startDate, endDate, signal),
     staleTime: 5 * 60 * 1000, // 5 minutes
     enabled: !!startDate && !!endDate, // Only run query when dates are provided
   });

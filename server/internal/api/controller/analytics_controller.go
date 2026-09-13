@@ -105,6 +105,26 @@ func (a *AnalyticsController) GetMonthlyAnalytics(ctx *gin.Context) {
 	a.SendSuccess(ctx, http.StatusOK, "Monthly analytics retrieved successfully", analytics)
 }
 
+func (a *AnalyticsController) GetInsights(ctx *gin.Context) {
+	userId := a.GetAuthenticatedUserId(ctx)
+	logger.Infof("Fetching analytics insights for user %d", userId)
+
+	startDate, endDate, err := a.ParseDateRange(ctx)
+	if err != nil {
+		return
+	}
+
+	insights, err := a.analyticsService.GetInsights(ctx, userId, startDate, endDate)
+	if err != nil {
+		logger.Errorf("Error getting analytics insights: %v", err)
+		a.HandleError(ctx, err)
+		return
+	}
+
+	logger.Infof("Analytics insights retrieved successfully for user %d", userId)
+	a.SendSuccess(ctx, http.StatusOK, "Analytics insights retrieved successfully", insights)
+}
+
 func parseCategoryIds(raw string) ([]int64, error) {
 	if raw == "" {
 		return nil, nil

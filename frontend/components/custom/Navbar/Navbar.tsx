@@ -41,6 +41,18 @@ export function Navbar() {
             >
               <Link href="/transaction">Transactions</Link>
             </Button>
+            <Button
+              asChild
+              variant="ghost"
+              className={
+                `border-1 border-transparent hover:border-primary ` +
+                (pathname.startsWith("/analytics")
+                  ? "border-primary bg-primary text-primary-foreground font-bold shadow-md"
+                  : "border-border bg-background text-foreground")
+              }
+            >
+              <Link href="/analytics">Analytics</Link>
+            </Button>
           </div>
         </div>
         <div className="flex items-center gap-2">

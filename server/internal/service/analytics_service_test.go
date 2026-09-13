@@ -1329,5 +1329,256 @@ var _ = Describe("AnalyticsService", func() {
 			expectedPct := ((currentValue - totalInvested) / totalInvested) * 100
 			Expect(percentage).To(BeNumerically("~", expectedPct))
 		})
+
+		It("should ignore FD interest credit rows in XIRR and percentage", func() {
+			currentValue := 107000.0
+			filteredFlows := []models.AccountCashFlow{
+				{AccountID: 1, Amount: -100000.0, Date: now.AddDate(-2, 0, 0)},
+				{AccountID: 1, Amount: -100000.0, Date: now.AddDate(-1, 0, 0)},
+				{AccountID: 1, Amount: 100000.0, Date: now.AddDate(-1, 0, 0), Name: "FD principal redemption"},
+				{AccountID: 1, Amount: 7000.0, Date: now.AddDate(-1, 0, 0), Name: "FD interest exit from SBI"},
+			}
+			withCreditFlows := append([]models.AccountCashFlow{
+				{AccountID: 1, Amount: -7000.0, Date: now.AddDate(-1, 0, 0), Name: "FD interest credit from SBI"},
+			}, filteredFlows...)
+
+			filteredPct, filteredXirr := calculateInvestmentMetrics(filteredFlows, currentValue, now)
+			creditPct, creditXirr := calculateInvestmentMetrics(withCreditFlows, currentValue, now)
+
+			Expect(creditPct).To(Equal(filteredPct))
+			Expect(filteredXirr).NotTo(BeNil())
+			Expect(creditXirr).NotTo(BeNil())
+			Expect(*creditXirr).To(Equal(*filteredXirr))
+		})
+
+		It("should keep a non-matching credit-like row in totalInvested and lower XIRR", func() {
+			currentValue := 107000.0
+			baseFlows := []models.AccountCashFlow{
+				{AccountID: 1, Amount: -100000.0, Date: now.AddDate(-2, 0, 0)},
+				{AccountID: 1, Amount: -100000.0, Date: now.AddDate(-1, 0, 0)},
+				{AccountID: 1, Amount: 100000.0, Date: now.AddDate(-1, 0, 0), Name: "FD principal redemption"},
+				{AccountID: 1, Amount: 7000.0, Date: now.AddDate(-1, 0, 0), Name: "FD interest exit from SBI"},
+			}
+			transferFlows := append([]models.AccountCashFlow{
+				{AccountID: 1, Amount: -7000.0, Date: now.AddDate(-1, 0, 0), Name: "Transfer"},
+			}, baseFlows...)
+
+			basePct, baseXirr := calculateInvestmentMetrics(baseFlows, currentValue, now)
+			transferPct, transferXirr := calculateInvestmentMetrics(transferFlows, currentValue, now)
+
+			// totalInvested includes the 7000 row, so the denominator is 207000.
+			Expect(transferPct).To(BeNumerically("~", ((currentValue-207000.0)/207000.0)*100))
+			Expect(transferPct).To(BeNumerically("<", basePct))
+			Expect(baseXirr).NotTo(BeNil())
+			Expect(transferXirr).NotTo(BeNil())
+			Expect(*transferXirr).To(BeNumerically("<", *baseXirr))
+		})
+
+		It("should not treat HDFC Interest (Credit) as a bookkeeping credit", func() {
+			Expect(isInterestCredit("Interest (Credit)")).To(BeFalse())
+			Expect(isInterestCredit("FD interest credit from SBI")).To(BeTrue())
+			Expect(isInterestCredit("FD INTEREST CREDIT FROM SBI")).To(BeTrue())
+			Expect(isInterestCredit("")).To(BeFalse())
+		})
+
+		It("should keep flows with an empty name", func() {
+			collected := collectInvestmentCashFlows([]models.AccountCashFlow{
+				{AccountID: 1, Amount: -10000.0, Date: now.AddDate(-1, 0, 0), Name: ""},
+			})
+			Expect(collected.contributed).To(Equal(10000.0))
+			Expect(collected.flows).To(HaveLen(1))
+		})
+
+		It("should derive realized interest without the credit counterpart", func() {
+			collected := collectInvestmentCashFlows([]models.AccountCashFlow{
+				{AccountID: 1, Amount: -100000.0, Date: now.AddDate(-1, 0, 0), Name: "FD principal"},
+				{AccountID: 1, Amount: 100000.0, Date: now.AddDate(-1, 0, 0), Name: "FD principal redemption"},
+				{AccountID: 1, Amount: 7000.0, Date: now.AddDate(-1, 0, 0), Name: "FD interest exit from SBI"},
+				{AccountID: 1, Amount: -7000.0, Date: now.AddDate(-1, 0, 0), Name: "FD interest credit from SBI"},
+			})
+			Expect(collected.contributed).To(Equal(100000.0))
+			Expect(collected.distributed).To(Equal(107000.0))
+			Expect(collected.realizedInterest).To(Equal(7000.0))
+		})
+	})
+
+	Describe("GetInsights", func() {
+		var startDate, endDate time.Time
+
+		BeforeEach(func() {
+			startDate = time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+			endDate = time.Date(2024, 3, 31, 23, 59, 59, 0, time.UTC)
+		})
+
+		Context("when the user has no accounts", func() {
+			It("should return a well-formed response with a zero-filled range", func() {
+				result, err := analyticsService.GetInsights(ctx, userId, startDate, endDate)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).NotTo(BeNil())
+				Expect(result.Summary.NetWorth).To(Equal(0.0))
+				Expect(result.Monthly).To(HaveLen(3))
+				Expect(result.Monthly[0].Month).To(Equal("2024-01"))
+				Expect(result.Categories).To(BeEmpty())
+				Expect(result.TopExpenses).To(BeEmpty())
+				Expect(result.Investments).To(BeEmpty())
+			})
+		})
+
+		Context("when end date is before start date", func() {
+			It("should return an error", func() {
+				_, err := analyticsService.GetInsights(ctx, userId, endDate, startDate)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("end date must be after or equal to start date"))
+			})
+		})
+
+		Context("when computing net worth and period figures", func() {
+			var investmentAccountId, bankAccountId int64
+
+			BeforeEach(func() {
+				currentValue := 15000.0
+				investment, err := mockAccountRepo.CreateAccount(ctx, models.CreateAccountInput{
+					Name:         "Investments",
+					BankType:     models.BankTypeInvestment,
+					Currency:     models.CurrencyINR,
+					CurrentValue: &currentValue,
+					CreatedBy:    userId,
+				})
+				Expect(err).NotTo(HaveOccurred())
+				investmentAccountId = investment.Id
+
+				bank, err := mockAccountRepo.CreateAccount(ctx, models.CreateAccountInput{
+					Name:      "Bank",
+					BankType:  models.BankTypeSBI,
+					Currency:  models.CurrencyINR,
+					CreatedBy: userId,
+				})
+				Expect(err).NotTo(HaveOccurred())
+				bankAccountId = bank.Id
+
+				// The mock negates stored balances to mimic SUM(amount) * -1,
+				// so storing -500 yields a 500 transaction balance.
+				mockAnalyticsRepo.SetBalance(userId, nil, nil, map[int64]float64{
+					bankAccountId: -500.0,
+				})
+
+				mockAnalyticsRepo.SetInsightsMonthly(userId, startDate, endDate, []models.InsightsMonthlyPoint{
+					{Month: "2024-01", Income: 1000.0, Expenses: 400.0, Net: 600.0},
+				})
+			})
+
+			It("should sum net worth across priced investments and bank balances", func() {
+				result, err := analyticsService.GetInsights(ctx, userId, startDate, endDate)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result.Summary.InvestmentValue).To(Equal(15000.0))
+				Expect(result.Summary.BankValue).To(Equal(500.0))
+				Expect(result.Summary.NetWorth).To(Equal(15500.0))
+				Expect(investmentAccountId).To(BeNumerically(">", 0))
+			})
+
+			It("should zero-fill the missing months and total the period", func() {
+				result, err := analyticsService.GetInsights(ctx, userId, startDate, endDate)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result.Monthly).To(HaveLen(3))
+				Expect(result.Monthly[0].Month).To(Equal("2024-01"))
+				Expect(result.Monthly[0].Income).To(Equal(1000.0))
+				Expect(result.Monthly[1].Month).To(Equal("2024-02"))
+				Expect(result.Monthly[1].Income).To(Equal(0.0))
+				Expect(result.Monthly[1].Net).To(Equal(0.0))
+				Expect(result.Monthly[2].Month).To(Equal("2024-03"))
+				Expect(result.Summary.PeriodIncome).To(Equal(1000.0))
+				Expect(result.Summary.PeriodExpenses).To(Equal(400.0))
+				Expect(result.Summary.PeriodNet).To(Equal(600.0))
+				Expect(result.Summary.SavingsRate).To(BeNumerically("~", 0.6))
+			})
+		})
+
+		Context("when period income is zero", func() {
+			It("should report a zero savings rate instead of dividing by zero", func() {
+				mockAnalyticsRepo.SetInsightsMonthly(userId, startDate, endDate, []models.InsightsMonthlyPoint{
+					{Month: "2024-02", Income: 0.0, Expenses: 250.0, Net: -250.0},
+				})
+				result, err := analyticsService.GetInsights(ctx, userId, startDate, endDate)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result.Summary.PeriodIncome).To(Equal(0.0))
+				Expect(result.Summary.SavingsRate).To(Equal(0.0))
+				Expect(result.Monthly).To(HaveLen(3))
+			})
+		})
+
+		Context("when derived datasets exist", func() {
+			BeforeEach(func() {
+				mockAnalyticsRepo.SetInsightsCategories(userId, startDate, endDate, []models.InsightsCategory{
+					{CategoryID: 1, CategoryName: "Food", TotalAmount: 500.0},
+				})
+				mockAnalyticsRepo.SetInsightsTopExpenses(userId, startDate, endDate, []models.InsightsTopExpense{
+					{Name: "Cafe", Amount: 300.0, Count: 4},
+				})
+				mockAnalyticsRepo.SetInsightsUncategorized(userId, startDate, endDate, 2, 125.0)
+			})
+
+			It("should pass through categories, top expenses and uncategorized totals", func() {
+				result, err := analyticsService.GetInsights(ctx, userId, startDate, endDate)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result.Categories).To(Equal([]models.InsightsCategory{
+					{CategoryID: 1, CategoryName: "Food", TotalAmount: 500.0},
+				}))
+				Expect(result.TopExpenses).To(HaveLen(1))
+				Expect(result.TopExpenses[0].Name).To(Equal("Cafe"))
+				Expect(result.Summary.UncategorizedCount).To(Equal(int64(2)))
+				Expect(result.Summary.UncategorizedAmount).To(Equal(125.0))
+			})
+		})
+
+		Context("when an investment account has cash flows", func() {
+			var investmentAccountId int64
+
+			BeforeEach(func() {
+				currentValue := 107000.0
+				account, err := mockAccountRepo.CreateAccount(ctx, models.CreateAccountInput{
+					Name:         "FD",
+					BankType:     models.BankTypeInvestment,
+					Currency:     models.CurrencyINR,
+					CurrentValue: &currentValue,
+					CreatedBy:    userId,
+				})
+				Expect(err).NotTo(HaveOccurred())
+				investmentAccountId = account.Id
+
+				mockAnalyticsRepo.SetAccountCashFlows(userId, []models.AccountCashFlow{
+					{AccountID: investmentAccountId, Amount: -100000.0, Date: time.Date(2023, 3, 15, 0, 0, 0, 0, time.UTC), Name: "FD principal"},
+					{AccountID: investmentAccountId, Amount: -100000.0, Date: time.Date(2024, 2, 15, 0, 0, 0, 0, time.UTC), Name: "FD principal"},
+					{AccountID: investmentAccountId, Amount: 100000.0, Date: time.Date(2024, 2, 15, 0, 0, 0, 0, time.UTC), Name: "FD principal redemption"},
+					{AccountID: investmentAccountId, Amount: 7000.0, Date: time.Date(2024, 3, 10, 0, 0, 0, 0, time.UTC), Name: "FD interest exit from SBI"},
+					{AccountID: investmentAccountId, Amount: -7000.0, Date: time.Date(2024, 3, 10, 0, 0, 0, 0, time.UTC), Name: "FD interest credit from SBI"},
+				})
+			})
+
+			It("should aggregate contributed, distributed and realized interest", func() {
+				result, err := analyticsService.GetInsights(ctx, userId, startDate, endDate)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result.Investments).To(HaveLen(1))
+				investment := result.Investments[0]
+				Expect(investment.AccountID).To(Equal(investmentAccountId))
+				Expect(investment.CurrentValue).To(Equal(107000.0))
+				Expect(investment.Contributed).To(Equal(200000.0))
+				Expect(investment.Distributed).To(Equal(107000.0))
+				Expect(investment.RealizedInterest).To(Equal(7000.0))
+				Expect(investment.Xirr).NotTo(BeNil())
+			})
+
+			It("should only count in-range realized interest in the summary", func() {
+				result, err := analyticsService.GetInsights(ctx, userId, startDate, endDate)
+				Expect(err).NotTo(HaveOccurred())
+				// The interest exit on 2024-03-10 sits inside the Jan-Mar range.
+				Expect(result.Summary.RealizedInterest).To(Equal(7000.0))
+
+				outOfRange, err := analyticsService.GetInsights(ctx, userId,
+					time.Date(2024, 4, 1, 0, 0, 0, 0, time.UTC),
+					time.Date(2024, 4, 30, 0, 0, 0, 0, time.UTC))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(outOfRange.Summary.RealizedInterest).To(Equal(0.0))
+			})
+		})
 	})
 })

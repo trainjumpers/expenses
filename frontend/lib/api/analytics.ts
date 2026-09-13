@@ -2,6 +2,7 @@ import { apiRequest } from "@/lib/api/request";
 import { API_BASE_URL } from "@/lib/constants/api";
 import type {
   AccountAnalyticsListResponse,
+  AnalyticsInsightsResponse,
   CategoryAnalyticsResponse,
   MonthlyAnalyticsResponse,
   NetworthTimeSeriesResponse,
@@ -90,5 +91,27 @@ export async function getMonthlyAnalytics(
     "analytics",
     [],
     "Failed to fetch monthly analytics"
+  );
+}
+
+export async function getInsights(
+  startDate: string,
+  endDate: string,
+  signal?: AbortSignal
+): Promise<AnalyticsInsightsResponse> {
+  const params = new URLSearchParams({
+    start_date: startDate,
+    end_date: endDate,
+  });
+
+  return apiRequest<AnalyticsInsightsResponse>(
+    `${API_BASE_URL}/analytics/insights?${params.toString()}`,
+    {
+      credentials: "include",
+      signal,
+    },
+    "analytics",
+    [],
+    "Failed to fetch analytics insights"
   );
 }
