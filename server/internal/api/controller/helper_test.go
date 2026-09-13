@@ -167,10 +167,10 @@ func checkMalformedTokens(helper *TestHelper, method, path string, body any) {
 	}
 }
 
-// checkNetworthValidation tests validation for networth endpoint
-func checkNetworthValidation(helper *TestHelper, testCases []map[string]any) {
+// checkCashBalanceValidation tests validation for the cash balance history endpoint
+func checkCashBalanceValidation(helper *TestHelper, testCases []map[string]any) {
 	for _, tc := range testCases {
-		url := fmt.Sprintf("/analytics/networth?start_date=%s&end_date=%s", tc["startDate"], tc["endDate"])
+		url := fmt.Sprintf("/analytics/cash-balance?start_date=%s&end_date=%s", tc["startDate"], tc["endDate"])
 		resp, response := helper.MakeRequest(http.MethodGet, url, nil)
 		Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 		Expect(response["message"]).To(Equal(tc["expectedMessage"]))

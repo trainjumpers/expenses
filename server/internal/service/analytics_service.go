@@ -13,7 +13,7 @@ import (
 
 type AnalyticsServiceInterface interface {
 	GetAccountAnalytics(ctx context.Context, userId int64) (models.AccountAnalyticsListResponse, error)
-	GetNetworthTimeSeries(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) (models.NetworthTimeSeriesResponse, error)
+	GetCashBalanceHistory(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) (models.CashBalanceHistoryResponse, error)
 	GetCategoryAnalytics(ctx context.Context, userId int64, startDate time.Time, endDate time.Time, categoryIds []int64) (*models.CategoryAnalyticsResponse, error)
 	GetMonthlyAnalytics(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) (*models.MonthlyAnalyticsResponse, error)
 	GetInsights(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) (*models.AnalyticsInsightsResponse, error)
@@ -103,26 +103,32 @@ func (s *AnalyticsService) GetAccountAnalytics(ctx context.Context, userId int64
 	}, nil
 }
 
-func (s *AnalyticsService) GetNetworthTimeSeries(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) (models.NetworthTimeSeriesResponse, error) {
+// GetCashBalanceHistory returns a cash-only balance history. Investment account
+// ledgers and opening balances are excluded because historical investment
+// valuation is unavailable.
+func (s *AnalyticsService) GetCashBalanceHistory(ctx context.Context, userId int64, startDate time.Time, endDate time.Time) (models.CashBalanceHistoryResponse, error) {
 	accounts, err := s.accountRepo.ListAccounts(ctx, userId)
 
 	if err != nil {
-		return models.NetworthTimeSeriesResponse{}, err
+		return models.CashBalanceHistoryResponse{}, err
 	}
 
 	// Get initial balance and daily changes from repository
-	initialBalance, totalIncome, totalExpenses, dailyData, err := s.analyticsRepo.GetNetworthTimeSeries(ctx, userId, startDate, endDate)
+	initialBalance, totalIncome, totalExpenses, dailyData, err := s.analyticsRepo.GetCashBalanceHistory(ctx, userId, startDate, endDate)
 	totalAccountBalance := 0.0
 	if err != nil {
-		return models.NetworthTimeSeriesResponse{}, err
+		return models.CashBalanceHistoryResponse{}, err
 	}
 
 	for _, account := range accounts {
+		if account.BankType == models.BankTypeInvestment {
+			continue
+		}
 		initialBalance += account.Balance
 		totalAccountBalance += account.Balance
 	}
 
-	var timeSeries []models.NetworthDataPoint
+	var timeSeries []models.CashBalanceDataPoint
 	runningBalance := initialBalance
 
 	// Create a map of dates with daily changes for easy lookup
@@ -130,11 +136,11 @@ func (s *AnalyticsService) GetNetworthTimeSeries(ctx context.Context, userId int
 	for _, data := range dailyData {
 		date, ok := data["date"].(string)
 		if !ok {
-			return models.NetworthTimeSeriesResponse{}, fmt.Errorf("invalid type for date in daily data")
+			return models.CashBalanceHistoryResponse{}, fmt.Errorf("invalid type for date in daily data")
 		}
 		dailyChange, ok := data["daily_change"].(float64)
 		if !ok {
-			return models.NetworthTimeSeriesResponse{}, fmt.Errorf("invalid type for daily_change in daily data")
+			return models.CashBalanceHistoryResponse{}, fmt.Errorf("invalid type for daily_change in daily data")
 		}
 		dailyChanges[date] = dailyChange
 	}
@@ -155,23 +161,23 @@ func (s *AnalyticsService) GetNetworthTimeSeries(ctx context.Context, userId int
 			continue
 		}
 
-		timeSeries = append(timeSeries, models.NetworthDataPoint{
-			Date:     dateStr,
-			Networth: runningBalance,
+		timeSeries = append(timeSeries, models.CashBalanceDataPoint{
+			Date:        dateStr,
+			CashBalance: runningBalance,
 		})
 
 		currentDate = currentDate.AddDate(0, 0, 1)
 	}
 
 	if len(timeSeries) == 0 {
-		timeSeries = append(timeSeries, models.NetworthDataPoint{
-			Date:     startDate.Format("2006-01-02"),
-			Networth: initialBalance,
+		timeSeries = append(timeSeries, models.CashBalanceDataPoint{
+			Date:        startDate.Format("2006-01-02"),
+			CashBalance: initialBalance,
 		})
 	}
 
-	return models.NetworthTimeSeriesResponse{
-		InitialBalance: initialBalance, // Initial balance for frontend
+	return models.CashBalanceHistoryResponse{
+		InitialBalance: initialBalance,
 		TotalIncome:    totalIncome,
 		TotalExpenses:  totalExpenses,
 		TimeSeries:     timeSeries,
@@ -213,7 +219,11 @@ func (s *AnalyticsService) GetInsights(ctx context.Context, userId int64, startD
 	investmentValue := 0.0
 	bankValue := 0.0
 	investmentAccountIds := make([]int64, 0)
+	currencySet := make(map[string]struct{})
 	for _, account := range accounts {
+		if account.Currency != "" {
+			currencySet[strings.ToUpper(account.Currency)] = struct{}{}
+		}
 		if account.BankType == models.BankTypeInvestment && account.CurrentValue != nil {
 			value := *account.CurrentValue
 			netWorth += value
@@ -228,6 +238,12 @@ func (s *AnalyticsService) GetInsights(ctx context.Context, userId int64, startD
 			bankValue += balance
 		}
 	}
+
+	currencies := make([]string, 0, len(currencySet))
+	for currency := range currencySet {
+		currencies = append(currencies, currency)
+	}
+	sort.Strings(currencies)
 
 	monthly, err := s.analyticsRepo.GetInsightsMonthly(ctx, userId, startDate, endDate)
 	if err != nil {
@@ -258,6 +274,42 @@ func (s *AnalyticsService) GetInsights(ctx context.Context, userId int64, startD
 	}
 
 	uncategorizedCount, uncategorizedAmount, err := s.analyticsRepo.GetInsightsUncategorized(ctx, userId, startDate, endDate)
+	if err != nil {
+		return nil, err
+	}
+
+	for i := range topExpenses {
+		if periodExpenses > 0 {
+			topExpenses[i].Share = topExpenses[i].Amount / periodExpenses
+		}
+		if topExpenses[i].Count > 0 {
+			topExpenses[i].Average = topExpenses[i].Amount / float64(topExpenses[i].Count)
+		}
+	}
+
+	spendingSummary, err := s.analyticsRepo.GetInsightsSpendingSummary(ctx, userId, startDate, endDate)
+	if err != nil {
+		return nil, err
+	}
+	spendingSummary.NoSpendDays = noSpendDays(startDate, endDate, spendingSummary.ActiveSpendingDays)
+
+	weekdayDays, err := s.analyticsRepo.GetInsightsWeekday(ctx, userId, startDate, endDate)
+	if err != nil {
+		return nil, err
+	}
+	weekdayBehavior := buildWeekdayBehavior(weekdayDays)
+
+	multiCategoryCount, err := s.analyticsRepo.GetInsightsMultiCategoryCount(ctx, userId, startDate, endDate)
+	if err != nil {
+		return nil, err
+	}
+
+	latestTransaction, err := s.analyticsRepo.GetInsightsLatestTransactionDate(ctx, userId)
+	if err != nil {
+		return nil, err
+	}
+
+	trend, categoryMovement, err := s.buildTrendAndMovement(ctx, userId, startDate, endDate, monthly)
 	if err != nil {
 		return nil, err
 	}
@@ -297,6 +349,22 @@ func (s *AnalyticsService) GetInsights(ctx context.Context, userId int64, startD
 		})
 	}
 
+	dataConfidence := models.InsightsDataConfidence{
+		UncategorizedShare: ratio(uncategorizedAmount, periodExpenses),
+		MultiCategoryCount: multiCategoryCount,
+		MultiCategoryShare: ratio(float64(multiCategoryCount), float64(spendingSummary.ExpenseCount)),
+		MultipleCurrencies: len(currencies) > 1,
+		Currencies:         currencies,
+	}
+	if latestTransaction != nil {
+		latestDate := latestTransaction.Format("2006-01-02")
+		dataConfidence.LatestTransactionDate = &latestDate
+		staleDays := int(now.Sub(*latestTransaction).Hours() / 24)
+		if staleDays > 0 {
+			dataConfidence.StaleDays = int64(staleDays)
+		}
+	}
+
 	return &models.AnalyticsInsightsResponse{
 		Summary: models.InsightsSummary{
 			NetWorth:            netWorth,
@@ -310,10 +378,15 @@ func (s *AnalyticsService) GetInsights(ctx context.Context, userId int64, startD
 			UncategorizedAmount: uncategorizedAmount,
 			RealizedInterest:    realizedInterest,
 		},
-		Monthly:     monthly,
-		Categories:  categories,
-		TopExpenses: topExpenses,
-		Investments: investments,
+		Monthly:          monthly,
+		Categories:       categories,
+		TopExpenses:      topExpenses,
+		Investments:      investments,
+		SpendingSummary:  spendingSummary,
+		CategoryMovement: categoryMovement,
+		WeekdayBehavior:  weekdayBehavior,
+		Trend:            trend,
+		DataConfidence:   dataConfidence,
 	}, nil
 }
 
@@ -341,6 +414,167 @@ func fillInsightsMonths(points []models.InsightsMonthlyPoint, startDate, endDate
 
 func isInDateRange(date, startDate, endDate time.Time) bool {
 	return !date.Before(startDate) && !date.After(endDate)
+}
+
+func ratio(part, whole float64) float64 {
+	if whole == 0 {
+		return 0
+	}
+	return part / whole
+}
+
+func noSpendDays(startDate, endDate time.Time, activeDays int64) int64 {
+	days := int(endDate.Sub(startDate).Hours()/24) + 1
+	if days < 0 {
+		days = 0
+	}
+	if int64(days) <= activeDays {
+		return 0
+	}
+	return int64(days) - activeDays
+}
+
+func buildWeekdayBehavior(days []models.InsightsWeekday) models.InsightsWeekdayBehavior {
+	byWeekday := make(map[int]models.InsightsWeekday, len(days))
+	grandTotal := 0.0
+	for _, day := range days {
+		byWeekday[day.Weekday] = day
+		grandTotal += day.Total
+	}
+
+	result := make([]models.InsightsWeekday, 0, 7)
+	weekendTotal := 0.0
+	for weekday := 0; weekday < 7; weekday++ {
+		day := byWeekday[weekday]
+		day.Weekday = weekday
+		if day.ActiveDays > 0 {
+			day.Average = day.Total / float64(day.ActiveDays)
+		}
+		if grandTotal > 0 {
+			day.Share = day.Total / grandTotal
+		}
+		if weekday == 0 || weekday == 6 {
+			weekendTotal += day.Total
+		}
+		result = append(result, day)
+	}
+
+	return models.InsightsWeekdayBehavior{
+		Days:         result,
+		WeekendShare: ratio(weekendTotal, grandTotal),
+	}
+}
+
+// latestCompleteMonth returns the newest month that ended on or before endDate.
+func latestCompleteMonth(endDate time.Time) time.Time {
+	firstOfMonth := time.Date(endDate.Year(), endDate.Month(), 1, 0, 0, 0, 0, time.UTC)
+	lastDay := firstOfMonth.AddDate(0, 1, -1).Day()
+	if endDate.Day() >= lastDay {
+		return firstOfMonth
+	}
+	return firstOfMonth.AddDate(0, -1, 0)
+}
+
+func (s *AnalyticsService) buildTrendAndMovement(ctx context.Context, userId int64, startDate, endDate time.Time, monthly []models.InsightsMonthlyPoint) (models.InsightsTrend, []models.InsightsCategoryMovement, error) {
+	trend := models.InsightsTrend{}
+	movement := make([]models.InsightsCategoryMovement, 0)
+
+	recentMonth := latestCompleteMonth(endDate)
+	startMonth := time.Date(startDate.Year(), startDate.Month(), 1, 0, 0, 0, 0, time.UTC)
+	if recentMonth.Before(startMonth) {
+		return trend, movement, nil
+	}
+
+	priorMonth := recentMonth.AddDate(0, -1, 0)
+	months, err := s.analyticsRepo.GetInsightsCategoryMonths(ctx, userId, priorMonth, recentMonth.AddDate(0, 1, -1))
+	if err != nil {
+		return trend, nil, err
+	}
+
+	recentKey := recentMonth.Format("2006-01")
+	priorKey := priorMonth.Format("2006-01")
+	movement = buildCategoryMovement(months, recentKey, priorKey)
+
+	expensesByMonth := make(map[string]float64, len(monthly))
+	for _, point := range monthly {
+		expensesByMonth[point.Month] = point.Expenses
+	}
+
+	trend = models.InsightsTrend{
+		RecentMonth:    recentKey,
+		PriorMonth:     priorKey,
+		RecentExpenses: expensesByMonth[recentKey],
+		PriorExpenses:  expensesByMonth[priorKey],
+	}
+	trend.Change = trend.RecentExpenses - trend.PriorExpenses
+
+	trailingTotal := 0.0
+	trailingCount := 0
+	for offset := 0; offset < 3; offset++ {
+		month := recentMonth.AddDate(0, -offset, 0)
+		if month.Before(startMonth) {
+			break
+		}
+		trailingTotal += expensesByMonth[month.Format("2006-01")]
+		trailingCount++
+	}
+	if trailingCount > 0 {
+		trend.TrailingThreeMonthAverage = trailingTotal / float64(trailingCount)
+	}
+
+	return trend, movement, nil
+}
+
+func buildCategoryMovement(months []models.InsightsCategoryMonth, recentKey, priorKey string) []models.InsightsCategoryMovement {
+	type categoryTotals struct {
+		id     int64
+		name   string
+		recent float64
+		prior  float64
+	}
+
+	byCategory := make(map[int64]*categoryTotals)
+	var totalRecent, totalPrior float64
+	for _, month := range months {
+		entry, ok := byCategory[month.CategoryID]
+		if !ok {
+			entry = &categoryTotals{id: month.CategoryID, name: month.CategoryName}
+			byCategory[month.CategoryID] = entry
+		}
+		switch month.Month {
+		case recentKey:
+			entry.recent += month.Total
+			totalRecent += month.Total
+		case priorKey:
+			entry.prior += month.Total
+			totalPrior += month.Total
+		}
+	}
+
+	movement := make([]models.InsightsCategoryMovement, 0, len(byCategory))
+	for _, entry := range byCategory {
+		if entry.recent == 0 && entry.prior == 0 {
+			continue
+		}
+		movement = append(movement, models.InsightsCategoryMovement{
+			CategoryID:   entry.id,
+			CategoryName: entry.name,
+			RecentTotal:  entry.recent,
+			PriorTotal:   entry.prior,
+			RecentShare:  ratio(entry.recent, totalRecent),
+			PriorShare:   ratio(entry.prior, totalPrior),
+			Change:       entry.recent - entry.prior,
+		})
+	}
+
+	sort.Slice(movement, func(i, j int) bool {
+		if math.Abs(movement[i].Change) != math.Abs(movement[j].Change) {
+			return math.Abs(movement[i].Change) > math.Abs(movement[j].Change)
+		}
+		return movement[i].CategoryName < movement[j].CategoryName
+	})
+
+	return movement
 }
 
 type investmentCashFlow struct {

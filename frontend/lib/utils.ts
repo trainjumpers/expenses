@@ -10,7 +10,7 @@ export const formatCurrency = (
   amount: number,
   currency: string = "INR"
 ): string => {
-  return new Intl.NumberFormat("en-US", {
+  return new Intl.NumberFormat("en-IN", {
     style: "currency",
     currency: currency,
     minimumFractionDigits: 2,
@@ -58,8 +58,7 @@ export const formatShortCurrency = (
 };
 
 export const formatPercentage = (percentage: number): string => {
-  const sign = percentage > 0 ? "+" : "";
-  return `${sign}${percentage.toFixed(1)}%`;
+  return `${percentage.toFixed(1)}%`;
 };
 
 export const getTransactionColor = (amount: number): string => {
@@ -67,6 +66,15 @@ export const getTransactionColor = (amount: number): string => {
     return `text-emerald-600 dark:text-emerald-400`;
   }
   return "text-rose-600 dark:text-rose-400";
+};
+
+// Semantic tone for a surplus (positive) or deficit (negative) figure. Used
+// where a negative value means money lost, not a ledger credit.
+export const getSurplusTone = (amount: number): string => {
+  if (amount < 0) {
+    return "text-rose-600 dark:text-rose-400";
+  }
+  return "text-emerald-600 dark:text-emerald-400";
 };
 
 interface ChartDataPoint {
@@ -77,11 +85,11 @@ interface ChartDataPoint {
 
 // Transform API data to chart format
 export const transformToChartData = (
-  timeSeries: Array<{ date: string; networth: number }>
+  timeSeries: Array<{ date: string; cash_balance: number }>
 ): ChartDataPoint[] => {
   return timeSeries.map((point) => ({
     date: format(new Date(point.date), "MMM dd"),
-    value: point.networth,
+    value: point.cash_balance,
     formattedDate: format(new Date(point.date), "MMM dd, yyyy"),
   }));
 };

@@ -432,15 +432,15 @@ var _ = Describe("AnalyticsController", func() {
 		})
 	})
 
-	Describe("GetNetworthTimeSeries", func() {
-		It("should get networth time series for authenticated user", func() {
+	Describe("GetCashBalanceHistory", func() {
+		It("should get cash balance history for authenticated user", func() {
 			startDate := "2023-01-01"
 			endDate := "2023-01-31"
-			url := "/analytics/networth?start_date=" + startDate + "&end_date=" + endDate
+			url := "/analytics/cash-balance?start_date=" + startDate + "&end_date=" + endDate
 
 			resp, response := testUser1.MakeRequest(http.MethodGet, url, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
-			Expect(response["message"]).To(Equal("Networth time series retrieved successfully"))
+			Expect(response["message"]).To(Equal("Cash balance history retrieved successfully"))
 			Expect(response["data"]).To(HaveKey("initial_balance"))
 			Expect(response["data"]).To(HaveKey("time_series"))
 
@@ -455,9 +455,9 @@ var _ = Describe("AnalyticsController", func() {
 			if len(timeSeries) > 0 {
 				firstPoint := timeSeries[0].(map[string]any)
 				Expect(firstPoint).To(HaveKey("date"))
-				Expect(firstPoint).To(HaveKey("networth"))
+				Expect(firstPoint).To(HaveKey("cash_balance"))
 				Expect(firstPoint["date"]).To(BeAssignableToTypeOf(""))
-				Expect(firstPoint["networth"]).To(BeAssignableToTypeOf(float64(0)))
+				Expect(firstPoint["cash_balance"]).To(BeAssignableToTypeOf(float64(0)))
 			}
 		})
 
@@ -474,12 +474,12 @@ var _ = Describe("AnalyticsController", func() {
 					{"startDate": "2023-13-01", "endDate": "2023-01-31", "expectedMessage": "invalid start_date format, expected YYYY-MM-DD"},
 					{"startDate": "2023-01-32", "endDate": "2023-01-31", "expectedMessage": "invalid start_date format, expected YYYY-MM-DD"},
 				}
-				checkNetworthValidation(testUser1, testCases)
+				checkCashBalanceValidation(testUser1, testCases)
 			})
 		})
 
 		It("should return error for unauthenticated user", func() {
-			url := "/analytics/networth?start_date=2023-01-01&end_date=2023-01-31"
+			url := "/analytics/cash-balance?start_date=2023-01-01&end_date=2023-01-31"
 			resp, response := testHelperUnauthenticated.MakeRequest(http.MethodGet, url, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
 			Expect(response["message"]).To(Equal("please log in to continue"))
@@ -488,7 +488,7 @@ var _ = Describe("AnalyticsController", func() {
 		It("should handle valid date range", func() {
 			startDate := "2023-01-01"
 			endDate := "2023-01-07"
-			url := "/analytics/networth?start_date=" + startDate + "&end_date=" + endDate
+			url := "/analytics/cash-balance?start_date=" + startDate + "&end_date=" + endDate
 
 			resp, response := testUser1.MakeRequest(http.MethodGet, url, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
@@ -512,7 +512,7 @@ var _ = Describe("AnalyticsController", func() {
 		It("should handle same start and end date", func() {
 			startDate := "2023-01-15"
 			endDate := "2023-01-15"
-			url := "/analytics/networth?start_date=" + startDate + "&end_date=" + endDate
+			url := "/analytics/cash-balance?start_date=" + startDate + "&end_date=" + endDate
 
 			resp, response := testUser1.MakeRequest(http.MethodGet, url, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
@@ -529,14 +529,14 @@ var _ = Describe("AnalyticsController", func() {
 
 		It("should handle edge case date formats", func() {
 			// Test with leading zeros
-			url := "/analytics/networth?start_date=2023-01-01&end_date=2023-01-02"
+			url := "/analytics/cash-balance?start_date=2023-01-01&end_date=2023-01-02"
 			resp, _ := testUser1.MakeRequest(http.MethodGet, url, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 		})
 
 		It("should return error for future dates", func() {
 			futureDate := time.Now().AddDate(1, 0, 0).Format("2006-01-02")
-			url := "/analytics/networth?start_date=" + futureDate + "&end_date=" + futureDate
+			url := "/analytics/cash-balance?start_date=" + futureDate + "&end_date=" + futureDate
 
 			// Note: The current implementation doesn't validate future dates
 			// This test documents the current behavior
@@ -545,21 +545,21 @@ var _ = Describe("AnalyticsController", func() {
 		})
 
 		It("should handle very old dates", func() {
-			url := "/analytics/networth?start_date=1900-01-01&end_date=1900-01-02"
+			url := "/analytics/cash-balance?start_date=1900-01-01&end_date=1900-01-02"
 			resp, _ := testUser1.MakeRequest(http.MethodGet, url, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 		})
 
 		It("should handle URL encoded query parameters", func() {
 			// Test with URL encoded dates (though not necessary for this format)
-			url := "/analytics/networth?start_date=2023-01-01&end_date=2023-01-02"
+			url := "/analytics/cash-balance?start_date=2023-01-01&end_date=2023-01-02"
 			resp, _ := testUser1.MakeRequest(http.MethodGet, url, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 		})
 
 		It("should handle query parameters with whitespace", func() {
 			// Test with whitespace (HTTP parsing typically trims query parameters)
-			url := "/analytics/networth?start_date= 2023-01-01 &end_date= 2023-01-02 "
+			url := "/analytics/cash-balance?start_date= 2023-01-01 &end_date= 2023-01-02 "
 
 			// Use a custom request to avoid JSON parsing issues with potential error responses
 			req, err := http.NewRequest(http.MethodGet, testUser1.BaseURL+url, nil)
@@ -578,7 +578,7 @@ var _ = Describe("AnalyticsController", func() {
 
 		It("should handle large date ranges", func() {
 			// Test with a year-long range
-			url := "/analytics/networth?start_date=2023-01-01&end_date=2023-12-31"
+			url := "/analytics/cash-balance?start_date=2023-01-01&end_date=2023-12-31"
 			resp, response := testUser1.MakeRequest(http.MethodGet, url, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
@@ -590,7 +590,7 @@ var _ = Describe("AnalyticsController", func() {
 		})
 
 		It("should handle leap year dates", func() {
-			url := "/analytics/networth?start_date=2024-02-28&end_date=2024-03-01"
+			url := "/analytics/cash-balance?start_date=2024-02-28&end_date=2024-03-01"
 			resp, response := testUser1.MakeRequest(http.MethodGet, url, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
@@ -602,21 +602,21 @@ var _ = Describe("AnalyticsController", func() {
 		})
 
 		It("should handle missing both query parameters", func() {
-			url := "/analytics/networth"
+			url := "/analytics/cash-balance"
 			resp, response := testUser1.MakeRequest(http.MethodGet, url, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			Expect(response["message"]).To(Equal("start_date and end_date query parameters are required"))
 		})
 
 		It("should handle empty query parameter values", func() {
-			url := "/analytics/networth?start_date=&end_date="
+			url := "/analytics/cash-balance?start_date=&end_date="
 			resp, response := testUser1.MakeRequest(http.MethodGet, url, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			Expect(response["message"]).To(Equal("start_date and end_date query parameters are required"))
 		})
 
 		It("should handle cross-year date ranges", func() {
-			url := "/analytics/networth?start_date=2023-12-30&end_date=2024-01-02"
+			url := "/analytics/cash-balance?start_date=2023-12-30&end_date=2024-01-02"
 			resp, response := testUser1.MakeRequest(http.MethodGet, url, nil)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
@@ -635,7 +635,7 @@ var _ = Describe("AnalyticsController", func() {
 
 		Context("with malformed tokens", func() {
 			It("should return unauthorized for malformed tokens", func() {
-				url := "/analytics/networth?start_date=2023-01-01&end_date=2023-01-31"
+				url := "/analytics/cash-balance?start_date=2023-01-01&end_date=2023-01-31"
 				checkMalformedTokens(testUser1, http.MethodGet, url, nil)
 			})
 		})
@@ -643,16 +643,16 @@ var _ = Describe("AnalyticsController", func() {
 		Context("error handling", func() {
 			It("should handle service errors gracefully", func() {
 				// Test with a valid request that should work
-				url := "/analytics/networth?start_date=2023-01-01&end_date=2023-01-02"
+				url := "/analytics/cash-balance?start_date=2023-01-01&end_date=2023-01-02"
 				resp, response := testUser1.MakeRequest(http.MethodGet, url, nil)
 
 				// Should succeed (we can't easily simulate service errors in integration tests)
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
-				Expect(response["message"]).To(Equal("Networth time series retrieved successfully"))
+				Expect(response["message"]).To(Equal("Cash balance history retrieved successfully"))
 			})
 
 			It("should maintain consistent response structure on success", func() {
-				url := "/analytics/networth?start_date=2023-01-01&end_date=2023-01-01"
+				url := "/analytics/cash-balance?start_date=2023-01-01&end_date=2023-01-01"
 				resp, response := testUser1.MakeRequest(http.MethodGet, url, nil)
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
@@ -1405,6 +1405,11 @@ var _ = Describe("AnalyticsController", func() {
 			Expect(data).To(HaveKey("categories"))
 			Expect(data).To(HaveKey("top_expenses"))
 			Expect(data).To(HaveKey("investments"))
+			Expect(data).To(HaveKey("spending_summary"))
+			Expect(data).To(HaveKey("category_movement"))
+			Expect(data).To(HaveKey("weekday_behavior"))
+			Expect(data).To(HaveKey("trend"))
+			Expect(data).To(HaveKey("data_confidence"))
 
 			summary := data["summary"].(map[string]any)
 			for _, key := range []string{
@@ -1414,6 +1419,35 @@ var _ = Describe("AnalyticsController", func() {
 				"realized_interest",
 			} {
 				Expect(summary).To(HaveKey(key))
+			}
+
+			spendingSummary := data["spending_summary"].(map[string]any)
+			for _, key := range []string{
+				"expense_count", "average_transaction", "median_transaction",
+				"largest_expense", "active_spending_days", "no_spend_days",
+			} {
+				Expect(spendingSummary).To(HaveKey(key))
+			}
+
+			weekdayBehavior := data["weekday_behavior"].(map[string]any)
+			Expect(weekdayBehavior["days"].([]any)).To(HaveLen(7))
+			Expect(weekdayBehavior).To(HaveKey("weekend_share"))
+
+			trend := data["trend"].(map[string]any)
+			for _, key := range []string{
+				"recent_month", "prior_month", "recent_expenses",
+				"prior_expenses", "change", "trailing_three_month_average",
+			} {
+				Expect(trend).To(HaveKey(key))
+			}
+
+			confidence := data["data_confidence"].(map[string]any)
+			for _, key := range []string{
+				"uncategorized_share", "multi_category_count",
+				"multi_category_share", "latest_transaction_date",
+				"stale_days", "multiple_currencies", "currencies",
+			} {
+				Expect(confidence).To(HaveKey(key))
 			}
 
 			// Jan-Mar inclusive is three months.
@@ -1502,10 +1536,70 @@ var _ = Describe("AnalyticsController", func() {
 			Expect(summary["period_expenses"]).To(Equal(0.0))
 
 			investments := data["investments"].([]any)
-			Expect(investments).To(HaveLen(1))
-			investment := investments[0].(map[string]any)
-			Expect(investment["account_id"]).To(Equal(float64(accountId)))
-			Expect(investment["current_value"]).To(Equal(1000.0))
+			var createdInvestment map[string]any
+			for _, raw := range investments {
+				investment := raw.(map[string]any)
+				if investment["account_id"].(float64) == float64(accountId) {
+					createdInvestment = investment
+					break
+				}
+			}
+			Expect(createdInvestment).NotTo(BeNil())
+			Expect(createdInvestment["current_value"]).To(Equal(1000.0))
+		})
+
+		It("should allocate multi-category spending across its categories", func() {
+			accountId := firstNonInvestmentAccountId()
+			foodId := foodCategoryId()
+			splitId := createCategory("Insights Split")
+
+			createTransaction("Insights Split Out", 300.0, "2019-09-05", accountId, []int64{foodId, splitId})
+
+			resp, response := testUser1.MakeRequest(http.MethodGet, "/analytics/insights?start_date=2019-09-01&end_date=2019-09-30", nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+			categories := response["data"].(map[string]any)["categories"].([]any)
+			totals := make(map[string]float64)
+			for _, raw := range categories {
+				category := raw.(map[string]any)
+				totals[category["category_name"].(string)] = category["total_amount"].(float64)
+			}
+
+			Expect(totals["Food"]).To(Equal(150.0))
+			Expect(totals["Insights Split"]).To(Equal(150.0))
+		})
+
+		It("should exclude the legacy Transfer category name", func() {
+			accountId := firstNonInvestmentAccountId()
+			legacyTransferId := createCategory("Transfer")
+
+			createTransaction("Insights Legacy Transfer", 700.0, "2019-10-05", accountId, []int64{legacyTransferId})
+
+			resp, response := testUser1.MakeRequest(http.MethodGet, "/analytics/insights?start_date=2019-10-01&end_date=2019-10-31", nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+			data := response["data"].(map[string]any)
+			summary := data["summary"].(map[string]any)
+			Expect(summary["period_expenses"]).To(Equal(0.0))
+
+			for _, raw := range data["categories"].([]any) {
+				category := raw.(map[string]any)
+				Expect(category["category_name"]).NotTo(Equal("Transfer"))
+			}
+		})
+
+		It("should not count credit-side uncategorized transactions", func() {
+			accountId := firstNonInvestmentAccountId()
+			createTransaction("Insights Uncategorized Credit", -80.0, "2019-11-07", accountId, nil)
+			createTransaction("Insights Uncategorized Debit", 50.0, "2019-11-08", accountId, nil)
+
+			resp, response := testUser1.MakeRequest(http.MethodGet, "/analytics/insights?start_date=2019-11-01&end_date=2019-11-30", nil)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+			summary := response["data"].(map[string]any)["summary"].(map[string]any)
+			Expect(summary["uncategorized_count"]).To(Equal(1.0))
+			Expect(summary["uncategorized_amount"]).To(Equal(50.0))
+			Expect(summary["period_expenses"]).To(Equal(50.0))
 		})
 	})
 })

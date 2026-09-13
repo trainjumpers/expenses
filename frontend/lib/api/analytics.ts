@@ -3,9 +3,9 @@ import { API_BASE_URL } from "@/lib/constants/api";
 import type {
   AccountAnalyticsListResponse,
   AnalyticsInsightsResponse,
+  CashBalanceHistoryResponse,
   CategoryAnalyticsResponse,
   MonthlyAnalyticsResponse,
-  NetworthTimeSeriesResponse,
 } from "@/lib/models/analytics";
 
 export async function getAccountAnalytics(
@@ -23,25 +23,25 @@ export async function getAccountAnalytics(
   );
 }
 
-export async function getNetworthTimeSeries(
+export async function getCashBalanceHistory(
   startDate: string,
   endDate: string,
   signal?: AbortSignal
-): Promise<NetworthTimeSeriesResponse> {
+): Promise<CashBalanceHistoryResponse> {
   const params = new URLSearchParams({
     start_date: startDate,
     end_date: endDate,
   });
 
-  return apiRequest<NetworthTimeSeriesResponse>(
-    `${API_BASE_URL}/analytics/networth?${params.toString()}`,
+  return apiRequest<CashBalanceHistoryResponse>(
+    `${API_BASE_URL}/analytics/cash-balance?${params.toString()}`,
     {
       credentials: "include",
       signal,
     },
     "analytics",
     [],
-    "Failed to fetch networth time series"
+    "Failed to fetch cash balance history"
   );
 }
 

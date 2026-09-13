@@ -1,5 +1,28 @@
 package models
 
+import "strings"
+
+// Transfer category names. "Transfers" is canonical; "Transfer" is the legacy
+// spelling still present in existing categories and rules. Both are treated as
+// the same transfer marker.
+var transferCategoryNames = []string{"transfers", "transfer"}
+
+// IsTransferCategoryName reports whether name is a transfer category.
+func IsTransferCategoryName(name string) bool {
+	for _, transferName := range transferCategoryNames {
+		if strings.EqualFold(name, transferName) {
+			return true
+		}
+	}
+	return false
+}
+
+// TransferCategoryNames returns the lowercased transfer category names for use
+// in SQL predicates.
+func TransferCategoryNames() []string {
+	return append([]string(nil), transferCategoryNames...)
+}
+
 // CreateCategoryInput is used for creating a new category
 type CreateCategoryInput struct {
 	Name      string `json:"name" binding:"required" maxlength:"100"`

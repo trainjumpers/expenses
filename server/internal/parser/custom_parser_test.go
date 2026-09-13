@@ -155,8 +155,21 @@ Row3Col1	Row3Col2	Row3Col3`
 				transactions, err := p.Parse([]byte(csvContent), metadata, "test.csv", "")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(transactions).To(HaveLen(2))
-				Expect(*transactions[0].Amount).To(Equal(5000.00))
-				Expect(*transactions[1].Amount).To(Equal(-75.20))
+				Expect(*transactions[0].Amount).To(Equal(-5000.00))
+				Expect(*transactions[1].Amount).To(Equal(75.20))
+			})
+
+			It("should prefer the debit column when both credit and debit are present", func() {
+				csvContent := `Date,Description,Credit,Debit
+2024-01-17,Reversed Entry,100.00,250.00`
+				metadata := `{
+					"skip_rows": 0,
+					"column_mapping": { "txn_date": "Date", "name": "Description", "credit": "Credit", "debit": "Debit" }
+				}`
+				transactions, err := p.Parse([]byte(csvContent), metadata, "test.csv", "")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(transactions).To(HaveLen(1))
+				Expect(*transactions[0].Amount).To(Equal(250.00))
 			})
 
 			It("should correctly handle an optional description field when present", func() {
