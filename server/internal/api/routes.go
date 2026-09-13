@@ -68,7 +68,7 @@ func Init(
 	statementController := controller.NewStatementController(cfg, statementService)
 	analyticsController := controller.NewAnalyticsController(cfg, analyticsService)
 
-	api := router.Group("/api/v1")
+	api := router.Group("/api/v1", middleware.VerifyOrigin(cfg.CORSAllowedOrigins))
 	{
 		base := api.Group("")
 
