@@ -11,10 +11,13 @@ coverage:
       default:
         target: 90%
 
+fixes:
+  - "expenses/::server/"
+
 ignore:
-  - internal/wire/**
-  - internal/database/migration/**
-  - internal/database/manager/**
-  - internal/mock/**
-  - internal/server/**
-  - pkg/logger/**
+  - "**/internal/wire/**"
+  - "**/internal/database/migrations/**"
+  - "**/pkg/database/manager/**"
+  - "**/internal/mock/**"
+  - "**/internal/server/**"
+  - "**/pkg/logger/**"
