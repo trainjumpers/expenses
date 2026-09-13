@@ -10,6 +10,7 @@ import {
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+  cn,
   formatCurrency,
   formatPercentage,
   transformToChartData,
@@ -28,10 +29,17 @@ interface NetWorthProps {
     from: Date;
     to: Date;
   };
-  onDateRangeChange: (dateRange: { from: Date; to: Date }) => void;
+  onDateRangeChange?: (dateRange: { from: Date; to: Date }) => void;
+  showDatePicker?: boolean;
+  className?: string;
 }
 
-export function NetWorth({ dateRange, onDateRangeChange }: NetWorthProps) {
+export function NetWorth({
+  dateRange,
+  onDateRangeChange,
+  showDatePicker = true,
+  className,
+}: NetWorthProps) {
   const { data: networthData, isLoading } = useNetworthTimeSeries(
     format(dateRange.from, "yyyy-MM-dd"),
     format(dateRange.to, "yyyy-MM-dd")
@@ -73,11 +81,11 @@ export function NetWorth({ dateRange, onDateRangeChange }: NetWorthProps) {
 
   if (isLoading) {
     return (
-      <Card className="w-full">
+      <Card className={cn("w-full", className)}>
         <CardHeader>
           <div className="flex items-center justify-between">
             <Skeleton className="h-6 w-20" />
-            <Skeleton className="h-6 w-12" />
+            {showDatePicker ? <Skeleton className="h-6 w-12" /> : null}
           </div>
         </CardHeader>
         <CardContent>
@@ -98,25 +106,27 @@ export function NetWorth({ dateRange, onDateRangeChange }: NetWorthProps) {
   }
 
   return (
-    <Card className="w-full">
+    <Card className={cn("w-full", className)}>
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg font-semibold text-muted-foreground">
             Net Worth
           </CardTitle>
-          <DateRangePicker
-            onUpdate={(values) =>
-              onDateRangeChange({
-                from: values.range.from || dateRange.from,
-                to: values.range.to || dateRange.to,
-              })
-            }
-            initialDateFrom={format(dateRange.from, "yyyy-MM-dd")}
-            initialDateTo={format(dateRange.to, "yyyy-MM-dd")}
-            align="start"
-            locale="en-GB"
-            showCompare={false}
-          />
+          {showDatePicker && onDateRangeChange ? (
+            <DateRangePicker
+              onUpdate={(values) =>
+                onDateRangeChange({
+                  from: values.range.from || dateRange.from,
+                  to: values.range.to || dateRange.to,
+                })
+              }
+              initialDateFrom={format(dateRange.from, "yyyy-MM-dd")}
+              initialDateTo={format(dateRange.to, "yyyy-MM-dd")}
+              align="start"
+              locale="en-GB"
+              showCompare={false}
+            />
+          ) : null}
         </div>
       </CardHeader>
       <CardContent>
@@ -143,7 +153,7 @@ export function NetWorth({ dateRange, onDateRangeChange }: NetWorthProps) {
                   color: "hsl(142, 76%, 36%)",
                 },
               }}
-              className="h-full w-full"
+              className="aspect-auto h-full w-full"
             >
               <LineChart data={chartData}>
                 <XAxis

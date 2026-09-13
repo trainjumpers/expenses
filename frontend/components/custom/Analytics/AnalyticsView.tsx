@@ -1,6 +1,5 @@
 "use client";
 
-import { CategoryBreakdown } from "@/components/custom/Analytics/CategoryBreakdown";
 import { InvestmentTable } from "@/components/custom/Analytics/InvestmentTable";
 import { MonthlyFlowChart } from "@/components/custom/Analytics/MonthlyFlowChart";
 import { NetWorth } from "@/components/custom/Dashboard/NetWorth";
@@ -16,7 +15,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import type {
+  AnalyticsInsightsResponse,
   InsightsMonthlyPoint,
   InsightsTopExpense,
 } from "@/lib/models/analytics";
@@ -24,45 +29,51 @@ import {
   cn,
   formatCurrency,
   formatPercentage,
+  formatShortCurrency,
   getTransactionColor,
 } from "@/lib/utils";
 import { format } from "date-fns";
 import Link from "next/link";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 
-interface KpiCardProps {
-  label: string;
-  value: string;
-  valueClassName?: string;
+function defaultRange() {
+  const to = new Date();
+  return {
+    from: new Date(to.getFullYear(), to.getMonth() - 11, 1),
+    to,
+  };
 }
 
-function KpiCard({ label, value, valueClassName }: KpiCardProps) {
+function FlowStat({ label, amount }: { label: string; amount: number }) {
+  const formatted = formatCurrency(amount);
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">
-          {label}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className={cn("text-2xl font-bold tabular-nums", valueClassName)}>
-          {value}
-        </div>
-      </CardContent>
-    </Card>
+    <div className="min-w-0">
+      <div className="text-xs text-muted-foreground">{label}</div>
+      <div
+        className={cn(
+          "truncate text-xl font-semibold tabular-nums",
+          getTransactionColor(amount)
+        )}
+        title={formatted}
+      >
+        {formatShortCurrency(amount)}
+      </div>
+    </div>
   );
 }
 
-function TopExpensesTable({ expenses }: { expenses: InsightsTopExpense[] }) {
+function TopPayees({ expenses }: { expenses: InsightsTopExpense[] }) {
+  const rows = expenses.slice(0, 8);
+
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="text-lg font-semibold text-muted-foreground">
-          Top Expenses
+    <Card className="min-w-0 overflow-hidden rounded-none border-x-0 border-t-0 shadow-none">
+      <CardHeader className="px-0 pb-2">
+        <CardTitle className="text-sm font-medium text-muted-foreground">
+          Top payees
         </CardTitle>
       </CardHeader>
-      <CardContent>
-        {expenses.length === 0 ? (
+      <CardContent className="px-0">
+        {rows.length === 0 ? (
           <p className="text-sm text-muted-foreground">
             No household expenses in this range.
           </p>
@@ -71,20 +82,27 @@ function TopExpensesTable({ expenses }: { expenses: InsightsTopExpense[] }) {
             <TableHeader>
               <TableRow>
                 <TableHead>Payee</TableHead>
-                <TableHead className="text-right">Count</TableHead>
+                <TableHead className="text-right">N</TableHead>
                 <TableHead className="text-right">Amount</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {expenses.map((expense) => (
+              {rows.map((expense) => (
                 <TableRow key={expense.name}>
-                  <TableCell>
-                    <Link
-                      href={`/transaction?search=${encodeURIComponent(expense.name)}`}
-                      className="font-medium hover:underline"
-                    >
-                      {expense.name}
-                    </Link>
+                  <TableCell className="max-w-[12rem]">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Link
+                          href={`/transaction?search=${encodeURIComponent(expense.name)}`}
+                          className="block truncate font-medium hover:underline"
+                        >
+                          {expense.name}
+                        </Link>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        {expense.name}
+                      </TooltipContent>
+                    </Tooltip>
                   </TableCell>
                   <TableCell className="text-right tabular-nums">
                     {expense.count}
@@ -95,7 +113,7 @@ function TopExpensesTable({ expenses }: { expenses: InsightsTopExpense[] }) {
                       getTransactionColor(expense.amount)
                     )}
                   >
-                    {formatCurrency(expense.amount)}
+                    {formatShortCurrency(expense.amount)}
                   </TableCell>
                 </TableRow>
               ))}
@@ -107,50 +125,124 @@ function TopExpensesTable({ expenses }: { expenses: InsightsTopExpense[] }) {
   );
 }
 
-function MonthlyDatasetTable({ monthly }: { monthly: InsightsMonthlyPoint[] }) {
+function completeMonths(monthly: InsightsMonthlyPoint[], endDate: Date) {
+  const currentMonth = format(endDate, "yyyy-MM");
+  return monthly.filter(
+    (point) =>
+      point.month < currentMonth && (point.income !== 0 || point.expenses !== 0)
+  );
+}
+
+function RunRate({
+  data,
+  endDate,
+}: {
+  data: AnalyticsInsightsResponse;
+  endDate: Date;
+}) {
+  const history = completeMonths(data.monthly, endDate);
+  const trailing = history.slice(-3);
+  const prior = history.at(-2);
+  const latest = history.at(-1);
+
+  const forecastIncome =
+    trailing.reduce((sum, point) => sum + point.income, 0) /
+    Math.max(trailing.length, 1);
+  const forecastExpenses =
+    trailing.reduce((sum, point) => sum + point.expenses, 0) /
+    Math.max(trailing.length, 1);
+  const mom =
+    latest && prior && prior.expenses !== 0
+      ? (latest.expenses - prior.expenses) / prior.expenses
+      : null;
+
+  const lines: { key: string; body: ReactNode }[] = [];
+
+  if (trailing.length > 0) {
+    lines.push({
+      key: "run-rate",
+      body: (
+        <>
+          Next month run-rate{" "}
+          <span className={getTransactionColor(-forecastIncome)}>
+            {formatShortCurrency(-forecastIncome)}
+          </span>{" "}
+          in,{" "}
+          <span className={getTransactionColor(forecastExpenses)}>
+            {formatShortCurrency(forecastExpenses)}
+          </span>{" "}
+          out, net{" "}
+          <span
+            className={getTransactionColor(forecastExpenses - forecastIncome)}
+          >
+            {formatShortCurrency(forecastExpenses - forecastIncome)}
+          </span>
+          .
+        </>
+      ),
+    });
+  }
+
+  if (mom !== null && latest && prior) {
+    lines.push({
+      key: "mom",
+      body: (
+        <>
+          {format(new Date(`${latest.month}-01T00:00:00`), "MMM yyyy")} spend{" "}
+          {formatPercentage(mom * 100)} vs{" "}
+          {format(new Date(`${prior.month}-01T00:00:00`), "MMM")}.
+        </>
+      ),
+    });
+  }
+
+  if (data.summary.uncategorized_count > 0) {
+    lines.push({
+      key: "uncat",
+      body: (
+        <Link
+          href="/transaction?uncategorized=true"
+          className="hover:underline"
+        >
+          {data.summary.uncategorized_count} uncategorized transactions
+        </Link>
+      ),
+    });
+  }
+
+  if (data.summary.realized_interest !== 0) {
+    lines.push({
+      key: "interest",
+      body: (
+        <>
+          Realized interest{" "}
+          <span
+            className={getTransactionColor(-data.summary.realized_interest)}
+          >
+            {formatShortCurrency(-data.summary.realized_interest)}
+          </span>
+        </>
+      ),
+    });
+  }
+
+  if (lines.length === 0) {
+    return null;
+  }
+
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="text-lg font-semibold text-muted-foreground">
-          Monthly Dataset
+    <Card className="min-w-0 overflow-hidden rounded-none border-x-0 border-t-0 shadow-none">
+      <CardHeader className="px-0 pb-2">
+        <CardTitle className="text-sm font-medium text-muted-foreground">
+          Run-rate
         </CardTitle>
       </CardHeader>
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Month</TableHead>
-              <TableHead className="text-right">Income</TableHead>
-              <TableHead className="text-right">Expenses</TableHead>
-              <TableHead className="text-right">Net</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {monthly.map((point) => (
-              <TableRow key={point.month}>
-                <TableCell>
-                  {format(new Date(`${point.month}-01T00:00:00`), "MMM yyyy")}
-                </TableCell>
-                <TableCell className="text-right tabular-nums text-emerald-600 dark:text-emerald-400">
-                  {formatCurrency(point.income)}
-                </TableCell>
-                <TableCell className="text-right tabular-nums text-rose-600 dark:text-rose-400">
-                  {formatCurrency(point.expenses)}
-                </TableCell>
-                <TableCell
-                  className={cn(
-                    "text-right tabular-nums",
-                    point.net < 0
-                      ? "text-rose-600 dark:text-rose-400"
-                      : "text-emerald-600 dark:text-emerald-400"
-                  )}
-                >
-                  {formatCurrency(point.net)}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+      <CardContent className="space-y-2 px-0 text-sm">
+        {lines.map((line) => (
+          <p key={line.key} className="text-pretty">
+            {line.body}
+          </p>
+        ))}
       </CardContent>
     </Card>
   );
@@ -158,42 +250,39 @@ function MonthlyDatasetTable({ monthly }: { monthly: InsightsMonthlyPoint[] }) {
 
 function LoadingSkeleton() {
   return (
-    <div className="space-y-8">
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6">
-        {Array.from({ length: 6 }).map((_, index) => (
-          <Skeleton key={index} className="h-24 w-full" />
+    <div className="space-y-9">
+      <div className="grid grid-cols-2 gap-4 border-b py-4 sm:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <Skeleton key={index} className="h-12 w-full" />
         ))}
       </div>
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <Skeleton className="h-72 w-full" />
-        <Skeleton className="h-72 w-full" />
-        <Skeleton className="h-72 w-full" />
-        <Skeleton className="h-72 w-full" />
+      <div className="grid grid-cols-1 gap-9 lg:grid-cols-2">
+        <Skeleton className="h-64 w-full" />
+        <Skeleton className="h-64 w-full" />
       </div>
     </div>
   );
 }
 
 export function AnalyticsView() {
-  const [dateRange, setDateRange] = useState(() => {
-    const now = new Date();
-    return {
-      from: new Date(now.getFullYear(), now.getMonth(), 1),
-      to: now,
-    };
-  });
+  const [dateRange, setDateRange] = useState(defaultRange);
 
   const startDate = format(dateRange.from, "yyyy-MM-dd");
   const endDate = format(dateRange.to, "yyyy-MM-dd");
   const { data, isLoading, isError } = useInsights(startDate, endDate);
 
+  const income = data ? -data.summary.period_income : 0;
+  const expenses = data ? data.summary.period_expenses : 0;
+  const net = data ? -data.summary.period_net : 0;
+
   return (
     <div className="px-4 py-6">
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-        <div>
+        <div className="min-w-0">
           <h1 className="text-3xl font-bold text-foreground">Analytics</h1>
           <p className="text-sm text-muted-foreground">
-            Household figures exclude Transfers and investment ledgers.
+            Household figures exclude Transfers and investment ledgers. Credits
+            are negative, debits are positive.
           </p>
         </div>
         <DateRangePicker
@@ -218,50 +307,39 @@ export function AnalyticsView() {
       ) : isLoading || !data ? (
         <LoadingSkeleton />
       ) : (
-        <div className="space-y-8">
-          <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6">
-            <KpiCard
-              label="Net Worth"
-              value={formatCurrency(data.summary.net_worth)}
-            />
-            <KpiCard
-              label="Investments"
-              value={formatCurrency(data.summary.investment_value)}
-            />
-            <KpiCard
-              label="Banks"
-              value={formatCurrency(data.summary.bank_value)}
-            />
-            <KpiCard
-              label="Income"
-              value={formatCurrency(data.summary.period_income)}
-              valueClassName={getTransactionColor(-data.summary.period_income)}
-            />
-            <KpiCard
-              label="Expenses"
-              value={formatCurrency(data.summary.period_expenses)}
-              valueClassName={getTransactionColor(data.summary.period_expenses)}
-            />
-            <KpiCard
-              label="Savings Rate"
-              value={formatPercentage(data.summary.savings_rate * 100)}
-            />
+        <div className="space-y-9">
+          <div className="grid grid-cols-2 gap-4 border-b py-4 sm:grid-cols-4">
+            <FlowStat label="Income" amount={income} />
+            <FlowStat label="Expenses" amount={expenses} />
+            <FlowStat label="Net" amount={net} />
+            <div className="min-w-0">
+              <div className="text-xs text-muted-foreground">Savings rate</div>
+              <div
+                className="truncate text-xl font-semibold tabular-nums"
+                title={formatPercentage(data.summary.savings_rate * 100)}
+              >
+                {formatPercentage(data.summary.savings_rate * 100)}
+              </div>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <NetWorth dateRange={dateRange} onDateRangeChange={setDateRange} />
+          <div className="grid grid-cols-1 gap-9 lg:grid-cols-2">
+            <div className="min-w-0">
+              <NetWorth
+                dateRange={dateRange}
+                showDatePicker={false}
+                className="rounded-none border-x-0 border-t-0 py-4 shadow-none [&_[data-slot=card-content]]:px-0 [&_[data-slot=card-header]]:px-0"
+              />
+            </div>
             <MonthlyFlowChart monthly={data.monthly} />
           </div>
 
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <CategoryBreakdown categories={data.categories} />
+          <div className="grid grid-cols-1 gap-9 lg:grid-cols-2">
             <InvestmentTable investments={data.investments} />
+            <TopPayees expenses={data.top_expenses} />
           </div>
 
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <TopExpensesTable expenses={data.top_expenses} />
-            <MonthlyDatasetTable monthly={data.monthly} />
-          </div>
+          <RunRate data={data} endDate={dateRange.to} />
         </div>
       )}
     </div>
