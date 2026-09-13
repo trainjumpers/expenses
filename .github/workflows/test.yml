@@ -78,7 +78,7 @@ jobs:
     
       - name: Cache Go tool binaries
         id: tool-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ${{ steps.gobin.outputs.dir }}
           key: ${{ runner.os }}-go-tools-${{ hashFiles('justfile') }}-${{ hashFiles('**/go.sum') }}
