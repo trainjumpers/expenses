@@ -97,7 +97,7 @@ jobs:
         run: ginkgo -r -race -cover -coverpkg=./... -coverprofile=coverage.txt -covermode=atomic ./...  
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           slug: ${{ github.repository }}
