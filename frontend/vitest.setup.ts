@@ -3,6 +3,13 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
 import { afterAll, afterEach, beforeAll, vi } from "vitest";
 
+// jsdom does not implement the pointer capture or scroll APIs that Radix
+// Select relies on.
+Element.prototype.hasPointerCapture ??= () => false;
+Element.prototype.setPointerCapture ??= () => {};
+Element.prototype.releasePointerCapture ??= () => {};
+Element.prototype.scrollIntoView ??= () => {};
+
 vi.mock("sonner", () => ({
   toast: {
     error: vi.fn(),
