@@ -123,7 +123,7 @@ const TablePagination: React.FC<TablePaginationProps> = ({
           variant="outline"
           size="sm"
           onClick={() => setCurrentPage(Math.min(currentPage + 1, totalPages))}
-          disabled={currentPage === totalPages}
+          disabled={currentPage >= totalPages}
           className="hover:bg-muted"
         >
           Next

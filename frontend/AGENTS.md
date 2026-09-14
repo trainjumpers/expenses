@@ -200,7 +200,9 @@ From the repo root: `just test-frontend`, `just test-e2e`.
 - **E2E** (`e2e/*.spec.ts`): Playwright against a running app and a real backend.
   `E2E_API_BASE_URL` (default `http://localhost:8080`) and `E2E_BASE_URL` (default
   `http://localhost:3100`) point tests elsewhere. `e2e/global-setup.ts` ensures the
-  `e2e@neurospend.test` user exists via signup.
+  `e2e@neurospend.test` user exists via signup, and `e2e/auth.setup.ts` signs in once
+  and stores the session in `e2e/.auth/`. Authenticated specs opt in with
+  `test.use({ storageState: AUTH_STATE })` instead of logging in again.
 - Playwright agents (planner, generator, healer) run as OpenCode subagents, test plans go in `specs/`.
 
 ## Development Workflow

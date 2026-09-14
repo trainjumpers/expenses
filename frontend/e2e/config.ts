@@ -10,3 +10,5 @@ export const E2E_USER = {
   email: "e2e@neurospend.test",
   password: "password123",
 };
+
+export const AUTH_STATE = "e2e/.auth/user.json";

@@ -52,6 +52,7 @@ export default function LoginPage() {
               type="email"
               id="email"
               name="email"
+              autoComplete="email"
               required
               placeholder="Email"
               value={formData.email}
@@ -65,6 +66,7 @@ export default function LoginPage() {
               type="password"
               id="password"
               name="password"
+              autoComplete="current-password"
               required
               placeholder="Password"
               value={formData.password}
