@@ -1,12 +1,14 @@
 import { testCategory } from "@/test/msw/handlers";
 import { server } from "@/test/msw/server";
 import { renderWithProviders } from "@/test/render";
-import { screen } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import { describe, expect, it, vi } from "vitest";
 
 import { CategoryAnalytics } from "./CategoryAnalytics";
+
+const travelCategory = { id: 2, name: "Travel", created_by: 1 };
 
 vi.mock("@/components/ui/icon-picker", () => ({
   Icon: () => null,
@@ -133,5 +135,193 @@ describe("CategoryAnalytics", () => {
     expect(
       screen.getByText("No category activity for the selected filter.")
     ).toBeInTheDocument();
+  });
+
+  it("selects every category at once", async () => {
+    const user = userEvent.setup();
+    const onFilterChange = vi.fn();
+    renderWithProviders(
+      <CategoryAnalytics
+        data={[]}
+        categories={[testCategory, travelCategory]}
+        onCategoryFilterChange={onFilterChange}
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: "All categories" }));
+    await user.click(await screen.findByRole("button", { name: "Select all" }));
+    await user.click(screen.getByRole("button", { name: "Apply" }));
+
+    expect(onFilterChange).toHaveBeenCalledWith([1, 2]);
+  });
+
+  it("clears the selection when everything is selected", async () => {
+    const user = userEvent.setup();
+    const onFilterChange = vi.fn();
+    renderWithProviders(
+      <CategoryAnalytics
+        data={[]}
+        categories={[testCategory, travelCategory]}
+        selectedCategoryIds={[1, 2]}
+        onCategoryFilterChange={onFilterChange}
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: "All categories" }));
+    expect(screen.getByText("Deselect all")).toBeInTheDocument();
+    await user.click(
+      await screen.findByRole("button", { name: "Deselect all" })
+    );
+    await user.click(screen.getByRole("button", { name: "Apply" }));
+
+    expect(onFilterChange).toHaveBeenCalledWith([]);
+  });
+
+  it("collapses an expanded category again", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<CategoryAnalytics data={categoryData} />);
+
+    await user.click(screen.getByRole("button", { name: "Expand Travel" }));
+    await user.click(
+      await screen.findByRole("button", { name: "Collapse Travel" })
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Expand Travel" })
+    ).toBeInTheDocument();
+  });
+
+  it("reports a failed transaction lookup", async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.get("*/api/v1/transaction", () =>
+        HttpResponse.json({ error: "boom" }, { status: 500 })
+      )
+    );
+    renderWithProviders(<CategoryAnalytics data={categoryData} />);
+
+    await user.click(screen.getByRole("button", { name: "Expand Travel" }));
+
+    expect(
+      await screen.findByText("Failed to load transactions.")
+    ).toBeInTheDocument();
+  });
+
+  it("closes the add dialog after creating a category", async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.post("*/api/v1/category", () =>
+        HttpResponse.json(
+          { data: { id: 9, name: "Travel", created_by: 1 } },
+          { status: 201 }
+        )
+      )
+    );
+    renderWithProviders(<CategoryAnalytics data={categoryData} />);
+
+    await user.click(screen.getByRole("button", { name: "Add category" }));
+    await user.type(
+      await screen.findByPlaceholderText("Enter category name"),
+      "Travel"
+    );
+    await user.click(screen.getByRole("button", { name: "Add" }));
+
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+    );
+  });
+
+  it("filters from the data view", async () => {
+    const user = userEvent.setup();
+    const onFilterChange = vi.fn();
+    renderWithProviders(
+      <CategoryAnalytics
+        data={categoryData}
+        categories={[testCategory, travelCategory]}
+        onCategoryFilterChange={onFilterChange}
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: "All categories" }));
+    await user.click(
+      await screen.findByRole("menuitemcheckbox", { name: "Food" })
+    );
+    await user.click(screen.getByRole("button", { name: "Apply" }));
+
+    expect(onFilterChange).toHaveBeenCalledWith([1]);
+  });
+
+  it("unchecks a selected category", async () => {
+    const user = userEvent.setup();
+    const onFilterChange = vi.fn();
+    renderWithProviders(
+      <CategoryAnalytics
+        data={[]}
+        categories={[testCategory, travelCategory]}
+        selectedCategoryIds={[1]}
+        onCategoryFilterChange={onFilterChange}
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: "1 selected" }));
+    await user.click(
+      await screen.findByRole("menuitemcheckbox", { name: "Food" })
+    );
+    await user.click(screen.getByRole("button", { name: "Apply" }));
+
+    expect(onFilterChange).toHaveBeenCalledWith([]);
+  });
+
+  it("creates the first category from the empty state", async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.post("*/api/v1/category", () =>
+        HttpResponse.json(
+          { data: { id: 9, name: "Travel", created_by: 1 } },
+          { status: 201 }
+        )
+      )
+    );
+    renderWithProviders(<CategoryAnalytics />);
+
+    await user.click(
+      screen.getByRole("button", { name: /add your first category/i })
+    );
+    await user.type(
+      await screen.findByPlaceholderText("Enter category name"),
+      "Travel"
+    );
+    await user.click(screen.getByRole("button", { name: "Add" }));
+
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+    );
+  });
+
+  it("creates a category from the no-activity state", async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.post("*/api/v1/category", () =>
+        HttpResponse.json(
+          { data: { id: 9, name: "Travel", created_by: 1 } },
+          { status: 201 }
+        )
+      )
+    );
+    renderWithProviders(
+      <CategoryAnalytics data={[]} categories={[testCategory]} />
+    );
+
+    await screen.findByText("No category activity for the selected filter.");
+    await user.click(screen.getByRole("button", { name: "Add category" }));
+    await user.type(
+      await screen.findByPlaceholderText("Enter category name"),
+      "Travel"
+    );
+    await user.click(screen.getByRole("button", { name: "Add" }));
+
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+    );
   });
 });

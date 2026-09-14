@@ -172,6 +172,7 @@ export function ImportFromBank({
                         variant="outline"
                         size="sm"
                         onClick={() => onFileRemove(index)}
+                        aria-label={`Remove ${file.name}`}
                       >
                         <X className="h-4 w-4" />
                       </Button>

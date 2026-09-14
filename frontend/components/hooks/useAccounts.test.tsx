@@ -9,10 +9,24 @@ import { toast } from "sonner";
 import { afterAll, describe, expect, it, vi } from "vitest";
 
 import {
+  useAccount,
   useCreateAccount,
   useDeleteAccount,
   useUpdateAccount,
 } from "./useAccounts";
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    refresh: vi.fn(),
+    back: vi.fn(),
+    forward: vi.fn(),
+    prefetch: vi.fn(),
+  }),
+  usePathname: () => "/",
+  useSearchParams: () => new URLSearchParams(),
+}));
 
 const existing: Account = {
   id: 1,
@@ -177,5 +191,39 @@ describe("account mutations", () => {
       { duration: 2000 }
     );
     expect(accounts(queryClient)).toEqual([existing]);
+  });
+
+  it("resolves a cached account by id", async () => {
+    const { wrapper } = setup();
+    const { result } = renderHook(() => useAccount(1), { wrapper });
+
+    await waitFor(() => expect(result.current.data?.name).toBe("HDFC Savings"));
+  });
+
+  it("fails for an unknown account id", async () => {
+    const { wrapper } = setup();
+    const { result } = renderHook(() => useAccount(99), { wrapper });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.error).toEqual(new Error("Account not found"));
+  });
+
+  it("rolls account updates back on failure", async () => {
+    server.use(
+      http.patch("*/api/v1/account/1", () =>
+        HttpResponse.json({ error: "nope" }, { status: 500 })
+      )
+    );
+    const { queryClient, wrapper } = setup();
+    const { result } = renderHook(() => useUpdateAccount(), { wrapper });
+
+    act(() => {
+      result.current.mutate({ id: 1, data: { name: "Renamed" } });
+    });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+
+    expect(accounts(queryClient)).toEqual([existing]);
+    expect(consoleError).toHaveBeenCalledWith("nope");
   });
 });

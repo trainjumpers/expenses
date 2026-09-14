@@ -4,6 +4,7 @@ import { useMonthlyAnalytics } from "@/components/hooks/useAnalytics";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency } from "@/lib/utils";
+import { format } from "date-fns";
 import {
   ArrowRightLeftIcon,
   CalendarIcon,
@@ -32,8 +33,8 @@ function getDateRanges() {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-  // Format date as YYYY-MM-DD
-  const formatDate = (date: Date) => date.toISOString().split("T")[0];
+  // Local calendar date; toISOString would shift the day in UTC+ offsets.
+  const formatDate = (date: Date) => format(date, "yyyy-MM-dd");
 
   return [
     {

@@ -455,6 +455,7 @@ export function CategoryAnalytics({
                 variant="ghost"
                 size="sm"
                 onClick={() => setIsAddCategoryModalOpen(true)}
+                aria-label="Add category"
                 className="h-8 w-8 p-0"
               >
                 <Plus className="h-4 w-4" />

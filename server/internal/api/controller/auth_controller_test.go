@@ -207,23 +207,16 @@ var _ = Describe("AuthController", func() {
 
 		Context("with invalid refresh token", func() {
 			It("should return unauthorized for invalid token", func() {
-				refreshInput := struct {
-					RefreshToken string `json:"refresh_token"`
-				}{
-					RefreshToken: "invalid-refresh-token",
-				}
-				resp, _ := testUser1.MakeRequest(http.MethodPost, "/refresh", refreshInput)
+				helper := NewTestHelper(baseURL)
+				helper.AccessToken = testUser1.AccessToken
+				helper.RefreshToken = "invalid-refresh-token"
+
+				resp, _ := helper.MakeRequest(http.MethodPost, "/refresh", nil)
 				Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
 			})
 
-			It("should return bad request for missing refresh token", func() {
-				refreshInput := struct {
-					RefreshToken string `json:"refresh_token"`
-				}{
-					RefreshToken: "",
-				}
-
-				resp, _ := testUser1.MakeRequest(http.MethodPost, "/refresh", refreshInput)
+			It("should return unauthorized for a missing refresh token cookie", func() {
+				resp, _ := testHelperUnauthenticated.MakeRequest(http.MethodPost, "/refresh", nil)
 				Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
 			})
 		})

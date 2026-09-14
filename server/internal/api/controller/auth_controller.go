@@ -3,6 +3,7 @@ package controller
 import (
 	"errors"
 	"expenses/internal/config"
+	customErrors "expenses/internal/errors"
 	"expenses/internal/models"
 	"expenses/internal/service"
 	"expenses/pkg/logger"
@@ -73,7 +74,7 @@ func (a *AuthController) RefreshToken(ctx *gin.Context) {
 	refreshToken, err := ctx.Cookie("refresh_token")
 	if err != nil || refreshToken == "" {
 		logger.Errorf("No refresh_token cookie provided: %v", err)
-		a.HandleError(ctx, errors.New("refresh token cookie missing"))
+		a.HandleError(ctx, customErrors.NewInvalidTokenError(errors.New("refresh token cookie missing")))
 		return
 	}
 

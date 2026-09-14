@@ -1,6 +1,6 @@
 import { server } from "@/test/msw/server";
 import { renderWithProviders } from "@/test/render";
-import { screen } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, delay, http } from "msw";
 import { beforeAll, describe, expect, it, vi } from "vitest";
@@ -78,5 +78,42 @@ describe("MonthlyAnalyticsCard", () => {
       screen.getByRole("button", { name: "View All Time analytics" })
     );
     expect(next).toBeDisabled();
+  });
+
+  it("follows the scroll position", async () => {
+    server.use(monthlyHandler());
+    const { container } = renderWithProviders(<MonthlyAnalyticsCard />);
+    await screen.findAllByText("Income");
+
+    const scroller = container.querySelector(".overflow-x-auto") as HTMLElement;
+    Object.defineProperty(scroller, "scrollLeft", {
+      value: 200,
+      writable: true,
+    });
+    Object.defineProperty(scroller, "clientWidth", { value: 100 });
+
+    fireEvent.scroll(scroller);
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "View previous range" })
+      ).toBeEnabled()
+    );
+  });
+
+  it("steps back with the previous arrow", async () => {
+    const user = userEvent.setup();
+    server.use(monthlyHandler());
+    renderWithProviders(<MonthlyAnalyticsCard />);
+    await screen.findAllByText("Income");
+
+    await user.click(screen.getByRole("button", { name: "View next range" }));
+    await user.click(
+      screen.getByRole("button", { name: "View previous range" })
+    );
+
+    expect(
+      screen.getByRole("button", { name: "View previous range" })
+    ).toBeDisabled();
   });
 });

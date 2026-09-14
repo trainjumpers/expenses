@@ -194,7 +194,7 @@ func TestAuthControllerRefreshTokenMissingCookie(t *testing.T) {
 
 	ctx, recorder := newControllerContext(t, http.MethodPost, "/refresh-token", "")
 	controller.RefreshToken(ctx)
-	requireStatus(t, recorder, http.StatusInternalServerError)
+	requireStatus(t, recorder, http.StatusUnauthorized)
 }
 
 func TestAuthControllerLogoutServiceError(t *testing.T) {

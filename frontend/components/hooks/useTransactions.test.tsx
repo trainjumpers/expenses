@@ -14,6 +14,7 @@ import { afterAll, describe, expect, it, vi } from "vitest";
 import {
   useCreateTransaction,
   useDeleteTransaction,
+  useTransaction,
   useUpdateTransaction,
 } from "./useTransactions";
 
@@ -180,5 +181,40 @@ describe("transaction mutations", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     expect(listData(queryClient)?.transactions).toEqual([]);
+  });
+
+  it("resolves a cached transaction by id", async () => {
+    const { wrapper } = setup();
+    const { result } = renderHook(() => useTransaction(1), { wrapper });
+
+    await waitFor(() => expect(result.current.data?.name).toBe("Coffee"));
+  });
+
+  it("fails for an uncached transaction id", async () => {
+    const { wrapper } = setup();
+    const { result } = renderHook(() => useTransaction(99), { wrapper });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.error).toEqual(new Error("Transaction not found"));
+  });
+
+  it("refetches and reports when an update fails", async () => {
+    server.use(
+      http.patch("*/api/v1/transaction/1", () =>
+        HttpResponse.json({ error: "nope" }, { status: 500 })
+      )
+    );
+    const { queryClient, wrapper } = setup();
+    const invalidate = vi.spyOn(queryClient, "invalidateQueries");
+    const { result } = renderHook(() => useUpdateTransaction(), { wrapper });
+
+    act(() => {
+      result.current.mutate({ id: 1, data: { name: "Latte" } });
+    });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ["transactions"] });
+    expect(consoleError).toHaveBeenCalledWith("nope");
   });
 });

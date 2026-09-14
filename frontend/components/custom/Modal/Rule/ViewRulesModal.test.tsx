@@ -177,4 +177,91 @@ describe("ViewRulesModal", () => {
     ).toBeInTheDocument();
     expect(await screen.findByDisplayValue("Coffee rule")).toBeInTheDocument();
   });
+
+  it("pages backwards and forwards", async () => {
+    const user = userEvent.setup();
+    const allRules = Array.from({ length: 6 }, (_, i) => ({
+      ...rule,
+      id: i + 1,
+      name: `Rule ${i + 1}`,
+    }));
+    server.use(
+      http.get("*/api/v1/rule", ({ request }) => {
+        const page = Number(
+          new URL(request.url).searchParams.get("page") ?? "1"
+        );
+        return HttpResponse.json({
+          data: {
+            rules: allRules.slice((page - 1) * 5, page * 5),
+            total: 6,
+            page,
+            page_size: 5,
+          },
+        });
+      })
+    );
+    render();
+    await screen.findByText("Rule 1");
+
+    await user.click(screen.getByText("2"));
+    expect(await screen.findByText("Rule 6")).toBeInTheDocument();
+
+    await user.click(screen.getByText("Previous"));
+    expect(await screen.findByText("Rule 1")).toBeInTheDocument();
+
+    await user.click(screen.getByText("Next"));
+    expect(await screen.findByText("Rule 6")).toBeInTheDocument();
+  });
+
+  it("opens the add rule dialog", async () => {
+    const user = userEvent.setup();
+    server.use(listHandler([rule]));
+    render();
+    await screen.findByText("Coffee rule");
+
+    await user.click(screen.getByRole("button", { name: "Add Rule" }));
+
+    expect(
+      await screen.findByRole("dialog", { name: "New transaction rule" })
+    ).toBeInTheDocument();
+  });
+
+  it("closes the edit dialog", async () => {
+    const user = userEvent.setup();
+    server.use(
+      listHandler([rule]),
+      http.get("*/api/v1/rule/1", () =>
+        HttpResponse.json({ data: describeResponse })
+      )
+    );
+    render();
+    await screen.findByText("Coffee rule");
+
+    await user.click(screen.getByRole("button", { name: "Edit" }));
+    await screen.findByDisplayValue("Coffee rule");
+    await user.keyboard("{Escape}");
+
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("dialog", { name: "Edit transaction rule" })
+      ).not.toBeInTheDocument()
+    );
+  });
+
+  it("closes the delete confirmation without deleting", async () => {
+    const user = userEvent.setup();
+    server.use(listHandler([rule]));
+    render();
+    await screen.findByText("Coffee rule");
+
+    await user.click(screen.getByRole("button", { name: "Delete" }));
+    const confirm = await screen.findByRole("dialog", { name: "Delete Rule" });
+    await user.click(within(confirm).getByRole("button", { name: "Cancel" }));
+
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("dialog", { name: "Delete Rule" })
+      ).not.toBeInTheDocument()
+    );
+  });
 });

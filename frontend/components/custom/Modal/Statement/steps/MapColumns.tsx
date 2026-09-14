@@ -14,7 +14,6 @@ import { useState } from "react";
 interface MapColumnsProps {
   headers: string[];
   onStepChange: (step: number) => void;
-  onCancel: () => void;
   onSubmit: (mappings: Record<string, string>) => void;
 }
 
@@ -30,7 +29,6 @@ const requiredFields = [
 export function MapColumns({
   headers,
   onStepChange,
-  onCancel,
   onSubmit,
 }: MapColumnsProps) {
   const [mappings, setMappings] = useState<Record<string, string>>({});
@@ -74,7 +72,6 @@ export function MapColumns({
     }
     setError("");
     onSubmit(mappings);
-    onCancel();
   };
 
   return (

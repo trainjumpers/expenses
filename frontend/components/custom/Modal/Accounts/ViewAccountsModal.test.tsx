@@ -135,4 +135,90 @@ describe("ViewAccountsModal", () => {
 
     expect(await screen.findByText("Account 6")).toBeInTheDocument();
   });
+
+  it("pages backwards and forwards", async () => {
+    const user = userEvent.setup();
+    const many = Array.from({ length: 6 }, (_, i) => ({
+      ...testAccount,
+      id: i + 1,
+      name: `Account ${i + 1}`,
+    }));
+    server.use(
+      http.get("*/api/v1/account", () =>
+        HttpResponse.json({ message: "ok", data: many })
+      )
+    );
+    render();
+    await screen.findByText("Account 1");
+
+    await user.click(screen.getByText("2"));
+    expect(await screen.findByText("Account 6")).toBeInTheDocument();
+
+    await user.click(screen.getByText("Previous"));
+    expect(await screen.findByText("Account 1")).toBeInTheDocument();
+
+    await user.click(screen.getByText("Next"));
+    expect(await screen.findByText("Account 6")).toBeInTheDocument();
+  });
+
+  it("opens the create dialog from the list", async () => {
+    const user = userEvent.setup();
+    render();
+    await screen.findByText("HDFC Savings");
+
+    await user.click(screen.getByRole("button", { name: "Add Account" }));
+
+    expect(
+      await screen.findByRole("dialog", { name: "Add Account" })
+    ).toBeInTheDocument();
+  });
+
+  it("updates an account from the edit dialog", async () => {
+    const user = userEvent.setup();
+    let body: unknown;
+    server.use(
+      http.patch("*/api/v1/account/1", async ({ request }) => {
+        body = await request.json();
+        return HttpResponse.json({
+          data: { ...testAccount, name: "HDFC Salary" },
+        });
+      })
+    );
+    render();
+    await screen.findByText("HDFC Savings");
+
+    const view = screen.getByRole("dialog", { name: "View Accounts" });
+    await user.click(within(view).getByRole("button", { name: "Edit" }));
+    const edit = await screen.findByRole("dialog", { name: "Update Account" });
+    const name = within(edit).getByDisplayValue("HDFC Savings");
+    await user.clear(name);
+    await user.type(name, "HDFC Salary");
+    await user.click(within(edit).getByRole("button", { name: "Update" }));
+
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("dialog", { name: "Update Account" })
+      ).not.toBeInTheDocument()
+    );
+    expect(body).toMatchObject({ name: "HDFC Salary" });
+  });
+
+  it("closes the delete confirmation without deleting", async () => {
+    const user = userEvent.setup();
+    render();
+    await screen.findByText("HDFC Savings");
+
+    const view = screen.getByRole("dialog", { name: "View Accounts" });
+    await user.click(within(view).getByRole("button", { name: "Delete" }));
+    const confirm = await screen.findByRole("dialog", {
+      name: "Delete Account",
+    });
+    await user.click(within(confirm).getByRole("button", { name: "Cancel" }));
+
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("dialog", { name: "Delete Account" })
+      ).not.toBeInTheDocument()
+    );
+  });
 });

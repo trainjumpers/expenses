@@ -116,4 +116,67 @@ describe("ViewCategoriesModal", () => {
       await screen.findByRole("dialog", { name: "Update Category" })
     ).toBeInTheDocument();
   });
+
+  it("pages through the categories", async () => {
+    const user = userEvent.setup();
+    const many = Array.from({ length: 6 }, (_, i) => ({
+      id: i + 1,
+      name: `Category ${i + 1}`,
+      created_by: 1,
+    }));
+    server.use(
+      http.get("*/api/v1/category", () =>
+        HttpResponse.json({ message: "ok", data: many })
+      )
+    );
+    render();
+    await screen.findByText("Category 1");
+
+    await user.click(screen.getByText("2"));
+    expect(await screen.findByText("Category 6")).toBeInTheDocument();
+
+    await user.click(screen.getByText("Previous"));
+    expect(await screen.findByText("Category 1")).toBeInTheDocument();
+
+    await user.click(screen.getByText("Next"));
+    expect(await screen.findByText("Category 6")).toBeInTheDocument();
+  });
+
+  it("opens the create dialog from the list", async () => {
+    const user = userEvent.setup();
+    render();
+    await screen.findByText("Food");
+
+    await user.click(screen.getByRole("button", { name: "Add New Category" }));
+
+    expect(
+      await screen.findByRole("dialog", { name: "Add Category" })
+    ).toBeInTheDocument();
+  });
+
+  it("closes the edit and delete dialogs", async () => {
+    const user = userEvent.setup();
+    render();
+    await screen.findByText("Food");
+
+    await user.click(screen.getByRole("button", { name: "Edit" }));
+    await screen.findByRole("dialog", { name: "Update Category" });
+    await user.keyboard("{Escape}");
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("dialog", { name: "Update Category" })
+      ).not.toBeInTheDocument()
+    );
+
+    await user.click(screen.getByRole("button", { name: "Delete" }));
+    const confirm = await screen.findByRole("dialog", {
+      name: "Delete Category",
+    });
+    await user.click(within(confirm).getByRole("button", { name: "Cancel" }));
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("dialog", { name: "Delete Category" })
+      ).not.toBeInTheDocument()
+    );
+  });
 });

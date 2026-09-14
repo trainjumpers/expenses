@@ -75,6 +75,26 @@ describe("apiRequest", () => {
     );
   });
 
+  it("attaches the response status to the thrown error", async () => {
+    server.use(
+      http.get(endpoint, () =>
+        HttpResponse.json({ error: "nope" }, { status: 409 })
+      )
+    );
+
+    const error: unknown = await apiRequest(
+      endpoint,
+      { method: "GET" },
+      "thing"
+    ).catch((e: unknown) => e);
+
+    expect(error).toMatchObject({
+      message: "nope",
+      status: 409,
+      data: { error: "nope" },
+    });
+  });
+
   it("reports network failures with the provided message", async () => {
     server.use(http.get(endpoint, () => HttpResponse.error()));
 

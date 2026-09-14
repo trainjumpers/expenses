@@ -28,9 +28,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 function render() {
-  return renderWithProviders(
-    <InfoCenterModal isOpen onOpenChange={vi.fn()} />
-  );
+  return renderWithProviders(<InfoCenterModal isOpen onOpenChange={vi.fn()} />);
 }
 
 describe("InfoCenterModal", () => {
@@ -40,7 +38,9 @@ describe("InfoCenterModal", () => {
     expect(
       screen.getByRole("dialog", { name: "View Center" })
     ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /accounts/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /accounts/i })
+    ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /categories/i })
     ).toBeInTheDocument();

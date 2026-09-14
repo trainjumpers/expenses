@@ -13,11 +13,28 @@ import {
   useSignup,
   useUpdatePassword,
   useUpdateUser,
+  useUser,
 } from "./useUser";
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    refresh: vi.fn(),
+    back: vi.fn(),
+    forward: vi.fn(),
+    prefetch: vi.fn(),
+  }),
+  usePathname: () => "/",
+  useSearchParams: () => new URLSearchParams(),
+}));
 
 function setup() {
   const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    defaultOptions: {
+      queries: { retry: false, retryDelay: 0 },
+      mutations: { retry: false },
+    },
   });
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
@@ -207,5 +224,82 @@ describe("user mutations", () => {
     await waitFor(() => expect(result.current.isError).toBe(true));
 
     expect(consoleError).toHaveBeenCalledWith("current password is wrong");
+  });
+
+  it("does not retry an authentication failure", async () => {
+    let calls = 0;
+    server.use(
+      http.get("*/api/v1/user", () => {
+        calls += 1;
+        return HttpResponse.json({ error: "unauthorized" }, { status: 401 });
+      })
+    );
+    const { queryClient, wrapper } = setup();
+    queryClient.setQueryData(["session"], {
+      isValid: true,
+      needsRefresh: false,
+    });
+
+    const { result } = renderHook(() => useUser(), { wrapper });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(calls).toBe(1);
+  });
+
+  it("does not retry a client error", async () => {
+    let calls = 0;
+    server.use(
+      http.get("*/api/v1/user", () => {
+        calls += 1;
+        return HttpResponse.json({ error: "bad request" }, { status: 400 });
+      })
+    );
+    const { queryClient, wrapper } = setup();
+    queryClient.setQueryData(["session"], {
+      isValid: true,
+      needsRefresh: false,
+    });
+
+    const { result } = renderHook(() => useUser(), { wrapper });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(calls).toBe(1);
+  });
+
+  it("retries a network failure before giving up", async () => {
+    let calls = 0;
+    server.use(
+      http.get("*/api/v1/user", () => {
+        calls += 1;
+        return HttpResponse.error();
+      })
+    );
+    const { queryClient, wrapper } = setup();
+    queryClient.setQueryData(["session"], {
+      isValid: true,
+      needsRefresh: false,
+    });
+
+    const { result } = renderHook(() => useUser(), { wrapper });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(calls).toBe(4);
+  });
+
+  it("keeps the profile update failure reason", async () => {
+    server.use(
+      http.patch("*/api/v1/user", () =>
+        HttpResponse.json({ error: "nope" }, { status: 500 })
+      )
+    );
+    const { wrapper } = setup();
+    const { result } = renderHook(() => useUpdateUser(), { wrapper });
+
+    act(() => {
+      result.current.mutate({ name: "Renamed" });
+    });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(consoleError).toHaveBeenCalledWith("nope");
   });
 });

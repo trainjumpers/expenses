@@ -1,7 +1,10 @@
 import type { Transaction } from "@/lib/models/transaction";
+import { testAccount, testCategory } from "@/test/msw/handlers";
+import { server } from "@/test/msw/server";
 import { renderWithProviders } from "@/test/render";
-import { screen } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { HttpResponse, http } from "msw";
 import type { ComponentProps } from "react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -159,5 +162,122 @@ describe("TransactionsTable", () => {
     ) => Set<number>;
     expect(updater(new Set())).toEqual(new Set([1]));
     expect(updater(new Set([1, 2]))).toEqual(new Set([2]));
+  });
+
+  it("toggles the order when sorting the active column", async () => {
+    const user = userEvent.setup();
+    const { setSortBy, setSortOrder } = setup({
+      sortBy: "name",
+      sortOrder: "asc",
+    });
+
+    await user.click(screen.getByRole("button", { name: "Name" }));
+
+    expect(setSortOrder).toHaveBeenCalledWith("desc");
+    expect(setSortBy).not.toHaveBeenCalled();
+  });
+
+  it("sorts by description and date", async () => {
+    const user = userEvent.setup();
+    const { setSortBy } = setup({ sortBy: "name" });
+
+    await user.click(screen.getByRole("button", { name: "Description" }));
+    expect(setSortBy).toHaveBeenCalledWith("description");
+
+    await user.click(screen.getByRole("button", { name: "Date" }));
+    expect(setSortBy).toHaveBeenCalledWith("date");
+  });
+
+  it("selects every row from the header checkbox", async () => {
+    const user = userEvent.setup();
+    const setSelectedRows = vi.fn();
+    setup({ setSelectedRows });
+
+    await screen.findByText("Coffee");
+    await user.click(screen.getByRole("checkbox", { name: "Select all" }));
+
+    expect(setSelectedRows).toHaveBeenCalledWith(new Set([1, 2]));
+  });
+
+  it("clears the selection when every row is selected", async () => {
+    const user = userEvent.setup();
+    const setSelectedRows = vi.fn();
+    setup({ selectedRows: new Set([1, 2]), setSelectedRows });
+
+    await screen.findByText("Coffee");
+    await user.click(screen.getByRole("checkbox", { name: "Select all" }));
+
+    expect(setSelectedRows).toHaveBeenCalledWith(new Set());
+  });
+
+  it("adds and removes categories inline", async () => {
+    const user = userEvent.setup();
+    const patchBodies: unknown[] = [];
+    server.use(
+      http.get("*/api/v1/category", () =>
+        HttpResponse.json({
+          message: "ok",
+          data: [testCategory, { id: 2, name: "Travel", created_by: 1 }],
+        })
+      ),
+      http.patch("*/api/v1/transaction/1", async ({ request }) => {
+        patchBodies.push(await request.json());
+        return HttpResponse.json({ data: transactions[0] });
+      })
+    );
+    setup();
+    await screen.findByText("Coffee");
+    await screen.findByText("Food");
+
+    await user.click(screen.getByText("Food"));
+    await user.click(await screen.findByRole("button", { name: "Travel" }));
+    await waitFor(() =>
+      expect(patchBodies[0]).toEqual({ category_ids: [1, 2] })
+    );
+
+    await user.click(screen.getByText("Food"));
+    await user.click(await screen.findByRole("button", { name: "Food" }));
+    await waitFor(() => expect(patchBodies[1]).toEqual({ category_ids: [] }));
+  });
+
+  it("changes the account inline and ignores a same-account pick", async () => {
+    const user = userEvent.setup();
+    const patchBodies: unknown[] = [];
+    server.use(
+      http.get("*/api/v1/account", () =>
+        HttpResponse.json({
+          message: "ok",
+          data: [
+            testAccount,
+            {
+              id: 2,
+              name: "ICICI Salary",
+              bank_type: "icici",
+              currency: "inr",
+              created_by: 1,
+            },
+          ],
+        })
+      ),
+      http.patch("*/api/v1/transaction/1", async ({ request }) => {
+        patchBodies.push(await request.json());
+        return HttpResponse.json({ data: transactions[0] });
+      })
+    );
+    setup();
+    await screen.findByText("Coffee");
+    await screen.findAllByText("HDFC Savings");
+
+    await user.click(screen.getAllByText("HDFC Savings")[0]);
+    await user.click(
+      await screen.findByRole("button", { name: "ICICI Salary" })
+    );
+    await waitFor(() => expect(patchBodies[0]).toEqual({ account_id: 2 }));
+
+    await user.click(screen.getAllByText("HDFC Savings")[0]);
+    await user.click(
+      await screen.findByRole("button", { name: "HDFC Savings" })
+    );
+    await waitFor(() => expect(patchBodies).toHaveLength(1));
   });
 });

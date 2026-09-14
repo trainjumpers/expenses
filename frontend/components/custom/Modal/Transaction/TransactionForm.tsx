@@ -24,7 +24,7 @@ import type { Account } from "@/lib/models/account";
 import type { Category } from "@/lib/models/category";
 import { ChevronDownIcon } from "lucide-react";
 import type { ChangeEvent } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 interface TransactionFormProps {
   initialValues: {
@@ -64,6 +64,16 @@ export function TransactionForm({
   const [showAddCategory, setShowAddCategory] = useState(false);
   const [openCalendar, setOpenCalendar] = useState(false);
 
+  // Accounts arrive asynchronously; fill the default once they load without
+  // touching anything the user has already edited.
+  useEffect(() => {
+    if (!formData.account_id && accounts.length > 0) {
+      setFormData((prev) =>
+        prev.account_id ? prev : { ...prev, account_id: accounts[0].id }
+      );
+    }
+  }, [accounts, formData.account_id]);
+
   const handleAccountAdded = (account: Account) => {
     setShowAddAccount(false);
     setFormData((prev) => ({ ...prev, account_id: account.id }));
@@ -77,6 +87,9 @@ export function TransactionForm({
   };
 
   const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    // The add account/category modals render their own forms inside this one,
+    // and their submit events bubble up here.
+    if (e.target !== e.currentTarget) return;
     e.preventDefault();
     await onSubmit(formData);
   };
