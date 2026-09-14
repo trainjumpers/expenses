@@ -81,6 +81,7 @@ export function RuleActions({
               size="icon"
               onClick={() => handleRemoveAction(idx)}
               disabled={disabled || actions.length === 1}
+              aria-label="Remove action"
               className="h-8 w-8 text-muted-foreground hover:text-destructive"
             >
               <Trash2 className="h-4 w-4" />
