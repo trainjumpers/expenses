@@ -78,11 +78,6 @@ export function TransactionsTable({
       setSortBy(key);
       setSortOrder("asc");
     }
-
-    // Clear amount filters when sorting by other columns
-    if (key !== "amount" && onFilterChange) {
-      onFilterChange({ minAmount: undefined, maxAmount: undefined });
-    }
   };
 
   const handleCreditSort = () => {

@@ -24,7 +24,7 @@ import type { Account } from "@/lib/models/account";
 import type { Category } from "@/lib/models/category";
 import { ChevronDownIcon } from "lucide-react";
 import type { ChangeEvent } from "react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 interface TransactionFormProps {
   initialValues: {
@@ -63,10 +63,6 @@ export function TransactionForm({
   const [showAddAccount, setShowAddAccount] = useState(false);
   const [showAddCategory, setShowAddCategory] = useState(false);
   const [openCalendar, setOpenCalendar] = useState(false);
-
-  useEffect(() => {
-    setFormData(initialValues);
-  }, [initialValues]);
 
   const handleAccountAdded = (account: Account) => {
     setShowAddAccount(false);

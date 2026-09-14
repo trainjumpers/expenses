@@ -16,6 +16,7 @@ import {
   Search,
 } from "lucide-react";
 import React, { useState } from "react";
+import { toast } from "sonner";
 
 import { AccountFilter } from "./Filter/AccountFilter";
 import { AmountFilter } from "./Filter/AmountFilter";
@@ -63,6 +64,16 @@ const TransactionFilters: React.FC<TransactionFiltersProps> = ({
   };
 
   const handleApply = () => {
+    const { minAmount, maxAmount } = tempFilters;
+    if (
+      minAmount !== undefined &&
+      maxAmount !== undefined &&
+      minAmount > maxAmount
+    ) {
+      toast.error("Min amount cannot exceed max amount");
+      return;
+    }
+
     onFilterChange({
       accountId: tempFilters.accountId,
       categoryId: tempFilters.categoryId,

@@ -1,8 +1,10 @@
 codecov:
   require_ci_to_pass: true
 
-flag_management:
-  default_rules:
+flags:
+  backend:
+    carryforward: true
+  frontend:
     carryforward: true
 
 coverage:
