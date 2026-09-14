@@ -123,7 +123,8 @@ export function useCreateTransaction() {
       const message = getErrorMessage(error);
       console.error(message || "Failed to create transaction");
     },
-    onSuccess: (newTransaction) => {
+    onSuccess: (newTransaction, _variables, context) => {
+      const optimisticId = context?.optimisticTransaction.id;
       queryClient.setQueriesData<PaginatedTransactionsResponse>(
         { queryKey: ["transactions"] },
         (old) => {
@@ -131,7 +132,7 @@ export function useCreateTransaction() {
           return {
             ...old,
             transactions: old.transactions.map((t) =>
-              t.id === newTransaction.id ? newTransaction : t
+              t.id === optimisticId ? newTransaction : t
             ),
           };
         }

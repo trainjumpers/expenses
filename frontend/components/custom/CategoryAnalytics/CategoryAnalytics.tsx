@@ -149,10 +149,14 @@ function CategoryTransactions({
   );
 }
 
+// Stable default: an inline [] would be a new reference each render and the
+// draft-selection effect would loop forever.
+const NO_CATEGORY_IDS: number[] = [];
+
 export function CategoryAnalytics({
   data,
   categories,
-  selectedCategoryIds = [],
+  selectedCategoryIds = NO_CATEGORY_IDS,
   onCategoryFilterChange,
 }: CategoryAnalyticsProps) {
   const [expandedCategories, setExpandedCategories] = useState<Set<number>>(
@@ -161,6 +165,7 @@ export function CategoryAnalytics({
   const [isAddCategoryModalOpen, setIsAddCategoryModalOpen] = useState(false);
   const [draftSelectedIds, setDraftSelectedIds] =
     useState<number[]>(selectedCategoryIds);
+  const [filterOpen, setFilterOpen] = useState(false);
 
   useEffect(() => {
     setDraftSelectedIds(selectedCategoryIds);
@@ -276,7 +281,7 @@ export function CategoryAnalytics({
               <span>Categories</span>
               <div className="flex items-center gap-2">
                 {showFilter && (
-                  <DropdownMenu>
+                  <DropdownMenu open={filterOpen} onOpenChange={setFilterOpen}>
                     <DropdownMenuTrigger asChild>
                       <Button variant="outline" size="sm" className="h-8">
                         {triggerLabel}
@@ -314,7 +319,10 @@ export function CategoryAnalytics({
                       <div className="flex justify-end px-2 py-2">
                         <Button
                           size="sm"
-                          onClick={applyCategoryFilter}
+                          onClick={() => {
+                            applyCategoryFilter();
+                            setFilterOpen(false);
+                          }}
                           disabled={!isDirty}
                         >
                           Apply
@@ -327,6 +335,7 @@ export function CategoryAnalytics({
                   variant="ghost"
                   size="sm"
                   onClick={() => setIsAddCategoryModalOpen(true)}
+                  aria-label="Add category"
                   className="h-8 w-8 p-0"
                 >
                   <Plus className="h-4 w-4" />
@@ -395,7 +404,7 @@ export function CategoryAnalytics({
             <span>Categories</span>
             <div className="flex items-center gap-2">
               {showFilter && (
-                <DropdownMenu>
+                <DropdownMenu open={filterOpen} onOpenChange={setFilterOpen}>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="sm" className="h-8">
                       {triggerLabel}
@@ -430,7 +439,10 @@ export function CategoryAnalytics({
                     <div className="flex justify-end px-2 py-2">
                       <Button
                         size="sm"
-                        onClick={applyCategoryFilter}
+                        onClick={() => {
+                          applyCategoryFilter();
+                          setFilterOpen(false);
+                        }}
                         disabled={!isDirty}
                       >
                         Apply
@@ -516,6 +528,11 @@ export function CategoryAnalytics({
                           <button
                             onClick={() =>
                               toggleCategoryExpansion(category.category_id)
+                            }
+                            aria-label={
+                              isExpanded
+                                ? `Collapse ${category.category_name}`
+                                : `Expand ${category.category_name}`
                             }
                             className="p-1 hover:bg-muted rounded transition-colors"
                           >

@@ -6,6 +6,21 @@ export const testUser = {
   email: "test1@example.com",
 };
 
+export const testAccount = {
+  id: 1,
+  name: "HDFC Savings",
+  bank_type: "hdfc",
+  currency: "inr",
+  balance: 1000,
+  created_by: 1,
+} as const;
+
+export const testCategory = {
+  id: 1,
+  name: "Food",
+  created_by: 1,
+} as const;
+
 export const loginRequests: Array<{ email: string; password: string }> = [];
 
 export const signupRequests: Array<{
@@ -57,6 +72,20 @@ export const handlers = [
     HttpResponse.json({
       message: "User retrieved successfully",
       data: testUser,
+    })
+  ),
+
+  http.get("*/api/v1/account", () =>
+    HttpResponse.json({
+      message: "Accounts retrieved successfully",
+      data: [testAccount],
+    })
+  ),
+
+  http.get("*/api/v1/category", () =>
+    HttpResponse.json({
+      message: "Categories retrieved successfully",
+      data: [testCategory],
     })
   ),
 

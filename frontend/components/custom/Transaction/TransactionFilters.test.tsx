@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { toast } from "sonner";
 import { describe, expect, it, vi } from "vitest";
 
 import TransactionFilters from "./TransactionFilters";
@@ -71,5 +72,24 @@ describe("TransactionFilters", () => {
     await user.click(screen.getByRole("button", { name: "Clear" }));
 
     expect(onClear).toHaveBeenCalled();
+  });
+
+  it("rejects an inverted amount range without applying", async () => {
+    const user = userEvent.setup();
+    const { onFilterChange } = setup();
+
+    await user.click(screen.getByRole("button", { name: "Filter" }));
+    await user.click(screen.getByRole("button", { name: "Amount" }));
+
+    const [minAmount, maxAmount] = screen.getAllByRole("spinbutton");
+    await user.type(minAmount, "5000");
+    await user.type(maxAmount, "100");
+    await user.click(screen.getByRole("button", { name: "Apply" }));
+
+    expect(toast.error).toHaveBeenCalledWith(
+      "Min amount cannot exceed max amount"
+    );
+    expect(onFilterChange).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Apply" })).toBeInTheDocument();
   });
 });
