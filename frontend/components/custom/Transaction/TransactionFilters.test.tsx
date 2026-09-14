@@ -92,4 +92,35 @@ describe("TransactionFilters", () => {
     expect(onFilterChange).not.toHaveBeenCalled();
     expect(screen.getByRole("button", { name: "Apply" })).toBeInTheDocument();
   });
+
+  it("switches between the filter panels", async () => {
+    const user = userEvent.setup();
+    setup();
+
+    await user.click(screen.getByRole("button", { name: "Filter" }));
+    await user.click(screen.getByRole("button", { name: /^amount$/i }));
+    expect(screen.getByText("Min Amount")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /^date$/i }));
+    expect(screen.getByText("Date From")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /^category$/i }));
+    expect(
+      screen.getByRole("option", { name: "Uncategorized" })
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /^account$/i }));
+    expect(screen.getByRole("option", { name: "All" })).toBeInTheDocument();
+  });
+
+  it("commits the search on blur", async () => {
+    const user = userEvent.setup();
+    const { onFilterChange } = setup();
+
+    const input = screen.getByPlaceholderText("Search transactions ...");
+    await user.type(input, "coffee");
+    await user.tab();
+
+    expect(onFilterChange).toHaveBeenCalledWith({ search: "coffee" });
+  });
 });

@@ -31,7 +31,10 @@ vi.mock("next/navigation", () => ({
 
 function setup() {
   const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    defaultOptions: {
+      queries: { retry: false, retryDelay: 0 },
+      mutations: { retry: false },
+    },
   });
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
@@ -232,7 +235,10 @@ describe("user mutations", () => {
       })
     );
     const { queryClient, wrapper } = setup();
-    queryClient.setQueryData(["session"], { isValid: true, needsRefresh: false });
+    queryClient.setQueryData(["session"], {
+      isValid: true,
+      needsRefresh: false,
+    });
 
     const { result } = renderHook(() => useUser(), { wrapper });
 
@@ -249,11 +255,51 @@ describe("user mutations", () => {
       })
     );
     const { queryClient, wrapper } = setup();
-    queryClient.setQueryData(["session"], { isValid: true, needsRefresh: false });
+    queryClient.setQueryData(["session"], {
+      isValid: true,
+      needsRefresh: false,
+    });
 
     const { result } = renderHook(() => useUser(), { wrapper });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(calls).toBe(1);
+  });
+
+  it("retries a network failure before giving up", async () => {
+    let calls = 0;
+    server.use(
+      http.get("*/api/v1/user", () => {
+        calls += 1;
+        return HttpResponse.error();
+      })
+    );
+    const { queryClient, wrapper } = setup();
+    queryClient.setQueryData(["session"], {
+      isValid: true,
+      needsRefresh: false,
+    });
+
+    const { result } = renderHook(() => useUser(), { wrapper });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(calls).toBe(4);
+  });
+
+  it("keeps the profile update failure reason", async () => {
+    server.use(
+      http.patch("*/api/v1/user", () =>
+        HttpResponse.json({ error: "nope" }, { status: 500 })
+      )
+    );
+    const { wrapper } = setup();
+    const { result } = renderHook(() => useUpdateUser(), { wrapper });
+
+    act(() => {
+      result.current.mutate({ name: "Renamed" });
+    });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(consoleError).toHaveBeenCalledWith("nope");
   });
 });

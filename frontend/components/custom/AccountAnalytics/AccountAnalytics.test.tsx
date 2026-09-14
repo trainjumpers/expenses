@@ -1,7 +1,7 @@
 import { testAccount } from "@/test/msw/handlers";
 import { server } from "@/test/msw/server";
 import { renderWithProviders } from "@/test/render";
-import { screen, within } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import { describe, expect, it, vi } from "vitest";
@@ -164,5 +164,92 @@ describe("AccountAnalytics", () => {
     expect(within(table).getByText("Zerodha")).toBeInTheDocument();
     expect(within(table).getByText("₹5,000.00")).toBeInTheDocument();
     expect(within(table).getByText("XIRR 12.3%")).toBeInTheDocument();
+  });
+
+  it("clears every account again after selecting all", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<AccountAnalytics data={[accountOne, accountTwo]} />);
+    await screen.findByText("HDFC Savings");
+
+    await user.click(screen.getByRole("button", { name: "Default accounts" }));
+    await user.click(await screen.findByRole("button", { name: "Select all" }));
+    await user.click(screen.getByRole("button", { name: "Apply" }));
+    await screen.findByRole("button", { name: "All accounts" });
+
+    await user.click(screen.getByRole("button", { name: "All accounts" }));
+    await user.click(
+      await screen.findByRole("button", { name: "Deselect all" })
+    );
+    await user.click(screen.getByRole("button", { name: "Apply" }));
+
+    expect(
+      await screen.findByRole("button", { name: "Default accounts" })
+    ).toBeInTheDocument();
+    expect(
+      within(screen.getByRole("table")).queryByText("Account 2")
+    ).not.toBeInTheDocument();
+  });
+
+  it("collapses an expanded account again", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<AccountAnalytics data={[accountOne]} />);
+    await screen.findByText("HDFC Savings");
+
+    await user.click(
+      screen.getByRole("button", { name: "Expand HDFC Savings" })
+    );
+    await user.click(
+      await screen.findByRole("button", { name: "Collapse HDFC Savings" })
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Expand HDFC Savings" })
+    ).toBeInTheDocument();
+  });
+
+  it("reports a failed transaction lookup", async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.get("*/api/v1/transaction", () =>
+        HttpResponse.json({ error: "boom" }, { status: 500 })
+      )
+    );
+    renderWithProviders(<AccountAnalytics data={[accountOne]} />);
+    await screen.findByText("HDFC Savings");
+
+    await user.click(
+      screen.getByRole("button", { name: "Expand HDFC Savings" })
+    );
+
+    expect(
+      await screen.findByText("Failed to load transactions.")
+    ).toBeInTheDocument();
+  });
+
+  it("closes the add dialog after creating an account", async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.post("*/api/v1/account", () =>
+        HttpResponse.json(
+          { data: { id: 9, name: "ICICI", bank_type: "icici" } },
+          { status: 201 }
+        )
+      )
+    );
+    renderWithProviders(<AccountAnalytics data={[accountOne]} />);
+    await screen.findByText("HDFC Savings");
+
+    await user.click(screen.getByRole("button", { name: "Add account" }));
+    await user.type(
+      await screen.findByPlaceholderText("Enter account name"),
+      "ICICI"
+    );
+    await user.click(screen.getAllByRole("combobox")[0]);
+    await user.click(await screen.findByRole("option", { name: "ICICI Bank" }));
+    await user.click(screen.getByRole("button", { name: "Add Account" }));
+
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+    );
   });
 });

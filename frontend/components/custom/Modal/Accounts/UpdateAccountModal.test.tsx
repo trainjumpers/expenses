@@ -137,4 +137,35 @@ describe("UpdateAccountModal", () => {
 
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
+
+  it("edits the bank, currency and balance", async () => {
+    const user = userEvent.setup();
+    let body: unknown;
+    server.use(
+      http.patch("*/api/v1/account/1", async ({ request }) => {
+        body = await request.json();
+        return HttpResponse.json({ data: testAccount });
+      })
+    );
+    setup();
+
+    await user.click(screen.getAllByRole("combobox")[0]);
+    await user.click(await screen.findByRole("option", { name: "ICICI Bank" }));
+    await user.click(screen.getAllByRole("combobox")[1]);
+    await user.click(
+      await screen.findByRole("option", { name: "US Dollar (USD)" })
+    );
+    const balance = screen.getByDisplayValue("1000");
+    await user.clear(balance);
+    await user.type(balance, "2500");
+    await user.click(screen.getByRole("button", { name: "Update" }));
+
+    await waitFor(() =>
+      expect(body).toMatchObject({
+        bank_type: "icici",
+        currency: "usd",
+        balance: 2500,
+      })
+    );
+  });
 });

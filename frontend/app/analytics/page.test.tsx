@@ -46,7 +46,9 @@ function handlers() {
         message: "ok",
         data: {
           summary,
-          monthly: [{ month: "2026-09", income: 60000, expenses: 45000, net: 15000 }],
+          monthly: [
+            { month: "2026-09", income: 60000, expenses: 45000, net: 15000 },
+          ],
           categories: [],
           top_expenses: [],
           investments: [],
@@ -83,7 +85,12 @@ function handlers() {
     http.get("*/api/v1/analytics/cash-balance", () =>
       HttpResponse.json({
         message: "ok",
-        data: { initial_balance: 0, total_income: 0, total_expenses: 0, time_series: [] },
+        data: {
+          initial_balance: 0,
+          total_income: 0,
+          total_expenses: 0,
+          time_series: [],
+        },
       })
     ),
     http.get("*/api/v1/analytics/monthly", () =>

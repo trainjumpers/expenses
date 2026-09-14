@@ -6,6 +6,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { format } from "date-fns";
 import { Calendar } from "lucide-react";
 import React from "react";
 
@@ -46,7 +47,7 @@ export const DateFilter: React.FC<DateFilterProps> = ({
               onSelect={(date) => {
                 setFilters({
                   ...filters,
-                  dateFrom: date ? date.toISOString().slice(0, 10) : undefined,
+                  dateFrom: date ? format(date, "yyyy-MM-dd") : undefined,
                 });
               }}
             />
@@ -77,7 +78,7 @@ export const DateFilter: React.FC<DateFilterProps> = ({
               onSelect={(date) => {
                 setFilters({
                   ...filters,
-                  dateTo: date ? date.toISOString().slice(0, 10) : undefined,
+                  dateTo: date ? format(date, "yyyy-MM-dd") : undefined,
                 });
               }}
             />

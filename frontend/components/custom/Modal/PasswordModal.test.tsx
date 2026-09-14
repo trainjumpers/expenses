@@ -104,4 +104,14 @@ describe("PasswordModal", () => {
     );
     expect(onOpenChange).not.toHaveBeenCalledWith(false);
   });
+
+  it("clears the form when the dialog closes", async () => {
+    const user = userEvent.setup();
+    const { onOpenChange } = setup();
+    await user.type(screen.getByLabelText("Current"), "password123");
+
+    await user.keyboard("{Escape}");
+
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
 });

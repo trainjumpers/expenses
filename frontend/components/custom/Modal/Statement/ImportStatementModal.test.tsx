@@ -559,4 +559,60 @@ describe("ImportStatementModal", () => {
       screen.getByRole("dialog", { name: "Map Columns" })
     ).toBeInTheDocument();
   });
+
+  it("rejects adding files past the ten file limit", async () => {
+    const user = userEvent.setup();
+    setup();
+    await user.click(screen.getByRole("button", { name: /import from bank/i }));
+
+    const files = Array.from({ length: 9 }, (_, i) =>
+      csvFile(`statement-${i + 1}.csv`)
+    );
+    await user.upload(fileInput("file-input"), files);
+    await screen.findByText("Click to add more files (9/10)");
+
+    await user.upload(fileInput("file-input-additional"), [
+      csvFile("extra-1.csv"),
+      csvFile("extra-2.csv"),
+    ]);
+
+    expect(
+      await screen.findByText("Maximum 10 files allowed")
+    ).toBeInTheDocument();
+  });
+
+  it("tracks the drag state over the dropzone", async () => {
+    const user = userEvent.setup();
+    setup();
+    await user.click(screen.getByRole("button", { name: /import from bank/i }));
+
+    const dropzone = screen
+      .getByText(/Drag & drop your bank statements here/)
+      .closest("div")!;
+    fireEvent.dragEnter(dropzone);
+    expect(screen.getByText("Drop the files here...")).toBeInTheDocument();
+
+    fireEvent.dragLeave(dropzone);
+    expect(
+      screen.getByText(/Drag & drop your bank statements here/)
+    ).toBeInTheDocument();
+  });
+
+  it("accepts a drop on the preview step", async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.post("*/api/v1/statement/preview", () =>
+        HttpResponse.json({ message: "ok", data: previewData })
+      )
+    );
+    setup();
+    await user.click(screen.getByRole("button", { name: /custom parsing/i }));
+
+    const dropzone = screen
+      .getByText(/Drag & drop your bank statement here/)
+      .closest("div")!;
+    fireEvent.drop(dropzone, { dataTransfer: { files: [csvFile()] } });
+
+    expect(await screen.findByText("Coffee")).toBeInTheDocument();
+  });
 });
