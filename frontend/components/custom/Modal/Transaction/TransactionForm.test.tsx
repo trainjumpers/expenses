@@ -218,13 +218,19 @@ describe("TransactionForm", () => {
     const user = userEvent.setup();
     setup();
 
-    await user.click(screen.getByRole("button", { name: "1/9/2026" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: new Date(2026, 8, 1).toLocaleDateString(),
+      })
+    );
     await user.click(
       await screen.findByRole("button", { name: /September 15th, 2026/ })
     );
 
     expect(
-      screen.getByRole("button", { name: "15/9/2026" })
+      screen.getByRole("button", {
+        name: new Date(2026, 8, 15).toLocaleDateString(),
+      })
     ).toBeInTheDocument();
   });
 });

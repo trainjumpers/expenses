@@ -33,10 +33,14 @@ describe("DateFilter", () => {
     );
 
     expect(
-      screen.getByRole("button", { name: /1\/9\/2026/ })
+      screen.getByRole("button", {
+        name: new Date("2026-09-01").toLocaleDateString(),
+      })
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: /30\/9\/2026/ })
+      screen.getByRole("button", {
+        name: new Date("2026-09-30").toLocaleDateString(),
+      })
     ).toBeInTheDocument();
   });
 

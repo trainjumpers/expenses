@@ -99,4 +99,27 @@ export const handlers = [
   http.post("*/api/v1/logout", () =>
     HttpResponse.json({ message: "Logged out" })
   ),
+
+  // Components that mount lists (profile dropdown, analytics panels) fetch
+  // these on render; default them to empty so tests never hit the network.
+  http.get("*/api/v1/rule", () =>
+    HttpResponse.json({
+      message: "Rules retrieved successfully",
+      data: { rules: [], total: 0, page: 1, page_size: 5 },
+    })
+  ),
+
+  http.get("*/api/v1/statement", () =>
+    HttpResponse.json({
+      message: "Statements retrieved successfully",
+      data: { statements: [], total: 0, page: 1, page_size: 5 },
+    })
+  ),
+
+  http.get("*/api/v1/transaction", () =>
+    HttpResponse.json({
+      message: "Transactions retrieved successfully",
+      data: { transactions: [], total: 0, page: 1, page_size: 15 },
+    })
+  ),
 ];
