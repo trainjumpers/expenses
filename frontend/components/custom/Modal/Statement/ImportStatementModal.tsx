@@ -326,12 +326,12 @@ export function ImportStatementModal({
   const handlePreview = useCallback(() => {
     if (selectedFiles.length === 0) return;
 
+    const currentFile = selectedFiles[0];
+    lastPreviewKeyRef.current = `${currentFile.name}-${currentFile.size}-${skipRows}-${rowSize}-${filePassword}`;
     setIsPreviewing(true);
     setError("");
-    setIsPasswordRequired(false);
     setPreviewData(null);
 
-    const currentFile = selectedFiles[0];
     previewStatementMutation.mutate(
       { file: currentFile, skipRows, rowSize, password: filePassword },
       {
@@ -368,7 +368,6 @@ export function ImportStatementModal({
 
     setIsUploading(true);
     setError("");
-    setIsPasswordRequired(false);
     setUploadProgress({
       current: 0,
       total: selectedFiles.length,

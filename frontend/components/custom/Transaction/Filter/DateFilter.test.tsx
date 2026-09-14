@@ -77,4 +77,48 @@ describe("DateFilter", () => {
       dateTo: format(day, "yyyy-MM-dd"),
     });
   });
+
+  it("clears the from date", async () => {
+    const user = userEvent.setup();
+    const setFilters = vi.fn();
+    const { day, label } = pickFifteenth();
+    const withDate = { ...filters, dateFrom: format(day, "yyyy-MM-dd") };
+    render(<DateFilter filters={withDate} setFilters={setFilters} />);
+
+    await user.click(
+      screen.getByRole("button", {
+        name: new Date(withDate.dateFrom).toLocaleDateString(),
+      })
+    );
+    await user.click(
+      await screen.findByRole("button", { name: new RegExp(label) })
+    );
+
+    expect(setFilters).toHaveBeenCalledWith({
+      ...withDate,
+      dateFrom: undefined,
+    });
+  });
+
+  it("clears the to date", async () => {
+    const user = userEvent.setup();
+    const setFilters = vi.fn();
+    const { day, label } = pickFifteenth();
+    const withDate = { ...filters, dateTo: format(day, "yyyy-MM-dd") };
+    render(<DateFilter filters={withDate} setFilters={setFilters} />);
+
+    await user.click(
+      screen.getByRole("button", {
+        name: new Date(withDate.dateTo).toLocaleDateString(),
+      })
+    );
+    await user.click(
+      await screen.findByRole("button", { name: new RegExp(label) })
+    );
+
+    expect(setFilters).toHaveBeenCalledWith({
+      ...withDate,
+      dateTo: undefined,
+    });
+  });
 });
