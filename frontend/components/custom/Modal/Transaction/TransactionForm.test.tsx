@@ -290,6 +290,8 @@ describe("TransactionForm", () => {
     expect(
       await screen.findByRole("menuitem", { name: "Food" })
     ).toBeInTheDocument();
-    expect(screen.getByRole("menuitem", { name: "Travel" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("menuitem", { name: "Travel" })
+    ).toBeInTheDocument();
   });
 });
