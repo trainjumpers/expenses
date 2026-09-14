@@ -6,12 +6,11 @@ permissions:
 on:
   push:
     branches: [ main ]
-    paths:
-      - 'server/**'
   pull_request:
     branches: [ main ]
     paths:
       - 'server/**'
+      - '.github/workflows/test.yml'
 
 env:
   DB_HOST: localhost
