@@ -45,8 +45,8 @@ var _ = Describe("Config", func() {
 			Expect(cfg.Environment).To(Equal("dev"))
 			Expect(string(cfg.JWTSecret)).To(Equal("test-secret"))
 			Expect(cfg.DBSchema).To(Equal("test_schema"))
-			Expect(cfg.AccessTokenDuration).To(Equal(12 * time.Hour))
-			Expect(cfg.RefreshTokenDuration).To(Equal(7 * 24 * time.Hour))
+			Expect(cfg.AccessTokenDuration).To(Equal(1 * time.Hour))
+			Expect(cfg.RefreshTokenDuration).To(Equal(90 * 24 * time.Hour))
 		})
 
 		It("should create a config with custom environment and token durations", func() {

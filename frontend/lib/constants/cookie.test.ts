@@ -9,8 +9,8 @@ import {
 
 describe("cookie constants", () => {
   it("defaults the token lifetimes", () => {
-    expect(ACCESS_TOKEN_EXPIRY).toBe(12 * 60 * 60);
-    expect(REFRESH_TOKEN_EXPIRY).toBe(7 * 24 * 60 * 60);
+    expect(ACCESS_TOKEN_EXPIRY).toBe(60 * 60);
+    expect(REFRESH_TOKEN_EXPIRY).toBe(90 * 24 * 60 * 60);
   });
 
   it("exposes the cookie names", () => {

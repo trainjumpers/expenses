@@ -52,12 +52,12 @@ func NewConfig() (*Config, error) {
 	if config.DBSchema == "" {
 		return nil, errors.New("DB_SCHEMA environment variable is not set")
 	}
-	accessTokenHours, err := config.getEnvInt("ACCESS_TOKEN_HOURS", 12)
+	accessTokenHours, err := config.getEnvInt("ACCESS_TOKEN_HOURS", 1)
 	if err != nil {
 		return nil, fmt.Errorf("invalid ACCESS_TOKEN_HOURS: %w", err)
 	}
 	config.AccessTokenDuration = time.Duration(accessTokenHours) * time.Hour
-	refreshTokenDays, err := config.getEnvInt("REFRESH_TOKEN_DAYS", 7)
+	refreshTokenDays, err := config.getEnvInt("REFRESH_TOKEN_DAYS", 90)
 	if err != nil {
 		return nil, fmt.Errorf("invalid REFRESH_TOKEN_DAYS: %w", err)
 	}
