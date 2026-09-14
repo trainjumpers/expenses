@@ -555,6 +555,14 @@ export function ImportStatementModal({
     setIsPasswordRequired(false);
   }, [step]);
 
+  // Accounts load asynchronously; preselect the first one so the user does not
+  // have to pick an account before every upload.
+  useEffect(() => {
+    if (!selectedAccountId && accounts.length > 0) {
+      setSelectedAccountId(accounts[0].id);
+    }
+  }, [accounts, selectedAccountId]);
+
   const renderStep = () => {
     switch (step) {
       case ImportStep.ImportFromBank:
