@@ -150,6 +150,7 @@ export function AccountAnalytics({ data }: AccountAnalyticsProps) {
   const { data: accountsData } = useAccounts();
   const [selectedAccountIds, setSelectedAccountIds] = useState<number[]>([]);
   const [draftSelectedIds, setDraftSelectedIds] = useState<number[]>([]);
+  const [filterOpen, setFilterOpen] = useState(false);
 
   useEffect(() => {
     setDraftSelectedIds(selectedAccountIds);
@@ -316,7 +317,7 @@ export function AccountAnalytics({ data }: AccountAnalyticsProps) {
             </div>
             <div className="flex items-center gap-2">
               {showFilter && (
-                <DropdownMenu>
+                <DropdownMenu open={filterOpen} onOpenChange={setFilterOpen}>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="sm" className="h-8">
                       {triggerLabel}
@@ -354,7 +355,10 @@ export function AccountAnalytics({ data }: AccountAnalyticsProps) {
                     <div className="flex justify-end px-2 py-2">
                       <Button
                         size="sm"
-                        onClick={applyAccountFilter}
+                        onClick={() => {
+                          applyAccountFilter();
+                          setFilterOpen(false);
+                        }}
                         disabled={!isDirty}
                       >
                         Apply
@@ -367,6 +371,7 @@ export function AccountAnalytics({ data }: AccountAnalyticsProps) {
                 variant="ghost"
                 size="sm"
                 onClick={() => setIsAddAccountModalOpen(true)}
+                aria-label="Add account"
                 className="h-8 w-8 p-0"
               >
                 <Plus className="h-4 w-4" />
@@ -446,6 +451,11 @@ export function AccountAnalytics({ data }: AccountAnalyticsProps) {
                               <button
                                 onClick={() =>
                                   toggleAccountExpansion(account.account_id)
+                                }
+                                aria-label={
+                                  isExpanded
+                                    ? `Collapse ${account.accountName}`
+                                    : `Expand ${account.accountName}`
                                 }
                                 className="p-1 hover:bg-muted rounded transition-colors"
                               >

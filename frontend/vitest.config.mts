@@ -7,13 +7,14 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     setupFiles: ["./vitest.setup.ts"],
+    env: { NEXT_PUBLIC_API_BASE_URL: "http://localhost:8080" },
     include: ["**/*.test.{ts,tsx}"],
     exclude: ["node_modules/**", ".next/**", "e2e/**"],
     coverage: {
       provider: "v8",
       reporter: ["text", "lcov"],
       include: ["app/**", "components/**", "lib/**", "hooks/**"],
-      exclude: ["**/*.test.{ts,tsx}"],
+      exclude: ["**/*.test.{ts,tsx}", "components/ui/**"],
     },
   },
 });

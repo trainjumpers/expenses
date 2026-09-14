@@ -29,7 +29,9 @@ function formProps() {
 describe("TransactionForm", () => {
   it("keeps typed values when the parent re-renders", async () => {
     const user = userEvent.setup();
-    const { rerender } = renderWithProviders(<TransactionForm {...formProps()} />);
+    const { rerender } = renderWithProviders(
+      <TransactionForm {...formProps()} />
+    );
 
     const name = screen.getByPlaceholderText("Enter transaction name");
     await user.type(name, "Coffee");
