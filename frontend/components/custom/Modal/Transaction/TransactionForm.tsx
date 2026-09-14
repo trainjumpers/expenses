@@ -68,9 +68,7 @@ export function TransactionForm({
   // touching anything the user has already edited.
   useEffect(() => {
     if (!formData.account_id && accounts.length > 0) {
-      setFormData((prev) =>
-        prev.account_id ? prev : { ...prev, account_id: accounts[0].id }
-      );
+      setFormData((prev) => ({ ...prev, account_id: accounts[0].id }));
     }
   }, [accounts, formData.account_id]);
 

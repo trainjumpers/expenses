@@ -9,6 +9,11 @@ import { describe, expect, it, vi } from "vitest";
 
 import { TransactionForm } from "./TransactionForm";
 
+vi.mock("@/components/ui/icon-picker", () => ({
+  Icon: () => null,
+  IconPicker: () => null,
+}));
+
 const initialValues = {
   name: "",
   description: "",
@@ -232,5 +237,59 @@ describe("TransactionForm", () => {
         name: new Date(2026, 8, 15).toLocaleDateString(),
       })
     ).toBeInTheDocument();
+  });
+
+  it("keeps a pre-selected account", async () => {
+    setup({ initialValues: { ...initialValues, account_id: 2 } });
+
+    expect(
+      await screen.findByRole("button", { name: /ICICI Salary/ })
+    ).toBeInTheDocument();
+  });
+
+  it("shows a date placeholder when no date is set", () => {
+    setup({
+      initialValues: { ...initialValues, date: null as unknown as Date },
+    });
+
+    expect(
+      screen.getByRole("button", { name: "Pick a date" })
+    ).toBeInTheDocument();
+  });
+
+  it("keeps the previous date when the selection is cleared", async () => {
+    const user = userEvent.setup();
+    const date = new Date(2026, 8, 15);
+    setup({ initialValues: { ...initialValues, date } });
+
+    await user.click(
+      screen.getByRole("button", { name: date.toLocaleDateString() })
+    );
+    await user.click(
+      await screen.findByRole("button", { name: /September 15th, 2026/ })
+    );
+
+    expect(
+      screen.getByRole("button", { name: date.toLocaleDateString() })
+    ).toBeInTheDocument();
+  });
+
+  it("renders category icons and falls back for missing ones", async () => {
+    const user = userEvent.setup();
+    setup({
+      categories: [
+        { id: 1, name: "Food", icon: "utensils", created_by: 1 },
+        { id: 2, name: "Travel", created_by: 1 },
+      ],
+    });
+
+    await user.click(
+      screen.getByRole("button", { name: /select categories/i })
+    );
+
+    expect(
+      await screen.findByRole("menuitem", { name: "Food" })
+    ).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Travel" })).toBeInTheDocument();
   });
 });

@@ -2,7 +2,7 @@ import { server } from "@/test/msw/server";
 import { renderWithProviders } from "@/test/render";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { HttpResponse, http } from "msw";
+import { HttpResponse, delay, http } from "msw";
 import { describe, expect, it, vi } from "vitest";
 
 import { ImportStatementModal } from "./ImportStatementModal";
@@ -614,5 +614,119 @@ describe("ImportStatementModal", () => {
     fireEvent.drop(dropzone, { dataTransfer: { files: [csvFile()] } });
 
     expect(await screen.findByText("Coffee")).toBeInTheDocument();
+  });
+
+  it("shows the submitting label while the password upload runs", async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.post("*/api/v1/statement", async ({ request }) => {
+        const body = await request.text();
+        if (body.includes('name="password"')) {
+          await delay(300);
+          return HttpResponse.json(
+            { message: "ok", data: statement },
+            { status: 201 }
+          );
+        }
+        return HttpResponse.json(
+          { error: "statement password required" },
+          { status: 400 }
+        );
+      })
+    );
+    const { onOpenChange } = setup();
+    await user.click(screen.getByRole("button", { name: /import from bank/i }));
+    await user.upload(fileInput("file-input"), csvFile());
+    await user.click(screen.getByRole("button", { name: /import statement/i }));
+    await screen.findByText("File Password Required");
+    await user.type(
+      screen.getByPlaceholderText("Enter file password"),
+      "secret123"
+    );
+
+    await user.click(screen.getByRole("button", { name: "Submit Password" }));
+
+    expect(
+      await screen.findByRole("button", { name: "Uploading..." })
+    ).toBeDisabled();
+    await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+  });
+
+  it("shows the checking label while the password preview runs", async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.post("*/api/v1/statement/preview", async ({ request }) => {
+        const body = await request.text();
+        if (body.includes('name="password"')) {
+          await delay(300);
+          return HttpResponse.json({ message: "ok", data: previewData });
+        }
+        return HttpResponse.json(
+          { error: "statement password required" },
+          { status: 400 }
+        );
+      })
+    );
+    setup();
+    await user.click(screen.getByRole("button", { name: /custom parsing/i }));
+    await user.upload(fileInput("file-input-fallback"), csvFile());
+    await screen.findByText("File Password Required");
+    await user.type(
+      screen.getByPlaceholderText("Enter file password"),
+      "secret123"
+    );
+
+    await user.click(screen.getByRole("button", { name: "Submit Password" }));
+
+    expect(
+      await screen.findByRole("button", { name: "Checking..." })
+    ).toBeDisabled();
+    expect(
+      await screen.findByText("Coffee", {}, { timeout: 3000 })
+    ).toBeInTheDocument();
+  });
+
+  it("ignores empty selections and drops", async () => {
+    const user = userEvent.setup();
+    setup();
+    await user.click(screen.getByRole("button", { name: /import from bank/i }));
+
+    fireEvent.change(fileInput("file-input"), { target: { files: null } });
+    const dropzone = screen
+      .getByText(/Drag & drop your bank statements here/)
+      .closest("div")!;
+    fireEvent.dragOver(dropzone);
+    fireEvent.dragEnd(dropzone);
+    fireEvent.drop(dropzone, { dataTransfer: { files: null } });
+
+    expect(
+      screen.getByText(/Drag & drop your bank statements here/)
+    ).toBeInTheDocument();
+
+    await user.upload(fileInput("file-input"), csvFile("first.csv"));
+    await screen.findByText("Click to add more files (1/10)");
+    fireEvent.change(fileInput("file-input-additional"), {
+      target: { files: null },
+    });
+
+    expect(
+      screen.getByText("Click to add more files (1/10)")
+    ).toBeInTheDocument();
+  });
+
+  it("removes one of several bank files", async () => {
+    const user = userEvent.setup();
+    setup();
+    await user.click(screen.getByRole("button", { name: /import from bank/i }));
+    await user.upload(fileInput("file-input"), [
+      csvFile("first.csv"),
+      csvFile("second.csv"),
+    ]);
+    await screen.findByText("second.csv");
+
+    await user.click(screen.getByRole("button", { name: "Remove first.csv" }));
+
+    expect(screen.queryByText("first.csv")).not.toBeInTheDocument();
+    expect(screen.getByText("second.csv")).toBeInTheDocument();
   });
 });
