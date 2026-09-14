@@ -58,6 +58,7 @@ export default function SignupPage() {
               type="text"
               id="name"
               name="name"
+              autoComplete="name"
               required
               placeholder="Name"
               value={formData.name}
@@ -71,6 +72,7 @@ export default function SignupPage() {
               type="email"
               id="email"
               name="email"
+              autoComplete="email"
               required
               placeholder="Email"
               value={formData.email}
@@ -84,6 +86,7 @@ export default function SignupPage() {
               type="password"
               id="password"
               name="password"
+              autoComplete="new-password"
               required
               placeholder="Password"
               value={formData.password}

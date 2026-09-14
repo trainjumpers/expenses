@@ -59,4 +59,17 @@ describe("LoginPage", () => {
     );
     expect(mockPush).not.toHaveBeenCalled();
   });
+
+  it("provides autocomplete hints for password managers", () => {
+    renderWithProviders(<LoginPage />);
+
+    expect(screen.getByPlaceholderText("Email")).toHaveAttribute(
+      "autocomplete",
+      "email"
+    );
+    expect(screen.getByPlaceholderText("Password")).toHaveAttribute(
+      "autocomplete",
+      "current-password"
+    );
+  });
 });

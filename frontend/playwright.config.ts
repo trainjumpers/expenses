@@ -22,7 +22,14 @@ export default defineConfig({
     trace: "on-first-retry",
     screenshot: "only-on-failure",
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [
+    { name: "setup", testMatch: /auth\.setup\.ts/ },
+    {
+      name: "chromium",
+      dependencies: ["setup"],
+      use: { ...devices["Desktop Chrome"] },
+    },
+  ],
   webServer: {
     command: `"${process.execPath}" "${NEXT_BIN}" dev --turbopack --port ${PORT}`,
     url: BASE_URL,
