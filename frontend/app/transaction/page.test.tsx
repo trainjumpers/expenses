@@ -224,9 +224,7 @@ describe("TransactionPage", () => {
     await user.click(screen.getByRole("checkbox", { name: "Select Coffee" }));
     await openActions(user, "Execute Rules");
 
-    await waitFor(() =>
-      expect(executedBody).toEqual({ transaction_ids: [1] })
-    );
+    await waitFor(() => expect(executedBody).toEqual({ transaction_ids: [1] }));
   });
 
   it("opens the import statement dialog", async () => {
@@ -270,9 +268,7 @@ describe("TransactionPage", () => {
     await openActions(user, "Delete");
 
     await waitFor(() =>
-      expect(consoleError).toHaveBeenCalledWith(
-        "Failed to delete transaction"
-      )
+      expect(consoleError).toHaveBeenCalledWith("Failed to delete transaction")
     );
   });
 });

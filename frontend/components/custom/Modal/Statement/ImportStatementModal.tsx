@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { StatementPreviewResponse } from "@/lib/models/statement";
 import { isStatementPasswordRequiredError } from "@/lib/types/errors";
-import { Lock } from "lucide-react";
+import { AlertCircle, Lock } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { FallbackParsing } from "./steps/FallbackParsing";
@@ -636,12 +636,19 @@ export function ImportStatementModal({
         );
       case ImportStep.MapColumns:
         return (
-          <MapColumns
-            headers={previewData?.headers || []}
-            onStepChange={setStep}
-            onCancel={handleCancel}
-            onSubmit={handleProcessStatement}
-          />
+          <>
+            <MapColumns
+              headers={previewData?.headers || []}
+              onStepChange={setStep}
+              onSubmit={handleProcessStatement}
+            />
+            {error && (
+              <div className="flex items-center space-x-2 text-sm text-destructive">
+                <AlertCircle className="h-4 w-4" />
+                <span>{error}</span>
+              </div>
+            )}
+          </>
         );
       default:
         return <SelectBank onStepChange={setStep} />;

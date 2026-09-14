@@ -1,6 +1,6 @@
 import { server } from "@/test/msw/server";
 import { renderWithProviders } from "@/test/render";
-import { screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import { describe, expect, it, vi } from "vitest";
@@ -371,6 +371,192 @@ describe("ImportStatementModal", () => {
     await user.click(screen.getByRole("button", { name: "Back" }));
     expect(
       screen.getByRole("dialog", { name: "Select Import Method" })
+    ).toBeInTheDocument();
+  });
+
+  it("submits the file password with the enter key", async () => {
+    const user = userEvent.setup();
+    let sawPassword = false;
+    server.use(
+      http.post("*/api/v1/statement", async ({ request }) => {
+        const body = await request.text();
+        if (body.includes('name="password"')) {
+          sawPassword = true;
+          return HttpResponse.json(
+            { message: "ok", data: statement },
+            { status: 201 }
+          );
+        }
+        return HttpResponse.json(
+          { error: "statement password required" },
+          { status: 400 }
+        );
+      })
+    );
+    const { onOpenChange } = setup();
+    await user.click(screen.getByRole("button", { name: /import from bank/i }));
+    await user.upload(fileInput("file-input"), csvFile());
+    await user.click(screen.getByRole("button", { name: /import statement/i }));
+    await screen.findByText("File Password Required");
+
+    await user.type(
+      screen.getByPlaceholderText("Enter file password"),
+      "secret123{Enter}"
+    );
+
+    await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+    expect(sawPassword).toBe(true);
+  });
+
+  it("removes a selected file", async () => {
+    const user = userEvent.setup();
+    setup();
+    await user.click(screen.getByRole("button", { name: /import from bank/i }));
+    await user.upload(fileInput("file-input"), csvFile("first.csv"));
+    await screen.findByText("first.csv");
+
+    await user.click(screen.getByRole("button", { name: "Remove first.csv" }));
+
+    expect(
+      screen.getByText(/Drag & drop your bank statements here/)
+    ).toBeInTheDocument();
+  });
+
+  it("rejects duplicate files when adding more", async () => {
+    const user = userEvent.setup();
+    setup();
+    await user.click(screen.getByRole("button", { name: /import from bank/i }));
+    await user.upload(fileInput("file-input"), csvFile("first.csv"));
+    await screen.findByText("first.csv");
+
+    await user.upload(fileInput("file-input-additional"), csvFile("first.csv"));
+
+    expect(
+      await screen.findByText("All selected files are already added")
+    ).toBeInTheDocument();
+  });
+
+  it("accepts a dropped file", async () => {
+    const user = userEvent.setup();
+    setup();
+    await user.click(screen.getByRole("button", { name: /import from bank/i }));
+
+    const dropzone = screen
+      .getByText(/Drag & drop your bank statements here/)
+      .closest("div")!;
+    fireEvent.dragEnter(dropzone);
+    expect(screen.getByText("Drop the files here...")).toBeInTheDocument();
+
+    fireEvent.drop(dropzone, { dataTransfer: { files: [csvFile()] } });
+
+    expect(await screen.findByText("statement.csv")).toBeInTheDocument();
+  });
+
+  it("removes the previewed file", async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.post("*/api/v1/statement/preview", () =>
+        HttpResponse.json({ message: "ok", data: previewData })
+      )
+    );
+    setup();
+    await user.click(screen.getByRole("button", { name: /custom parsing/i }));
+    await user.upload(fileInput("file-input-fallback"), csvFile());
+    await screen.findByText("Coffee");
+
+    await user.click(
+      screen.getByRole("button", { name: "Remove statement.csv" })
+    );
+
+    expect(
+      screen.getByText(/Drag & drop your bank statement here/)
+    ).toBeInTheDocument();
+  });
+
+  it("refreshes the preview when the row size changes", async () => {
+    const user = userEvent.setup();
+    let previewBody = "";
+    server.use(
+      http.post("*/api/v1/statement/preview", async ({ request }) => {
+        previewBody = await request.text();
+        return HttpResponse.json({ message: "ok", data: previewData });
+      })
+    );
+    setup();
+    await user.click(screen.getByRole("button", { name: /custom parsing/i }));
+    await user.upload(fileInput("file-input-fallback"), csvFile());
+    await screen.findByText("Coffee");
+
+    await user.clear(screen.getByLabelText("Row Size"));
+    fireEvent.change(screen.getByLabelText("Row Size"), {
+      target: { value: "3" },
+    });
+
+    await waitFor(() =>
+      expect(previewBody).toMatch(/name="row_size"\r\n\r\n3\r\n/)
+    );
+  });
+
+  it("reports a failed processing run", async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.post("*/api/v1/statement/preview", () =>
+        HttpResponse.json({ message: "ok", data: previewData })
+      ),
+      http.post("*/api/v1/statement", () =>
+        HttpResponse.json({ error: "bad file" }, { status: 400 })
+      )
+    );
+    setup();
+    await user.click(screen.getByRole("button", { name: /custom parsing/i }));
+    await user.upload(fileInput("file-input-fallback"), csvFile());
+    await screen.findByText("Coffee");
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    await mapField(user, 0, "Date");
+    await mapField(user, 1, "Narration");
+    await mapField(user, 3, "Amount");
+
+    await user.click(
+      screen.getByRole("button", { name: "Process Transactions" })
+    );
+
+    expect(
+      await screen.findByText(/Failed to process statement.csv: bad file/)
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("dialog", { name: "Map Columns" })
+    ).toBeInTheDocument();
+  });
+
+  it("stays quiet when processing needs a password", async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.post("*/api/v1/statement/preview", () =>
+        HttpResponse.json({ message: "ok", data: previewData })
+      ),
+      http.post("*/api/v1/statement", () =>
+        HttpResponse.json(
+          { error: "statement password required" },
+          { status: 400 }
+        )
+      )
+    );
+    const { onOpenChange } = setup();
+    await user.click(screen.getByRole("button", { name: /custom parsing/i }));
+    await user.upload(fileInput("file-input-fallback"), csvFile());
+    await screen.findByText("Coffee");
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    await mapField(user, 0, "Date");
+    await mapField(user, 1, "Narration");
+    await mapField(user, 3, "Amount");
+
+    await user.click(
+      screen.getByRole("button", { name: "Process Transactions" })
+    );
+
+    await waitFor(() => expect(onOpenChange).not.toHaveBeenCalledWith(false));
+    expect(
+      screen.getByRole("dialog", { name: "Map Columns" })
     ).toBeInTheDocument();
   });
 });

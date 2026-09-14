@@ -33,8 +33,9 @@ describe("mutation errors", () => {
 
   it("clears the session on a 401", () => {
     const clear = vi.spyOn(queryClient, "clear");
-    const onError = queryClient.getDefaultOptions().mutations!
-      .onError as (error: unknown) => void;
+    const onError = queryClient.getDefaultOptions().mutations!.onError as (
+      error: unknown
+    ) => void;
 
     onError({ status: 401 });
 
@@ -45,8 +46,9 @@ describe("mutation errors", () => {
   });
 
   it("logs every other mutation failure", () => {
-    const onError = queryClient.getDefaultOptions().mutations!
-      .onError as (error: unknown) => void;
+    const onError = queryClient.getDefaultOptions().mutations!.onError as (
+      error: unknown
+    ) => void;
 
     onError(new Error("nope"));
 
@@ -68,9 +70,9 @@ describe("queryKeys", () => {
     expect(queryKeys.account(2)).toEqual(["accounts", 2]);
     expect(queryKeys.category(3)).toEqual(["categories", 3]);
     expect(queryKeys.rule(4)).toEqual(["rules", 4]);
-    expect(queryKeys.analytics.categoryAnalytics("2026-09-01", "2026-09-30")).toEqual(
-      ["analytics", "category", "2026-09-01", "2026-09-30"]
-    );
+    expect(
+      queryKeys.analytics.categoryAnalytics("2026-09-01", "2026-09-30")
+    ).toEqual(["analytics", "category", "2026-09-01", "2026-09-30"]);
     expect(
       queryKeys.analytics.monthlyAnalytics("2026-09-01", "2026-09-30")
     ).toEqual(["analytics", "monthly", "2026-09-01", "2026-09-30"]);

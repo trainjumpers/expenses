@@ -8,19 +8,17 @@ const headers = ["Date", "Narration", "Amount", "Credit", "Debit"];
 
 function setup() {
   const onStepChange = vi.fn();
-  const onCancel = vi.fn();
   const onSubmit = vi.fn();
 
   render(
     <MapColumns
       headers={headers}
       onStepChange={onStepChange}
-      onCancel={onCancel}
       onSubmit={onSubmit}
     />
   );
 
-  return { onStepChange, onCancel, onSubmit };
+  return { onStepChange, onSubmit };
 }
 
 async function mapField(
@@ -89,7 +87,7 @@ describe("MapColumns", () => {
 
   it("submits a single amount mapping", async () => {
     const user = userEvent.setup();
-    const { onSubmit, onCancel } = setup();
+    const { onSubmit } = setup();
 
     await mapField(user, 0, "Date");
     await mapField(user, 1, "Narration");
@@ -103,7 +101,6 @@ describe("MapColumns", () => {
       name: "Narration",
       amount: "Amount",
     });
-    expect(onCancel).toHaveBeenCalled();
   });
 
   it("submits a credit and debit mapping", async () => {

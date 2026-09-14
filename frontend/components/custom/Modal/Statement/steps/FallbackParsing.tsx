@@ -224,6 +224,7 @@ export function FallbackParsing({
                 variant="outline"
                 size="sm"
                 onClick={onFileRemove}
+                aria-label={`Remove ${selectedFile.name}`}
               >
                 <X className="h-4 w-4" />
               </Button>
