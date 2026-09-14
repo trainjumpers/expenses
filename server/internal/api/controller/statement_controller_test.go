@@ -40,10 +40,16 @@ func createAccount(testHelper *TestHelper, name string, balance float64) float64
 	return response["data"].(map[string]any)["id"].(float64)
 }
 
+// waitForStatementDone polls until the statement leaves processing. Parsing a
+// 100K row statement can take minutes on a loaded CI runner, so the budget is
+// deliberately generous rather than tuned to local timings.
 func waitForStatementDone(testHelper *TestHelper, statementId float64) map[string]any {
+	const maxWait = 15 * time.Minute
+	deadline := time.Now().Add(maxWait)
+
 	var status string
 	var data map[string]any
-	for i := 0; i < 5*60; i++ {
+	for time.Now().Before(deadline) {
 		resp, response := testHelper.MakeRequest(http.MethodGet, "/statement/"+strconv.FormatFloat(statementId, 'f', 0, 64), nil)
 		Expect(resp.StatusCode).To(Equal(http.StatusOK))
 		data = response["data"].(map[string]any)
@@ -53,7 +59,9 @@ func waitForStatementDone(testHelper *TestHelper, statementId float64) map[strin
 		}
 		time.Sleep(1 * time.Second)
 	}
-	Expect(status).To(Equal("done"))
+	Expect(status).To(Equal("done"), fmt.Sprintf(
+		"statement %v did not finish within %s (status=%q)", statementId, maxWait, status,
+	))
 	return data
 }
 
