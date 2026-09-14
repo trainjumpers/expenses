@@ -35,9 +35,13 @@ export async function apiRequest<T>(
         toastShown = true;
       }
       const errorMsg = (data as Record<string, unknown>)["error"];
-      throw new Error(
+      const error = new Error(
         typeof errorMsg === "string" ? errorMsg : "Request failed"
-      );
+      ) as Error & { status: number; statusText: string; data: unknown };
+      error.status = response.status;
+      error.statusText = response.statusText;
+      error.data = data;
+      throw error;
     }
     return (data as { data: T }).data;
   } catch (err) {

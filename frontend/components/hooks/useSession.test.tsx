@@ -129,4 +129,53 @@ describe("useSession", () => {
 
     await waitFor(() => expect(mockPush).toHaveBeenCalledWith("/"));
   });
+
+  it("treats a server failure as an invalid session", async () => {
+    server.use(
+      http.get("*/api/v1/user", () =>
+        HttpResponse.json({ error: "boom" }, { status: 500 })
+      )
+    );
+
+    const { wrapper } = setup();
+    const { result } = renderHook(() => useSession(), { wrapper });
+
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith("/login"));
+    expect(result.current.isAuthenticated).toBe(false);
+  });
+
+  it("logs a failing refresh attempt", async () => {
+    server.use(
+      http.get("*/api/v1/user", () =>
+        HttpResponse.json({ error: "expired" }, { status: 401 })
+      ),
+      http.post("*/api/v1/refresh", () => HttpResponse.error())
+    );
+
+    const { wrapper } = setup();
+    const { result } = renderHook(() => useSession(), { wrapper });
+
+    await waitFor(() =>
+      expect(consoleError).toHaveBeenCalledWith(
+        "Token refresh failed:",
+        expect.any(Error)
+      )
+    );
+    expect(result.current.isAuthenticated).toBe(false);
+  });
+
+  it("logs a throwing session check", async () => {
+    server.use(http.get("*/api/v1/user", () => HttpResponse.error()));
+
+    const { wrapper } = setup();
+    const { result } = renderHook(() => useSession(), { wrapper });
+
+    await waitFor(() =>
+      expect(consoleError).toHaveBeenCalledWith(
+        "Session check failed:",
+        expect.any(Error)
+      )
+    );
+    expect(result.current.isAuthenticated).toBe(false);
+  });
 });

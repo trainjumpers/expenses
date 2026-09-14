@@ -89,3 +89,31 @@ describe("TablePagination", () => {
     expect(screen.queryByRole("button", { name: "5" })).not.toBeInTheDocument();
   });
 });
+
+describe("TablePagination long lists", () => {
+  it("shows the edges, middle pages and both ellipses", async () => {
+    const setCurrentPage = vi.fn();
+    render(
+      <TablePagination
+        currentPage={5}
+        totalPages={10}
+        setCurrentPage={setCurrentPage}
+      />
+    );
+
+    expect(screen.getByRole("button", { name: "1" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "4" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "5" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "6" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "10" })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "1" }));
+    expect(setCurrentPage).toHaveBeenCalledWith(1);
+
+    await userEvent.click(screen.getByRole("button", { name: "10" }));
+    expect(setCurrentPage).toHaveBeenCalledWith(10);
+
+    await userEvent.click(screen.getByRole("button", { name: "Previous" }));
+    expect(setCurrentPage).toHaveBeenCalledWith(4);
+  });
+});

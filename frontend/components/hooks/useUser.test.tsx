@@ -13,7 +13,21 @@ import {
   useSignup,
   useUpdatePassword,
   useUpdateUser,
+  useUser,
 } from "./useUser";
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    refresh: vi.fn(),
+    back: vi.fn(),
+    forward: vi.fn(),
+    prefetch: vi.fn(),
+  }),
+  usePathname: () => "/",
+  useSearchParams: () => new URLSearchParams(),
+}));
 
 function setup() {
   const queryClient = new QueryClient({
@@ -207,5 +221,39 @@ describe("user mutations", () => {
     await waitFor(() => expect(result.current.isError).toBe(true));
 
     expect(consoleError).toHaveBeenCalledWith("current password is wrong");
+  });
+
+  it("does not retry an authentication failure", async () => {
+    let calls = 0;
+    server.use(
+      http.get("*/api/v1/user", () => {
+        calls += 1;
+        return HttpResponse.json({ error: "unauthorized" }, { status: 401 });
+      })
+    );
+    const { queryClient, wrapper } = setup();
+    queryClient.setQueryData(["session"], { isValid: true, needsRefresh: false });
+
+    const { result } = renderHook(() => useUser(), { wrapper });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(calls).toBe(1);
+  });
+
+  it("does not retry a client error", async () => {
+    let calls = 0;
+    server.use(
+      http.get("*/api/v1/user", () => {
+        calls += 1;
+        return HttpResponse.json({ error: "bad request" }, { status: 400 });
+      })
+    );
+    const { queryClient, wrapper } = setup();
+    queryClient.setQueryData(["session"], { isValid: true, needsRefresh: false });
+
+    const { result } = renderHook(() => useUser(), { wrapper });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(calls).toBe(1);
   });
 });

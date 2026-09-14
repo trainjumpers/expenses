@@ -9,10 +9,24 @@ import { toast } from "sonner";
 import { afterAll, describe, expect, it, vi } from "vitest";
 
 import {
+  useCategory,
   useCreateCategory,
   useDeleteCategory,
   useUpdateCategory,
 } from "./useCategories";
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    refresh: vi.fn(),
+    back: vi.fn(),
+    forward: vi.fn(),
+    prefetch: vi.fn(),
+  }),
+  usePathname: () => "/",
+  useSearchParams: () => new URLSearchParams(),
+}));
 
 const existing: Category = { id: 1, name: "Food", created_by: 1 };
 
@@ -140,5 +154,60 @@ describe("category mutations", () => {
 
     expect(categories(queryClient)).toEqual([]);
     expect(toast.success).toHaveBeenCalledWith("Category deleted successfully");
+  });
+
+  it("resolves a single category from the cached list", async () => {
+    const { wrapper } = setup();
+    const { result } = renderHook(() => useCategory(1), { wrapper });
+
+    await waitFor(() => expect(result.current.data?.name).toBe("Food"));
+  });
+
+  it("fails for an unknown category id", async () => {
+    const { wrapper } = setup();
+    const { result } = renderHook(() => useCategory(99), { wrapper });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.error).toEqual(new Error("Category not found"));
+  });
+
+  it("rolls category updates back on failure", async () => {
+    server.use(
+      http.patch("*/api/v1/category/1", () =>
+        HttpResponse.json({ error: "nope" }, { status: 500 })
+      )
+    );
+
+    const { queryClient, wrapper } = setup();
+    const { result } = renderHook(() => useUpdateCategory(), { wrapper });
+
+    act(() => {
+      result.current.mutate({ id: 1, data: { name: "Groceries" } });
+    });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+
+    expect(categories(queryClient)).toEqual([existing]);
+    expect(consoleError).toHaveBeenCalledWith("nope");
+  });
+
+  it("rolls category deletions back on failure", async () => {
+    server.use(
+      http.delete("*/api/v1/category/1", () =>
+        HttpResponse.json({ error: "nope" }, { status: 500 })
+      )
+    );
+
+    const { queryClient, wrapper } = setup();
+    const { result } = renderHook(() => useDeleteCategory(), { wrapper });
+
+    act(() => {
+      result.current.mutate(1);
+    });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+
+    expect(categories(queryClient)).toEqual([existing]);
+    expect(consoleError).toHaveBeenCalledWith("nope");
   });
 });
